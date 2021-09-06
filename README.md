@@ -1,7 +1,6 @@
 # Asserts
 
-<center>The most over-engineered assertion library.</center>
-<br>
+<p align="center">The most over-engineered assertion library.</p>
 
 Asserts are sanity checks for programs: Validating the programmer's assumptions and helping identify
 problems at their sources. Assertions should provide as much information and context to the
@@ -124,6 +123,24 @@ Possible pitfalls of this library:
   `char*`, the library will try to print the string value. Fine in most cases, not fine if the
   result is a non-null pointer to a non-c string (e.g. a binary buffer).
 
+### Library Documentation
+
+Assertions are of the form:
+
+- `void assert(expression, info?, fatal?)`
+- `void assert_op(a, b, info?, fatal?)`
+  - Where `op` is one of `eq`, `neq`, `lt`, `gt`, `lteq`, `gteq`, `and`, or `or`.
+
+`info` is optional has overloads for `char*` and `std::string`.
+
+`fatal` is optional and is `ASSERT::FATAL` or `ASSERT::NONFATAL`.
+
+Build options:
+
+- `-DNCOLOR` Turns off colors
+- `-DNDEBUG` Disables assertions
+- `-DASSERT_DEMO` Makes all assertions non-fatal
+
 ### Comparison With Other Languages
 
 Even when standard libraries provide constructs like `assert_eq` they don't always do a good job of
@@ -167,12 +184,12 @@ Extras:
 | Syntax Highlighting   | ❌   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
 | Non-Fatal Assertions  | ❌   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
 | Format Consistency    | ❌   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
+| Automatic expression decomposition | ❌   | ❌   | ❌ | ❌  | ❌    | ❌         | TODO |
 
-### Language support for asserts
+Automatic expression decomposition (automatically understanding a binary comparison like
+`assert(a == b);` instead of having to use a macro like `assert_eq`) is something I'd expect to
+require language support (and even Rust's macro system doesn't allow inspecting an expression tree).
+It turns out there's a [cool trick lest uses][lest trick] that enables this in C++ with the help of
+macro abuse.
 
-Really I think there should be language support for assertions. I'm coming from a perspective of
-idealism here, after all language-defined assertions presents its own problems.
-
-I say ideally the programmer can just write `assert(a == b);` instead of `assert_eq`. Without
-language support, there's nothing that can be done about this. Even Rust's macro system doesn't
-allow inspecting an expression AST like this.
+[lest trick]: https://github.com/martinmoene/lest/blob/master/include/lest/lest.hpp#L829-L853
