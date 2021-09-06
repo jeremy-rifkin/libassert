@@ -833,7 +833,6 @@ namespace assert_impl_ {
 	}
 
 	template<typename C, typename A, typename B>
-	[[maybe_unused]]
 	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
 		if(!C()(a, b)) {
 			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info, fatal, location);
@@ -858,7 +857,6 @@ namespace assert_impl_ {
 	}
 
 	template<typename C, typename A, typename B>
-	[[maybe_unused]]
 	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const std::string& info, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
 		if(!C()(a, b)) {
 			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info.c_str(), fatal, location);
@@ -869,30 +867,59 @@ namespace assert_impl_ {
 		}
 	}
 
+	[[maybe_unused]]
+	static void assume(bool expr) {
+		if(!expr) {
+			__builtin_unreachable();
+		}
+	}
+
+	template<typename C, typename A, typename B>
+	void assume(A&& a, B&& b) {
+		if(!C()(a, b)) {
+			__builtin_unreachable();
+		}
+	}
+
 	#undef primitive_assert
 }
 
 using assert_impl_::ASSERT;
 
 #ifdef NDEBUG
-#define      assert(...) (void)0
-#define   assert_eq(...) (void)0
-#define  assert_neq(...) (void)0
-#define   assert_lt(...) (void)0
-#define   assert_gt(...) (void)0
-#define assert_lteq(...) (void)0
-#define assert_gteq(...) (void)0
-#define  assert_and(...) (void)0
-#define   assert_or(...) (void)0
+ #ifndef ASSUME_ASSERTS
+  #define      assert(...) (void)0
+  #define   assert_eq(...) (void)0
+  #define  assert_neq(...) (void)0
+  #define   assert_lt(...) (void)0
+  #define   assert_gt(...) (void)0
+  #define assert_lteq(...) (void)0
+  #define assert_gteq(...) (void)0
+  #define  assert_and(...) (void)0
+  #define   assert_or(...) (void)0
+ #else
+  // Note: This is not a default because Sometimes assertion expressions have side effects that are
+  // undesirable at runtime in an `NDEBUG` build like exceptions on std container operations which
+  // cannot be optimized away. These often end up not being helpful hints either.
+  #define      assert(expr, ...) assert_impl_::assume(expr)
+  #define   assert_eq(a, b, ...) assert_impl_::assume<assert_impl_::equal_to     >(a, b)
+  #define  assert_neq(a, b, ...) assert_impl_::assume<assert_impl_::not_equal_to >(a, b)
+  #define   assert_lt(a, b, ...) assert_impl_::assume<assert_impl_::less         >(a, b)
+  #define   assert_gt(a, b, ...) assert_impl_::assume<assert_impl_::greater      >(a, b)
+  #define assert_lteq(a, b, ...) assert_impl_::assume<assert_impl_::less_equal   >(a, b)
+  #define assert_gteq(a, b, ...) assert_impl_::assume<assert_impl_::greater_equal>(a, b)
+  #define  assert_and(a, b, ...) assert_impl_::assume<assert_impl_::logical_and  >(a, b)
+  #define   assert_or(a, b, ...) assert_impl_::assume<assert_impl_::logical_or   >(a, b)
+ #endif
 #else
-// __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method name, not signature
-#define      assert(expr, ...) assert_impl_::assert(expr, #expr, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define   assert_eq(a, b, ...) assert_impl_::assert_binary<assert_impl_::equal_to     >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define  assert_neq(a, b, ...) assert_impl_::assert_binary<assert_impl_::not_equal_to >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define   assert_lt(a, b, ...) assert_impl_::assert_binary<assert_impl_::less         >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define   assert_gt(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater      >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define assert_lteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::less_equal   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define assert_gteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater_equal>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define  assert_and(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_and  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define   assert_or(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_or   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method name, not signature
+ #define      assert(expr, ...) assert_impl_::assert(expr, #expr, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_eq(a, b, ...) assert_impl_::assert_binary<assert_impl_::equal_to     >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define  assert_neq(a, b, ...) assert_impl_::assert_binary<assert_impl_::not_equal_to >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_lt(a, b, ...) assert_impl_::assert_binary<assert_impl_::less         >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_gt(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater      >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define assert_lteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::less_equal   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define assert_gteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater_equal>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define  assert_and(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_and  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_or(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_or   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 #endif
