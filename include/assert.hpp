@@ -666,7 +666,11 @@ namespace assert_impl_ {
 		}
 		[[gnu::cold]]
 		static std::string highlight(const std::string& expression) {
+			#ifdef NCOLOR
+			return expression;
+			#else
 			return get()._highlight(expression);
+			#endif
 		}
 		[[gnu::cold]]
 		static literal_format get_literal_format(const std::string& expression) {

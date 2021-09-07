@@ -139,7 +139,7 @@ Build options:
 
 - `-DNCOLOR` Turns off colors
 - `-DNDEBUG` Disables assertions
-- `-DASSERT_DEMO` Makes all assertions non-fatal
+- `-DASSERT_DEMO` Internal use
 - `-DASSUME_ASSERTS` Makes assertions serve as optimizer hints in `NDEBUG` mode. Note: This is not
   always a win. Sometimes assertion expressions have side effects that are undesirable at runtime in
   an `NDEBUG` build like exceptions which cannot be optimized away (e.g. `std::unordered_map::at`
