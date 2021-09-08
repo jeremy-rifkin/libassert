@@ -75,6 +75,7 @@ int main() {
 	assert_eq(buffer, thing);
 	::foo();
 	assert_eq(0x12p2, 12);
+	assert_eq(0x12p2, 0b10);
 	assert(true); // this should cause a primitive_assert fail
 }
 

@@ -1,3 +1,6 @@
+#ifndef ASSERT_HPP
+#define ASSERT_HPP
+
 #include <iomanip>
 #include <limits>
 #include <regex>
@@ -301,8 +304,12 @@ namespace assert_impl_ {
 				case literal_format::dec:
 					break;
 				case literal_format::hex:
-					oss<<"0x"<<std::hexfloat;
+					// apparently std::hexfloat automatically prepends "0x" while std::hex does not
+					oss<<std::hexfloat;
 					break;
+				case literal_format::octal:
+				case literal_format::binary:
+					return "";
 				default:
 					primitive_assert(false, "unexpected literal format requested for printing");
 			}
@@ -463,7 +470,7 @@ namespace assert_impl_ {
 			// regex is greedy, sequencing rules are as follow:
 			// keyword > identifier
 			// number > punctuation (for .1f)
-			// float > int (for 1.5)
+			// float > int (for 1.5 and hex floats)
 			// hex int > decimal int
 			// named_literal > identifier
 			// string > identifier (for R"(foobar)")
@@ -707,7 +714,11 @@ namespace assert_impl_ {
 				 && !std::is_same_v<strip<T>, char>) {
 			std::vector<std::string> vec;
 			for(literal_format fmt : formats) {
-				vec.push_back(stringify(v, fmt));
+				// TODO: consider pushing empty fillers to keep columns aligned later on? Does not
+				// matter at the moment because floats only have decimal and hex literals but could
+				// if more formats are added.
+				std::string str = stringify(v, fmt);
+				if(!str.empty()) vec.push_back(std::move(str));
 			}
 			return vec;
 		} else {
@@ -743,13 +754,16 @@ namespace assert_impl_ {
 		formats.erase(literal_format::none); // none is just for when the expression isn't a literal
 		primitive_assert(formats.size() > 0);
 		// generate raw strings for given formats, without highlighting
-		auto lstrings = generate_stringifications(std::forward<A>(a), formats);
-		auto rstrings = generate_stringifications(std::forward<B>(b), formats);
-		// pad all columns where there is overlap (last column excluded as padding is not necessary there)
-		for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()) - 1; i++) {
-			std::string& shorter_column = lstrings[i].length() < rstrings[i].length() ? lstrings[i] : rstrings[i];
+		std::vector<std::string> lstrings = generate_stringifications(std::forward<A>(a), formats);
+		std::vector<std::string> rstrings = generate_stringifications(std::forward<B>(b), formats);
+		// pad all columns where there is overlap
+		for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()); i++) {
+			// find which clause, left or right, we're padding (entry i)
+			std::vector<std::string>& which = lstrings[i].length() < rstrings[i].length() ? lstrings : rstrings;
 			int difference = std::abs((int)lstrings[i].length() - (int)rstrings[i].length());
-			shorter_column.insert(shorter_column.end(), difference, ' ');
+			if(i != which.size() - 1) { // last column excluded as padding is not necessary at the end of the line
+				which[i].insert(which[i].end(), difference, ' ');
+			}
 		}
 		primitive_assert(lstrings.size() > 0);
 		primitive_assert(rstrings.size() > 0);
@@ -926,4 +940,6 @@ using assert_impl_::ASSERT;
  #define assert_gteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater_equal>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
  #define  assert_and(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_and  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
  #define   assert_or(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_or   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#endif
+
 #endif
