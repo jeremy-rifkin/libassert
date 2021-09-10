@@ -99,73 +99,178 @@ namespace assert_impl_ {
 		return join(std::begin(container), std::end(container), delim);
 	}
 
-	// boilerplate
+	// lots of boilerplate
 	// std:: implementations don't allow two separate types for lhs/rhs
-	struct equal_to {
-		template<typename A, typename B>
-		constexpr bool operator()(const A& lhs, const B& rhs) const {
-			return lhs == rhs;
+	// note: is this macro potentially bad when it comes to debugging(?)
+	// TODO: put all of this in a namespace?
+	#define gen_op_boilerplate(name, op) struct name { \
+		static constexpr const char* const op_string = #op; \
+		template<typename A, typename B> \
+		constexpr auto operator()(A&& lhs, B&& rhs) const { \
+			return std::forward<A>(lhs) op std::forward<B>(rhs); \
+		} \
+	};
+	gen_op_boilerplate(shift_left, <<);
+	gen_op_boilerplate(shift_right, >>);
+	gen_op_boilerplate(equal_to, ==); // todo: rename -> equal?
+	gen_op_boilerplate(not_equal_to, !=);
+	gen_op_boilerplate(greater, >);
+	gen_op_boilerplate(less, <);
+	gen_op_boilerplate(greater_equal, >=);
+	gen_op_boilerplate(less_equal, <=);
+	gen_op_boilerplate(bit_and, &);
+	gen_op_boilerplate(bit_xor, ^);
+	gen_op_boilerplate(bit_or, |);
+	gen_op_boilerplate(logical_and, &&);
+	gen_op_boilerplate(logical_or, ||);
+	gen_op_boilerplate(assign, =);
+	gen_op_boilerplate(add_assign, +=);
+	gen_op_boilerplate(minus_assign, -=);
+	gen_op_boilerplate(mul_assign, *=);
+	gen_op_boilerplate(div_assign, /=);
+	gen_op_boilerplate(mod_assign, %=);
+	gen_op_boilerplate(shift_left_assign, <<=);
+	gen_op_boilerplate(shift_right_assign, >>=);
+	gen_op_boilerplate(bit_and_assign, &=);
+	gen_op_boilerplate(bit_xor_assign, ^=);
+	gen_op_boilerplate(bit_or_assign, |=);
+	#undef gen_op_boilerplate
+
+	// I learned this automatic expression decomposition trick from lest:
+	// https://github.com/martinmoene/lest/blob/master/include/lest/lest.hpp#L829-L853
+	//
+	// I have improved upon the logic.
+	//
+	// While enabling something like `assert(foo(n) == bar<n> + n);` to be parsed automatically
+	// decomposed and treated as `assert_eq(foo(n), bar<n> + n);` we only get the full expression's
+	// string representation from macros. Breaking down an expression string is difficult given C++
+	// grammar ambiguity. TODO: Can we leverage decomposition to get some insights that may help
+	// disambiguate? I.e. store operators in the order they're seen by the decomposer and try to
+	// utilize that to disambiguate templates.
+	//
+	// Some cases to test and consider:
+	//
+	// Expression   Parsed as
+	// Basic:
+	// false        << false
+	// a == b       (<< a) == b
+	//
+	// Equal precedence following:
+	// a << b       (<< a) << b
+	// a << b << c  ((<< a) << b) << c
+	// a << b + c   (<< a) << (b + c)
+	// a << b < c   ((<< a) << b) < c  // edge case
+	//
+	// Higher precedence following:
+	// a + b        << (a + b)
+	// a + b + c    << ((a + b) + c)
+	// a + b * c    << (a + (b * c))
+	// a + b < c    (<< (a + b)) < c
+	//
+	// Lower precedence following:
+	// a < b        (<< a) < b
+	// a < b < c    ((<< a) < b) < c
+	// a < b + c    (<< a) < (b + c)
+	// a < b == c   ((<< a) < b) == c // edge case
+
+	struct nothing {};
+
+	template<typename T> constexpr bool is_nothing = std::is_same_v<T, nothing>; // TODO cv/ref?
+
+	// hack to get around static_assert(false); being evaluated before any instantiation, even under
+	// an if-constexpr branch
+	template<typename T> constexpr bool always_false = false;
+
+	///template<typename A, typename B> auto make_expression_decomposer(A&&, B&&);
+
+	// Th
+	// TODO: Need to test this extensively. A bug here would be bad.
+	// TODO: How to do forwarding here??
+	// TODO: Re-evaluate && qualifiers
+	template<typename A = nothing, typename B = nothing, typename C = nothing>
+	struct expression_decomposer {
+		A a;
+		B b;
+		expression_decomposer() = default;
+		template<typename U>
+		expression_decomposer(U&& a) : a(std::forward<U>(a)) {}
+		template<typename U, typename V>
+		expression_decomposer(U&& a, V&& b) : a(std::forward<U>(a)), b(std::forward<V>(b)) {}
+		// Note: get_value or operator bool() should only be invoked once
+		// TODO: forwarding?
+		auto get_value() {
+			if constexpr(is_nothing<C>) {
+				static_assert(is_nothing<B> && !is_nothing<A>);
+				return std::forward<A>(a);
+			} else {
+				return C()(std::forward<A>(a), std::forward<B>(b));
+			}
 		}
+		operator bool() { return get_value(); }
+		// Need overloads for operators with precedence <= bitshift
+		// TODO:
+		// - ternary?
+		// - comma shouldn't be a problem
+		// - spaceship operator
+		// TODO: Could decompose much more than just comparison and boolean operators, but it would
+		// take a lot of work
+		template<typename O> auto operator<<(O&& operand) {
+			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
+			if constexpr (is_nothing<A>) {
+				static_assert(is_nothing<B> && is_nothing<C>);
+				return expression_decomposer<Q, nothing, nothing>(std::forward<O>(operand));
+			} else if constexpr (is_nothing<B>) {
+				static_assert(is_nothing<C>);
+				return expression_decomposer<A, Q, shift_left>(std::forward<A>(a), std::forward<O>(operand));
+			} else {
+				static_assert(!is_nothing<C>);
+				return expression_decomposer<decltype(get_value()), O, shift_left>(std::forward<A>(get_value()), std::forward<O>(operand));
+			}
+		}
+		// TODO: fuck use make_expr...
+		#define gen_op_boilerplate(functor, op) template<typename O> auto operator op(O&& operand) { \
+			static_assert(!is_nothing<A>); \
+			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
+			if constexpr (is_nothing<B>) { \
+				static_assert(is_nothing<C>); \
+				return expression_decomposer<A, Q, functor>(std::forward<A>(a), std::forward<O>(operand)); \
+			} else { \
+				static_assert(!is_nothing<C>); \
+				return expression_decomposer<decltype(get_value()), Q, functor>(std::forward<A>(get_value()), std::forward<O>(operand)); \
+			} \
+		}
+		gen_op_boilerplate(shift_right, >>);
+		gen_op_boilerplate(equal_to, ==);
+		gen_op_boilerplate(not_equal_to, !=);
+		gen_op_boilerplate(greater, >);
+		gen_op_boilerplate(less, <);
+		gen_op_boilerplate(greater_equal, >=);
+		gen_op_boilerplate(less_equal, <=);
+		gen_op_boilerplate(bit_and, &);
+		gen_op_boilerplate(bit_xor, ^);
+		gen_op_boilerplate(bit_or, |);
+		gen_op_boilerplate(logical_and, &&);
+		gen_op_boilerplate(logical_or, ||);
+		gen_op_boilerplate(assign, =);
+		gen_op_boilerplate(add_assign, +=);
+		gen_op_boilerplate(minus_assign, -=);
+		gen_op_boilerplate(mul_assign, *=);
+		gen_op_boilerplate(div_assign, /=);
+		gen_op_boilerplate(mod_assign, %=);
+		gen_op_boilerplate(shift_left_assign, <<=);
+		gen_op_boilerplate(shift_right_assign, >>=);
+		gen_op_boilerplate(bit_and_assign, &=);
+		gen_op_boilerplate(bit_xor_assign, ^=);
+		gen_op_boilerplate(bit_or_assign, |=);
+		#undef gen_op_boilerplate
 	};
 
-	struct not_equal_to {
-		template<typename A, typename B>
-		constexpr bool operator()(const A& lhs, const B& rhs) const {
-			return lhs != rhs;
-		}
-	};
-
-	struct greater {
-		template<typename A, typename B>
-		constexpr bool operator()(const A& lhs, const B& rhs) const {
-			return lhs > rhs;
-		}
-	};
-
-	struct less {
-		template<typename A, typename B>
-		constexpr bool operator()(const A& lhs, const B& rhs) const {
-			return lhs < rhs;
-		}
-	};
-
-	struct greater_equal {
-		template<typename A, typename B>
-		constexpr bool operator()(const A& lhs, const B& rhs) const {
-			return lhs >= rhs;
-		}
-	};
-
-	struct less_equal {
-		template<typename A, typename B>
-		constexpr bool operator()(const A& lhs, const B& rhs) const {
-			return lhs <= rhs;
-		}
-	};
-
-	struct logical_and {
-		template<typename A, typename B>
-		constexpr bool operator()(const A& lhs, const B& rhs) const {
-			return lhs && rhs;
-		}
-	};
-
-	struct logical_or {
-		template<typename A, typename B>
-		constexpr bool operator()(const A& lhs, const B& rhs) const {
-			return lhs || rhs;
-		}
-	};
-
-	template<class T> constexpr const char* operator_string = nullptr;
-	template<> constexpr const char* operator_string<equal_to     > = "==";
-	template<> constexpr const char* operator_string<not_equal_to > = "!=";
-	template<> constexpr const char* operator_string<greater      > = ">";
-	template<> constexpr const char* operator_string<less         > = "<";
-	template<> constexpr const char* operator_string<greater_equal> = ">=";
-	template<> constexpr const char* operator_string<less_equal   > = "<=";
-	template<> constexpr const char* operator_string<logical_and  > = "&&";
-	template<> constexpr const char* operator_string<logical_or   > = "||";
+	//template<typename A, typename B>
+	//auto make_expression_decomposer(A&& a, B&& b) {
+	//	using U = std::conditional_t<std::is_rvalue_reference_v<A>, std::remove_reference_t<A>, A>;
+	//	using V = std::conditional_t<std::is_rvalue_reference_v<B>, std::remove_reference_t<B>, B>;
+	//	return expression_decomposer<U, V>(std::forward<A>(a), std::forward<B>(b));
+	//}
 
 	// macro to make asserts non-fatal
 	enum class ASSERT {
@@ -358,6 +463,7 @@ namespace assert_impl_ {
 			}
 			return *analysis_singleton;
 		}
+
 	public:
 		enum class token_e {
 			keyword,
@@ -519,7 +625,7 @@ namespace assert_impl_ {
 				{ -4, { "|" } },
 				{ -5, { "&&" } },
 				{ -6, { "||" } },
-				{ -7, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } },
+				{ -7, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } }, // NOTE: associativity logic currently relies on these having precedence -7
 				{ -8, { "," } }
 			};
 			std::unordered_map<std::string, int> table;
@@ -608,6 +714,7 @@ namespace assert_impl_ {
 		[[gnu::cold]]
 		bool _has_precedence_below_or_equal(const std::string& expression, const std::string& op) {
 			// TODO: there is redundant tokenization here
+			// TODO: what about templates?
 			const auto tokens = analysis::tokenize(expression);
 			// precedence table is binary, unary operators have highest precedence
 			// we can figure out unary / binary easy enough
@@ -665,6 +772,14 @@ namespace assert_impl_ {
 			return false;
 		}
 
+		[[gnu::cold]]
+		std::pair<std::string, std::string> _decompose_expression(const std::string& expression, const std::string& target_op) {
+			// Attempt to parse the raw expression string available during automatic expression
+			// decomposition into left and right parts for later diagnostic
+			// TODO: Not implemented yet.
+			return {"left", "right"};
+		}
+
 	public:
 		// public static wrappers for
 		[[gnu::cold]]
@@ -686,6 +801,10 @@ namespace assert_impl_ {
 		[[gnu::cold]]
 		static bool has_precedence_below_or_equal(const std::string& expression, const std::string& op) {
 			return get()._has_precedence_below_or_equal(expression, op);
+		}
+		[[gnu::cold]]
+		static std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string& target_op) {
+			return get()._decompose_expression(expression, target_op);
 		}
 	};
 
@@ -709,7 +828,7 @@ namespace assert_impl_ {
 	template<typename T>
 	[[gnu::cold]]
 	std::vector<std::string> generate_stringifications(T&& v, const std::set<literal_format>& formats) {
-		if constexpr(std::is_arithmetic<T>::value
+		if constexpr(std::is_arithmetic<strip<T>>::value
 				 && !std::is_same_v<strip<T>, bool>
 				 && !std::is_same_v<strip<T>, char>) {
 			std::vector<std::string> vec;
@@ -772,8 +891,6 @@ namespace assert_impl_ {
 			formats.size() > 1 || lstrings.size() > 1 || a_str != lstrings[0],
 			formats.size() > 1 || rstrings.size() > 1 || b_str != rstrings[0]
 		};
-		// print assert statement
-		fprintf(stderr, "    %s\n", analysis::highlight(gen_assert_binary(a_str, operator_string<C>, b_str)).c_str());
 		// print where clause
 		if(has_useful_where_clause.left || has_useful_where_clause.right) {
 			size_t lw = std::max(
@@ -794,18 +911,20 @@ namespace assert_impl_ {
 		}
 	}
 
+	template<typename A, typename B, typename C>
 	[[gnu::cold]] [[gnu::noinline]]
-	static void assert_fail(const char* expr_str, const char* pretty_func, const char* info, ASSERT fatal, source_location location) {
+	void assert_fail(expression_decomposer<A, B, C>& decomposer, const char* expr_str, const char* pretty_func, const char* info, ASSERT fatal, source_location location) {
 		if(info == nullptr) {
-			fprintf(stderr, "Assertion failed at %s:%d: %s:\n"
-				    "    %s\n",
-				    location.file, location.line, pretty_func,
-				    analysis::highlight(stringf("assert(%s);", expr_str)).c_str());
+			fprintf(stderr, "Assertion failed at %s:%d: %s:\n", location.file, location.line, pretty_func);
 		} else {
-			fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n"
-				   "    %s\n",
-				   location.file, location.line, pretty_func, info,
-				   analysis::highlight(stringf("assert(%s);", expr_str)).c_str());
+			fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n", location.file, location.line, pretty_func, info);
+		}
+		fprintf(stderr, "    %s\n", analysis::highlight(stringf("assert(%s);", expr_str)).c_str());
+		if constexpr(is_nothing<C>) {
+			static_assert(is_nothing<B> && !is_nothing<A>);
+		} else {
+			auto [a_str, b_str] = analysis::decompose_expression(expr_str, C::op_string);
+			print_binary_diagnostic<C>(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b), a_str.c_str(), b_str.c_str());
 		}
 		if(fatal == ASSERT::FATAL) {
 			#ifdef ASSERT_DEMO
@@ -825,6 +944,7 @@ namespace assert_impl_ {
 		} else {
 			fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n", location.file, location.line, pretty_func, info);
 		}
+		fprintf(stderr, "    %s\n", analysis::highlight(gen_assert_binary(a_str, C::op_string, b_str)).c_str());
 		print_binary_diagnostic<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str);
 		if(fatal == ASSERT::FATAL) {
 			#ifdef ASSERT_DEMO
@@ -839,48 +959,48 @@ namespace assert_impl_ {
 	// top-level assert functions emplaced by the macros
 	// these are the only non-cold functions
 
-	[[maybe_unused]]
-	static void assert(bool expr, const char* expr_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
-		if(!expr) {
-			assert_fail(expr_str, pretty_func, info, fatal, location);
+	template<typename A, typename B, typename C>
+	void assert(expression_decomposer<A, B, C> decomposer, const char* expr_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
+		if(!decomposer.get_value()) {
+			assert_fail(decomposer, expr_str, pretty_func, info, fatal, location);
 		} else {
 			#ifdef ASSERT_DEMO
-			assert(false, "false", __PRETTY_FUNCTION__, "assert should have failed");
+			assert(expression_decomposer{} << false, "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
 	}
 
 	template<typename C, typename A, typename B>
 	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
-		if(!C()(a, b)) {
+		if(!(bool)C()(a, b)) {
 			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info, fatal, location);
 		} else {
 			#ifdef ASSERT_DEMO
-			assert(false, "false", __PRETTY_FUNCTION__, "assert should have failed");
+			assert(expression_decomposer{} << false, "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
 	}
 
 	// std::string info overloads
 
-	[[maybe_unused]]
-	static void assert(bool expr, const char* expr_str, const char* pretty_func, const std::string& info, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
-		if(!expr) {
-			assert_fail(expr_str, pretty_func, info.c_str(), fatal, location);
+	template<typename A, typename B, typename C>
+	void assert(expression_decomposer<A, B, C> decomposer, const char* expr_str, const char* pretty_func, const std::string& info, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
+		if(!decomposer.get_value()) {
+			assert_fail(decomposer, expr_str, pretty_func, info.c_str(), fatal, location);
 		} else {
 			#ifdef ASSERT_DEMO
-			assert(false, "false", __PRETTY_FUNCTION__, "assert should have failed");
+			assert(expression_decomposer{} << false, "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
 	}
 
 	template<typename C, typename A, typename B>
 	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const std::string& info, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
-		if(!C()(a, b)) {
+		if(!(bool)C()(a, b)) {
 			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info.c_str(), fatal, location);
 		} else {
 			#ifdef ASSERT_DEMO
-			assert(false, "false", __PRETTY_FUNCTION__, "assert should have failed");
+			assert(expression_decomposer{} << false, "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
 	}
@@ -894,9 +1014,7 @@ namespace assert_impl_ {
 
 	template<typename C, typename A, typename B>
 	void assume(A&& a, B&& b) {
-		if(!C()(a, b)) {
-			__builtin_unreachable();
-		}
+		assume(C()(a, b));
 	}
 
 	#undef primitive_assert
@@ -931,15 +1049,16 @@ using assert_impl_::ASSERT;
  #endif
 #else
  // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method name, not signature
- #define      assert(expr, ...) assert_impl_::assert(expr, #expr, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_eq(a, b, ...) assert_impl_::assert_binary<assert_impl_::equal_to     >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define  assert_neq(a, b, ...) assert_impl_::assert_binary<assert_impl_::not_equal_to >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_lt(a, b, ...) assert_impl_::assert_binary<assert_impl_::less         >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_gt(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater      >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define assert_lteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::less_equal   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define assert_gteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater_equal>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define  assert_and(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_and  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_or(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_or   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ // TODO: ugly manual nothings
+ #define      assert(expr, ...) assert_impl_::assert(assert_impl_::expression_decomposer{} << expr, #expr, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_eq(a, b, ...) assert_impl_::assert_binary<assert_impl_::equal_to         >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define  assert_neq(a, b, ...) assert_impl_::assert_binary<assert_impl_::not_equal_to     >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_lt(a, b, ...) assert_impl_::assert_binary<assert_impl_::less             >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_gt(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater          >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define assert_lteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::less_equal       >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define assert_gteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater_equal    >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define  assert_and(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_and      >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_or(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_or       >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 #endif
 
 #endif
