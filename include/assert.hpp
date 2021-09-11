@@ -8,7 +8,6 @@
 #include <sstream>
 #include <stdlib.h>
 #include <string_view>
-#include <string.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -99,6 +98,14 @@ namespace assert_impl_ {
 		return join(std::begin(container), std::end(container), delim);
 	}
 
+	constexpr const char * const ws = " \t\n\r\f\v";
+	[[gnu::cold]]
+	static std::string trim(const std::string& s) {
+		size_t l = s.find_first_not_of(ws);
+		size_t r = s.find_last_not_of(ws) + 1;
+		return s.substr(l, r - l);
+	}
+
 	// lots of boilerplate
 	// std:: implementations don't allow two separate types for lhs/rhs
 	// note: is this macro potentially bad when it comes to debugging(?)
@@ -181,22 +188,16 @@ namespace assert_impl_ {
 	// an if-constexpr branch
 	template<typename T> constexpr bool always_false = false;
 
-	///template<typename A, typename B> auto make_expression_decomposer(A&&, B&&);
-
-	// Th
-	// TODO: Need to test this extensively. A bug here would be bad.
-	// TODO: How to do forwarding here??
-	// TODO: Re-evaluate && qualifiers
 	template<typename A = nothing, typename B = nothing, typename C = nothing>
 	struct expression_decomposer {
 		A a;
 		B b;
-		expression_decomposer() = default;
+		explicit expression_decomposer() = default;
 		template<typename U>
-		expression_decomposer(U&& a) : a(std::forward<U>(a)) {}
+		explicit expression_decomposer(U&& a) : a(std::forward<U>(a)) {}
 		template<typename U, typename V>
-		expression_decomposer(U&& a, V&& b) : a(std::forward<U>(a)), b(std::forward<V>(b)) {}
-		// Note: get_value or operator bool() should only be invoked once
+		explicit expression_decomposer(U&& a, V&& b) : a(std::forward<U>(a)), b(std::forward<V>(b)) {}
+		// NOTE: get_value or operator bool() should only be invoked once
 		// TODO: forwarding?
 		auto get_value() {
 			if constexpr(is_nothing<C>) {
@@ -209,11 +210,9 @@ namespace assert_impl_ {
 		operator bool() { return get_value(); }
 		// Need overloads for operators with precedence <= bitshift
 		// TODO:
-		// - ternary?
-		// - comma shouldn't be a problem
-		// - spaceship operator
-		// TODO: Could decompose much more than just comparison and boolean operators, but it would
-		// take a lot of work
+		// - spaceship operator?
+		// NOTE: Could decompose much more than just comparison and boolean operators, but it would
+		// take a lot of work and I don't think it's beneficial for this library.
 		template<typename O> auto operator<<(O&& operand) {
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
 			if constexpr (is_nothing<A>) {
@@ -265,12 +264,9 @@ namespace assert_impl_ {
 		#undef gen_op_boilerplate
 	};
 
-	//template<typename A, typename B>
-	//auto make_expression_decomposer(A&& a, B&& b) {
-	//	using U = std::conditional_t<std::is_rvalue_reference_v<A>, std::remove_reference_t<A>, A>;
-	//	using V = std::conditional_t<std::is_rvalue_reference_v<B>, std::remove_reference_t<B>, B>;
-	//	return expression_decomposer<U, V>(std::forward<A>(a), std::forward<B>(b));
-	//}
+	// for ternary support
+	template<typename U>
+	expression_decomposer(U&&) -> expression_decomposer<std::conditional_t<std::is_rvalue_reference_v<U>, std::remove_reference_t<U>, U>>;
 
 	// macro to make asserts non-fatal
 	enum class ASSERT {
@@ -618,15 +614,16 @@ namespace assert_impl_ {
 			// generate precedence table
 			// bottom few rows of the precedence table:
 			const std::unordered_map<int, std::vector<std::string>> precedences = {
-				{  0, { "<", "<=", ">=", ">" } },
-				{ -1, { "==", "!=" } },
-				{ -2, { "&" } },
-				{ -3, { "^" } },
-				{ -4, { "|" } },
-				{ -5, { "&&" } },
-				{ -6, { "||" } },
-				{ -7, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } }, // NOTE: associativity logic currently relies on these having precedence -7
-				{ -8, { "," } }
+				{ -1, { "<<", ">>" } },
+				{ -2, { "<", "<=", ">=", ">" } },
+				{ -3, { "==", "!=" } },
+				{ -4, { "&" } },
+				{ -5, { "^" } },
+				{ -6, { "|" } },
+				{ -7, { "&&" } },
+				{ -8, { "||" } },
+				{ -9, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } }, // NOTE: associativity logic currently relies on these having precedence -9
+				{ -10, { "," } }
 			};
 			std::unordered_map<std::string, int> table;
 			for(const auto& [ p, ops ] : precedences) {
@@ -646,7 +643,7 @@ namespace assert_impl_ {
 				bool at_least_one_matched = false;
 				for(const auto& [ type, re ] : rules) {
 					if(std::regex_match(std::begin(expression) + i, std::end(expression), match, re)) {
-						//fprintf(stderr, "%s : %s\n", name.c_str(), match[1].str().c_str());
+						//fprintf(stderr, "%s\n", match[1].str().c_str());
 						//fflush(stdout);
 						tokens.push_back({ type, match[1].str() });
 						i += match[1].length();
@@ -715,7 +712,7 @@ namespace assert_impl_ {
 		bool _has_precedence_below_or_equal(const std::string& expression, const std::string& op) {
 			// TODO: there is redundant tokenization here
 			// TODO: what about templates?
-			const auto tokens = analysis::tokenize(expression);
+			const auto tokens = _tokenize(expression);
 			// precedence table is binary, unary operators have highest precedence
 			// we can figure out unary / binary easy enough
 			enum {
@@ -775,9 +772,98 @@ namespace assert_impl_ {
 		[[gnu::cold]]
 		std::pair<std::string, std::string> _decompose_expression(const std::string& expression, const std::string& target_op) {
 			// Attempt to parse the raw expression string available during automatic expression
-			// decomposition into left and right parts for later diagnostic
-			// TODO: Not implemented yet.
-			return {"left", "right"};
+			// decomposition into left and right parts for diagnostic
+			// NOTE: There's a lot of redundancy with the _has_precedence_below_or_equal logic
+			// NOTE: This logic currently doesn't support templates. Neither does
+			//       _has_precedence_below_or_equal. Need to combing these two into something better.
+			// NOTE: Yes, very inefficient
+			// Once some template stuff is supported, will return {"left", "right"} if unable to
+			// decompose unambiguously.
+			// Some cases to consider
+			// foo()
+			// false
+			// 1 == 1 == 1
+			// a == 2
+			// something<T>>2
+			// 1 < 1 > 3
+			// a < 1 == 2 > ( 1 + 3 )
+			// a < b< 1 == 2 >> ( 1 + 3 )
+			// T<A> + 4
+			// T<A>()
+			// T<+A>
+			// T<A+>
+			const auto tokens = _tokenize(expression);
+			std::vector<token_t> left;
+			std::optional<token_t> op;
+			std::vector<token_t> right;
+			int current_lowest_precedence = 0;
+			// precedence table is binary, unary operators have highest precedence
+			// we can figure out unary / binary easy enough
+			enum {
+				expecting_operator,
+				expecting_term
+			} state = expecting_term;
+			for(std::size_t i = 0; i < tokens.size(); i++) {
+				const analysis::token_t& token = tokens[i];
+				switch(token.token_type) {
+					case analysis::token_e::punctuation:
+						if(operators.count(token.str)) {
+							if(state == expecting_term) {
+								// must be unary, continue
+							} else {
+								// binary
+								if(precedence.count(token.str))
+								if(precedence.at(token.str) < current_lowest_precedence
+								|| (precedence.at(token.str) == current_lowest_precedence && precedence.at(token.str) != -9)) {
+									left.insert(left.end(), right.begin(), right.end());
+									right.clear();
+									op = token;
+									current_lowest_precedence = precedence.at(token.str);
+								}
+								state = expecting_term;
+							}
+						} else if(braces.count(token.str)) {
+							// We can assume the given expression is valid.
+							// Braces must be balanced.
+							// Scan forward until finding matching brace, don't need to take into
+							// account other types of braces.
+							const std::string& open = token.str;
+							const std::string& close = braces.at(token.str);
+							right.push_back(tokens[i]);
+							int count = 0;
+							while(++i < tokens.size()) {
+								if(tokens[i].str == open) count++;
+								else if(tokens[i].str == close) {
+									if(count-- == 0) {
+										break;
+									}
+								}
+								right.push_back(tokens[i]);
+							}
+							state = expecting_operator;
+						} else {
+							primitive_assert(false, "unhandled punctuation?");
+						}
+						break;
+					case analysis::token_e::keyword:
+					case analysis::token_e::named_literal:
+					case analysis::token_e::number:
+					case analysis::token_e::string:
+					case analysis::token_e::identifier:
+						state = expecting_operator;
+					case analysis::token_e::whitespace:
+						break;
+				}
+				right.push_back(tokens[i]); // tokens[i] over token in case paren logic updated index
+			}
+			primitive_assert(op.value().str == target_op);
+			// TODO: handle the case where left is empty, e.g. single constant and no operator we care about
+			right.erase(right.begin()); // right.begin() will be topmost operator in the expression tree
+			std::vector<std::string> left_strings;
+			std::vector<std::string> right_strings;
+			for(auto t : left) left_strings.push_back(t.str);
+			for(auto t : right) right_strings.push_back(t.str);
+			return {trim(join(left_strings, "")), trim(join(right_strings, ""))};
 		}
 
 	public:
@@ -965,7 +1051,7 @@ namespace assert_impl_ {
 			assert_fail(decomposer, expr_str, pretty_func, info, fatal, location);
 		} else {
 			#ifdef ASSERT_DEMO
-			assert(expression_decomposer{} << false, "false", __PRETTY_FUNCTION__, "assert should have failed");
+			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
 	}
@@ -976,7 +1062,7 @@ namespace assert_impl_ {
 			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info, fatal, location);
 		} else {
 			#ifdef ASSERT_DEMO
-			assert(expression_decomposer{} << false, "false", __PRETTY_FUNCTION__, "assert should have failed");
+			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
 	}
@@ -989,7 +1075,7 @@ namespace assert_impl_ {
 			assert_fail(decomposer, expr_str, pretty_func, info.c_str(), fatal, location);
 		} else {
 			#ifdef ASSERT_DEMO
-			assert(expression_decomposer{} << false, "false", __PRETTY_FUNCTION__, "assert should have failed");
+			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
 	}
@@ -1000,7 +1086,7 @@ namespace assert_impl_ {
 			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info.c_str(), fatal, location);
 		} else {
 			#ifdef ASSERT_DEMO
-			assert(expression_decomposer{} << false, "false", __PRETTY_FUNCTION__, "assert should have failed");
+			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
 	}
@@ -1049,16 +1135,17 @@ using assert_impl_::ASSERT;
  #endif
 #else
  // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method name, not signature
- // TODO: ugly manual nothings
- #define      assert(expr, ...) assert_impl_::assert(assert_impl_::expression_decomposer{} << expr, #expr, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_eq(a, b, ...) assert_impl_::assert_binary<assert_impl_::equal_to         >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define  assert_neq(a, b, ...) assert_impl_::assert_binary<assert_impl_::not_equal_to     >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_lt(a, b, ...) assert_impl_::assert_binary<assert_impl_::less             >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_gt(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater          >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define assert_lteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::less_equal       >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define assert_gteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater_equal    >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define  assert_and(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_and      >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_or(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_or       >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ // assert_impl_::expression_decomposer(assert_impl_::expression_decomposer{}) done for ternary support
+ #define      assert(expr, ...) assert_impl_::assert(assert_impl_::expression_decomposer(assert_impl_::expression_decomposer{} << expr), \
+                                                                                                #expr, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_eq(a, b, ...) assert_impl_::assert_binary<assert_impl_::equal_to     >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define  assert_neq(a, b, ...) assert_impl_::assert_binary<assert_impl_::not_equal_to >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_lt(a, b, ...) assert_impl_::assert_binary<assert_impl_::less         >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_gt(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater      >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define assert_lteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::less_equal   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define assert_gteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater_equal>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define  assert_and(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_and  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_or(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_or   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 #endif
 
 #endif

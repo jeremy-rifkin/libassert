@@ -1,6 +1,16 @@
-# Asserts
+# Asserts <!-- omit in toc -->
 
 <p align="center">The most over-engineered assertion library.</p>
+
+**BLUF:** Automatic expression decomposition, diagnostics on binary expressions, syntax
+highlighting, info messages!
+
+```cpp
+assert(map.count(1) == 2);
+```
+![](screenshots/b.png)
+
+**The Problem:**
 
 Asserts are sanity checks for programs: Validating the programmer's assumptions and helping identify
 problems at their sources. Assertions should provide as much information and context to the
@@ -9,70 +19,86 @@ after hitting an assertion failure. E.g. after an assert such as `assert(n <= 12
 know anything about the value of `n`.
 
 `assert_eq`, `assert_lteq`, ... and other related variants are common extensions to the standard
-library's assert functionality, with mixed success.
+library's assert functionality, with mixed success. Ideally the programmer should be able to just
+write `assert(count > 0);` and the language / library will provide diagnostic information for them.
 
-Fail messages are very valuable. They can explain the purpose of an assertion and what it means if
-the assertion is failing. Often this is free, we would be documenting the purpose of an assert in a
-comment anyway. We aren't able to provide an associated information message with asserts with
-out-of-the-box C asserts either (`assert(("this should be unreachable", false));` is not an option
-because of `-Wunused-value`).
+Fail messages are valuable: They allow the programmer to explain the purpose of an assertion and
+what it means if the assertion is failing. Adding these messages is often zero-cost, we would be
+documenting the purpose of an assert in a comment anyway. While an optional message is allowed in
+`static_assert`, we aren't able to provide an associated information message with asserts with
+out-of-the-box assert.h/cassert asserts (`assert(("this should be unreachable", false));` is not an
+option because of `-Wunused-value`).
 
-Throughout languages a common theme exists: assertions are very lightweight (even in the cold fail
-paths). Why? Their purpose is to provide diagnostic info, lightweight does not matter. **Thesis:**
-Let's see how much helpful information and functionality we can add to assertions while still
-maintaining ease of use for the developer.
+Throughout languages a common theme exists: Assertions are very minimal (even in the cold fail
+paths). Why? Their purpose is to provide diagnostic info, being lightweight does not matter.
+**Thesis:** Let's see how much helpful information and functionality we can add to assertions while
+still maintaining ease of use for the developer.
+
+#### Table of Contents: <!-- omit in toc -->
+- [Functionality This Library Provides](#functionality-this-library-provides)
+- [Quick Library Documentation](#quick-library-documentation)
+- [Installation](#installation)
+- [Comparison With Other Languages](#comparison-with-other-languages)
 
 ### Functionality This Library Provides
 
 - Optional info messages
 - Non-fatal assertion option
-- `assert_eq` and variants for `!=`, `<`, `>`, `<=`, `>=`, `&&`, and `||`
-- Expression strings and values are displayed
-  - Intelligent display of values (e.g. doesn't display `1 => 1` or other such redundant
-    expression-value pairs)
-- Smart parenthesization of re-constructed comparisons
-- Robust value printing (attempts to display a a wide variety of types most effectively and supports user-defined types)
+- `assert_eq` and variants for `!=`, `<`, `>`, `<=`, `>=`, `&&`, and `||`.
+- **Automatic expression decomposition:** `assert(foo() == bar());` is automatically understood as
+  `assert_eq(foo(), bar());`. `assert_eq` and variants may be deprecated once support for automatic
+  decomposition improves.
+- Diagnostic info: Show the values of parts of the assert expression.
+  - Comprehensive stringification (attempts to display a wide variety of types effectively and
+  	supports user-defined types).
+- Smart diagnostic info
+  - Don't display `1 => 1` or other such redundant expression-value pairs.
+  - Try to provide format consistency: If a comparison involves an expression and a hex
+  	literal, the values of the left and right side are printed in both decimal and hex.
+- Smart parenthesization: Re-constructed expressions from `assert_...` have parentheses
+  automatically inserted if it would help readability or be otherwise important for precedence.
 - Pretty printing
-- Rough syntax highlighting because fuck it why not
-- Try to provide format consistency (E.g.: if a comparison involves an expression and a hex literal,
-  the values of the left and right side are printed )
+- Rough syntax highlighting because why not!
 
 Demo: (note that the call to `abort();` on assertion failure is commented out for this demo)
 ```cpp
-assert(false, "this should be unreachable");
+assert(false, "code should never do <xyz>"); // optional diagnostic message
 assert(false);
 ```
 ![](screenshots/a.png)
 ```cpp
-// In this example, note that important values are displayed but there's no redundant "2 => 2"
-assert_eq(map.count(1), 2);
-assert_gteq(map.count(2 * bar()), 2, "some data not received");
+// Note below that important values are displayed but there's no redundant "2 => 2"
+assert(map.count(1) == 2);
+assert(map.count(1) >= 2 * bar(), "some data not received");
 ```
 ![](screenshots/b.png)
 ![](screenshots/c.png)
 ```cpp
-// In this example, note that precision issue is displayed but there's no redundant "2 => 2"
-assert_eq(.1, 2);
-assert_eq(.1f, .1);
+// Floating point stringificaiton done carefully to provide the most helpful diagnostic info
+assert(.1f == .1);
 ```
-![](screenshots/d.png)
 ![](screenshots/e.png)
 ```cpp
-// In this example, note that parentheses are automatically added in on the right-side by the assertion processor to make the output correct
+// Parentheses are automatically added in the by the assertion processor to make the output correct and readable
 assert_eq(0, 2 == bar());
 ```
 ![](screenshots/f.png)
 ```cpp
-// Note again no redundant literals and also string escaping
+// Same care is taken with strings and characters: No redundant diagnostics and strings are escaped.
 std::string s = "test";
-assert_eq(s, "test2");
-assert_eq(s[0], 'c');
-assert_eq(BLUE "test" RESET, "test2");
+assert(s == "test2");
+assert(s[0] == 'c');
+assert(BLUE "test" RESET == "test2");
+// Note with this that the processor takes care not to segfault when attempting to stringify
+char* buffer = nullptr;
+char thing[] = "foo";
+assert_eq(buffer, thing);
 ```
 ![](screenshots/g.png)
+![](screenshots/k.png)
 ```cpp
-// Numbers are always printed in decimal but this expression involves other representations too: hex and binary. So the hex and binary forms are also displayed.
-assert_eq(0b1000000, 0x3);
+// Numbers are always printed in decimal but this expression also involves hex and binary. As such, the processor also displays the hex and binary forms.
+assert(0b1000000 == 0x3);
 ```
 ![](screenshots/h.png)
 ```cpp
@@ -86,11 +112,12 @@ template<class T> struct S {
         // to-string on s.x
         std::ostringstream oss; oss<<s.x;
         // print contents, assert_impl_::indent is just a string utility to indent all lines in a string
+		// the assert logic does its own indentation, too
         o<<assert_impl_::indent(std::move(oss).str(), 4);
         return o;
     }
 };
-assert_eq(S<S<int>>(2), S<S<int>>(4));
+assert(S<S<int>>(2) == S<S<int>>(4));
 ```
 ![](screenshots/i.png)
 ```cpp
@@ -99,7 +126,7 @@ template<> struct S<void> {
 };
 // For a user-defined type with no stringification the assertion processor will fallback to type info
 S<void> e, f;
-assert_eq(e, f);
+assert(e == f);
 ```
 ![](screenshots/j.png)
 
@@ -123,7 +150,7 @@ Possible pitfalls of this library:
   `char*`, the library will try to print the string value. Fine in most cases, not fine if the
   result is a non-null pointer to a non-c string (e.g. a binary buffer).
 
-### Library Documentation
+### Quick Library Documentation
 
 Assertions are of the form:
 
@@ -140,10 +167,25 @@ Build options:
 - `-DNCOLOR` Turns off colors
 - `-DNDEBUG` Disables assertions
 - `-DASSERT_DEMO` Internal use
-- `-DASSUME_ASSERTS` Makes assertions serve as optimizer hints in `NDEBUG` mode. Note: This is not
+- `-DASSUME_ASSERTS` Makes assertions serve as optimizer hints in `NDEBUG` mode. *Note:* This is not
   always a win. Sometimes assertion expressions have side effects that are undesirable at runtime in
   an `NDEBUG` build like exceptions which cannot be optimized away (e.g. `std::unordered_map::at`
   where the lookup cannot be optimized away and ends up not being a helpful compiler hint).
+
+*Note:* There is no short-circuiting for `assert_and` and `assert_or` or `&&` and `||` in expression
+decomposition.
+
+*Note* For user-defined types, only move semantics are required by the assertion processor.
+
+*Note:* With automatic decomposition the assertion processor is only able to obtain a the string
+form of the full expression rather than the left and right parts independently. Because templates
+make C++ expression grammar ambiguous without type information there are limits to how effectively
+the processor can figure out the left and right sides. The current system is very rough, a better
+system will be implemented later.
+
+### Installation
+
+Dead-simple: This is a single-header file so just copy the header file.
 
 ### Comparison With Other Languages
 
@@ -179,16 +221,16 @@ Assertions should:
 | Backtrace       | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | TODO |
 | Info Message    | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
 | Values Involved | ❌   | ✔️   | ❌ | ❌  | ❌    | ✔️         | ✔️ |
+| Automatic expression decomposition | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
 
 Extras:
 
 |                 | C/C++ | Rust | C# | Java | Python | JavaScript | This Library |
 |:--:             |:--:  |:--:  |:--: |:--:  |:--:    |:--:        |:--:|
-| Automatically Attach GDB At Failure Point | ❌   | ❌   | ❌ | ❌  | ❌    | ❌         | Will investigate further |
-| Syntax Highlighting   | ❌   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
-| Non-Fatal Assertions  | ❌   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
-| Format Consistency    | ❌   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
-| Automatic expression decomposition | ❌   | ❌   | ❌ | ❌  | ❌    | ❌         | TODO |
+| Automatically Attach GDB At Failure Point | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Will investigate further |
+| Syntax Highlighting   | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
+| Non-Fatal Assertions  | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
+| Format Consistency    | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
 
 Automatic expression decomposition (automatically understanding a binary comparison like
 `assert(a == b);` instead of having to use a macro like `assert_eq`) is something I'd expect to

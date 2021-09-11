@@ -26,36 +26,65 @@ template<> struct S<void> {
 	bool operator==(const S&) const { return false; }
 };
 
+struct P {
+	std::string str;
+	P() = default;
+	P(const P&) = delete;
+	P(P&&) = default;
+	P& operator=(const P&) = delete;
+	P& operator=(P&&) = delete;
+	bool operator==(const P& p) const { return str == p.str; }
+	friend std::ostream& operator<<(std::ostream& o, const P& p) {
+		o<<p.str;
+		return o;
+	}
+};
+
 void foo();
 int bar() {
 	return 2;
 }
 
 int main() {
-    assert(false, "this should be unreachable");
+	// demo section
+	assert(false, "code should never do <xyz>");
 	assert(false);
     std::map<int, int> map {{1,1}};
-    assert_eq(map.count(1), 2);
-    assert_gteq(map.count(1 == 1), 2ULL);
-    assert_eq(map.count(1), 2ULL, "some data not received");
-    assert_gteq(map.count(2 * bar()), 2, "some data not received");
-    assert_eq(1, 1.5);
-	assert_eq(.1, 2);
-	assert_eq(.1f, .1);
+    assert(map.count(1) == 2);
+	assert(map.count(1) >= 2 * bar(), "some data not received");
+	assert(.1f == .1);
 	assert_eq(0, 2 == bar());
+	assert(0 == (2 == bar()));
     std::string s = "test";
-    assert_eq(s, "test2");
-    assert_eq(s[0], 'c');
-    assert_eq(BLUE "test" RESET, "test2");
-    assert_eq(0xf, 16);
-    assert_eq(true, false);
-    assert_eq(true ? true : false, false);
-	assert_eq(0b100, 0x3);
-	assert_eq(0b1000000, 0x3);
-	//assert(nullptr);
+    assert(s == "test2");
+    assert(s[0] == 'c');
+    assert(BLUE "test" RESET == "test2");
+	assert(0b1000000 == 0x3);
+	assert(S<S<int>>(2) == S<S<int>>(4));
+    {
+		S<void> e, f;
+		assert(e == f);
+	}
+	char* buffer = nullptr;
+	char thing[] = "foo";
+	assert_eq(buffer, thing);
+
+	
+
+	// tests useful during development
+    assert_gteq(map.count(1 == 1), 2);
+    assert_eq(map.count(1), 2, "some data not received");
+    assert_gteq(map.count(2 * bar()), 2, "some data not received");
+    assert(1 == 1.5);
+	assert(.1 == 2);
+	assert(0xf == 16);
+    assert(true == false);
+    assert(true ? false : true == false);
+	assert(0b100 == 0x3);
+	assert(0b1000000 == 0x3);
 	void* foo = (void*)0xdeadbeef;
 	assert_eq(foo, (int*)nullptr);
-	assert_eq(S<S<int>>(2), S<S<int>>(4));
+	assert(S<S<int>>(2) == S<S<int>>(4));
 	S<S<int>> a(1), b(2);
 	assert_eq(a, b);
 	const S<S<int>> c(4), d(8);
@@ -70,13 +99,50 @@ int main() {
     assert_and(&a, nullptr && nullptr);
     assert_and((bool)nullptr && (bool)nullptr, (bool)nullptr);
     assert_and((uintptr_t)&a, (bool)nullptr && (bool)nullptr); // FIXME: parentheses
-	char* buffer = nullptr;
-	char thing[] = "foo";
-	assert_eq(buffer, thing);
 	::foo();
 	assert_eq(0x12p2, 12);
 	assert_eq(0x12p2, 0b10);
-	assert(true); // this should cause a primitive_assert fail
-}
 
-// TODO: syntax highlighting
+	assert(0 == (2  ==  bar()));
+	//assert(0 == 2 == bar());
+	float ff = .1f;
+	assert(ff == .1);
+	const float&& gg = .1f;
+	assert(gg == .1);
+	assert(1 < 1 < 0);
+	assert(0 + 0 + 0);
+	assert(false == false == false);
+	assert(1 << 1 == 200);
+	assert(1 << 1 << 31);
+	assert(true ? false : true, "pffft");
+	{
+		std::string x = "aa";
+		std::string y = "bb";
+		assert(x == y);
+	}
+	{
+		P x {"aa"};
+		P y {"bb"};
+		assert(x == y);
+	}
+	{
+		P x {"aa"};
+		assert(x == P {"bb"});
+	}
+	{
+		const P x {"aa"};
+		assert(x == P {"bb"});
+	}
+	assert(false);
+	int v = 1, p = 2;
+	assert_eq(v, p);
+	int x = 2;
+	assert(x -= 2);
+	x = 2;
+	assert(x -= x -= 1);
+	x = 2;
+	assert(x -= x -= x -= 1);
+	//assert(assert_impl_::always_false<void> == true);
+
+	assert(true); // this should lead to another assert(false) because we're in demo mode
+}
