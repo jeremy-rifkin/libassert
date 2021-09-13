@@ -49,19 +49,19 @@ int main() {
 	// demo section
 	assert(false, "code should never do <xyz>");
 	assert(false);
-    std::map<int, int> map {{1,1}};
-    assert(map.count(1) == 2);
+	std::map<int, int> map {{1,1}};
+	assert(map.count(1) == 2);
 	assert(map.count(1) >= 2 * bar(), "some data not received");
 	assert(.1f == .1);
 	assert_eq(0, 2 == bar());
 	assert(0 == (2 == bar()));
-    std::string s = "test";
-    assert(s == "test2");
-    assert(s[0] == 'c');
-    assert(BLUE "test" RESET == "test2");
+	std::string s = "test";
+	assert(s == "test2");
+	assert(s[0] == 'c');
+	assert(BLUE "test" RESET == "test2");
 	assert(0b1000000 == 0x3);
 	assert(S<S<int>>(2) == S<S<int>>(4));
-    {
+	{
 		S<void> e, f;
 		assert(e == f);
 	}
@@ -69,17 +69,17 @@ int main() {
 	char thing[] = "foo";
 	assert_eq(buffer, thing);
 
-	
+
 
 	// tests useful during development
-    assert_gteq(map.count(1 == 1), 2);
-    assert_eq(map.count(1), 2, "some data not received");
-    assert_gteq(map.count(2 * bar()), 2, "some data not received");
-    assert(1 == 1.5);
+	assert_gteq(map.count(1 == 1), 2);
+	assert_eq(map.count(1), 2, "some data not received");
+	assert_gteq(map.count(2 * bar()), 2, "some data not received");
+	assert(1 == 1.5);
 	assert(.1 == 2);
 	assert(0xf == 16);
-    assert(true == false);
-    assert(true ? false : true == false);
+	assert(true == false);
+	assert(true ? false : true == false);
 	assert(0b100 == 0x3);
 	assert(0b1000000 == 0x3);
 	void* foo = (void*)0xdeadbeef;
@@ -91,14 +91,14 @@ int main() {
 	assert_eq(c, d);
 	S<void> e, f;
 	assert_eq(e, f);
-    assert_eq(1, 2);
-    assert_eq(&a, nullptr);
-    assert_eq((uintptr_t)&a, 0ULL & 0ULL);
-    assert_and(&a, nullptr);
-    assert_and(nullptr && nullptr, nullptr);
-    assert_and(&a, nullptr && nullptr);
-    assert_and((bool)nullptr && (bool)nullptr, (bool)nullptr);
-    assert_and((uintptr_t)&a, (bool)nullptr && (bool)nullptr); // FIXME: parentheses
+	assert_eq(1, 2);
+	assert_eq(&a, nullptr);
+	assert_eq((uintptr_t)&a, 0ULL & 0ULL);
+	assert_and(&a, nullptr);
+	assert_and(nullptr && nullptr, nullptr);
+	assert_and(&a, nullptr && nullptr);
+	assert_and((bool)nullptr && (bool)nullptr, (bool)nullptr);
+	assert_and((uintptr_t)&a, (bool)nullptr && (bool)nullptr); // FIXME: parentheses
 	::foo();
 	assert_eq(0x12p2, 12);
 	assert_eq(0x12p2, 0b10);

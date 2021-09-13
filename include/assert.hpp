@@ -1,13 +1,18 @@
 #ifndef ASSERT_HPP
 #define ASSERT_HPP
 
+// Jeremy Rifkin 2021
+// https://github.com/jeremy-rifkin/asserts
+
 #include <iomanip>
 #include <limits>
+#include <optional>
 #include <regex>
 #include <set>
 #include <sstream>
 #include <stdlib.h>
 #include <string_view>
+#include <string.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -99,7 +104,7 @@ namespace assert_impl_ {
 	}
 
 	constexpr const char * const ws = " \t\n\r\f\v";
-	[[gnu::cold]]
+	[[gnu::cold]] [[maybe_unused]]
 	static std::string trim(const std::string& s) {
 		size_t l = s.find_first_not_of(ws);
 		size_t r = s.find_last_not_of(ws) + 1;
@@ -226,7 +231,6 @@ namespace assert_impl_ {
 				return expression_decomposer<decltype(get_value()), O, shift_left>(std::forward<A>(get_value()), std::forward<O>(operand));
 			}
 		}
-		// TODO: fuck use make_expr...
 		#define gen_op_boilerplate(functor, op) template<typename O> auto operator op(O&& operand) { \
 			static_assert(!is_nothing<A>); \
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
@@ -599,7 +603,9 @@ namespace assert_impl_ {
 			rules.resize(std::size(rules_raw));
 			for(size_t i = 0; i < std::size(rules_raw); i++) {
 				std::string str = stringf("^(%s)[^]*", rules_raw[i].second.c_str()); // [^] instead of . because . does not match newlines
-				//fprintf(stderr, "%s : %s\n", rules_raw[i].first.c_str(), str.c_str());
+				#ifdef _0_DEBUG_ASSERT_LEXER_RULES
+				fprintf(stderr, "%s : %s\n", rules_raw[i].first.c_str(), str.c_str());
+				#endif
 				rules[i] = { rules_raw[i].first, std::regex(str) };
 			}
 			// setup literal format rules
@@ -643,8 +649,10 @@ namespace assert_impl_ {
 				bool at_least_one_matched = false;
 				for(const auto& [ type, re ] : rules) {
 					if(std::regex_match(std::begin(expression) + i, std::end(expression), match, re)) {
-						//fprintf(stderr, "%s\n", match[1].str().c_str());
-						//fflush(stdout);
+						#ifdef _0_DEBUG_ASSERT_TOKENIZATION
+						fprintf(stderr, "%s\n", match[1].str().c_str());
+						fflush(stdout);
+						#endif
 						tokens.push_back({ type, match[1].str() });
 						i += match[1].length();
 						at_least_one_matched = true;
@@ -710,8 +718,15 @@ namespace assert_impl_ {
 
 		[[gnu::cold]]
 		bool _has_precedence_below_or_equal(const std::string& expression, const std::string& op) {
-			// TODO: there is redundant tokenization here
-			// TODO: what about templates?
+			// Scans over top-level of expression and looks for any operators with precedence <=
+			// op's precedence.
+			// Anything between parentheses can be excluded but no attempt is made to figure out
+			// template parameter lists.
+			// We can figure out unary / binary easy enough TODO: we don't actually need to worry about this though
+			// TODO: There is redundant tokenization here
+			// NOTE: Templates make C++ expressions ambiguous without type info. This function looks
+			// for any occurrance of op that cannot be ruled out. False positives are ok, most stuff
+			// can be ruled out though.
 			const auto tokens = _tokenize(expression);
 			// precedence table is binary, unary operators have highest precedence
 			// we can figure out unary / binary easy enough
@@ -720,9 +735,9 @@ namespace assert_impl_ {
 				expecting_term
 			} state = expecting_term;
 			for(std::size_t i = 0; i < tokens.size(); i++) {
-				const analysis::token_t& token = tokens[i];
+				const token_t& token = tokens[i];
 				switch(token.token_type) {
-					case analysis::token_e::punctuation:
+					case token_e::punctuation:
 						if(operators.count(token.str)) {
 							if(state == expecting_term) {
 								// must be unary, continue
@@ -756,62 +771,94 @@ namespace assert_impl_ {
 							primitive_assert(false, "unhandled punctuation?");
 						}
 						break;
-					case analysis::token_e::keyword:
-					case analysis::token_e::named_literal:
-					case analysis::token_e::number:
-					case analysis::token_e::string:
-					case analysis::token_e::identifier:
+					case token_e::keyword:
+					case token_e::named_literal:
+					case token_e::number:
+					case token_e::string:
+					case token_e::identifier:
 						state = expecting_operator;
-					case analysis::token_e::whitespace:
+					case token_e::whitespace:
 						break;
 				}
 			}
 			return false;
 		}
 
-		[[gnu::cold]]
-		std::pair<std::string, std::string> _decompose_expression(const std::string& expression, const std::string& target_op) {
-			// Attempt to parse the raw expression string available during automatic expression
-			// decomposition into left and right parts for diagnostic
-			// NOTE: There's a lot of redundancy with the _has_precedence_below_or_equal logic
-			// NOTE: This logic currently doesn't support templates. Neither does
-			//       _has_precedence_below_or_equal. Need to combing these two into something better.
-			// NOTE: Yes, very inefficient
-			// Once some template stuff is supported, will return {"left", "right"} if unable to
-			// decompose unambiguously.
-			// Some cases to consider
-			// foo()
-			// false
-			// 1 == 1 == 1
-			// a == 2
-			// something<T>>2
-			// 1 < 1 > 3
-			// a < 1 == 2 > ( 1 + 3 )
-			// a < b< 1 == 2 >> ( 1 + 3 )
-			// T<A> + 4
-			// T<A>()
-			// T<+A>
-			// T<A+>
-			const auto tokens = _tokenize(expression);
-			std::vector<token_t> left;
-			std::optional<token_t> op;
-			std::vector<token_t> right;
-			int current_lowest_precedence = 0;
+		token_t find_last_non_ws(const std::vector<token_t>& tokens, size_t i) {
+			// returns empty token_e::whitespace on failure
+			while(i--) {
+				if(tokens[i].token_type != token_e::whitespace) {
+					return tokens[i];
+				}
+			}
+			return {token_e::whitespace, ""};
+		}
+
+		// In this function we are essentially exploring all possible parse trees for an expression
+		// an making an attempt to disambiguate as much as we can. It's potentially O(2^t) (?) with
+		// t being the number of possible templates in the expression, but t is anticipated to
+		// always be small. TODO: Safeguard? TODO: Count possible matching angle brackets?
+		// TODO: purify?
+		// NOTE: Intentionally taking almosteverything by copy
+		// TODO: Make use of string views and do stuff like just making vectors of pointers rather
+		// than vectors of strings.
+		// TODO: Redundancy with _has_precedence_below_or_equal logic?
+		[[gnu::cold]] void pseudoparse(
+			std::vector<token_t> tokens, // TODO: can eliminate copying the entire token array every time?
+			const std::string& target_op,
+			size_t i,
+			int current_lowest_precedence,
+			int template_depth,
+			std::vector<token_t> left,
+			std::optional<token_t> op,
+			std::vector<token_t> right,
+			std::vector<std::pair<std::vector<token_t>, std::vector<token_t>>>& output
+		) {
+			#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
+			printf("*");
+			#endif
 			// precedence table is binary, unary operators have highest precedence
 			// we can figure out unary / binary easy enough
 			enum {
 				expecting_operator,
 				expecting_term
 			} state = expecting_term;
-			for(std::size_t i = 0; i < tokens.size(); i++) {
-				const analysis::token_t& token = tokens[i];
+			for(; i < tokens.size(); i++) {
+				token_t& token = tokens[i];
 				switch(token.token_type) {
-					case analysis::token_e::punctuation:
+					case token_e::punctuation:
 						if(operators.count(token.str)) {
 							if(state == expecting_term) {
 								// must be unary, continue
 							} else {
+								// template can only open with a < token, no need to check << or <<=
+								// also must be preceeded by an identifier
+								if(token.str == "<" && find_last_non_ws(tokens, i).token_type == token_e::identifier) {
+									// branch 1: this is a template opening
+									right.push_back(tokens[i]);
+									pseudoparse(tokens, target_op, i + 1, current_lowest_precedence, template_depth + 1, left, op, right, output);
+									right.pop_back();
+									// branch 2: this is a binary operator // fallthrough
+								}
+								if(template_depth > 0 && (token.str == ">" || token.str == ">>")) {
+									// No branch here: This must be a close. C++ standard
+									// Disambiguates by treating > always as a template parameter
+									// list close and >> is broken down.
+									// >= and >>= are not broken down.
+									// We don't need to worry about re-tokenizing beyond just the
+									// simple breakdown. I.e. we don't need to worry about x<2>>>1
+									// which is tokenized as x < 2 >> > 1 but perhaps being intended
+									// as x < 2 > >> 1. Standard has saved us from this complexity.
+									if(token.str == ">>") {
+										token.str = ">";
+										tokens.insert(tokens.begin() + i, token_t {token_e::punctuation, ">"}); // safe for us to insert
+									}
+									template_depth--;
+									state = expecting_operator;
+									goto next_iteration;
+								}
 								// binary
+								if(template_depth == 0) // ignore precedence in template parameter list
 								if(precedence.count(token.str))
 								if(precedence.at(token.str) < current_lowest_precedence
 								|| (precedence.at(token.str) == current_lowest_precedence && precedence.at(token.str) != -9)) {
@@ -829,6 +876,7 @@ namespace assert_impl_ {
 							// account other types of braces.
 							const std::string& open = token.str;
 							const std::string& close = braces.at(token.str);
+							bool empty = true;
 							right.push_back(tokens[i]);
 							int count = 0;
 							while(++i < tokens.size()) {
@@ -837,33 +885,100 @@ namespace assert_impl_ {
 									if(count-- == 0) {
 										break;
 									}
+								} else if(tokens[i].token_type != token_e::whitespace) {
+									empty = false;
 								}
 								right.push_back(tokens[i]);
+							}
+							if(i == tokens.size() && count != -1) primitive_assert(false, "ill-formed expression input");
+							if(state == expecting_term && empty) { // () and {}
+								return; // this is a failed parse tree
 							}
 							state = expecting_operator;
 						} else {
 							primitive_assert(false, "unhandled punctuation?");
 						}
 						break;
-					case analysis::token_e::keyword:
-					case analysis::token_e::named_literal:
-					case analysis::token_e::number:
-					case analysis::token_e::string:
-					case analysis::token_e::identifier:
+					case token_e::keyword:
+					case token_e::named_literal:
+					case token_e::number:
+					case token_e::string:
+					case token_e::identifier:
 						state = expecting_operator;
-					case analysis::token_e::whitespace:
+					case token_e::whitespace:
 						break;
 				}
-				right.push_back(tokens[i]); // tokens[i] over token in case paren logic updated index
+				next_iteration:
+				right.push_back(tokens[i]); // tokens[i] over token, paren logic updates index
 			}
-			primitive_assert(op.value().str == target_op);
-			// TODO: handle the case where left is empty, e.g. single constant and no operator we care about
-			right.erase(right.begin()); // right.begin() will be topmost operator in the expression tree
-			std::vector<std::string> left_strings;
-			std::vector<std::string> right_strings;
-			for(auto t : left) left_strings.push_back(t.str);
-			for(auto t : right) right_strings.push_back(t.str);
-			return {trim(join(left_strings, "")), trim(join(right_strings, ""))};
+			if(op.has_value() && op.value().str == target_op && template_depth == 0 && state == expecting_operator) {
+				right.erase(right.begin()); // right.begin() will be topmost operator in the expression tree
+				output.push_back({left, right});
+			} else {
+				// failed parse tree, ignore
+			}
+		}
+
+		[[gnu::cold]]
+		std::pair<std::string, std::string> _decompose_expression(const std::string& expression, const std::string& target_op) {
+			// Attempt to parse basic info for the raw expression string available during automatic
+			// expression. Just enough to decomposition into left and right parts for diagnostic.
+			// Template parameters make C++ grammar ambiguous without type information. That being
+			// said, many expressions can be disambiguated.
+			// This code will make guesses about the grammar, essentially doing a traversal of all
+			// possibly parse trees and looking for ones that could work. This is O(2^t) with the
+			// where t is the number of potential templates. Usually t is small but this should
+			// perhaps be limited.
+			// Will return {"left", "right"} if unable to decompose unambiguously.
+			// Some cases to consider
+			//   tgt  expr
+			//   ==   a < 1 == 2 > ( 1 + 3 )
+			//   ==   a < 1 == 2 > - 3 == ( 1 + 3 )
+			//   ==   ( 1 + 3 ) == a < 1 == 2 > - 3 // <- ambiguous
+			//   ==   ( 1 + 3 ) == a < 1 == 2 > ()
+			//   <    a<x<x<x<x<x<x<x<x<x<1>>>>>>>>>
+			//   ==   1 == something<a == b>>2 // <- ambiguous
+			//   <    1 == something<a == b>>2 // <- should be an error
+			//   <    1 < something<a < b>>2 // <- ambiguous
+			// If there is only one candidate from the parse trees considered, expression has been
+			// disambiguated. If there are no candidates that's an error. If there is more than one
+			// candidate the expression may be ambiguous, but, not necessarily. For example,
+			// a < 1 == 2 > - 3 == ( 1 + 3 ) is split the same regardless of whether a < 1 == 2 > is
+			// treated as a template or not:
+			//   left:  a < 1 == 2 > - 3
+			//   right: ( 1 + 3 )
+			//   ---
+			//   left:  a < 1 == 2 > - 3
+			//   right: ( 1 + 3 )
+			//   ---
+			// Because we're just splitting an expression in half, instead of storing tokens for
+			// both sides we can just store an index of the split. TODO
+			// NOTE: We don't need to worry about expressions where there is only a single term.
+			// This will only be called on decomposable expressions.
+			const auto tokens = _tokenize(expression);
+			std::vector<std::pair<std::vector<token_t>, std::vector<token_t>>> candidates;
+			pseudoparse(std::move(tokens), target_op, 0, 0, 0, {}, {}, {}, candidates);
+			#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
+			printf("\n%d\n", candidates.size());
+			for(const auto& [l, r] : candidates) {
+				std::vector<std::string> left_strings;
+				std::vector<std::string> right_strings;
+				for(auto t : l) left_strings.push_back(t.str);
+				for(auto t : r) right_strings.push_back(t.str);
+				printf("left:  %s\n", highlight(trim(join(left_strings, ""))).c_str());
+				printf("right: %s\n", highlight(trim(join(right_strings, ""))).c_str());
+				printf("---\n");
+			}
+			#endif
+			if(candidates.size() == 1) {
+				std::vector<std::string> left_strings;
+				std::vector<std::string> right_strings;
+				for(auto t : candidates[0].first) left_strings.push_back(t.str);
+				for(auto t : candidates[0].second) right_strings.push_back(t.str);
+				return {trim(join(left_strings, "")), trim(join(right_strings, ""))};
+			} else {
+				return {"left", "right"};
+			}
 		}
 
 	public:
@@ -1013,7 +1128,7 @@ namespace assert_impl_ {
 			print_binary_diagnostic<C>(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b), a_str.c_str(), b_str.c_str());
 		}
 		if(fatal == ASSERT::FATAL) {
-			#ifdef ASSERT_DEMO
+			#ifdef _0_ASSERT_DEMO
 			printf("\n");
 			#else
 			fflush(stdout);
@@ -1033,7 +1148,7 @@ namespace assert_impl_ {
 		fprintf(stderr, "    %s\n", analysis::highlight(gen_assert_binary(a_str, C::op_string, b_str)).c_str());
 		print_binary_diagnostic<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str);
 		if(fatal == ASSERT::FATAL) {
-			#ifdef ASSERT_DEMO
+			#ifdef _0_ASSERT_DEMO
 			printf("\n");
 			#else
 			fflush(stdout);
@@ -1050,7 +1165,7 @@ namespace assert_impl_ {
 		if(!decomposer.get_value()) {
 			assert_fail(decomposer, expr_str, pretty_func, info, fatal, location);
 		} else {
-			#ifdef ASSERT_DEMO
+			#ifdef _0_ASSERT_DEMO
 			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
@@ -1061,7 +1176,7 @@ namespace assert_impl_ {
 		if(!(bool)C()(a, b)) {
 			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info, fatal, location);
 		} else {
-			#ifdef ASSERT_DEMO
+			#ifdef _0_ASSERT_DEMO
 			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
@@ -1074,7 +1189,7 @@ namespace assert_impl_ {
 		if(!decomposer.get_value()) {
 			assert_fail(decomposer, expr_str, pretty_func, info.c_str(), fatal, location);
 		} else {
-			#ifdef ASSERT_DEMO
+			#ifdef _0_ASSERT_DEMO
 			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}
@@ -1085,7 +1200,7 @@ namespace assert_impl_ {
 		if(!(bool)C()(a, b)) {
 			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info.c_str(), fatal, location);
 		} else {
-			#ifdef ASSERT_DEMO
+			#ifdef _0_ASSERT_DEMO
 			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
 			#endif
 		}

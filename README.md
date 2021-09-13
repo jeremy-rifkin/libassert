@@ -19,15 +19,15 @@ after hitting an assertion failure. E.g. after an assert such as `assert(n <= 12
 know anything about the value of `n`.
 
 `assert_eq`, `assert_lteq`, ... and other related variants are common extensions to the standard
-library's assert functionality, with mixed success. Ideally the programmer should be able to just
-write `assert(count > 0);` and the language / library will provide diagnostic information for them.
+library's assert functionality but they don't put much effort into displaying diagnostics most
+effectively. Furthermore, ideally the programmer should be able to just write `assert(count > 0);`
+and the language / library will provide diagnostic information for them.
 
 Fail messages are valuable: They allow the programmer to explain the purpose of an assertion and
 what it means if the assertion is failing. Adding these messages is often zero-cost, we would be
 documenting the purpose of an assert in a comment anyway. While an optional message is allowed in
 `static_assert`, we aren't able to provide an associated information message with asserts with
-out-of-the-box assert.h/cassert asserts (`assert(("this should be unreachable", false));` is not an
-option because of `-Wunused-value`).
+out-of-the-box assert.h/cassert asserts.
 
 Throughout languages a common theme exists: Assertions are very minimal (even in the cold fail
 paths). Why? Their purpose is to provide diagnostic info, being lightweight does not matter.
@@ -48,16 +48,17 @@ still maintaining ease of use for the developer.
 - **Automatic expression decomposition:** `assert(foo() == bar());` is automatically understood as
   `assert_eq(foo(), bar());`. `assert_eq` and variants may be deprecated once support for automatic
   decomposition improves.
+  - Displaying good diagnostic info here requires some attempt to parse C++ expression grammar,
+    which is ambiguous without type info.
 - Diagnostic info: Show the values of parts of the assert expression.
   - Comprehensive stringification (attempts to display a wide variety of types effectively and
   	supports user-defined types).
 - Smart diagnostic info
-  - Don't display `1 => 1` or other such redundant expression-value pairs.
-  - Try to provide format consistency: If a comparison involves an expression and a hex
-  	literal, the values of the left and right side are printed in both decimal and hex.
+  - `1 => 1` and other such redundant expression-value diagnostics are not displayed.
+  - The library tries to provide format consistency: If a comparison involves an expression and a
+    hex literal, the values of the left and right side are printed in both decimal and hex.
 - Smart parenthesization: Re-constructed expressions from `assert_...` have parentheses
   automatically inserted if it would help readability or be otherwise important for precedence.
-- Pretty printing
 - Rough syntax highlighting because why not!
 
 Demo: (note that the call to `abort();` on assertion failure is commented out for this demo)
@@ -130,11 +131,19 @@ assert(e == f);
 ```
 ![](screenshots/j.png)
 
-**A note on performance:** A lot of logic is required to make some of these assertions happen. There
-is a lot of inefficient string manipulation and io operations. The impact of `assert`s at callsites
-is still minimal, the fail paths are marked `cold` and all heavy logic occurs in the fail paths.
-While a lot of work is required to process a failed assertion as long it doesn't take a noticeable
-amount of time it's fine. After all, assertion fails are *the coldest* path in a binary.
+**A note on performance:** I've kept the impact of `assert`s at callsites minimal. A lot of logic is
+required to process assertion failures once they happen. Because assertion fails are *the coldest*
+path in a binary, I'm not concerned with performance in the assertion processor as long as it's not
+noticeably slow.
+
+**A note on automatic expression decomposition:** In automatic decomposition the assertion processor
+is only able to obtain a the string form of the full expression rather than the left and right parts
+independently. To get the left and right sides of the expression, the library needs to do some basic
+parsing of the expression (just figuring out the very top-level of the expression tree). The
+problem: templates make C++ grammar ambiguous without type information. The assertion processor is
+able to disambiguate many expressions and will just return `{"left", "right"}` if it's unable to
+parse. Disambiguating expressions is currently done by essentially traversing all possible parse
+trees. There is probably a more optimal way to do this.
 
 What I'd like to add and improve on further:
 - Backtraces (a feature of every language's asserts *except* C/C++)
@@ -166,7 +175,6 @@ Build options:
 
 - `-DNCOLOR` Turns off colors
 - `-DNDEBUG` Disables assertions
-- `-DASSERT_DEMO` Internal use
 - `-DASSUME_ASSERTS` Makes assertions serve as optimizer hints in `NDEBUG` mode. *Note:* This is not
   always a win. Sometimes assertion expressions have side effects that are undesirable at runtime in
   an `NDEBUG` build like exceptions which cannot be optimized away (e.g. `std::unordered_map::at`
@@ -177,15 +185,10 @@ decomposition.
 
 *Note* For user-defined types, only move semantics are required by the assertion processor.
 
-*Note:* With automatic decomposition the assertion processor is only able to obtain a the string
-form of the full expression rather than the left and right parts independently. Because templates
-make C++ expression grammar ambiguous without type information there are limits to how effectively
-the processor can figure out the left and right sides. The current system is very rough, a better
-system will be implemented later.
-
 ### Installation
 
-Dead-simple: This is a single-header file so just copy the header file.
+Dead-simple: This is a single-header file so just copy the header file. The use of precompiled
+headers is advised.
 
 ### Comparison With Other Languages
 
