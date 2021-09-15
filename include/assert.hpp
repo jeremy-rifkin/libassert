@@ -4,6 +4,7 @@
 // Jeremy Rifkin 2021
 // https://github.com/jeremy-rifkin/asserts
 
+#include <bitset>
 #include <iomanip>
 #include <limits>
 #include <optional>
@@ -79,7 +80,7 @@ namespace assert_impl_ {
 
 	template<typename I>
 	[[gnu::cold]]
-	static std::string join(I iter, I end, const std::string& delim) {
+	static std::string join(I iter, I end, const std::string_view delim) {
 		std::string str;
 		if(std::distance(iter, end) > 0) {
 			str += *iter;
@@ -93,23 +94,67 @@ namespace assert_impl_ {
 
 	template<class C>
 	[[gnu::cold]]
-	static std::string join(C container, std::string delim) {
+	static std::string join(C container, const std::string_view delim) {
 		return join(container.begin(), container.end(), delim);
 	}
 
 	template<size_t N>
 	[[gnu::cold]]
-	static std::string join(const std::string (&container)[N], std::string delim) {
+	static std::string join(const std::string (&container)[N], const std::string_view delim) {
 		return join(std::begin(container), std::end(container), delim);
 	}
 
-	constexpr const char * const ws = " \t\n\r\f\v";
-	[[gnu::cold]] [[maybe_unused]]
-	static std::string trim(const std::string& s) {
+	[[gnu::cold]]
+	static std::string trim(const std::string_view s) {
+		constexpr const char * const ws = " \t\n\r\f\v";
 		size_t l = s.find_first_not_of(ws);
 		size_t r = s.find_last_not_of(ws) + 1;
-		return s.substr(l, r - l);
+		return std::string(s.substr(l, r - l));
 	}
+
+	[[gnu::cold]] [[maybe_unused]]
+	static std::string escape_string(const std::string_view str, char quote) {
+		std::string escaped;
+		escaped += quote;
+		for(unsigned char c : str) {
+			if(c == '\\') escaped += "\\\\";
+			else if(c == '\t') escaped += "\\t";
+			else if(c == '\r') escaped += "\\r";
+			else if(c == '\n') escaped += "\\n";
+			else if(c == quote) escaped += "\\" + std::to_string(quote);
+			else if(c >= 32 && c <= 126) escaped += c; // printable
+			else {
+				constexpr const char * const hexdig = "0123456789abcdef";
+				escaped += std::string("\\x") + hexdig[c >> 4] + hexdig[c & 0xF];
+			}
+		}
+		escaped += quote;
+		return escaped;
+	}
+
+	[[gnu::cold]]
+	static std::string indent(const std::string_view str, size_t depth, char c=' ', bool ignore_first=false) {
+		size_t i = 0, j;
+		std::string output;
+		while((j = str.find('\n', i)) != std::string::npos) {
+			if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
+			output.insert(output.end(), str.begin() + i, str.begin() + j + 1);
+			i = j + 1;
+		}
+		if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
+		output.insert(output.end(), str.begin() + i, str.end());
+		return output;
+	}
+
+	struct nothing {};
+
+	template<typename T> constexpr bool is_nothing = std::is_same_v<T, nothing>; // TODO cv/ref?
+
+	// hack to get around static_assert(false); being evaluated before any instantiation, even under
+	// an if-constexpr branch
+	template<typename T> constexpr bool always_false = false;
+
+	template<typename T> using strip = std::remove_cv_t<std::remove_reference_t<T>>;
 
 	// lots of boilerplate
 	// std:: implementations don't allow two separate types for lhs/rhs
@@ -185,14 +230,6 @@ namespace assert_impl_ {
 	// a < b + c    (<< a) < (b + c)
 	// a < b == c   ((<< a) < b) == c // edge case
 
-	struct nothing {};
-
-	template<typename T> constexpr bool is_nothing = std::is_same_v<T, nothing>; // TODO cv/ref?
-
-	// hack to get around static_assert(false); being evaluated before any instantiation, even under
-	// an if-constexpr branch
-	template<typename T> constexpr bool always_false = false;
-
 	template<typename A = nothing, typename B = nothing, typename C = nothing>
 	struct expression_decomposer {
 		A a;
@@ -202,7 +239,7 @@ namespace assert_impl_ {
 		explicit expression_decomposer(U&& a) : a(std::forward<U>(a)) {}
 		template<typename U, typename V>
 		explicit expression_decomposer(U&& a, V&& b) : a(std::forward<U>(a)), b(std::forward<V>(b)) {}
-		// NOTE: get_value or operator bool() should only be invoked once
+		// Note: get_value or operator bool() should only be invoked once
 		// TODO: forwarding?
 		auto get_value() {
 			if constexpr(is_nothing<C>) {
@@ -216,7 +253,7 @@ namespace assert_impl_ {
 		// Need overloads for operators with precedence <= bitshift
 		// TODO:
 		// - spaceship operator?
-		// NOTE: Could decompose much more than just comparison and boolean operators, but it would
+		// Note: Could decompose much more than just comparison and boolean operators, but it would
 		// take a lot of work and I don't think it's beneficial for this library.
 		template<typename O> auto operator<<(O&& operand) {
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
@@ -271,49 +308,6 @@ namespace assert_impl_ {
 	// for ternary support
 	template<typename U>
 	expression_decomposer(U&&) -> expression_decomposer<std::conditional_t<std::is_rvalue_reference_v<U>, std::remove_reference_t<U>, U>>;
-
-	// macro to make asserts non-fatal
-	enum class ASSERT {
-		NONFATAL, FATAL
-	};
-
-	template<char quote>
-	[[gnu::cold]]
-	std::string escape_string(const std::string& str) {
-		std::string escaped;
-		escaped += quote;
-		for(unsigned char c : str) {
-			switch(c) {
-				case quote: escaped += "\\" + std::to_string(quote); break;
-				case '\\':  escaped += "\\\\"; break;
-				case '\t':  escaped += "\\t";  break;
-				case '\r':  escaped += "\\r";  break;
-				case '\n':  escaped += "\\n";  break;
-				default:
-					if(c >= 32 && c <= 126) { // printable
-						escaped += c;
-					} else {
-						constexpr const char * const hexdig = "0123456789abcdef";
-						escaped += std::string("\\x") + hexdig[c >> 4] + hexdig[c & 0xF];
-					}
-			}
-		}
-		escaped += quote;
-		return escaped;
-	}
-
-	[[maybe_unused]]
-	static std::string indent(std::string str, size_t count, char indent=' ', bool ignore_first=false) {
-		size_t i = 0;
-		while((i = str.find('\n', i)) != std::string::npos) {
-			i++;
-			str.insert(i, count, indent);
-		}
-		if(!ignore_first) str.insert(0, count, indent);
-		return str;
-	}
-
-	template<typename T> using strip = std::remove_cv_t<std::remove_reference_t<T>>;
 
 	enum class literal_format {
 		dec,
@@ -379,9 +373,9 @@ namespace assert_impl_ {
 					return "nullptr";
 				}
 			}
-			return escape_string<'"'>(std::string(t)); // string view may need explicit construction?
+			return escape_string(t, '"'); // string view may need explicit construction?
 		} else if constexpr (std::is_same_v<strip<T>, char>) {
-			return escape_string<'\''>({t});
+			return escape_string({&t, 1}, '\'');
 		} else if constexpr (std::is_same_v<strip<T>, bool>) {
 			return t ? "true" : "false"; // streams/boolalpha not needed for this
 		} else if constexpr (std::is_integral_v<T>) {
@@ -442,11 +436,11 @@ namespace assert_impl_ {
 	}
 
 	[[gnu::cold]]
-	static std::string union_regexes(std::initializer_list<std::string> regexes) {
+	static std::string union_regexes(std::initializer_list<std::string_view> regexes) {
 		std::string composite;
-		for(const std::string& str : regexes) {
+		for(const std::string_view str : regexes) {
 			if(composite != "") composite += "|";
-			composite += stringf("(?:%s)", str.c_str());
+			composite += stringf("(?:%s)", str.data());
 		}
 		return composite;
 	}
@@ -532,7 +526,7 @@ namespace assert_impl_ {
 				",", "and", "or", "xor", "not", "bitand", "bitor", "compl", "and_eq", "or_eq",
 				"xor_eq", "not_eq" };
 			// Sort longest -> shortest (secondarily A->Z)
-			const auto cmp = [](const std::string& a, const std::string& b) {
+			const auto cmp = [](const std::string_view a, const std::string_view b) {
 				if(a.length() > b.length()) return true;
 				else if(a.length() == b.length()) return a < b;
 				else return false;
@@ -628,7 +622,7 @@ namespace assert_impl_ {
 				{ -6, { "|" } },
 				{ -7, { "&&" } },
 				{ -8, { "||" } },
-				{ -9, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } }, // NOTE: associativity logic currently relies on these having precedence -9
+				{ -9, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } }, // Note: associativity logic currently relies on these having precedence -9
 				{ -10, { "," } }
 			};
 			std::unordered_map<std::string, int> table;
@@ -641,7 +635,7 @@ namespace assert_impl_ {
 		}
 
 		[[gnu::cold]]
-		std::vector<token_t> _tokenize(const std::string& expression) {
+		std::vector<token_t> _tokenize(const std::string& expression, bool decompose_shr=false) {
 			std::vector<token_t> tokens;
 			size_t i = 0;
 			while(i < expression.length()) {
@@ -653,7 +647,12 @@ namespace assert_impl_ {
 						fprintf(stderr, "%s\n", match[1].str().c_str());
 						fflush(stdout);
 						#endif
-						tokens.push_back({ type, match[1].str() });
+						if(decompose_shr && match[1].str() == ">>") { // Do >> decomposition now for templates
+							tokens.push_back({ type, ">" });
+							tokens.push_back({ type, ">" });
+						} else {
+							tokens.push_back({ type, match[1].str() });
+						}
 						i += match[1].length();
 						at_least_one_matched = true;
 						break;
@@ -670,7 +669,7 @@ namespace assert_impl_ {
 		[[gnu::cold]]
 		std::string _highlight(const std::string& expression) try {
 			// TODO: improve highlighting, will require more situational awareness
-			const auto tokens = tokenize(expression);
+			const auto tokens = _tokenize(expression);
 			std::string str;
 			for(const auto& token : tokens) {
 				switch(token.token_type) {
@@ -724,7 +723,7 @@ namespace assert_impl_ {
 			// template parameter lists.
 			// We can figure out unary / binary easy enough TODO: we don't actually need to worry about this though
 			// TODO: There is redundant tokenization here
-			// NOTE: Templates make C++ expressions ambiguous without type info. This function looks
+			// Note: Templates make C++ expressions ambiguous without type info. This function looks
 			// for any occurrance of op that cannot be ruled out. False positives are ok, most stuff
 			// can be ruled out though.
 			const auto tokens = _tokenize(expression);
@@ -755,8 +754,8 @@ namespace assert_impl_ {
 							// Braces must be balanced.
 							// Scan forward until finding matching brace, don't need to take into
 							// account other types of braces.
-							const std::string& open = token.str;
-							const std::string& close = braces.at(token.str);
+							const std::string_view open = token.str;
+							const std::string_view close = braces.at(token.str);
 							int count = 0;
 							while(++i < tokens.size()) {
 								if(tokens[i].str == open) count++;
@@ -784,6 +783,7 @@ namespace assert_impl_ {
 			return false;
 		}
 
+		[[gnu::cold]]
 		token_t find_last_non_ws(const std::vector<token_t>& tokens, size_t i) {
 			// returns empty token_e::whitespace on failure
 			while(i--) {
@@ -794,25 +794,27 @@ namespace assert_impl_ {
 			return {token_e::whitespace, ""};
 		}
 
+		[[gnu::cold]]
+		static std::string get_real_op(const std::vector<token_t>& tokens, const size_t i) {
+			// re-coalesce >> if necessary
+			bool is_shr = tokens[i].str == ">" && i < tokens.size() - 1 && tokens[i + 1].str == ">";
+			return is_shr ? ">>" : tokens[i].str;
+		}
+
 		// In this function we are essentially exploring all possible parse trees for an expression
 		// an making an attempt to disambiguate as much as we can. It's potentially O(2^t) (?) with
 		// t being the number of possible templates in the expression, but t is anticipated to
-		// always be small. TODO: Safeguard? TODO: Count possible matching angle brackets?
+		// always be small.
+		// TODO: Safeguard? TODO: Count possible matching angle brackets?
 		// TODO: purify?
-		// NOTE: Intentionally taking almosteverything by copy
-		// TODO: Make use of string views and do stuff like just making vectors of pointers rather
-		// than vectors of strings.
-		// TODO: Redundancy with _has_precedence_below_or_equal logic?
 		[[gnu::cold]] void pseudoparse(
-			std::vector<token_t> tokens, // TODO: can eliminate copying the entire token array every time?
-			const std::string& target_op,
+			const std::vector<token_t>& tokens,
+			const std::string_view target_op,
 			size_t i,
 			int current_lowest_precedence,
 			int template_depth,
-			std::vector<token_t> left,
-			std::optional<token_t> op,
-			std::vector<token_t> right,
-			std::vector<std::pair<std::vector<token_t>, std::vector<token_t>>>& output
+			int middle_index, // where the split currently is, current op = tokens[middle_index]
+			std::set<int>& output
 		) {
 			#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
 			printf("*");
@@ -824,7 +826,7 @@ namespace assert_impl_ {
 				expecting_term
 			} state = expecting_term;
 			for(; i < tokens.size(); i++) {
-				token_t& token = tokens[i];
+				const token_t& token = tokens[i];
 				switch(token.token_type) {
 					case token_e::punctuation:
 						if(operators.count(token.str)) {
@@ -835,37 +837,35 @@ namespace assert_impl_ {
 								// also must be preceeded by an identifier
 								if(token.str == "<" && find_last_non_ws(tokens, i).token_type == token_e::identifier) {
 									// branch 1: this is a template opening
-									right.push_back(tokens[i]);
-									pseudoparse(tokens, target_op, i + 1, current_lowest_precedence, template_depth + 1, left, op, right, output);
-									right.pop_back();
+									pseudoparse(tokens, target_op, i + 1, current_lowest_precedence, template_depth + 1, middle_index, output);
 									// branch 2: this is a binary operator // fallthrough
 								}
-								if(template_depth > 0 && (token.str == ">" || token.str == ">>")) {
+								if(template_depth > 0 && token.str == ">") {
 									// No branch here: This must be a close. C++ standard
 									// Disambiguates by treating > always as a template parameter
 									// list close and >> is broken down.
-									// >= and >>= are not broken down.
-									// We don't need to worry about re-tokenizing beyond just the
-									// simple breakdown. I.e. we don't need to worry about x<2>>>1
-									// which is tokenized as x < 2 >> > 1 but perhaps being intended
-									// as x < 2 > >> 1. Standard has saved us from this complexity.
-									if(token.str == ">>") {
-										token.str = ">";
-										tokens.insert(tokens.begin() + i, token_t {token_e::punctuation, ">"}); // safe for us to insert
-									}
+									// >= and >>= don't need to be broken down and we don't need to
+									// worry about re-tokenizing beyond just the simple breakdown.
+									// I.e. we don't need to worry about x<2>>>1 which is tokenized
+									// as x < 2 >> > 1 but perhaps being intended as x < 2 > >> 1.
+									// Standard has saved us from this complexity.
+									// Note: >> breakdown moved to initial tokenization so we can
+									// take the token vector by reference.
 									template_depth--;
 									state = expecting_operator;
-									goto next_iteration;
+									continue;
 								}
 								// binary
-								if(template_depth == 0) // ignore precedence in template parameter list
-								if(precedence.count(token.str))
-								if(precedence.at(token.str) < current_lowest_precedence
-								|| (precedence.at(token.str) == current_lowest_precedence && precedence.at(token.str) != -9)) {
-									left.insert(left.end(), right.begin(), right.end());
-									right.clear();
-									op = token;
-									current_lowest_precedence = precedence.at(token.str);
+								if(template_depth == 0) { // ignore precedence in template parameter list
+									// re-coalesce >> if necessary
+									std::string op = get_real_op(tokens, i);
+									if(precedence.count(op))
+									if(precedence.at(op) < current_lowest_precedence
+									|| (precedence.at(op) == current_lowest_precedence && precedence.at(op) != -9)) {
+										middle_index = i;
+										current_lowest_precedence = precedence.at(op);
+									}
+									if(op == ">>") i++;
 								}
 								state = expecting_term;
 							}
@@ -874,10 +874,9 @@ namespace assert_impl_ {
 							// Braces must be balanced.
 							// Scan forward until finding matching brace, don't need to take into
 							// account other types of braces.
-							const std::string& open = token.str;
-							const std::string& close = braces.at(token.str);
+							const std::string_view open = token.str;
+							const std::string_view close = braces.at(token.str);
 							bool empty = true;
-							right.push_back(tokens[i]);
 							int count = 0;
 							while(++i < tokens.size()) {
 								if(tokens[i].str == open) count++;
@@ -888,7 +887,6 @@ namespace assert_impl_ {
 								} else if(tokens[i].token_type != token_e::whitespace) {
 									empty = false;
 								}
-								right.push_back(tokens[i]);
 							}
 							if(i == tokens.size() && count != -1) primitive_assert(false, "ill-formed expression input");
 							if(state == expecting_term && empty) { // () and {}
@@ -908,19 +906,16 @@ namespace assert_impl_ {
 					case token_e::whitespace:
 						break;
 				}
-				next_iteration:
-				right.push_back(tokens[i]); // tokens[i] over token, paren logic updates index
 			}
-			if(op.has_value() && op.value().str == target_op && template_depth == 0 && state == expecting_operator) {
-				right.erase(right.begin()); // right.begin() will be topmost operator in the expression tree
-				output.push_back({left, right});
+			if(middle_index != -1 && get_real_op(tokens, middle_index) == target_op && template_depth == 0 && state == expecting_operator) {
+				output.insert(middle_index);
 			} else {
 				// failed parse tree, ignore
 			}
 		}
 
 		[[gnu::cold]]
-		std::pair<std::string, std::string> _decompose_expression(const std::string& expression, const std::string& target_op) {
+		std::pair<std::string, std::string> _decompose_expression(const std::string& expression, const std::string_view target_op) {
 			// Attempt to parse basic info for the raw expression string available during automatic
 			// expression. Just enough to decomposition into left and right parts for diagnostic.
 			// Template parameters make C++ grammar ambiguous without type information. That being
@@ -952,41 +947,46 @@ namespace assert_impl_ {
 			//   right: ( 1 + 3 )
 			//   ---
 			// Because we're just splitting an expression in half, instead of storing tokens for
-			// both sides we can just store an index of the split. TODO
-			// NOTE: We don't need to worry about expressions where there is only a single term.
+			// both sides we can just store an index of the split.
+			// Note: We don't need to worry about expressions where there is only a single term.
 			// This will only be called on decomposable expressions.
-			const auto tokens = _tokenize(expression);
-			std::vector<std::pair<std::vector<token_t>, std::vector<token_t>>> candidates;
-			pseudoparse(std::move(tokens), target_op, 0, 0, 0, {}, {}, {}, candidates);
+			// Note: The >> to > > token breakdown needed in template parameter lists is done in the
+			// initial tokenization so we can pass the token vector by reference and avoid copying
+			// for every recursive path (O(t^2)). This does not create an issue for syntax
+			// highlighting as long as >> and > are highlighted the same.
+			// TODO: currently exploring all disambiguations, could exit early. Worst-case
+			// complexity does not change though.
+			const auto tokens = _tokenize(expression, true);
+			// We're only looking for the split, we can just store a set of split indices. No need
+			// to store a vector<pair<vector<token_t>, vector<token_t>>>
+			std::set<int> candidates;
+			pseudoparse(std::move(tokens), target_op, 0, 0, 0, -1, candidates);
 			#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
 			printf("\n%d\n", candidates.size());
-			for(const auto& [l, r] : candidates) {
+			for(size_t m : candidates) {
 				std::vector<std::string> left_strings;
 				std::vector<std::string> right_strings;
-				for(auto t : l) left_strings.push_back(t.str);
-				for(auto t : r) right_strings.push_back(t.str);
-				printf("left:  %s\n", highlight(trim(join(left_strings, ""))).c_str());
-				printf("right: %s\n", highlight(trim(join(right_strings, ""))).c_str());
+				for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
+				for(size_t i = m + 1; i < tokens.size(); i++) right_strings.push_back(tokens[i].str);
+				printf("left:  %s\n", highlight(std::string(trim(join(left_strings, "")))).c_str());
+				printf("right: %s\n", highlight(std::string(trim(join(right_strings, "")))).c_str());
 				printf("---\n");
 			}
 			#endif
 			if(candidates.size() == 1) {
 				std::vector<std::string> left_strings;
 				std::vector<std::string> right_strings;
-				for(auto t : candidates[0].first) left_strings.push_back(t.str);
-				for(auto t : candidates[0].second) right_strings.push_back(t.str);
-				return {trim(join(left_strings, "")), trim(join(right_strings, ""))};
+				size_t m = *candidates.begin();
+				for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
+				for(size_t i = m + 1; i < tokens.size(); i++) right_strings.push_back(tokens[i].str);
+				return { trim(join(left_strings, "")), trim(join(right_strings, "")) };
 			} else {
-				return {"left", "right"};
+				return { "left", "right" };
 			}
 		}
 
 	public:
-		// public static wrappers for
-		[[gnu::cold]]
-		static std::vector<token_t> tokenize(const std::string& expression) {
-			return get()._tokenize(expression);
-		}
+		// public static wrappers
 		[[gnu::cold]]
 		static std::string highlight(const std::string& expression) {
 			#ifdef NCOLOR
@@ -1004,12 +1004,12 @@ namespace assert_impl_ {
 			return get()._has_precedence_below_or_equal(expression, op);
 		}
 		[[gnu::cold]]
-		static std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string& target_op) {
+		static std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op) {
 			return get()._decompose_expression(expression, target_op);
 		}
 	};
 
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	static std::string parenthesize_if_necessary(const std::string& expression, const std::string& op) {
 		if(analysis::has_precedence_below_or_equal(expression, op)) {
 			return "(" + expression + ")";
@@ -1046,7 +1046,7 @@ namespace assert_impl_ {
 		}
 	}
 
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	static void print_values(const std::vector<std::string>& vec, size_t lw) {
 		primitive_assert(vec.size() > 0);
 		if(vec.size() == 1) {
@@ -1111,6 +1111,11 @@ namespace assert_impl_ {
 			}
 		}
 	}
+
+	// allow non-fatal assertions
+	enum class ASSERT {
+		NONFATAL, FATAL
+	};
 
 	template<typename A, typename B, typename C>
 	[[gnu::cold]] [[gnu::noinline]]
