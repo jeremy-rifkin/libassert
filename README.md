@@ -60,6 +60,7 @@ still maintaining ease of use for the developer.
 - Smart parenthesization: Re-constructed expressions from `assert_...` have parentheses
   automatically inserted if it would help readability or be otherwise important for precedence.
 - Rough syntax highlighting because why not!
+- Signed-unsigned comparison is always done safely by the assertion processor.
 
 Demo: (note that the call to `abort();` on assertion failure is commented out for this demo)
 ```cpp
@@ -190,6 +191,8 @@ decomposition.
 Dead-simple: This is a single-header file so just copy the header file. The use of precompiled
 headers is advised.
 
+This library targets C++17 and supports gcc and clang.
+
 ### Comparison With Other Languages
 
 Even when standard libraries provide constructs like `assert_eq` they don't always do a good job of
@@ -234,11 +237,4 @@ Extras:
 | Syntax Highlighting   | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
 | Non-Fatal Assertions  | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
 | Format Consistency    | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
-
-Automatic expression decomposition (automatically understanding a binary comparison like
-`assert(a == b);` instead of having to use a macro like `assert_eq`) is something I'd expect to
-require language support (and even Rust's macro system doesn't allow inspecting an expression tree).
-It turns out there's a [cool trick lest uses][lest trick] that enables this in C++ with the help of
-macro abuse.
-
-[lest trick]: https://github.com/martinmoene/lest/blob/master/include/lest/lest.hpp#L829-L853
+| Safe signed-unsigned comparison | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |

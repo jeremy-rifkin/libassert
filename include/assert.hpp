@@ -78,9 +78,11 @@ namespace assert_impl_ {
 		return str;
 	}
 
-	template<typename I>
+	template<typename C>
 	[[gnu::cold]]
-	static std::string join(I iter, I end, const std::string_view delim) {
+	static std::string join(const C& container, const std::string_view delim) {
+		auto iter = std::begin(container);
+		auto end = std::end(container);
 		std::string str;
 		if(std::distance(iter, end) > 0) {
 			str += *iter;
@@ -90,18 +92,6 @@ namespace assert_impl_ {
 			}
 		}
 		return str;
-	}
-
-	template<class C>
-	[[gnu::cold]]
-	static std::string join(C container, const std::string_view delim) {
-		return join(container.begin(), container.end(), delim);
-	}
-
-	template<size_t N>
-	[[gnu::cold]]
-	static std::string join(const std::string (&container)[N], const std::string_view delim) {
-		return join(std::begin(container), std::end(container), delim);
 	}
 
 	[[gnu::cold]]
@@ -148,33 +138,88 @@ namespace assert_impl_ {
 
 	struct nothing {};
 
-	template<typename T> constexpr bool is_nothing = std::is_same_v<T, nothing>; // TODO cv/ref?
+	template<typename T> constexpr bool is_nothing = std::is_same_v<T, nothing>;
 
-	// hack to get around static_assert(false); being evaluated before any instantiation, even under
+	// Hack to get around static_assert(false); being evaluated before any instantiation, even under
 	// an if-constexpr branch
 	template<typename T> constexpr bool always_false = false;
 
 	template<typename T> using strip = std::remove_cv_t<std::remove_reference_t<T>>;
 
-	// lots of boilerplate
+	// Is integral but not boolean
+	template<typename T> constexpr bool is_integral_notb = std::is_integral_v<strip<T>> && !std::is_same_v<strip<T>, bool>;
+
+	// Lots of boilerplate
+	// Using int comparison functions here to support proper signed comparisons. Need to make sure
+	// assert(map.count(1) == 2) doesn't produce a warning. It wouldn't under normal circumstances
+	// but it would in this library due to the parameters being forwarded down a long chain.
+	// And we want to provide as much robustness as possible anyways.
+	// Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
+	// Not using std:: versions because library is targetting C++17
+	template<typename T, typename U>
+	constexpr bool cmp_equal(T t, U u) {
+		using UT = std::make_unsigned_t<T>;
+		using UU = std::make_unsigned_t<U>;
+		if constexpr (std::is_signed_v<T> == std::is_signed_v<U>)
+			return t == u;
+		else if constexpr (std::is_signed_v<T>)
+			return t < 0 ? false : UT(t) == u;
+		else
+			return u < 0 ? false : t == UU(u);
+	}
+	
+	template<typename T, typename U>
+	constexpr bool cmp_not_equal(T t, U u) {
+		return !cmp_equal(t, u);
+	}
+	
+	template<typename T, typename U>
+	constexpr bool cmp_less(T t, U u) {
+		using UT = std::make_unsigned_t<T>;
+		using UU = std::make_unsigned_t<U>;
+		if constexpr (std::is_signed_v<T> == std::is_signed_v<U>)
+			return t < u;
+		else if constexpr (std::is_signed_v<T>)
+			return t < 0 ? true : UT(t) < u;
+		else
+			return u < 0 ? false : t < UU(u);
+	}
+	
+	template<typename T, typename U>
+	constexpr bool cmp_greater(T t, U u) {
+		return cmp_less(u, t);
+	}
+	
+	template<typename T, typename U>
+	constexpr bool cmp_less_equal(T t, U u) {
+		return !cmp_greater(t, u);
+	}
+	
+	template<typename T, typename U>
+	constexpr bool cmp_greater_equal(T t, U u) {
+		return !cmp_less(t, u);
+	}
+
+	// Lots of boilerplate
 	// std:: implementations don't allow two separate types for lhs/rhs
-	// note: is this macro potentially bad when it comes to debugging(?)
+	// Note: is this macro potentially bad when it comes to debugging(?)
 	// TODO: put all of this in a namespace?
-	#define gen_op_boilerplate(name, op) struct name { \
-		static constexpr const char* const op_string = #op; \
+	#define gen_op_boilerplate(name, op, ...) struct name { \
+		static constexpr std::string_view op_string = #op; \
 		template<typename A, typename B> \
 		constexpr auto operator()(A&& lhs, B&& rhs) const { \
+			__VA_OPT__(if constexpr (is_integral_notb<A> && is_integral_notb<B>) return __VA_ARGS__(lhs, rhs); else) /* no need to forward ints */ \
 			return std::forward<A>(lhs) op std::forward<B>(rhs); \
 		} \
-	};
+	}
 	gen_op_boilerplate(shift_left, <<);
 	gen_op_boilerplate(shift_right, >>);
-	gen_op_boilerplate(equal_to, ==); // todo: rename -> equal?
-	gen_op_boilerplate(not_equal_to, !=);
-	gen_op_boilerplate(greater, >);
-	gen_op_boilerplate(less, <);
-	gen_op_boilerplate(greater_equal, >=);
-	gen_op_boilerplate(less_equal, <=);
+	gen_op_boilerplate(equal_to, ==, cmp_equal); // todo: rename -> equal?
+	gen_op_boilerplate(not_equal_to, !=, cmp_not_equal);
+	gen_op_boilerplate(greater, >, cmp_greater);
+	gen_op_boilerplate(less, <, cmp_less);
+	gen_op_boilerplate(greater_equal, >=, cmp_greater_equal);
+	gen_op_boilerplate(less_equal, <=, cmp_less_equal);
 	gen_op_boilerplate(bit_and, &);
 	gen_op_boilerplate(bit_xor, ^);
 	gen_op_boilerplate(bit_or, |);
@@ -196,14 +241,7 @@ namespace assert_impl_ {
 	// I learned this automatic expression decomposition trick from lest:
 	// https://github.com/martinmoene/lest/blob/master/include/lest/lest.hpp#L829-L853
 	//
-	// I have improved upon the logic.
-	//
-	// While enabling something like `assert(foo(n) == bar<n> + n);` to be parsed automatically
-	// decomposed and treated as `assert_eq(foo(n), bar<n> + n);` we only get the full expression's
-	// string representation from macros. Breaking down an expression string is difficult given C++
-	// grammar ambiguity. TODO: Can we leverage decomposition to get some insights that may help
-	// disambiguate? I.e. store operators in the order they're seen by the decomposer and try to
-	// utilize that to disambiguate templates.
+	// I have improved upon the trick by supporting more operators and adding perfect forwarding.
 	//
 	// Some cases to test and consider:
 	//
@@ -240,7 +278,6 @@ namespace assert_impl_ {
 		template<typename U, typename V>
 		explicit expression_decomposer(U&& a, V&& b) : a(std::forward<U>(a)), b(std::forward<V>(b)) {}
 		// Note: get_value or operator bool() should only be invoked once
-		// TODO: forwarding?
 		auto get_value() {
 			if constexpr(is_nothing<C>) {
 				static_assert(is_nothing<B> && !is_nothing<A>);
@@ -251,10 +288,9 @@ namespace assert_impl_ {
 		}
 		operator bool() { return get_value(); }
 		// Need overloads for operators with precedence <= bitshift
-		// TODO:
-		// - spaceship operator?
-		// Note: Could decompose much more than just comparison and boolean operators, but it would
-		// take a lot of work and I don't think it's beneficial for this library.
+		// TODO: spaceship operator?
+		// Note: Could decompose more than just comparison and boolean operators, but it would take
+		// a lot of work and I don't think it's beneficial for this library.
 		template<typename O> auto operator<<(O&& operand) {
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
 			if constexpr (is_nothing<A>) {
@@ -317,7 +353,7 @@ namespace assert_impl_ {
 		none
 	};
 
-	template<class T>
+	template<typename T>
 	[[gnu::cold]]
 	constexpr std::string_view type_name() {
 		// clang: std::string_view ns::type_name() [T = int]
@@ -355,8 +391,6 @@ namespace assert_impl_ {
 
 	template<typename T> constexpr bool has_stream_overload_v = has_stream_overload<T>::value;
 
-	// TODO: This should be implemented better. More robustly.
-	// TODO: Improve literal system from hard-coded switches...?
 	template<typename T>
 	[[gnu::cold]]
 	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
@@ -369,10 +403,10 @@ namespace assert_impl_ {
 					) {
 			if constexpr(std::is_pointer_v<T>) {
 				if(t == nullptr) {
-					// TODO: re-evaluate this...? What if just comparing two buffer pointers?
 					return "nullptr";
 				}
 			}
+			// TODO: re-evaluate this...? What if just comparing two buffer pointers?
 			return escape_string(t, '"'); // string view may need explicit construction?
 		} else if constexpr (std::is_same_v<strip<T>, char>) {
 			return escape_string({&t, 1}, '\'');
@@ -446,7 +480,7 @@ namespace assert_impl_ {
 	}
 	
 	// file-local singleton, at most 8 BSS bytes per TU in debug mode is no problem
-	// at runtime could be 464 heap bytes per TU but in practice should only happen in one TU
+	// at runtime could be 576 heap bytes per TU but in practice should only happen in one TU
 	class analysis;
 	static analysis* analysis_singleton;
 
@@ -483,24 +517,32 @@ namespace assert_impl_ {
 		std::string int_hex;
 		std::string float_decimal;
 		std::string float_hex;
-		std::unordered_map<std::string, int> precedence;
-		std::unordered_map<std::string, std::string> braces = {
+		std::unordered_map<std::string_view, int> precedence;
+		std::unordered_map<std::string_view, std::string_view> braces = {
 			// template angle brackets excluded from this analysis
-			{ "(", ")" }, { "{", "}" }, { "[", "]" }
+			{ "(", ")" }, { "{", "}" }, { "[", "]" }, { "<:", ":>" }, { "<%", "%>" }
 		};
 		// punctuators to highlight
-		std::unordered_set<std::string> highlight_ops = {
+		std::unordered_set<std::string_view> highlight_ops = {
 			"~", "!", "+", "-", "*", "/", "%", "^", "&", "|", "=", "+=", "-=", "*=", "/=", "%=",
 			"^=", "&=", "|=", "==", "!=", "<", ">", "<=", ">=", "<=>", "&&", "||", "<<", ">>",
 			"<<=", ">>=", "++", "--", "and", "or", "xor", "not", "bitand", "bitor", "compl",
 			"and_eq", "or_eq", "xor_eq", "not_eq"
 		};
 		// all operators
-		std::unordered_set<std::string> operators = {
+		std::unordered_set<std::string_view> operators = {
 			":", "...", "?", "::", ".", ".*", "->", "->*", "~", "!", "+", "-", "*", "/", "%", "^",
 			"&", "|", "=", "+=", "-=", "*=", "/=", "%=", "^=", "&=", "|=", "==", "!=", "<", ">",
 			"<=", ">=", "<=>", "&&", "||", "<<", ">>", "<<=", ">>=", "++", "--", ",", "and", "or",
 			"xor", "not", "bitand", "bitor", "compl", "and_eq", "or_eq", "xor_eq", "not_eq"
+		};
+		std::unordered_map<std::string_view, std::string_view> alternative_operators_map = {
+			{"and", "&&"}, {"or", "||"}, {"xor", "^"}, {"not", "!"}, {"bitand", "&"},
+			{"bitor", "|"}, {"compl", "~"}, {"and_eq", "&="}, {"or_eq", "|="}, {"xor_eq", "^="},
+			{"not_eq", "!="}
+		};
+		std::unordered_set<std::string_view> bitwise_operators = {
+			"^", "&", "|", "^=", "&=", "|=", "xor", "bitand", "bitor", "and_eq", "or_eq", "xor_eq"
 		};
 		std::vector<std::pair<std::regex, literal_format>> literal_formats;
 
@@ -538,7 +580,6 @@ namespace assert_impl_ {
 				const std::regex special_chars { R"([-[\]{}()*+?.,\^$|#\s])" };
 				return std::regex_replace(str, special_chars, "\\$&");
 			};
-			std::transform(std::begin(keywords), std::end(keywords), std::begin(keywords), escape);
 			std::transform(std::begin(punctuators), std::end(punctuators), std::begin(punctuators), escape);
 			// regular expressions
 			std::string keywords_re    = "(?:" + join(keywords, "|") + ")\\b";
@@ -613,7 +654,7 @@ namespace assert_impl_ {
 			};
 			// generate precedence table
 			// bottom few rows of the precedence table:
-			const std::unordered_map<int, std::vector<std::string>> precedences = {
+			const std::unordered_map<int, std::vector<std::string_view>> precedences = {
 				{ -1, { "<<", ">>" } },
 				{ -2, { "<", "<=", ">=", ">" } },
 				{ -3, { "==", "!=" } },
@@ -625,7 +666,7 @@ namespace assert_impl_ {
 				{ -9, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } }, // Note: associativity logic currently relies on these having precedence -9
 				{ -10, { "," } }
 			};
-			std::unordered_map<std::string, int> table;
+			std::unordered_map<std::string_view, int> table;
 			for(const auto& [ p, ops ] : precedences) {
 				for(const auto& op : ops) {
 					table.insert({op, p});
@@ -716,7 +757,7 @@ namespace assert_impl_ {
 		}
 
 		[[gnu::cold]]
-		bool _has_precedence_below_or_equal(const std::string& expression, const std::string& op) {
+		bool _has_precedence_below_or_equal(const std::string& expression, const std::string_view op) {
 			// Scans over top-level of expression and looks for any operators with precedence <=
 			// op's precedence.
 			// Anything between parentheses can be excluded but no attempt is made to figure out
@@ -742,9 +783,9 @@ namespace assert_impl_ {
 								// must be unary, continue
 							} else {
 								// binary
-								if(precedence.count(token.str)
+								if(precedence.count(normalize_op(token.str))
 								&& precedence.count(op)
-								&& precedence.at(token.str) <= precedence.at(op)) {
+								&& precedence.at(normalize_op(token.str)) <= precedence.at(op)) {
 									return true;
 								}
 								state = expecting_term;
@@ -795,10 +836,19 @@ namespace assert_impl_ {
 		}
 
 		[[gnu::cold]]
-		static std::string get_real_op(const std::vector<token_t>& tokens, const size_t i) {
+		static std::string_view get_real_op(const std::vector<token_t>& tokens, const size_t i) {
 			// re-coalesce >> if necessary
 			bool is_shr = tokens[i].str == ">" && i < tokens.size() - 1 && tokens[i + 1].str == ">";
-			return is_shr ? ">>" : tokens[i].str;
+			return is_shr ? std::string_view(">>") : std::string_view(tokens[i].str);
+		}
+
+		[[gnu::cold]]
+		std::string_view normalize_op(const std::string_view op) {
+			// Operators need to be normalized to support alternative operators like and and bitand
+			// Normalization instead of just adding to the precedence table because target operators
+			// will always be the normalized operator even when the alternative operator is used.
+			if(alternative_operators_map.count(op)) return alternative_operators_map.at(op);
+			else return op;
 		}
 
 		// In this function we are essentially exploring all possible parse trees for an expression
@@ -858,7 +908,7 @@ namespace assert_impl_ {
 								// binary
 								if(template_depth == 0) { // ignore precedence in template parameter list
 									// re-coalesce >> if necessary
-									std::string op = get_real_op(tokens, i);
+									std::string_view op = normalize_op(get_real_op(tokens, i));
 									if(precedence.count(op))
 									if(precedence.at(op) < current_lowest_precedence
 									|| (precedence.at(op) == current_lowest_precedence && precedence.at(op) != -9)) {
@@ -907,7 +957,10 @@ namespace assert_impl_ {
 						break;
 				}
 			}
-			if(middle_index != -1 && get_real_op(tokens, middle_index) == target_op && template_depth == 0 && state == expecting_operator) {
+			if(middle_index != -1
+			&& normalize_op(get_real_op(tokens, middle_index)) == target_op
+			&& template_depth == 0
+			&& state == expecting_operator) {
 				output.insert(middle_index);
 			} else {
 				// failed parse tree, ignore
@@ -916,8 +969,11 @@ namespace assert_impl_ {
 
 		[[gnu::cold]]
 		std::pair<std::string, std::string> _decompose_expression(const std::string& expression, const std::string_view target_op) {
-			// Attempt to parse basic info for the raw expression string available during automatic
-			// expression. Just enough to decomposition into left and right parts for diagnostic.
+			// While automatic decomposition allows something like `assert(foo(n) == bar<n> + n);`
+			// treated as `assert_eq(foo(n), bar<n> + n);` we only get the full expression's string
+			// representation.
+			// Here we attempt to parse basic info for the raw string representation. Just enough to
+			// decomposition into left and right parts for diagnostic.
 			// Template parameters make C++ grammar ambiguous without type information. That being
 			// said, many expressions can be disambiguated.
 			// This code will make guesses about the grammar, essentially doing a traversal of all
@@ -962,7 +1018,7 @@ namespace assert_impl_ {
 			std::set<int> candidates;
 			pseudoparse(std::move(tokens), target_op, 0, 0, 0, -1, candidates);
 			#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
-			printf("\n%d\n", candidates.size());
+			printf("\n%d\n", (int)candidates.size());
 			for(size_t m : candidates) {
 				std::vector<std::string> left_strings;
 				std::vector<std::string> right_strings;
@@ -1000,7 +1056,11 @@ namespace assert_impl_ {
 			return get()._get_literal_format(expression);
 		}
 		[[gnu::cold]]
-		static bool has_precedence_below_or_equal(const std::string& expression, const std::string& op) {
+		static bool is_bitwise(std::string_view op) {
+			return get().bitwise_operators.count(op);
+		}
+		[[gnu::cold]]
+		static bool has_precedence_below_or_equal(const std::string& expression, const std::string_view op) {
 			return get()._has_precedence_below_or_equal(expression, op);
 		}
 		[[gnu::cold]]
@@ -1010,7 +1070,7 @@ namespace assert_impl_ {
 	};
 
 	[[gnu::cold]]
-	static std::string parenthesize_if_necessary(const std::string& expression, const std::string& op) {
+	static std::string parenthesize_if_necessary(const std::string& expression, const std::string_view op) {
 		if(analysis::has_precedence_below_or_equal(expression, op)) {
 			return "(" + expression + ")";
 		} else {
@@ -1019,10 +1079,10 @@ namespace assert_impl_ {
 	}
 
 	[[gnu::cold]] [[maybe_unused]]
-	static std::string gen_assert_binary(std::string a_str, const std::string& op, std::string b_str) {
+	static std::string gen_assert_binary(std::string a_str, const std::string_view op, std::string b_str) {
 		return stringf("assert(%s %s %s);",
 					   parenthesize_if_necessary(a_str, op).c_str(),
-					   op.c_str(),
+					   op.data(),
 					   parenthesize_if_necessary(b_str, op).c_str());
 	}
 
@@ -1063,15 +1123,18 @@ namespace assert_impl_ {
 		}
 	}
 
-	template<typename C, typename A, typename B>
+	template<typename A, typename B>
 	[[gnu::cold]]
-	void print_binary_diagnostic(A&& a, B&& b, const char* a_str, const char* b_str) {
+	void print_binary_diagnostic(A&& a, B&& b, const char* a_str, const char* b_str, std::string_view op) {
+		// Note: op
 		// figure out what information we need to print in the where clause
 		// find all literal formats involved (literal_format::dec included for everything)
 		literal_format lformat = analysis::get_literal_format(a_str);
 		literal_format rformat = analysis::get_literal_format(b_str);
+		// std::set used so formats are printed in a specific order
 		std::set<literal_format> formats = { literal_format::dec, lformat, rformat };
 		formats.erase(literal_format::none); // none is just for when the expression isn't a literal
+		if(analysis::is_bitwise(op)) formats.insert(literal_format::binary); // always display binary for bitwise
 		primitive_assert(formats.size() > 0);
 		// generate raw strings for given formats, without highlighting
 		std::vector<std::string> lstrings = generate_stringifications(std::forward<A>(a), formats);
@@ -1130,7 +1193,7 @@ namespace assert_impl_ {
 			static_assert(is_nothing<B> && !is_nothing<A>);
 		} else {
 			auto [a_str, b_str] = analysis::decompose_expression(expr_str, C::op_string);
-			print_binary_diagnostic<C>(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b), a_str.c_str(), b_str.c_str());
+			print_binary_diagnostic(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b), a_str.c_str(), b_str.c_str(), C::op_string);
 		}
 		if(fatal == ASSERT::FATAL) {
 			#ifdef _0_ASSERT_DEMO
@@ -1151,7 +1214,7 @@ namespace assert_impl_ {
 			fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n", location.file, location.line, pretty_func, info);
 		}
 		fprintf(stderr, "    %s\n", analysis::highlight(gen_assert_binary(a_str, C::op_string, b_str)).c_str());
-		print_binary_diagnostic<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str);
+		print_binary_diagnostic(std::forward<A>(a), std::forward<B>(b), a_str, b_str, C::op_string);
 		if(fatal == ASSERT::FATAL) {
 			#ifdef _0_ASSERT_DEMO
 			printf("\n");
@@ -1168,6 +1231,7 @@ namespace assert_impl_ {
 	template<typename A, typename B, typename C>
 	void assert(expression_decomposer<A, B, C> decomposer, const char* expr_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
 		if(!decomposer.get_value()) {
+			// todo: forward decomposer?
 			assert_fail(decomposer, expr_str, pretty_func, info, fatal, location);
 		} else {
 			#ifdef _0_ASSERT_DEMO
@@ -1191,24 +1255,12 @@ namespace assert_impl_ {
 
 	template<typename A, typename B, typename C>
 	void assert(expression_decomposer<A, B, C> decomposer, const char* expr_str, const char* pretty_func, const std::string& info, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
-		if(!decomposer.get_value()) {
-			assert_fail(decomposer, expr_str, pretty_func, info.c_str(), fatal, location);
-		} else {
-			#ifdef _0_ASSERT_DEMO
-			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
-			#endif
-		}
+		assert(std::forward<expression_decomposer<A, B, C>>(decomposer), expr_str, pretty_func, info.c_str(), fatal, location);
 	}
 
 	template<typename C, typename A, typename B>
 	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const std::string& info, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
-		if(!(bool)C()(a, b)) {
-			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info.c_str(), fatal, location);
-		} else {
-			#ifdef _0_ASSERT_DEMO
-			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
-			#endif
-		}
+		assert(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info.c_str(), fatal, location);
 	}
 
 	[[maybe_unused]]
@@ -1243,6 +1295,7 @@ using assert_impl_::ASSERT;
   // Note: This is not a default because Sometimes assertion expressions have side effects that are
   // undesirable at runtime in an `NDEBUG` build like exceptions on std container operations which
   // cannot be optimized away. These often end up not being helpful hints either.
+  // TODO: Need to feed through decomposer to preserve sign-unsigned safety on top-level compare?
   #define      assert(expr, ...) assert_impl_::assume(expr)
   #define   assert_eq(a, b, ...) assert_impl_::assume<assert_impl_::equal_to     >(a, b)
   #define  assert_neq(a, b, ...) assert_impl_::assume<assert_impl_::not_equal_to >(a, b)
@@ -1256,7 +1309,8 @@ using assert_impl_::ASSERT;
 #else
  // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method name, not signature
  // assert_impl_::expression_decomposer(assert_impl_::expression_decomposer{}) done for ternary support
- #define      assert(expr, ...) assert_impl_::assert(assert_impl_::expression_decomposer(assert_impl_::expression_decomposer{} << expr), \
+ #define      assert(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+                                assert_impl_::assert(assert_impl_::expression_decomposer(assert_impl_::expression_decomposer{} << expr), \
                                                                                                 #expr, __PRETTY_FUNCTION__, ##__VA_ARGS__)
  #define   assert_eq(a, b, ...) assert_impl_::assert_binary<assert_impl_::equal_to     >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
  #define  assert_neq(a, b, ...) assert_impl_::assert_binary<assert_impl_::not_equal_to >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)

@@ -68,6 +68,11 @@ int main() {
 	char* buffer = nullptr;
 	char thing[] = "foo";
 	assert_eq(buffer, thing);
+	assert_eq(1, 1 bitand 2);
+	assert(18446744073709551606ULL == -10);
+	const uint16_t flag = 0b000100000;
+	const uint16_t mask = 0b110011101;
+	assert(mask bitand flag);
 
 
 
@@ -142,7 +147,10 @@ int main() {
 	assert(x -= x -= 1);
 	x = 2;
 	assert(x -= x -= x -= 1);
-	//assert(assert_impl_::always_false<void> == true);
+	assert(assert_impl_::always_false<void> == true);
+	assert(mask bitand flag, std::string("foobar"));
+	x = 1;
+	assert(x ^= 1);
 
 	assert(true); // this should lead to another assert(false) because we're in demo mode
 }

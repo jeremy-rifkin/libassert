@@ -10,11 +10,11 @@ foo.o: foo.cpp include/assert.hpp.gch
 tests/assert.hpp.gch: include/assert.hpp
 	g++ -std=c++17 -g include/assert.hpp -o tests/assert.hpp.gch -Wall -Wextra -D_0_ASSERT_DEMO -D_0_DEBUG_ASSERT_DISAMBIGUATION
 tests/disambiguation: tests/disambiguation.cpp tests/assert.hpp.gch
-	g++ -Itests tests/disambiguation.cpp -o tests/disambiguation.exe -g -std=c++17 -D_0_ASSERT_DEMO -D_0_DEBUG_ASSERT_DISAMBIGUATION
+	g++ -Itests tests/disambiguation.cpp -o tests/disambiguation.exe -g -std=c++17 -Wall -Wextra -D_0_ASSERT_DEMO -D_0_DEBUG_ASSERT_DISAMBIGUATION
 tests/literals: tests/literals.cpp tests/assert.hpp.gch
-	g++ -Itests tests/literals.cpp -o tests/literals.exe -g -std=c++17 -D_0_ASSERT_DEMO -D_0_DEBUG_ASSERT_DISAMBIGUATION
+	g++ -Itests tests/literals.cpp -o tests/literals.exe -g -std=c++17 -Wall -Wextra -D_0_ASSERT_DEMO -D_0_DEBUG_ASSERT_DISAMBIGUATION
 tests/tokens_and_highlighting: tests/tokens_and_highlighting.cpp tests/assert.hpp.gch
-	g++ -Itests tests/tokens_and_highlighting.cpp -o tests/tokens_and_highlighting.exe -g -std=c++17 -D_0_ASSERT_DEMO -D_0_DEBUG_ASSERT_DISAMBIGUATION
+	g++ -Itests tests/tokens_and_highlighting.cpp -o tests/tokens_and_highlighting.exe -g -std=c++17 -Wall -Wextra -D_0_ASSERT_DEMO -D_0_DEBUG_ASSERT_DISAMBIGUATION
 
 .PHONY: tests clean everything
 

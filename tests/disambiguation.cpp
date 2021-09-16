@@ -3,16 +3,18 @@
 #include <iostream>
 
 int main() {
-	std::tuple<std::string, std::string, bool> tests[] = {
+	std::tuple<std::string, std::string_view, bool> tests[] = {
 		{"a < 1 == 2 > ( 1 + 3 )", "==", true},
 		{"a < 1 == 2 > - 3 == ( 1 + 3 )", "==", true}, // <- disambiguated despite ambiguity
 		{"( 1 + 3 ) == a < 1 == 2 > - 3", "==", false}, // <- ambiguous
 		{"( 1 + 3 ) == a < 1 == 2 > ()", "==", true},
+		{"( 1 + 3 ) not_eq a < 1 not_eq 2 > ()", "!=", true},
 		{"a<x<x<x<x<x<x<x<x<x<1>>>>>>>>>", "<", true},
 		{"1 == something<a == b>>2", "==", false}, // <- ambiguous
 		{"1 == something<a == b>>2", "<", false}, // <- should be an error
 		{"1 < something<a < b>>2", "<", false}, // <- ambiguous
-		{"1 < something<a < b>> - 2", "<", false} // <- ambiguous
+		{"1 < something<a < b>> - 2", "<", false}, // <- ambiguous
+		{"18446744073709551606ULL == -10", "==", true}
 	};
 	using namespace assert_impl_;
 	for(auto [expression, target_op, should_disambiguate] : tests) {
