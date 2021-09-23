@@ -19,22 +19,25 @@
 #include <unordered_set>
 
 #ifndef NCOLOR
-#define ESC "\033["
-#define RED ESC "1;31m"
-#define GREEN ESC "1;32m"
-#define BLUE ESC "1;34m"
-#define CYAN ESC "1;36m"
-#define PURPL ESC "1;35m"
-#define DARK ESC "1;30m"
-#define RESET ESC "0m"
+ #define ESC "\033["
+ #define ANSIRGB(r, g, b) ESC "38;2;" #r ";" #g ";" #b "m"
+ #define RED ANSIRGB(224, 107, 116)
+ #define ORANGE ANSIRGB(209, 154, 102)
+ #define YELLOW ANSIRGB(229, 192, 122)
+ #define GREEN ANSIRGB(152, 195, 121)
+ #define BLUE ANSIRGB(98, 174, 239)
+ #define CYAN ANSIRGB(85, 182, 194)
+ #define PURPL ANSIRGB(198, 120, 221)
+ #define RESET ESC "0m"
 #else
-#define RED ""
-#define GREEN ""
-#define BLUE ""
-#define CYAN ""
-#define PURPL ""
-#define DARK ""
-#define RESET ""
+ #define RED ""
+ #define ORANGE ""
+ #define YELLOW ""
+ #define GREEN ""
+ #define BLUE ""
+ #define CYAN ""
+ #define PURPL ""
+ #define RESET ""
 #endif
 
 namespace assert_impl_ {
@@ -412,16 +415,29 @@ namespace assert_impl_ {
 			return escape_string({&t, 1}, '\'');
 		} else if constexpr (std::is_same_v<strip<T>, bool>) {
 			return t ? "true" : "false"; // streams/boolalpha not needed for this
+		} else if constexpr (std::is_same_v<strip<T>, std::nullptr_t>) {
+			return "nullptr";
+		} else if constexpr (std::is_pointer_v<strip<T>> || std::is_same_v<strip<T>, uintptr_t>) {
+			if(uintptr_t(t) == uintptr_t(nullptr)) { // weird nullptr shenanigans, only prints "nullptr" for nullptr_t
+				return "nullptr";
+			} else {
+				std::ostringstream oss;
+				// Manually format the pointer - ostream::operator<<(void*) falls back to %p which
+				// is implementation-defined. MSVC prints pointers without the leading "0x" which
+				// messes up the highlighter.
+				oss<<std::showbase<<std::hex<<uintptr_t(t);
+				return std::move(oss).str();
+			}
 		} else if constexpr (std::is_integral_v<T>) {
 			std::ostringstream oss;
 			switch(fmt) {
 				case literal_format::dec:
 					break;
 				case literal_format::hex:
-					oss<<"0x"<<std::hex;
+					oss<<std::showbase<<std::hex;
 					break;
 				case literal_format::octal:
-					oss<<"0"<<std::oct;
+					oss<<std::showbase<<std::oct;
 					break;
 				case literal_format::binary:
 					oss<<"0b"<<std::bitset<sizeof(t) * 8>(t);
@@ -448,16 +464,6 @@ namespace assert_impl_ {
 			}
 			oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<t;
 			return std::move(oss).str();
-		} else if constexpr (std::is_same_v<T, std::nullptr_t>) {
-			return "nullptr";
-		} else if constexpr (std::is_pointer_v<T>) {
-			if(t == nullptr) { // weird nullptr shenanigans, only prints "nullptr" for nullptr_t
-				return "nullptr";
-			} else {
-				std::ostringstream oss;
-				oss<<t;
-				return std::move(oss).str();
-			}
 		} else {
 			if constexpr (has_stream_overload_v<T>) {
 				std::ostringstream oss;
@@ -474,13 +480,13 @@ namespace assert_impl_ {
 		std::string composite;
 		for(const std::string_view str : regexes) {
 			if(composite != "") composite += "|";
-			composite += stringf("(?:%s)", str.data());
+			composite += "(?:" + std::string(str) + ")";
 		}
 		return composite;
 	}
 	
 	// file-local singleton, at most 8 BSS bytes per TU in debug mode is no problem
-	// at runtime could be 576 heap bytes per TU but in practice should only happen in one TU
+	// <1KB heap bytes per TU at runtime but in practice should only happen in one TU
 	class analysis;
 	static analysis* analysis_singleton;
 
@@ -517,10 +523,14 @@ namespace assert_impl_ {
 		std::string int_hex;
 		std::string float_decimal;
 		std::string float_hex;
+		std::regex escapes_re;
 		std::unordered_map<std::string_view, int> precedence;
 		std::unordered_map<std::string_view, std::string_view> braces = {
 			// template angle brackets excluded from this analysis
 			{ "(", ")" }, { "{", "}" }, { "[", "]" }, { "<:", ":>" }, { "<%", "%>" }
+		};
+		std::unordered_map<std::string_view, std::string_view> digraph_map = {
+			{ "<:", "[" }, { "<%", "{" }, { ":>", "]" }, { "%>", "}" }
 		};
 		// punctuators to highlight
 		std::unordered_set<std::string_view> highlight_ops = {
@@ -547,20 +557,38 @@ namespace assert_impl_ {
 		std::vector<std::pair<std::regex, literal_format>> literal_formats;
 
 		[[gnu::cold]]
+		std::string_view normalize_op(const std::string_view op) {
+			// Operators need to be normalized to support alternative operators like and and bitand
+			// Normalization instead of just adding to the precedence table because target operators
+			// will always be the normalized operator even when the alternative operator is used.
+			if(alternative_operators_map.count(op)) return alternative_operators_map.at(op);
+			else return op;
+		}
+
+		[[gnu::cold]]
+		std::string_view normalize_brace(const std::string_view brace) {
+			// Operators need to be normalized to support alternative operators like and and bitand
+			// Normalization instead of just adding to the precedence table because target operators
+			// will always be the normalized operator even when the alternative operator is used.
+			if(digraph_map.count(brace)) return digraph_map.at(brace);
+			else return brace;
+		}
+
+		[[gnu::cold]]
 		analysis() {
 			// https://eel.is/c++draft/gram.lex
 			// generate regular expressions
-			std::string keywords[] = { "alignas", "constinit", "false", "public", "true",
-				"alignof", "const_cast", "float", "register", "try", "asm", "continue", "for",
-				"reinterpret_cast", "typedef", "auto", "co_await", "friend", "requires", "typeid",
-				"bool", "co_return", "goto", "return", "typename", "break", "co_yield", "if",
-				"short", "union", "case", "decltype", "inline", "signed", "unsigned", "catch",
-				"default", "int", "sizeof", "using", "char", "delete", "long", "static", "virtual",
-				"char8_t", "do", "mutable", "static_assert", "void", "char16_t", "double",
-				"namespace", "static_cast", "volatile", "char32_t", "dynamic_cast", "new", "struct",
-				"wchar_t", "class", "else", "noexcept", "switch", "while", "concept", "enum",
-				"nullptr", "template", "const", "explicit", "operator", "this", "consteval",
-				"export", "private", "thread_local", "constexpr", "extern", "protected", "throw" };
+			std::string keywords[] = { "alignas", "constinit", "public", "alignof", "const_cast",
+				"float", "register", "try", "asm", "continue", "for", "reinterpret_cast", "typedef",
+				"auto", "co_await", "friend", "requires", "typeid", "bool", "co_return", "goto",
+				"return", "typename", "break", "co_yield", "if", "short", "union", "case",
+				"decltype", "inline", "signed", "unsigned", "catch", "default", "int", "sizeof",
+				"using", "char", "delete", "long", "static", "virtual", "char8_t", "do", "mutable",
+				"static_assert", "void", "char16_t", "double", "namespace", "static_cast",
+				"volatile", "char32_t", "dynamic_cast", "new", "struct", "wchar_t", "class", "else",
+				"noexcept", "switch", "while", "concept", "enum", "template", "const", "explicit",
+				"operator", "this", "consteval", "export", "private", "thread_local", "constexpr",
+				"extern", "protected", "throw" };
 			std::string punctuators[] = { "{", "}", "[", "]", "(", ")", "<:", ":>", "<%",
 				"%>", ";", ":", "...", "?", "::", ".", ".*", "->", "->*", "~", "!", "+", "-", "*",
 				"/", "%", "^", "&", "|", "=", "+=", "-=", "*=", "/=", "%=", "^=", "&=", "|=", "==",
@@ -575,12 +603,13 @@ namespace assert_impl_ {
 			};
 			std::sort(std::begin(keywords), std::end(keywords), cmp);
 			std::sort(std::begin(punctuators), std::end(punctuators), cmp);
-			// Escape special characters
-			const auto escape = [](const std::string& str) {
+			// Escape special characters and add wordbreaks
+			std::transform(std::begin(punctuators), std::end(punctuators), std::begin(punctuators), [](const std::string& str) {
 				const std::regex special_chars { R"([-[\]{}()*+?.,\^$|#\s])" };
-				return std::regex_replace(str, special_chars, "\\$&");
-			};
-			std::transform(std::begin(punctuators), std::end(punctuators), std::begin(punctuators), escape);
+				return std::regex_replace(str + (isalpha(str[0]) ? "\\b" : ""), special_chars, "\\$&");
+			});
+			// https://eel.is/c++draft/lex.pptoken#3.2
+			*std::find(std::begin(punctuators), std::end(punctuators), "<:") += "(?!:[^:>])";
 			// regular expressions
 			std::string keywords_re    = "(?:" + join(keywords, "|") + ")\\b";
 			std::string punctuators_re = join(punctuators, "|");
@@ -604,9 +633,11 @@ namespace assert_impl_ {
 			float_hex = stringf("0[Xx](?:%s|%s)%s%s?",
 						hex_frac_const.c_str(), hex_digit_sequence.c_str(), binary_exp.c_str(), suffix.c_str());
 			// char and string literals
-			std::string char_literal = R"((?:u8|[UuL])?'(?:\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.|[^\n'])*')";
-			std::string string_literal = R"((?:u8|[UuL])?"(?:\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.|[^\n"])*")";
+			std::string escapes = R"(\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.)";
+			std::string char_literal = R"((?:u8|[UuL])?'(?:)" + escapes + R"(|[^\n'])*')";
+			std::string string_literal = R"((?:u8|[UuL])?"(?:)" + escapes + R"(|[^\n"])*")";
 			std::string raw_string_literal = R"((?:u8|[UuL])?R"([^ ()\\t\r\v\n]*)\((?:(?!\)\2\").)*\)\2")"; // \2 because the first capture is the match without the rest of the file
+			escapes_re = std::regex(escapes);
 			// final rule set
 			// regex is greedy, sequencing rules are as follow:
 			// keyword > identifier
@@ -615,6 +646,7 @@ namespace assert_impl_ {
 			// hex int > decimal int
 			// named_literal > identifier
 			// string > identifier (for R"(foobar)")
+			// punctuation > identifier (for "not" and other alternative operators)
 			std::pair<token_e, std::string> rules_raw[] = {
 				{ token_e::keyword    , keywords_re },
 				{ token_e::number     , union_regexes({
@@ -712,28 +744,49 @@ namespace assert_impl_ {
 			// TODO: improve highlighting, will require more situational awareness
 			const auto tokens = _tokenize(expression);
 			std::string str;
-			for(const auto& token : tokens) {
+			for(size_t i = 0; i < tokens.size(); i++) {
+				const auto& token = tokens[i];
+				// Peek next non-whitespace token, return empty whitespace token if end is reached
+				const auto peek = [i, &tokens](size_t j = 1) {
+					for(size_t k = 1; j > 0 && i + k < tokens.size(); k++) {
+						if(tokens[i + k].token_type != token_e::whitespace) {
+							if(--j == 0) {
+								return tokens[i + k];
+							}
+						}
+					}
+					primitive_assert(j != 0);
+					return token_t { token_e::whitespace, "" };
+				};
 				switch(token.token_type) {
 					case token_e::keyword:
 						str += PURPL + token.str + RESET;
 						break;
 					case token_e::punctuation:
 						if(highlight_ops.count(token.str)) {
-							str += BLUE + token.str + RESET;
+							str += PURPL + token.str + RESET;
 						} else {
 							str += token.str;
 						}
 						break;
 					case token_e::named_literal:
-						str += RED + token.str + RESET;
+						str += ORANGE + token.str + RESET;
 						break;
 					case token_e::number:
 						str += CYAN + token.str + RESET;
 						break;
 					case token_e::string:
-						str += GREEN + token.str + RESET;
+						str += GREEN + std::regex_replace(token.str, escapes_re, BLUE "$&" GREEN) + RESET;
 						break;
 					case token_e::identifier:
+						if(peek().str == "(") {
+							str += BLUE + token.str + RESET;
+						} else if(peek().str == "::") {
+							str += YELLOW + token.str + RESET;
+						} else {
+							str += RED + token.str + RESET;
+						}
+						break;
 					case token_e::whitespace:
 						str += token.str;
 						break;
@@ -795,12 +848,12 @@ namespace assert_impl_ {
 							// Braces must be balanced.
 							// Scan forward until finding matching brace, don't need to take into
 							// account other types of braces.
-							const std::string_view open = token.str;
-							const std::string_view close = braces.at(token.str);
+							const std::string_view open = normalize_brace(token.str);
+							const std::string_view close = normalize_brace(braces.at(token.str));
 							int count = 0;
 							while(++i < tokens.size()) {
-								if(tokens[i].str == open) count++;
-								else if(tokens[i].str == close) {
+								if(normalize_brace(tokens[i].str) == open) count++;
+								else if(normalize_brace(tokens[i].str) == close) {
 									if(count-- == 0) {
 										break;
 									}
@@ -842,15 +895,6 @@ namespace assert_impl_ {
 			return is_shr ? std::string_view(">>") : std::string_view(tokens[i].str);
 		}
 
-		[[gnu::cold]]
-		std::string_view normalize_op(const std::string_view op) {
-			// Operators need to be normalized to support alternative operators like and and bitand
-			// Normalization instead of just adding to the precedence table because target operators
-			// will always be the normalized operator even when the alternative operator is used.
-			if(alternative_operators_map.count(op)) return alternative_operators_map.at(op);
-			else return op;
-		}
-
 		// In this function we are essentially exploring all possible parse trees for an expression
 		// an making an attempt to disambiguate as much as we can. It's potentially O(2^t) (?) with
 		// t being the number of possible templates in the expression, but t is anticipated to
@@ -877,6 +921,24 @@ namespace assert_impl_ {
 			} state = expecting_term;
 			for(; i < tokens.size(); i++) {
 				const token_t& token = tokens[i];
+				// scan forward to matching brace
+				// can assume braces are balanced
+				const auto scan_forward = [this, &i, &tokens](const std::string_view open, const std::string_view close) {
+					bool empty = true;
+					int count = 0;
+					while(++i < tokens.size()) {
+						if(normalize_brace(tokens[i].str) == normalize_brace(open)) count++;
+						else if(normalize_brace(tokens[i].str) == normalize_brace(close)) {
+							if(count-- == 0) {
+								break;
+							}
+						} else if(tokens[i].token_type != token_e::whitespace) {
+							empty = false;
+						}
+					}
+					if(i == tokens.size() && count != -1) primitive_assert(false, "ill-formed expression input");
+					return empty;
+				};
 				switch(token.token_type) {
 					case token_e::punctuation:
 						if(operators.count(token.str)) {
@@ -889,6 +951,12 @@ namespace assert_impl_ {
 									// branch 1: this is a template opening
 									pseudoparse(tokens, target_op, i + 1, current_lowest_precedence, template_depth + 1, middle_index, output);
 									// branch 2: this is a binary operator // fallthrough
+								} else if(token.str == "<" && normalize_brace(find_last_non_ws(tokens, i).str) == "]") {
+									// this must be a template parameter list, part of a generic lambda
+									bool empty = scan_forward("<", ">");
+									primitive_assert(!empty);
+									state = expecting_operator;
+									continue;
 								}
 								if(template_depth > 0 && token.str == ">") {
 									// No branch here: This must be a close. C++ standard
@@ -926,20 +994,13 @@ namespace assert_impl_ {
 							// account other types of braces.
 							const std::string_view open = token.str;
 							const std::string_view close = braces.at(token.str);
-							bool empty = true;
-							int count = 0;
-							while(++i < tokens.size()) {
-								if(tokens[i].str == open) count++;
-								else if(tokens[i].str == close) {
-									if(count-- == 0) {
-										break;
-									}
-								} else if(tokens[i].token_type != token_e::whitespace) {
-									empty = false;
-								}
-							}
-							if(i == tokens.size() && count != -1) primitive_assert(false, "ill-formed expression input");
-							if(state == expecting_term && empty) { // () and {}
+							bool empty = scan_forward(open, close);
+							// Handle () and {} when they aren't a call/initializer
+							// [] may appear in lambdas when state == expecting_term
+							// [](){ ... }() is parsed fine because state == expecting_operator
+							// after the captures list. Not concerned with template parameters at
+							// the moment.
+							if(state == expecting_term && empty && normalize_brace(open) != "[") {
 								return; // this is a failed parse tree
 							}
 							state = expecting_operator;
@@ -1056,6 +1117,10 @@ namespace assert_impl_ {
 			return get()._get_literal_format(expression);
 		}
 		[[gnu::cold]]
+		static std::string trim_suffix(const std::string& expression) {
+			return expression.substr(0, expression.find_last_not_of("FfUuLlZz") + 1);
+		}
+		[[gnu::cold]]
 		static bool is_bitwise(std::string_view op) {
 			return get().bitwise_operators.count(op);
 		}
@@ -1082,7 +1147,7 @@ namespace assert_impl_ {
 	static std::string gen_assert_binary(std::string a_str, const std::string_view op, std::string b_str) {
 		return stringf("assert(%s %s %s);",
 					   parenthesize_if_necessary(a_str, op).c_str(),
-					   op.data(),
+					   std::string(op).c_str(), // string_view isn't null-terminated; TODO: better solution?
 					   parenthesize_if_necessary(b_str, op).c_str());
 	}
 
@@ -1106,7 +1171,7 @@ namespace assert_impl_ {
 		}
 	}
 
-	[[gnu::cold]]
+	[[gnu::cold]] [[maybe_unused]]
 	static void print_values(const std::vector<std::string>& vec, size_t lw) {
 		primitive_assert(vec.size() > 0);
 		if(vec.size() == 1) {
@@ -1152,8 +1217,8 @@ namespace assert_impl_ {
 		primitive_assert(rstrings.size() > 0);
 		// determine whether we actually gain anything from printing a where clause (e.g. exclude "1 => 1")
 		struct { bool left, right; } has_useful_where_clause = {
-			formats.size() > 1 || lstrings.size() > 1 || a_str != lstrings[0],
-			formats.size() > 1 || rstrings.size() > 1 || b_str != rstrings[0]
+			formats.size() > 1 || lstrings.size() > 1 || (a_str != lstrings[0] && analysis::trim_suffix(a_str) != lstrings[0]),
+			formats.size() > 1 || rstrings.size() > 1 || (b_str != rstrings[0] && analysis::trim_suffix(b_str) != rstrings[0])
 		};
 		// print where clause
 		if(has_useful_where_clause.left || has_useful_where_clause.right) {
@@ -1232,7 +1297,7 @@ namespace assert_impl_ {
 	void assert(expression_decomposer<A, B, C> decomposer, const char* expr_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
 		if(!decomposer.get_value()) {
 			// todo: forward decomposer?
-			assert_fail(decomposer, expr_str, pretty_func, info, fatal, location);
+			assert_fail(decomposer, expr_str, analysis::highlight(pretty_func).c_str(), info, fatal, location);
 		} else {
 			#ifdef _0_ASSERT_DEMO
 			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
@@ -1243,7 +1308,7 @@ namespace assert_impl_ {
 	template<typename C, typename A, typename B>
 	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
 		if(!(bool)C()(a, b)) {
-			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info, fatal, location);
+			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, analysis::highlight(pretty_func).c_str(), info, fatal, location);
 		} else {
 			#ifdef _0_ASSERT_DEMO
 			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
@@ -1277,6 +1342,19 @@ namespace assert_impl_ {
 
 	#undef primitive_assert
 }
+
+#ifndef NCOLOR
+ #undef ESC
+ #undef ANSIRGB
+#endif
+#undef RED
+#undef ORANGE
+#undef YELLOW
+#undef GREEN
+#undef BLUE
+#undef CYAN
+#undef PURPL
+#undef RESET
 
 using assert_impl_::ASSERT;
 

@@ -8,6 +8,15 @@
 #include <string_view>
 #include <iostream>
 
+#define ESC "\033["
+#define RED ESC "1;31m"
+#define GREEN ESC "1;32m"
+#define BLUE ESC "1;34m"
+#define CYAN ESC "1;36m"
+#define PURPL ESC "1;35m"
+#define DARK ESC "1;30m"
+#define RESET ESC "0m"
+
 template<class T> struct S {
 	T x;
 	S() = default;
@@ -151,6 +160,23 @@ int main() {
 	assert(mask bitand flag, std::string("foobar"));
 	x = 1;
 	assert(x ^= 1);
+	assert((42 & 3U) == 1UL);
+	
+	assert([](int a, int b) {
+		return a + b;
+	} (10, 32) not_eq 42);
+	assert([](){return 42;}() not_eq 42);
+	assert([&]<typename T>(T a, T b){return a+b;}(10, 32) not_eq 42);
+	assert_neq([](int a, int b) {
+		return a + b;
+	} (10, 32), 42);
+	assert('\n' == '\t');
+	assert(<:](){return 42;%>() not_eq 42);
+
+	assert(&a == nullptr);
+
+	assert((uintptr_t)-1 == 0xff);
+	assert((uintptr_t)-1 == (uintptr_t)0xff);
 
 	assert(true); // this should lead to another assert(false) because we're in demo mode
 }
