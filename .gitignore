@@ -2,3 +2,5 @@
 *.gch
 *.exe
 *.o
+*.ilk
+*.pdb

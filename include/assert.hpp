@@ -11,12 +11,36 @@
 #include <regex>
 #include <set>
 #include <sstream>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string_view>
 #include <string.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+
+#ifdef _WIN32
+ #include <windows.h>
+ #include <conio.h>
+ #include <dbghelp.h>
+ #include <io.h>
+ #include <process.h>
+ #ifndef STDIN_FILENO
+  #define STDIN_FILENO _fileno(stdin)
+  #define STDOUT_FILENO _fileno(stdout)
+  #define STDERR_FILENO _fileno(stderr)
+ #endif
+ #undef min // fucking windows headers man
+ #undef max
+ #define USE_DBG_HELP_H
+#else
+ #include <execinfo.h>
+ #include <limits.h>
+ #include <sys/wait.h>
+ #include <termios.h>
+ #include <unistd.h>
+ #define USE_EXECINFO_H
+#endif
 
 #ifndef NCOLOR
  #define ESC "\033["
@@ -81,6 +105,21 @@ namespace assert_impl_ {
 		return str;
 	}
 
+	[[gnu::cold]] [[maybe_unused]]
+	static std::vector<std::string> split(std::string_view s, std::string_view delim) {
+		std::vector<std::string> vec;
+		size_t old_pos = 0;
+		size_t pos = 0;
+		std::string token;
+		while((pos = s.find(delim, old_pos)) != std::string::npos) {
+				token = s.substr(old_pos, pos - old_pos);
+				vec.push_back(token);
+				old_pos = pos + delim.length();
+		}
+		vec.push_back(std::string(s.substr(old_pos)));
+		return vec;
+	}
+
 	template<typename C>
 	[[gnu::cold]]
 	static std::string join(const C& container, const std::string_view delim) {
@@ -104,6 +143,275 @@ namespace assert_impl_ {
 		size_t r = s.find_last_not_of(ws) + 1;
 		return std::string(s.substr(l, r - l));
 	}
+
+	template<size_t N> [[gnu::cold]] std::array<std::string, N> match(const std::string s, const std::regex& r) {
+
+	}
+
+	[[gnu::cold]] [[maybe_unused]]
+	static void enable_virtual_terminal_processing_if_needed() {
+		// enable colors / ansi processing if necessary
+		#ifdef _WIN32
+		// https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing
+		#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+		constexpr DWORD ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4;
+		#endif
+		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		DWORD dwMode = 0;
+		if(hOut == INVALID_HANDLE_VALUE) return;
+		if(!GetConsoleMode(hOut, &dwMode)) return;
+		if(dwMode != (dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+		if(!SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) return;
+		#endif
+	}
+
+	#ifdef _WIN32
+	typedef int pid_t;
+	#endif
+	[[maybe_unused]] static pid_t getpid() {
+		#ifdef _WIN32
+		return _getpid();
+		#else
+		return ::getpid();
+		#endif
+	}
+
+	[[maybe_unused]] static void wait_for_keypress() {
+		#ifdef _WIN32
+		_getch();
+		#else
+		struct termios tty_attr;
+        tcgetattr(0, &tty_attr);
+		struct termios tty_attr_original = tty_attr;
+        tty_attr.c_lflag &= ~(ICANON | ECHO);
+        tty_attr.c_cc[VTIME] = 0;
+        tty_attr.c_cc[VMIN] = 1;
+        tcsetattr(0, TCSAFLUSH, &tty_attr); // formerly used TCSANOW
+		char c;
+		read(STDIN_FILENO, &c, 1);
+        tcsetattr(0, TCSAFLUSH, &tty_attr_original);
+		#endif
+	}
+
+	[[maybe_unused]] static bool isatty(int fd) {
+		#ifdef _WIN32
+		return _isatty(fd);
+		#else
+		return ::isatty(fd);
+		#endif
+	}
+
+	struct stacktrace_entry {
+		std::string filename;
+		std::string signature;
+		int line = 0;
+		bool operator==(const stacktrace_entry& other) const {
+			return line == other.line && signature == other.signature && filename == other.filename;
+		}
+		bool operator!=(const stacktrace_entry& other) const {
+			return !operator==(other);
+		}
+	};
+	
+	// ... -> print_stacktrace -> get_stacktrace
+	// get 100, skip at least 2
+	constexpr size_t n_frames = 100;
+	constexpr size_t n_skip   = 2;
+
+	// based on https://blog.aaronballman.com/2011/04/generating-a-stack-crawl/
+	// TODO: I'd like to find a way to get a full signature for symbols, at the moment this only
+	// produces name and template parameters, not other parameters. I do not know if this is
+	// possible, I haven't found any library or example that can extract this info.
+	#ifdef USE_DBG_HELP_H
+	[[maybe_unused]] static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
+		SymSetOptions(
+			  SYMOPT_DEFERRED_LOADS
+			| SYMOPT_INCLUDE_32BIT_MODULES
+		//	| SYMOPT_NO_PUBLICS
+		//	| SYMOPT_UNDNAME
+		    | SYMOPT_AUTO_PUBLICS
+			| SYMOPT_LOAD_LINES
+		//	| SYMOPT_CASE_INSENSITIVE
+			);
+		HANDLE hProcess = GetCurrentProcess();
+		if (!SymInitialize(hProcess, NULL, TRUE)) return {};
+		PVOID addrs[n_frames] = { 0 };
+		int frames = CaptureStackBackTrace(n_skip, n_frames, addrs, NULL);
+		std::vector<stacktrace_entry> trace;
+		trace.reserve(frames);
+		for(int i = 0; i < frames; i++) {
+			char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+			SYMBOL_INFO* info = (SYMBOL_INFO*)buffer;
+			info->SizeOfStruct = sizeof(SYMBOL_INFO);
+			info->MaxNameLen = MAX_SYM_NAME;
+			DWORD64 displacement;
+			DWORD   displacement2;
+			IMAGEHLP_LINE64 line;
+			SymGetLineFromAddr64(hProcess, (DWORD64)addrs[i], &displacement2, &line);
+			if(SymFromAddr(hProcess, (DWORD64)addrs[i], &displacement, info)) {
+				//printf("%s:%d %s", line.FileName, info->Name, (int)line.LineNumber);
+				//primitive_assert(SymSetContext(hProcess, ))
+				trace.push_back({line.FileName, info->Name, (int)line.LineNumber});
+			}
+		}
+		SymCleanup(hProcess);
+		return trace;
+	}
+	#endif
+	#ifdef USE_EXECINFO_H
+	[[maybe_unused]] static bool has_addr2line() {
+		// Detects if addr2line exists by trying to invoke addr2line --help
+		constexpr int magic = 42;
+		pid_t pid = fork();
+		if(pid == -1) return false; // error? TODO: Diagnostic
+		if(pid == 0) { // child
+			close(STDOUT_FILENO);
+			execlp("addr2line", "addr2line", "--help", nullptr);
+			exit(magic); // TODO: Diagnostic?
+		}
+		int status;
+		waitpid(pid, &status, 0); // -1 && errno == EINTR handles interrupt
+		return WEXITSTATUS(status) == 0;
+	}
+
+	[[maybe_unused]] static std::string get_executable_path() {
+		char buffer[PATH_MAX + 1];
+		ssize_t s = readlink("/proc/self/exe", buffer, PATH_MAX);
+		primitive_assert(s != -1);
+		buffer[s] = 0;
+		return buffer;
+	}
+	
+	struct pipe_t {
+		union {
+			struct {
+				int read_end;
+				int write_end;
+			};
+			int data[2];
+		};
+	};
+
+	static_assert(sizeof(pipe_t) == 2 * sizeof(int));
+	[[maybe_unused]] static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
+		pipe_t output_pipe;
+		pipe_t input_pipe;
+		pipe(output_pipe.data);
+		pipe(input_pipe.data);
+		pid_t pid = fork();
+		if(pid == -1) return ""; // error? TODO: Diagnostic
+		if(pid == 0) { // child
+			dup2(output_pipe.write_end, STDOUT_FILENO);
+			dup2(input_pipe.read_end, STDIN_FILENO);
+			close(output_pipe.read_end);
+			close(output_pipe.write_end);
+			close(input_pipe.read_end);
+			close(input_pipe.write_end);
+			execlp("addr2line", "addr2line", "-e", executable.c_str(), "-f", "-C", nullptr);
+			exit(1); // TODO: Diagnostic?
+		}
+		primitive_assert(write(input_pipe.write_end, addresses.data(), addresses.size()) != -1);
+		close(input_pipe.read_end);
+		close(input_pipe.write_end);
+		close(output_pipe.write_end);
+		std::string output;
+		constexpr int buffer_size = 4096;
+		char buffer[buffer_size];
+		size_t count = 0;
+		while((count = read(output_pipe.read_end, buffer, buffer_size)) > 0) {
+			output.insert(output.end(), buffer, buffer + count);
+		}
+		// TODO: check status from addr2line?
+		waitpid(pid, NULL, 0);
+		return output;
+	}
+
+	[[maybe_unused]] static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
+		printf("has_addr2line: %d\n", has_addr2line());
+		void* bt[n_frames];
+		int bt_size = backtrace(bt, n_frames);
+		//for(int i = 0; i < bt_size; i++) {
+		//	printf("%d %p\n", i, bt[i]);
+		//}
+		char** bt_syms = backtrace_symbols(bt, bt_size);
+		// TODO: check NULL
+		std::vector<stacktrace_entry> trace;
+		trace.reserve(bt_size - n_skip);
+		for(int i = n_skip; i < bt_size; i++) {
+			trace.push_back({"", bt_syms[i], 0});
+			puts(bt_syms[i]);
+			//resolve_address(bt_syms[i]);
+			//size_t len = strlen(bt_syms[i]);
+			//full_write(STDERR_FILENO, bt_syms[i], len);
+			//full_write(STDERR_FILENO, "\n", 1);
+		}
+		free(bt_syms);
+		if(has_addr2line()) {
+			// Four types of lines to handle:
+			// ./demo(foo+0x5c) [0x80487f0]
+			// ./demo [0x8048871]
+			// ./demo(+0x9900) [0x7fa512609900]
+			// /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xe7) [0x7fa5117f1bf7]
+			// general form: path-spec
+			static std::regex bt_symbol_re(R"(^[^(\[]+(?:\(.*(0x[\da-fA-F]+)\))? \[0x[a-fA-F\d]+\]$)");
+			//static std::regex bt_symbol_re(R"(^[^(\[]+(?:\(.*(0x[\da-fA-F]+)\))? \[0x[a-fA-F\d]+\]$)");
+			std::vector<stacktrace_entry*> entries;
+			std::string addresses;
+			//static std::regex address_re(R"(^\+(0x[a-fA-F\d]+)$)");
+			for(auto& entry : trace) {
+				std::smatch match;
+				if(std::regex_match(entry.signature, match, bt_symbol_re)) {
+					auto addr = match[1].str();
+					addresses += addr + "\n";
+					entries.push_back(&entry);
+				} else {
+					// shared object, just use raw line from bt_symbols
+					// TODO: figure out how to addr2line?
+					//fprintf(stderr, "XX: %s\n", entry.signature.c_str());
+					//return line;
+				}
+				//return trace;
+			}
+			// perform translations
+			/*
+			Resolution table
+			path symbol output
+			T    T      default
+			T    F      default
+			F    T      default
+			F    F      default
+			*/
+			std::string exe = get_executable_path();
+			// Always two lines per entry?
+			auto output = split(trim(resolve_addresses(addresses, exe)), "\n");
+			primitive_assert(output.size() == 2 * entries.size());
+			//printf("%d\n", output.size());
+			for(int i = 0; i < entries.size(); i++) {
+				// line info is one of the following:
+				// path:line (descriminator number)
+				// path:line
+				// path:?
+				// ??:?
+				static std::regex location_re(R"(^([^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
+				std::smatch match;
+				std::regex_match(output[i * 2 + 1], match, location_re); // TODO: check return
+				std::string path = match[1].str();
+				std::string line = match[2].str();
+				entries[i]->filename = path == "??" ? entries[i]->signature : path;
+				entries[i]->line = line == "?" ? 0 : std::stoi(line);
+				fprintf(stderr, "XX: %s\n", output[i * 2 + 1].c_str());
+				// signature shouldn't require processing
+				// signature done after path so path can take signature, if needed
+				entries[i]->signature = output[i * 2];
+			}
+			//puts(exe.c_str());
+			//puts(resolve_addresses(addresses, exe).c_str());
+			//auto result = split(resolve_addresses(addresses, exe), "\n");
+			//return "";
+		}
+		return trace;
+	}
+	#endif
 
 	[[gnu::cold]] [[maybe_unused]]
 	static std::string escape_string(const std::string_view str, char quote) {
@@ -800,9 +1108,8 @@ namespace assert_impl_ {
 
 		[[gnu::cold]]
 		literal_format _get_literal_format(const std::string& expression) {
-			std::smatch match;
 			for(auto& [ re, type ] : literal_formats) {
-				if(std::regex_match(expression, match, re)) {
+				if(std::regex_match(expression, re)) {
 					return type;
 				}
 			}
@@ -1134,6 +1441,93 @@ namespace assert_impl_ {
 		}
 	};
 
+	static constexpr int log10(int n) {
+		int t = 1;
+		for(int i = 0; i < [] {
+				int j = 0, n = std::numeric_limits<int>::max(); // note: `j` used instead of `i` because of https://bugs.llvm.org/show_bug.cgi?id=51986
+				while(n /= 10) j++;
+				return j;
+			} () - 1; i++) {
+			if(n <= t) return i;
+			t *= 10;
+		}
+		return t;
+	}
+
+	static void print_stacktrace() {
+		if(auto _trace = get_stacktrace()) {
+			// TODO: Decide format. Line wrapping while maintaining alignment?
+			// TODO: lower-bound too, or just include assert internals
+			auto trace = *_trace;
+			auto main = std::find_if(trace.rbegin(), trace.rend(),
+				[](const assert_impl_::stacktrace_entry& e) {
+					return e.signature == "main";
+				});
+			//if(main != trace.rend()) main = trace.rend() + 1;
+			//primitive_assert(main != trace.rend());
+			//int end = &*main - trace.data();
+			int end = trace.size() - 1;
+			#if 1
+			int max_file_length = std::min(std::max_element(trace.begin(), trace.begin() + end,
+				[](const assert_impl_::stacktrace_entry& a, const assert_impl_::stacktrace_entry& b) {
+					return a.filename.size() < b.filename.size();
+				})->filename.size(), size_t(80)); // don't width-format longer than 80
+			int max_line_numbers_length = log10(std::max_element(trace.begin(), trace.begin() + end,
+				[](const assert_impl_::stacktrace_entry& a, const assert_impl_::stacktrace_entry& b) {
+					return std::to_string(a.line).size() < std::to_string(b.line).size();
+				})->line);
+			int frame_offset = 0;
+			for(int i = 0; i <= end; i++) {
+				const auto& [filename, signature, line] = trace[i];
+				int recursion_folded = 0;
+				if(end - i >= 4) {
+					int j = 1;
+					for( ; i + j <= end; j++) {
+						if(trace[i + j] != trace[i]) break;
+					}
+					if(j >= 4) {
+						trace.erase(trace.begin() + i + 1, trace.begin() + i + j - 1);
+						end -= j - 2;
+						recursion_folded = j - 2;
+					}
+				}
+				auto sig = analysis::highlight(signature + "("); // hack for the highlighter
+				sig = sig.substr(0, sig.rfind("("));
+				fprintf(
+					stderr, "#%2d %-*s %s %s\n",
+					i + 1 + frame_offset,
+					max_file_length,
+					filename.c_str(),
+					analysis::highlight(stringf("%-*s", max_line_numbers_length, std::to_string(line).c_str())).c_str(), // yes this is excessive
+					sig.c_str());
+				if(recursion_folded) {
+					frame_offset += recursion_folded;
+					fprintf(stderr, "    --- %d layers of recursion were folded ---\n", recursion_folded);
+				}
+			}
+			#else
+			for(int i = 0; i <= end; i++) {
+				const auto& [filename, signature, line] = trace[i];
+				#if defined(_WIN32) && defined(__clang__)
+				 auto sig = analysis::highlight(signature + "("); // hack for the highlighter
+				 sig = sig.substr(0, sig.rfind("("));
+				#else
+				 const auto& sig = signature;
+				#endif
+				fprintf(
+					stderr, "#%2d %s\n      at %s:%s\n",
+					i + 1,
+					sig.c_str(),
+					filename.c_str(),
+					analysis::highlight(std::to_string(line).c_str()).c_str() // yes this is excessive
+					);
+			}
+			#endif
+		} else {
+			fprintf(stderr, "Error: Unable to generate stacktrace.");
+		}
+	}
+
 	[[gnu::cold]]
 	static std::string parenthesize_if_necessary(const std::string& expression, const std::string_view op) {
 		if(analysis::has_precedence_below_or_equal(expression, op)) {
@@ -1245,6 +1639,22 @@ namespace assert_impl_ {
 		NONFATAL, FATAL
 	};
 
+	[[gnu::cold]] [[maybe_unused]]
+	static void fail() {
+		if(isatty(STDIN_FILENO) && isatty(STDERR_FILENO)) {
+			//fprintf(stderr, "\n    Process is suspended, run gdb -p %d to attach\n", getpid());
+			//fprintf(stderr,   "    Press any key to continue\n\n");
+			//wait_for_keypress();
+		}
+		#ifdef _0_ASSERT_DEMO
+		printf("\n");
+		#else
+		fflush(stdout);
+		fflush(stderr);
+		abort();
+		#endif
+	}
+
 	template<typename A, typename B, typename C>
 	[[gnu::cold]] [[gnu::noinline]]
 	void assert_fail(expression_decomposer<A, B, C>& decomposer, const char* expr_str, const char* pretty_func, const char* info, ASSERT fatal, source_location location) {
@@ -1260,13 +1670,10 @@ namespace assert_impl_ {
 			auto [a_str, b_str] = analysis::decompose_expression(expr_str, C::op_string);
 			print_binary_diagnostic(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b), a_str.c_str(), b_str.c_str(), C::op_string);
 		}
+		fprintf(stderr, "\nStack trace:\n");
+		print_stacktrace();
 		if(fatal == ASSERT::FATAL) {
-			#ifdef _0_ASSERT_DEMO
-			printf("\n");
-			#else
-			fflush(stdout);
-			abort();
-			#endif
+			fail();
 		}
 	}
 
@@ -1280,13 +1687,10 @@ namespace assert_impl_ {
 		}
 		fprintf(stderr, "    %s\n", analysis::highlight(gen_assert_binary(a_str, C::op_string, b_str)).c_str());
 		print_binary_diagnostic(std::forward<A>(a), std::forward<B>(b), a_str, b_str, C::op_string);
+		fprintf(stderr, "\nStack trace:\n");
+		print_stacktrace();
 		if(fatal == ASSERT::FATAL) {
-			#ifdef _0_ASSERT_DEMO
-			printf("\n");
-			#else
-			fflush(stdout);
-			abort();
-			#endif
+			fail();
 		}
 	}
 
@@ -1296,6 +1700,7 @@ namespace assert_impl_ {
 	template<typename A, typename B, typename C>
 	void assert(expression_decomposer<A, B, C> decomposer, const char* expr_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
 		if(!decomposer.get_value()) {
+			enable_virtual_terminal_processing_if_needed();
 			// todo: forward decomposer?
 			assert_fail(decomposer, expr_str, analysis::highlight(pretty_func).c_str(), info, fatal, location);
 		} else {
@@ -1308,6 +1713,7 @@ namespace assert_impl_ {
 	template<typename C, typename A, typename B>
 	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
 		if(!(bool)C()(a, b)) {
+			enable_virtual_terminal_processing_if_needed();
 			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, analysis::highlight(pretty_func).c_str(), info, fatal, location);
 		} else {
 			#ifdef _0_ASSERT_DEMO

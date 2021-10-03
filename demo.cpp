@@ -54,6 +54,11 @@ int bar() {
 	return 2;
 }
 
+void rec(int n) {
+	if(n == 0) assert(false);
+	else rec(n - 1);
+}
+
 int main() {
 	// demo section
 	assert(false, "code should never do <xyz>");
@@ -177,6 +182,8 @@ int main() {
 
 	assert((uintptr_t)-1 == 0xff);
 	assert((uintptr_t)-1 == (uintptr_t)0xff);
+
+	rec(10);
 
 	assert(true); // this should lead to another assert(false) because we're in demo mode
 }
