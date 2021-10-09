@@ -137,9 +137,10 @@ namespace assert_impl_ {
 		return str;
 	}
 
+	constexpr const char * const ws = " \t\n\r\f\v";
+
 	[[gnu::cold]]
 	static std::string_view trim(const std::string_view s) {
-		constexpr const char * const ws = " \t\n\r\f\v";
 		size_t l = s.find_first_not_of(ws);
 		size_t r = s.find_last_not_of(ws) + 1;
 		return s.substr(l, r - l);
@@ -209,12 +210,10 @@ namespace assert_impl_ {
 		 HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
 		 if(h == INVALID_HANDLE_VALUE) return 0;
 		 if(!GetConsoleScreenBufferInfo(h, &csbi)) return 0;
-		 fprintf(stderr, "%d\n", csbi.srWindow.Right - csbi.srWindow.Left + 1);
 		 return csbi.srWindow.Right - csbi.srWindow.Left + 1;
 		#else
 		 struct winsize w;
     	 if(ioctl(STDERR_FILENO, TIOCGWINSZ, &w) == -1) return 0;
-		 fprintf(stderr, "%d\n", w.ws_col);
 		 return w.ws_col;
 		#endif
 	}
@@ -1628,23 +1627,30 @@ namespace assert_impl_ {
 					// number of characters we can extract from the block
 					size_t extract = std::min(width - lines[current_line][i].length, block.content.size() - block_i);
 					primitive_assert(block_i + extract <= block.content.size());
+					auto substr = std::string_view(block.content).substr(block_i, extract);
+					// handle newlines
+					if(auto x = substr.find('\n'); x != std::string_view::npos) {
+						substr = substr.substr(0, x);
+						extract = x + 1; // extract newline but don't print
+					}
 					// append
 					lines[current_line][i].content += block.color;
-					lines[current_line][i].content += block.content.substr(block_i, extract);
+					lines[current_line][i].content += substr;
 					lines[current_line][i].content += block.color == "" ? "" : RESET;
 					// advance
 					block_i += extract;
 					lines[current_line][i].length += extract;
 					// new line if necessary
-					if(lines[current_line][i].length >= width) current_line++;
+					// substr.size() != extract iff newline
+					if(lines[current_line][i].length >= width || substr.size() != extract) current_line++;
 					if(lines.size() == current_line) lines.push_back(std::vector<cell_t>(columns.size()));
 				}
 			}
 		}
 		// print
 		for(auto& line : lines) {
-			// don't print empty columns but more importantly don't print empty spaces they'll mess
-			// up lines after terminal resizing even more
+			// don't print empty columns with no content in subsequent columns and more importantly
+			// don't print empty spaces they'll mess up lines after terminal resizing even more
 			size_t last_col = 0;
 			for(size_t i = 0; i < line.size(); i++) {
 				if(line[i].content != "") {
@@ -1653,7 +1659,7 @@ namespace assert_impl_ {
 			}
 			for(size_t i = 0; i <= last_col; i++) {
 				auto& cell = line[i];
-				printf("%s%-*s%s",
+				fprintf(stderr, "%s%-*s%s",
 					cell.content.c_str(),
 					i == last_col ? 0 : int(columns[i].width - cell.length), "",
 					i == last_col ? "\n" : " ");
@@ -1704,7 +1710,7 @@ namespace assert_impl_ {
 					return std::to_string(a.line).size() < std::to_string(b.line).size();
 				})->line);
 			int frame_offset = 0;
-			int term_width = terminal_width();
+			int term_width = terminal_width(); // will be 0 on error
 			for(size_t i = 0; i <= end; i++) {
 				const auto& [filename, signature, _line] = trace[i];
 				std::string line = _line == 0 ? "?" : std::to_string(_line);
@@ -1808,12 +1814,30 @@ namespace assert_impl_ {
 		} else {
 			// spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
 			// no indentation done here for multiple value printing
-			if(vec.size() > 1) fprintf(stderr, " ");
+			fprintf(stderr, " ");
 			for(const auto& str : vec) {
 				fprintf(stderr, "%s", analysis::highlight(str).c_str());
 				if(str != *vec.end()--) fprintf(stderr, "  ");
 			}
 			fprintf(stderr, "\n");
+		}
+	}
+	[[gnu::cold]] [[maybe_unused]]
+	static std::vector<analysis::highlight_block> get_values(const std::vector<std::string>& vec) {
+		primitive_assert(vec.size() > 0);
+		if(vec.size() == 1) {
+			return analysis::highlight_blocks(vec[0]);
+		} else {
+			std::vector<analysis::highlight_block> blocks;
+			// spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
+			// no indentation done here for multiple value printing
+			blocks.push_back({"", " "});
+			for(const auto& str : vec) {
+				auto h = analysis::highlight_blocks(str);
+				blocks.insert(blocks.end(), h.begin(), h.end());
+				if(str != *vec.end()--) blocks.push_back({"", "  "});
+			}
+			return blocks;
 		}
 	}
 
@@ -1855,16 +1879,39 @@ namespace assert_impl_ {
 				has_useful_where_clause.left  ? strlen(a_str) : 0,
 				has_useful_where_clause.right ? strlen(b_str) : 0
 			);
+			size_t term_width = terminal_width(); // will be 0 on error
+			// Limit lw to about half the screen. TODO: Re-evaluate what we want to do here.
+			if(term_width > 0) lw = std::min(lw, term_width / 2 - 8 /* indent */ - 4 /* arrow */);
 			fprintf(stderr, "    Where:\n");
 			if(has_useful_where_clause.left) {
-				fprintf(stderr, "        %s%*s => ",
-						analysis::highlight(a_str).c_str(), int(lw - strlen(a_str)), "");
-					print_values(lstrings, lw);
+				if(term_width >= 50) {
+					wrapped_print({
+						{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
+						{ lw, analysis::highlight_blocks(a_str) },
+						{ 2, {{"", "=>"}} },
+						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(lstrings) }
+					});
+				} else {
+					fprintf(stderr, "        %s%*s => ",
+							analysis::highlight(a_str).c_str(), int(lw - strlen(a_str)), "");
+						print_values(lstrings, lw);
+					//fprintf(stderr, "%s\n", join(get_values(lstrings)))
+				}
 			}
 			if(has_useful_where_clause.right) {
-				fprintf(stderr, "        %s%*s => ",
-						analysis::highlight(b_str).c_str(), int(lw - strlen(b_str)), "");
-					print_values(rstrings, lw);
+				if(term_width >= 50) {
+					wrapped_print({
+						{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
+						{ lw, analysis::highlight_blocks(b_str) },
+						{ 2, {{"", "=>"}} },
+						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(rstrings) }
+					});
+				} else {
+					fprintf(stderr, "        %s%*s => ",
+							analysis::highlight(b_str).c_str(), int(lw - strlen(b_str)), "");
+						print_values(rstrings, lw);
+					//fprintf(stderr, "%s\n", join(get_values(rstrings)))
+				}
 			}
 		}
 	}

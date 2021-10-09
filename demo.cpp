@@ -8,6 +8,8 @@
 #include <string_view>
 #include <iostream>
 
+#include "tests/assert.hpp"
+
 #define ESC "\033["
 #define RED ESC "1;31m"
 #define GREEN ESC "1;32m"
@@ -59,6 +61,18 @@ void rec(int n) {
 	else rec(n - 1);
 }
 
+void rbar(int);
+
+void rfoo(int n) {
+	if(n == 0) assert(false);
+	else rbar(n - 1);
+}
+
+void rbar(int n) {
+	if(n == 0) assert(false);
+	else rfoo(n - 1);
+}
+
 int main() {
 	// demo section
 	assert(false, "code should never do <xyz>");
@@ -87,8 +101,6 @@ int main() {
 	const uint16_t flag = 0b000100000;
 	const uint16_t mask = 0b110011101;
 	assert(mask bitand flag);
-
-
 
 	// tests useful during development
 	assert_gteq(map.count(1 == 1), 2);
@@ -184,6 +196,19 @@ int main() {
 	assert((uintptr_t)-1 == (uintptr_t)0xff);
 
 	rec(10);
+
+	rfoo(10);
+
+	baz();
+	
+	{
+		std::string s = "h1ello";
+		assert(std::find_if(s.begin(), s.end(), [](char c) {
+			if(c == '1') assert(c != '1');
+			//assert(!isdigit(c), c);
+			return c == 'e';
+		}) == s.end());
+	}
 
 	assert(true); // this should lead to another assert(false) because we're in demo mode
 }
