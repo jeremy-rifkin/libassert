@@ -1,8 +1,9 @@
 #C = clang++
-C = g++-10
+C = g++
 
-demo: demo.o foo.o
+demo.exe: demo.o foo.o
 	$(C) -std=c++17 -g demo.o foo.o -o demo.exe -Wall -Wextra -ldl #-rdynamic #-ldbghelp
+	#$(C) -std=c++17 -g demo.o foo.o -o demo.exe -Wall -Wextra -ldbghelp
 demo.o: demo.cpp include/assert.hpp
 	$(C) -std=c++17 -g demo.cpp -c -o demo.o -Iinclude -D_0_ASSERT_DEMO -Wall -Wextra
 foo.o: foo.cpp include/assert.hpp
@@ -22,4 +23,4 @@ tests: tests/disambiguation tests/literals tests/tokens_and_highlighting
 everything: demo tests
 
 clean:
-	rm demo.o foo.o tests/disambiguation tests/literals tests/tokens_and_highlighting include/assert.hpp.gch
+	rm demo.exe demo.o foo.o tests/disambiguation tests/literals tests/tokens_and_highlighting include/assert.hpp.gch

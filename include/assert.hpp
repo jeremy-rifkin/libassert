@@ -36,6 +36,7 @@
 #else
  #include <execinfo.h>
  #include <limits.h>
+ #include <sys/ioctl.h>
  #include <sys/wait.h>
  #include <termios.h>
  #include <unistd.h>
@@ -137,11 +138,11 @@ namespace assert_impl_ {
 	}
 
 	[[gnu::cold]]
-	static std::string trim(const std::string_view s) {
+	static std::string_view trim(const std::string_view s) {
 		constexpr const char * const ws = " \t\n\r\f\v";
 		size_t l = s.find_first_not_of(ws);
 		size_t r = s.find_last_not_of(ws) + 1;
-		return std::string(s.substr(l, r - l));
+		return s.substr(l, r - l);
 	}
 
 	template<size_t N> [[gnu::cold]] std::array<std::string, N> match(const std::string s, const std::regex& r) {
@@ -168,7 +169,7 @@ namespace assert_impl_ {
 	#ifdef _WIN32
 	typedef int pid_t;
 	#endif
-	[[maybe_unused]] static pid_t getpid() {
+	[[gnu::cold]] [[maybe_unused]] static pid_t getpid() {
 		#ifdef _WIN32
 		return _getpid();
 		#else
@@ -176,7 +177,7 @@ namespace assert_impl_ {
 		#endif
 	}
 
-	[[maybe_unused]] static void wait_for_keypress() {
+	[[gnu::cold]] [[maybe_unused]] static void wait_for_keypress() {
 		#ifdef _WIN32
 		_getch();
 		#else
@@ -193,11 +194,28 @@ namespace assert_impl_ {
 		#endif
 	}
 
-	[[maybe_unused]] static bool isatty(int fd) {
+	[[gnu::cold]] [[maybe_unused]] static bool isatty(int fd) {
 		#ifdef _WIN32
 		return _isatty(fd);
 		#else
 		return ::isatty(fd);
+		#endif
+	}
+
+	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
+	[[gnu::cold]] [[maybe_unused]] static int terminal_width() {
+		#ifdef _WIN32
+		 CONSOLE_SCREEN_BUFFER_INFO csbi;
+		 HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
+		 if(h == INVALID_HANDLE_VALUE) return 0;
+		 if(!GetConsoleScreenBufferInfo(h, &csbi)) return 0;
+		 fprintf(stderr, "%d\n", csbi.srWindow.Right - csbi.srWindow.Left + 1);
+		 return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+		#else
+		 struct winsize w;
+    	 if(ioctl(STDERR_FILENO, TIOCGWINSZ, &w) == -1) return 0;
+		 fprintf(stderr, "%d\n", w.ws_col);
+		 return w.ws_col;
 		#endif
 	}
 
@@ -822,6 +840,11 @@ namespace assert_impl_ {
 			std::string str;
 		};
 
+		struct highlight_block {
+			std::string_view color;
+			std::string content;
+		};
+
 	private:
 		// could all be const but I don't want to try to pack everything into an init list
 		std::vector<std::pair<token_e, std::regex>> rules; // could be std::array but I don't want to hard-code a size
@@ -902,7 +925,7 @@ namespace assert_impl_ {
 				"/", "%", "^", "&", "|", "=", "+=", "-=", "*=", "/=", "%=", "^=", "&=", "|=", "==",
 				"!=", "<", ">", "<=", ">=", "<=>", "&&", "||", "<<", ">>", "<<=", ">>=", "++", "--",
 				",", "and", "or", "xor", "not", "bitand", "bitor", "compl", "and_eq", "or_eq",
-				"xor_eq", "not_eq" };
+				"xor_eq", "not_eq", "#" }; // # appears in some lambda signatures
 			// Sort longest -> shortest (secondarily A->Z)
 			const auto cmp = [](const std::string_view a, const std::string_view b) {
 				if(a.length() > b.length()) return true;
@@ -1048,10 +1071,10 @@ namespace assert_impl_ {
 		}
 
 		[[gnu::cold]]
-		std::string _highlight(const std::string& expression) try {
+		std::vector<highlight_block> _highlight(const std::string& expression) try {
 			// TODO: improve highlighting, will require more situational awareness
 			const auto tokens = _tokenize(expression);
-			std::string str;
+			std::vector<highlight_block> output;
 			for(size_t i = 0; i < tokens.size(); i++) {
 				const auto& token = tokens[i];
 				// Peek next non-whitespace token, return empty whitespace token if end is reached
@@ -1068,42 +1091,42 @@ namespace assert_impl_ {
 				};
 				switch(token.token_type) {
 					case token_e::keyword:
-						str += PURPL + token.str + RESET;
+						output.push_back({PURPL, token.str});
 						break;
 					case token_e::punctuation:
 						if(highlight_ops.count(token.str)) {
-							str += PURPL + token.str + RESET;
+							output.push_back({PURPL, token.str});
 						} else {
-							str += token.str;
+							output.push_back({"", token.str});
 						}
 						break;
 					case token_e::named_literal:
-						str += ORANGE + token.str + RESET;
+						output.push_back({ORANGE, token.str});
 						break;
 					case token_e::number:
-						str += CYAN + token.str + RESET;
+						output.push_back({CYAN, token.str});
 						break;
 					case token_e::string:
-						str += GREEN + std::regex_replace(token.str, escapes_re, BLUE "$&" GREEN) + RESET;
+						output.push_back({GREEN, std::regex_replace(token.str, escapes_re, BLUE "$&" GREEN)});
 						break;
 					case token_e::identifier:
 						if(peek().str == "(") {
-							str += BLUE + token.str + RESET;
+							output.push_back({BLUE, token.str});
 						} else if(peek().str == "::") {
-							str += YELLOW + token.str + RESET;
+							output.push_back({YELLOW, token.str});
 						} else {
-							str += RED + token.str + RESET;
+							output.push_back({RED, token.str});
 						}
 						break;
 					case token_e::whitespace:
-						str += token.str;
+						output.push_back({"", token.str});
 						break;
 				}
 			}
-			return str;
+			return output;
 		} catch(...) {
 			// yes, yes, never use exceptions for control flow, but performance really does not matter here!
-			return expression;
+			return {{"", expression}};
 		}
 
 		[[gnu::cold]]
@@ -1403,7 +1426,10 @@ namespace assert_impl_ {
 				size_t m = *candidates.begin();
 				for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
 				for(size_t i = m + 1; i < tokens.size(); i++) right_strings.push_back(tokens[i].str);
-				return { trim(join(left_strings, "")), trim(join(right_strings, "")) };
+				return {
+					std::string(trim(join(left_strings, ""))),
+					std::string(trim(join(right_strings, "")))
+				};
 			} else {
 				return { "left", "right" };
 			}
@@ -1413,6 +1439,21 @@ namespace assert_impl_ {
 		// public static wrappers
 		[[gnu::cold]]
 		static std::string highlight(const std::string& expression) {
+			#ifdef NCOLOR
+			return expression;
+			#else
+			auto blocks = get()._highlight(expression);
+			std::string str;
+			for(auto& block : blocks) {
+				str += block.color;
+				str += block.content;
+				if(!block.color.empty()) str += RESET;
+			}
+			return str;
+			#endif
+		}
+		[[gnu::cold]]
+		static std::vector<highlight_block> highlight_blocks(const std::string& expression) {
 			#ifdef NCOLOR
 			return expression;
 			#else
@@ -1454,34 +1495,222 @@ namespace assert_impl_ {
 		return t;
 	}
 
+	using path_components = std::vector<std::string>;
+
+	[[gnu::cold]] [[maybe_unused]]
+	static path_components parse_path(const std::string_view path) {
+		#ifdef _WIN32
+		 constexpr std::string_view path_delim = "\\";
+		#else
+		 constexpr std::string_view path_delim = "/";
+		#endif
+		// Some cases to consider
+		// projects/asserts/demo.cpp               projects   asserts  demo.cpp
+		// /glibc-2.27/csu/../csu/libc-start.c  /  glibc-2.27 csu      libc-start.c
+		// ./demo.exe                           .  demo.exe
+		// ./../demo.exe                        .. demo.exe
+		// ../x.hpp                             .. x.hpp
+		// /foo/./x                             foo        x
+		// /foo//x                              f          x
+		path_components parts;
+		for(std::string& part : split(path, path_delim)) {
+			if(parts.empty()) {
+				// first gets added no matter what
+				parts.push_back(part);
+			} else {
+				if(part == "") {
+					// nop
+				} else if(part == ".") {
+					// nop
+				} else if(part == "..") {
+					// cases where we have unresolvable ..'s, e.g. ./../../demo.exe
+					if(parts.back() == "." || parts.back() == "..") {
+						parts.push_back(part);
+					} else {
+						parts.pop_back();
+					}
+				} else {
+					parts.push_back(part);
+				}
+			}
+		}
+		primitive_assert(!parts.empty());
+		primitive_assert(parts.back() != "." && parts.back() != "..");
+		return parts;
+	}
+
+	class path_trie {
+		// Backwards path trie structure
+		// e.g.:
+		// a/b/c/d/e     disambiguate to -> c/d/e
+		// a/b/f/d/e     disambiguate to -> f/d/e
+		//  2   2   1   1   1
+		// e - d - c - b - a
+		//      \   1   1   1
+		//       \ f - b - a
+		// Nodes are marked with the number of downstream branches
+		size_t downstream_branches = 1;
+		std::string root;
+		std::unordered_map<std::string, path_trie*> edges;
+	public:
+		path_trie(std::string root) : root(root) {};
+		compl path_trie() {
+			for(auto& [k, trie] : edges) {
+				delete trie;
+			}
+		}
+		path_trie(const path_trie&) = delete;
+		path_trie(path_trie&& other) {
+			downstream_branches = other.downstream_branches;
+			root = other.root;
+			for(auto& [k, trie] : edges) {
+				delete trie;
+			}
+			edges = std::move(other.edges);
+		}
+		path_trie& operator=(const path_trie&) = delete;
+		path_trie& operator=(path_trie&&) = delete;
+		void insert(const path_components& path) {
+			primitive_assert(path.back() == root);
+			insert(path, (int)path.size() - 2);
+		}
+		path_components disambiguate(const path_components& path) {
+			path_components result;
+			path_trie* current = this;
+			primitive_assert(path.back() == root);
+			result.push_back(current->root);
+			for(size_t i = path.size() - 2; i >= 1; i--) {
+				primitive_assert(current->downstream_branches >= 1);
+				if(current->downstream_branches == 1) break;
+				const std::string& component = path[i];
+				primitive_assert(current->edges.count(component));
+				current = current->edges.at(component);
+				result.push_back(current->root);
+			}
+			std::reverse(result.begin(), result.end());
+			return result;
+		}
+	private:
+		void insert(const path_components& path, int i) {
+			if(i < 0) return;
+			if(!edges.count(path[i])) {
+				if(!edges.empty()) downstream_branches++; // this is to deal with making leaves have count 1
+				edges.insert({path[i], new path_trie(path[i])});
+			}
+			downstream_branches -= edges.at(path[i])->downstream_branches;
+			edges.at(path[i])->insert(path, i - 1);
+			downstream_branches += edges.at(path[i])->downstream_branches;
+		}
+	};
+
+	struct column_t {
+		size_t width;
+		std::vector<analysis::highlight_block> blocks;
+	};
+
+	struct cell_t {
+		size_t length;
+		std::string content;
+	};
+
+	static void wrapped_print(std::vector<column_t> columns) {
+		// 2d array rows/columns
+		std::vector<std::vector<cell_t>> lines;
+		lines.push_back(std::vector<cell_t>(columns.size()));
+		// populate one column at a time
+		for(size_t i = 0; i < columns.size(); i++) {
+			auto [width, blocks] = columns[i];
+			size_t current_line = 0;
+			for(auto& block : blocks) {
+				size_t block_i = 0;
+				// digest block
+				while(block_i != block.content.size()) {
+					// number of characters we can extract from the block
+					size_t extract = std::min(width - lines[current_line][i].length, block.content.size() - block_i);
+					primitive_assert(block_i + extract <= block.content.size());
+					// append
+					lines[current_line][i].content += block.color;
+					lines[current_line][i].content += block.content.substr(block_i, extract);
+					lines[current_line][i].content += block.color == "" ? "" : RESET;
+					// advance
+					block_i += extract;
+					lines[current_line][i].length += extract;
+					// new line if necessary
+					if(lines[current_line][i].length >= width) current_line++;
+					if(lines.size() == current_line) lines.push_back(std::vector<cell_t>(columns.size()));
+				}
+			}
+		}
+		// print
+		for(auto& line : lines) {
+			// don't print empty columns but more importantly don't print empty spaces they'll mess
+			// up lines after terminal resizing even more
+			size_t last_col = 0;
+			for(size_t i = 0; i < line.size(); i++) {
+				if(line[i].content != "") {
+					last_col = i;
+				}
+			}
+			for(size_t i = 0; i <= last_col; i++) {
+				auto& cell = line[i];
+				printf("%s%-*s%s",
+					cell.content.c_str(),
+					i == last_col ? 0 : int(columns[i].width - cell.length), "",
+					i == last_col ? "\n" : " ");
+			}
+		}
+	}
+
+	[[gnu::cold]]
 	static void print_stacktrace() {
 		if(auto _trace = get_stacktrace()) {
-			// TODO: Decide format. Line wrapping while maintaining alignment?
-			// TODO: lower-bound too, or just include assert internals
 			auto trace = *_trace;
+			// TODO: lower-bound too, or just include assert internals
 			auto main = std::find_if(trace.rbegin(), trace.rend(),
 				[](const assert_impl_::stacktrace_entry& e) {
 					return e.signature == "main";
 				});
-			//if(main != trace.rend()) main = trace.rend() + 1;
-			//primitive_assert(main != trace.rend());
-			//int end = &*main - trace.data();
-			int end = trace.size() - 1;
-			#if 1
-			int max_file_length = std::min(std::max_element(trace.begin(), trace.begin() + end,
-				[](const assert_impl_::stacktrace_entry& a, const assert_impl_::stacktrace_entry& b) {
-					return a.filename.size() < b.filename.size();
-				})->filename.size(), size_t(80)); // don't width-format longer than 80
+			//size_t end = &*main - &trace.front();
+			size_t end = trace.size() - 1; (void) main;
+			// path preprocessing
+			// raw full path -> components
+			std::unordered_map<std::string, path_components> components;
+			// file name -> trie
+			std::unordered_map<std::string, path_trie> file_tries;
+			for(size_t i = 0; i <= end; i++) {
+				const auto& [filename, _1, _2] = trace[i];
+				auto path = parse_path(filename);
+				if(!components.count(filename)) {
+					components.insert({filename, path});
+					if(!file_tries.count(path.back())) {
+						file_tries.insert(std::make_pair(path.back(), path_trie(path.back())));
+					}
+					file_tries.at(path.back()).insert(path);
+				}
+			}
+			// raw full path -> minified path
+			std::unordered_map<std::string, std::string> files;
+			size_t max_file_length = 0;
+			for(auto& [raw, path] : components) {
+				primitive_assert(!files.count(raw));
+				//std::string new_path = raw;
+				std::string new_path = join(file_tries.at(path.back()).disambiguate(path), "/");
+				files.insert({raw, new_path});
+				if(new_path.size() > max_file_length) max_file_length = new_path.size();
+			}
+			max_file_length = std::min(max_file_length, size_t(80));
 			int max_line_numbers_length = log10(std::max_element(trace.begin(), trace.begin() + end,
 				[](const assert_impl_::stacktrace_entry& a, const assert_impl_::stacktrace_entry& b) {
 					return std::to_string(a.line).size() < std::to_string(b.line).size();
 				})->line);
 			int frame_offset = 0;
-			for(int i = 0; i <= end; i++) {
-				const auto& [filename, signature, line] = trace[i];
+			int term_width = terminal_width();
+			for(size_t i = 0; i <= end; i++) {
+				const auto& [filename, signature, _line] = trace[i];
+				std::string line = _line == 0 ? "?" : std::to_string(_line);
 				int recursion_folded = 0;
 				if(end - i >= 4) {
-					int j = 1;
+					size_t j = 1;
 					for( ; i + j <= end; j++) {
 						if(trace[i + j] != trace[i]) break;
 					}
@@ -1491,38 +1720,44 @@ namespace assert_impl_ {
 						recursion_folded = j - 2;
 					}
 				}
-				auto sig = analysis::highlight(signature + "("); // hack for the highlighter
-				sig = sig.substr(0, sig.rfind("("));
-				fprintf(
-					stderr, "#%2d %-*s %s %s\n",
-					i + 1 + frame_offset,
-					max_file_length,
-					filename.c_str(),
-					analysis::highlight(stringf("%-*s", max_line_numbers_length, std::to_string(line).c_str())).c_str(), // yes this is excessive
-					sig.c_str());
+				// pretty print with columns for wide terminals
+				// split printing for small terminals
+				if(term_width >= 50) {
+					auto sig = analysis::highlight_blocks(signature + "("); // hack for the highlighter
+					sig.pop_back();
+					std::string frame = std::to_string(i + 1 + frame_offset);
+					size_t left = 2 + std::max((int)frame.length(), 2);
+					size_t middle = std::max((int)line.size(), max_line_numbers_length);
+					//constexpr size_t max_file_length = 20;
+					size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
+					primitive_assert(remaining_width >= 2);
+					size_t file_width = std::min(max_file_length, remaining_width / 2);
+					size_t sig_width = remaining_width - file_width;
+					wrapped_print({
+						{ left,       {{"", "# " + frame}} },
+						{ file_width, {{"", files.at(filename)}} },
+						{ middle,     analysis::highlight_blocks(line) }, // intentionally not coloring "?"
+						{ sig_width,  sig }
+					});
+				} else {
+					auto sig = analysis::highlight(signature + "("); // hack for the highlighter
+					sig = sig.substr(0, sig.rfind("("));
+					fprintf(
+						stderr, "#%2d %s\n      at %s:%s\n",
+						int(i + 1 + frame_offset),
+						sig.c_str(),
+						filename.c_str(),
+						(CYAN + line + RESET).c_str() // yes this is excessive and intentionally coloring "?"
+					);
+				}
 				if(recursion_folded) {
 					frame_offset += recursion_folded;
-					fprintf(stderr, "    --- %d layers of recursion were folded ---\n", recursion_folded);
+					std::string s = stringf("| %d layers of recursion were folded |", recursion_folded);
+					fprintf(stderr, BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
+					fprintf(stderr, BLUE  "%s"   RESET "\n", s.c_str());
+					fprintf(stderr, BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
 				}
 			}
-			#else
-			for(int i = 0; i <= end; i++) {
-				const auto& [filename, signature, line] = trace[i];
-				#if defined(_WIN32) && defined(__clang__)
-				 auto sig = analysis::highlight(signature + "("); // hack for the highlighter
-				 sig = sig.substr(0, sig.rfind("("));
-				#else
-				 const auto& sig = signature;
-				#endif
-				fprintf(
-					stderr, "#%2d %s\n      at %s:%s\n",
-					i + 1,
-					sig.c_str(),
-					filename.c_str(),
-					analysis::highlight(std::to_string(line).c_str()).c_str() // yes this is excessive
-					);
-			}
-			#endif
 		} else {
 			fprintf(stderr, "Error: Unable to generate stacktrace.");
 		}
