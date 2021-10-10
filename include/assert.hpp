@@ -1624,6 +1624,7 @@ namespace assert_impl_ {
 				size_t block_i = 0;
 				// digest block
 				while(block_i != block.content.size()) {
+					if(lines.size() == current_line) lines.push_back(std::vector<cell_t>(columns.size()));
 					// number of characters we can extract from the block
 					size_t extract = std::min(width - lines[current_line][i].length, block.content.size() - block_i);
 					primitive_assert(block_i + extract <= block.content.size());
@@ -1643,7 +1644,6 @@ namespace assert_impl_ {
 					// new line if necessary
 					// substr.size() != extract iff newline
 					if(lines[current_line][i].length >= width || substr.size() != extract) current_line++;
-					if(lines.size() == current_line) lines.push_back(std::vector<cell_t>(columns.size()));
 				}
 			}
 		}
@@ -1718,7 +1718,7 @@ namespace assert_impl_ {
 				if(end - i >= 4) {
 					size_t j = 1;
 					for( ; i + j <= end; j++) {
-						if(trace[i + j] != trace[i]) break;
+						if(trace[i + j] != trace[i] || trace[i + j].signature == "??") break;
 					}
 					if(j >= 4) {
 						trace.erase(trace.begin() + i + 1, trace.begin() + i + j - 1);
@@ -1726,12 +1726,13 @@ namespace assert_impl_ {
 						recursion_folded = j - 2;
 					}
 				}
+				int frame_number = i + 1 + frame_offset;
 				// pretty print with columns for wide terminals
 				// split printing for small terminals
 				if(term_width >= 50) {
 					auto sig = analysis::highlight_blocks(signature + "("); // hack for the highlighter
 					sig.pop_back();
-					std::string frame = std::to_string(i + 1 + frame_offset);
+					std::string frame = std::to_string(frame_number);
 					size_t left = 2 + std::max((int)frame.length(), 2);
 					size_t middle = std::max((int)line.size(), max_line_numbers_length);
 					//constexpr size_t max_file_length = 20;
@@ -1740,7 +1741,7 @@ namespace assert_impl_ {
 					size_t file_width = std::min(max_file_length, remaining_width / 2);
 					size_t sig_width = remaining_width - file_width;
 					wrapped_print({
-						{ left,       {{"", "# " + frame}} },
+						{ left,       {{"", (frame_number < 10 ? "#  " : "# ") + frame}} },
 						{ file_width, {{"", files.at(filename)}} },
 						{ middle,     analysis::highlight_blocks(line) }, // intentionally not coloring "?"
 						{ sig_width,  sig }
@@ -1750,7 +1751,7 @@ namespace assert_impl_ {
 					sig = sig.substr(0, sig.rfind("("));
 					fprintf(
 						stderr, "#%2d %s\n      at %s:%s\n",
-						int(i + 1 + frame_offset),
+						frame_number,
 						sig.c_str(),
 						filename.c_str(),
 						(CYAN + line + RESET).c_str() // yes this is excessive and intentionally coloring "?"
