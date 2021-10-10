@@ -19,7 +19,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#ifdef _WIN32
+#if defined(_WIN32) && defined(__clang__)
  #include <windows.h>
  #include <conio.h>
  #include <dbghelp.h>
@@ -34,14 +34,19 @@
  #undef max
  #define USE_DBG_HELP_H
 #else
+ #include <dlfcn.h>
  #include <execinfo.h>
  #include <limits.h>
  #include <sys/ioctl.h>
+ #include <sys/stat.h>
+ #include <sys/types.h>
  #include <sys/wait.h>
  #include <termios.h>
  #include <unistd.h>
  #define USE_EXECINFO_H
 #endif
+
+///#include <iostream>
 
 #ifndef NCOLOR
  #define ESC "\033["
@@ -146,8 +151,19 @@ namespace assert_impl_ {
 		return s.substr(l, r - l);
 	}
 
-	template<size_t N> [[gnu::cold]] std::array<std::string, N> match(const std::string s, const std::regex& r) {
-
+	template<size_t N>
+	[[gnu::cold]]
+	std::optional<std::array<std::string, N>> match(const std::string s, const std::regex& r) {
+		std::smatch match;
+		if(std::regex_match(s, match, r)) {
+			std::array<std::string, N> arr;
+			for(size_t i = 0; i < N; i++) {
+				arr[i] = match[i + 1].str();
+			}
+			return arr;
+		} else {
+			return {};
+		}
 	}
 
 	[[gnu::cold]] [[maybe_unused]]
@@ -276,7 +292,7 @@ namespace assert_impl_ {
 	}
 	#endif
 	#ifdef USE_EXECINFO_H
-	[[maybe_unused]] static bool has_addr2line() {
+	[[gnu::cold]] [[maybe_unused]] static bool has_addr2line() {
 		// Detects if addr2line exists by trying to invoke addr2line --help
 		constexpr int magic = 42;
 		pid_t pid = fork();
@@ -291,12 +307,92 @@ namespace assert_impl_ {
 		return WEXITSTATUS(status) == 0;
 	}
 
-	[[maybe_unused]] static std::string get_executable_path() {
+	[[gnu::cold]] [[maybe_unused]] static std::string get_executable_path() {
 		char buffer[PATH_MAX + 1];
 		ssize_t s = readlink("/proc/self/exe", buffer, PATH_MAX);
 		primitive_assert(s != -1);
 		buffer[s] = 0;
 		return buffer;
+	}
+
+	// returns 1 for little endian, 2 for big endien, matches elf
+	[[gnu::cold]] [[maybe_unused]] static int endianness() {
+		int n = 1;
+		if(*(char*)&n == 1) {
+			return 1; // little
+		} else {
+			return 2; // big
+		}
+	}
+
+	// https://en.wikipedia.org/wiki/Executable_and_Linkable_Format#File_header
+	// file header is the same between 32 and 64-bit until offset 0x18
+	struct [[gnu::packed]] partial_elf_file_header {
+		char magic[4];
+		uint8_t e_class;
+		uint8_t e_data; // endianness: 1 for little, 2 for big
+		uint8_t e_version;
+		uint8_t e_osabi;
+		uint8_t e_abiver;
+		char e_unused[7];
+		uint16_t e_type;
+	};
+	static_assert(sizeof(partial_elf_file_header) == 0x12);
+
+	enum elf_obj_types {
+		ET_EXEC = 0x02,
+		ET_DYN = 0x03
+	};
+
+	[[gnu::cold]] [[maybe_unused]] static uint16_t get_executable_e_type(const std::string& path) {
+		FILE* f = fopen(path.c_str(), "rb");
+		primitive_assert(f != NULL);
+		partial_elf_file_header h;
+		size_t s = fread(&h, sizeof(partial_elf_file_header), 1, f);
+		if(s != 1) primitive_assert(false, "error while reading file");
+		if(h.e_data != endianness()) {
+			h.e_type = (h.e_type & 0x00ff) << 8 | (h.e_type & 0xff00) >> 8;
+		}
+		return h.e_type;
+	}
+
+	[[gnu::cold]] [[maybe_unused]]
+	static bool paths_refer_to_same(const std::string& path_a, const std::string& path_b) {
+		struct stat a, b;
+		stat(path_a.c_str(), &a);
+		stat(path_b.c_str(), &b);
+		static_assert(std::is_integral_v<dev_t>);
+		static_assert(std::is_integral_v<ino_t>);
+		return a.st_dev == b.st_dev && a.st_ino == b.st_ino;
+	}
+
+	struct frame { // TODO: re-evaluate members here
+		std::string obj_path;
+		std::string symbol;
+		void* obj_base = nullptr;
+		void* raw_address = nullptr; // raw_address - obj_base -> addr2line
+	};
+
+	[[gnu::cold]] [[maybe_unused]]
+	static std::vector<frame> backtrace_frames(void * const * array, size_t size, size_t skip) {
+		// reference: https://github.com/bminor/glibc/blob/master/debug/backtracesyms.c
+		std::vector<frame> frames;
+		for(size_t i = skip; i < size; i++) {
+			Dl_info info;
+			frame frame;
+			frame.raw_address = array[i];
+			if(dladdr(array[i], &info)) {
+				primitive_assert(info.dli_fname != nullptr);
+				// dli_sname and dli_saddr are only present with -rdynamic, sname will be included
+				// but we don't really need dli_saddr
+				frame.obj_path = info.dli_fname;
+				frame.obj_base = info.dli_fbase;
+				frame.symbol = info.dli_sname ?: "?";
+			}
+			frames.push_back(frame);
+		}
+		primitive_assert(frames.size() == size - skip);
+		return frames;
 	}
 	
 	struct pipe_t {
@@ -308,9 +404,10 @@ namespace assert_impl_ {
 			int data[2];
 		};
 	};
-
 	static_assert(sizeof(pipe_t) == 2 * sizeof(int));
-	[[maybe_unused]] static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
+
+	[[gnu::cold]] [[maybe_unused]]
+	static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
 		pipe_t output_pipe;
 		pipe_t input_pipe;
 		pipe(output_pipe.data);
@@ -343,88 +440,81 @@ namespace assert_impl_ {
 		return output;
 	}
 
-	[[maybe_unused]] static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
-		printf("has_addr2line: %d\n", has_addr2line());
+	[[gnu::cold]] [[maybe_unused]]
+	static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
 		void* bt[n_frames];
 		int bt_size = backtrace(bt, n_frames);
-		//for(int i = 0; i < bt_size; i++) {
-		//	printf("%d %p\n", i, bt[i]);
-		//}
-		char** bt_syms = backtrace_symbols(bt, bt_size);
-		// TODO: check NULL
-		std::vector<stacktrace_entry> trace;
-		trace.reserve(bt_size - n_skip);
-		for(int i = n_skip; i < bt_size; i++) {
-			trace.push_back({"", bt_syms[i], 0});
-			puts(bt_syms[i]);
-			//resolve_address(bt_syms[i]);
-			//size_t len = strlen(bt_syms[i]);
-			//full_write(STDERR_FILENO, bt_syms[i], len);
-			//full_write(STDERR_FILENO, "\n", 1);
-		}
-		free(bt_syms);
+		///char** x = backtrace_symbols(bt, bt_size);
+		///for(int i = 0; i < bt_size; i++) {
+		///	puts(x[i]);
+		///}
+		std::vector<frame> frames = backtrace_frames(bt, bt_size, n_skip);
+		///std::cout<<"path symbol obj_base symbol_address raw_address"<<std::endl;
+		///for(auto& frame : frames) {
+		///	std::cout<<frame.obj_path<<" "<<frame.symbol<<" "<<frame.obj_base<<" "<<frame.raw_address<<std::endl;
+		///}
+		std::vector<stacktrace_entry> trace(frames.size());
 		if(has_addr2line()) {
-			// Four types of lines to handle:
-			// ./demo(foo+0x5c) [0x80487f0]
-			// ./demo [0x8048871]
-			// ./demo(+0x9900) [0x7fa512609900]
-			// /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xe7) [0x7fa5117f1bf7]
-			// general form: path-spec
-			static std::regex bt_symbol_re(R"(^[^(\[]+(?:\(.*(0x[\da-fA-F]+)\))? \[0x[a-fA-F\d]+\]$)");
-			//static std::regex bt_symbol_re(R"(^[^(\[]+(?:\(.*(0x[\da-fA-F]+)\))? \[0x[a-fA-F\d]+\]$)");
-			std::vector<stacktrace_entry*> entries;
-			std::string addresses;
-			//static std::regex address_re(R"(^\+(0x[a-fA-F\d]+)$)");
-			for(auto& entry : trace) {
-				std::smatch match;
-				if(std::regex_match(entry.signature, match, bt_symbol_re)) {
-					auto addr = match[1].str();
-					addresses += addr + "\n";
-					entries.push_back(&entry);
-				} else {
-					// shared object, just use raw line from bt_symbols
-					// TODO: figure out how to addr2line?
-					//fprintf(stderr, "XX: %s\n", entry.signature.c_str());
-					//return line;
+			// filename -> { addresses string, target vector }
+			std::unordered_map<std::string, std::pair<std::string, std::vector<stacktrace_entry*>>> entries;
+			std::string binary_path = get_executable_path();
+			bool is_pie = get_executable_e_type(binary_path) == ET_DYN;
+			std::optional<std::string> dladdr_name_of_executable;
+			for(size_t i = 0; i < frames.size(); i++) {
+				auto& entry = frames[i];
+				primitive_assert(entry.raw_address >= entry.obj_base);
+				// There is a bug with dladdr for non-PIE objects
+				if(!dladdr_name_of_executable.has_value()) {
+					if(paths_refer_to_same(entry.obj_path, binary_path)) {
+						dladdr_name_of_executable = entry.obj_path;
+					}
 				}
-				//return trace;
+				uintptr_t addr;
+				// if this symbol is in the executable and the executable is not pie use raw address
+				// otherwise compute offset
+				if(dladdr_name_of_executable.has_value()
+				&& dladdr_name_of_executable.value() == entry.obj_path
+				&& !is_pie) {
+					addr = (uintptr_t)entry.raw_address;
+				} else {
+					addr = (uintptr_t)entry.raw_address - (uintptr_t)entry.obj_base;
+				}
+				///printf("%s :: %p\n", entry.obj_path.c_str(), addr);
+				if(entries.count(entry.obj_path) == 0) entries.insert({entry.obj_path, {"", {}}});
+				entries.at(entry.obj_path).first += stringf("%#tx\n", addr);
+				entries.at(entry.obj_path).second.push_back(&trace[i]);
+				trace[i].filename = entry.obj_path;
 			}
 			// perform translations
-			/*
-			Resolution table
-			path symbol output
-			T    T      default
-			T    F      default
-			F    T      default
-			F    F      default
-			*/
-			std::string exe = get_executable_path();
-			// Always two lines per entry?
-			auto output = split(trim(resolve_addresses(addresses, exe)), "\n");
-			primitive_assert(output.size() == 2 * entries.size());
-			//printf("%d\n", output.size());
-			for(int i = 0; i < entries.size(); i++) {
-				// line info is one of the following:
-				// path:line (descriminator number)
-				// path:line
-				// path:?
-				// ??:?
-				static std::regex location_re(R"(^([^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
-				std::smatch match;
-				std::regex_match(output[i * 2 + 1], match, location_re); // TODO: check return
-				std::string path = match[1].str();
-				std::string line = match[2].str();
-				entries[i]->filename = path == "??" ? entries[i]->signature : path;
-				entries[i]->line = line == "?" ? 0 : std::stoi(line);
-				fprintf(stderr, "XX: %s\n", output[i * 2 + 1].c_str());
-				// signature shouldn't require processing
-				// signature done after path so path can take signature, if needed
-				entries[i]->signature = output[i * 2];
+			for(auto& [file, pair] : entries) {
+				auto& [addresses, target] = pair;
+				// Always two lines per entry?
+				// https://kernel.googlesource.com/pub/scm/linux/kernel/git/hjl/binutils/+/hjl/secondary/binutils/addr2line.c
+				///auto x = resolve_addresses(addresses, file);
+				///puts(x.c_str());
+				///auto output = split(trim(x), "\n");
+				auto output = split(trim(resolve_addresses(addresses, file)), "\n");
+				primitive_assert(output.size() == 2 * target.size());
+				//printf("%d\n", output.size());
+				for(size_t i = 0; i < target.size(); i++) {
+					// line info is one of the following:
+					// path:line (descriminator number)
+					// path:line
+					// path:?
+					// ??:?
+					static std::regex location_re(R"(^([^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
+					auto m = match<2>(output[i * 2 + 1], location_re);
+					primitive_assert(m.has_value());
+					auto [path, line] = *m;
+					if(path != "??") {
+						target[i]->filename = path;
+					}
+					target[i]->line = line == "?" ? 0 : std::stoi(line);
+					// signature shouldn't require processing
+					// signature done after path so path can take signature, if needed
+					target[i]->signature = output[i * 2];
+				}
 			}
-			//puts(exe.c_str());
-			//puts(resolve_addresses(addresses, exe).c_str());
-			//auto result = split(resolve_addresses(addresses, exe), "\n");
-			//return "";
 		}
 		return trace;
 	}

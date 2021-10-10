@@ -1,9 +1,10 @@
 # Asserts <!-- omit in toc -->
 
 <p align="center">The most over-engineered assertion library.</p>
+<p align="center"><i>"did you just implement syntax highlighting for an assertion library??"</i> - My Russian friend Oleg</p>
 
-**BLUF:** Automatic expression decomposition, diagnostics on binary expressions, syntax
-highlighting, info messages!
+**Summary:** Automatic expression decomposition, diagnostics on binary expressions, stack traces,
+syntax highlighting, info messages!
 
 ```cpp
 assert(map.count(1) == 2);
@@ -37,7 +38,7 @@ still maintaining ease of use for the developer.
 #### Table of Contents: <!-- omit in toc -->
 - [Functionality This Library Provides](#functionality-this-library-provides)
 - [Quick Library Documentation](#quick-library-documentation)
-- [Installation](#installation)
+- [How To Use This Library](#how-to-use-this-library)
 - [Comparison With Other Languages](#comparison-with-other-languages)
 
 ### Functionality This Library Provides
@@ -186,12 +187,15 @@ decomposition.
 
 *Note* For user-defined types, only move semantics are required by the assertion processor.
 
-### Installation
+### How To Use This Library
 
-Dead-simple: This is a single-header file so just copy the header file. The use of precompiled
-headers is advised.
+1. Copy the header file [`include/assert.hpp`](include/assert.hpp) somewhere in your include path.
+2. Link
+   - On windows with clang link with dbghelp (`-ldbghelp`). Note: A pdb file may need to be present
+     for stacktraces, clang will generate these automatically.
+   - On linux or windows with mingw link with lib dl (`-ldl`)
 
-This library targets C++17 and supports gcc and clang.
+This library targets >=C++17 and supports gcc and clang on windows and linux.
 
 ### Comparison With Other Languages
 
@@ -220,13 +224,13 @@ Assertions should:
 - Allow the programmer to provide an associated info message.
 - If a comparison fails, provide the values involved.
 
-|                 | C/C++ | Rust | C# | Java | Python | JavaScript | This Library |
-|:--:             |:--:  |:--:  |:--: |:--:  |:--:    |:--:        |:--:|
-| Expression      | ✔️   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
-| Location        | ✔️   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
-| Backtrace       | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | TODO |
-| Info Message    | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
-| Values Involved | ❌   | ✔️   | ❌ | ❌  | ❌    | ✔️         | ✔️ |
+|                          | C/C++ | Rust | C# | Java | Python | JavaScript | This Library |
+|:--:                      |:--:  |:--:   |:--:|:--:  |:--:    |:--:        |:--:|
+| Expression String        | ✔️   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
+| Location                 | ✔️   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
+| Backtrace                | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | TODO |
+| Info Message             | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
+| Binary specializations   | ❌   | ✔️   | ❌ | ❌  | ❌    | ✔️         | ✔️ |
 | Automatic expression decomposition | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
 
 Extras:
