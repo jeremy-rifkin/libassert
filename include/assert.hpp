@@ -19,7 +19,22 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#if defined(_WIN32) && defined(__clang__)
+#if defined(__clang__)
+ #define IS_CLANG 1
+#elif defined(__GNUC__) || defined(__GNUG__)
+ #define IS_GCC 1
+#else
+ #error "no"
+#endif
+#if defined(_WIN32)
+ #define IS_WINDOWS 1
+#elif defined(__linux)
+ #define IS_LINUX 1
+#else
+ #error "no"
+#endif
+
+#if IS_WINDOWS
  #include <windows.h>
  #include <conio.h>
  #include <dbghelp.h>
@@ -234,6 +249,21 @@ namespace assert_impl_ {
 		#endif
 	}
 
+	[[gnu::cold]] [[maybe_unused]] static std::string get_executable_path() {
+		#ifdef _WIN32
+		 char buffer[MAX_PATH + 1];
+		 int s = GetModuleFileNameA(NULL, buffer, sizeof(buffer));
+		 primitive_assert(s != 0);
+		 return buffer;
+		#else
+		 char buffer[PATH_MAX + 1];
+		 ssize_t s = readlink("/proc/self/exe", buffer, PATH_MAX);
+		 primitive_assert(s != -1);
+		 buffer[s] = 0;
+		 return buffer;
+		#endif
+	}
+
 	struct stacktrace_entry {
 		std::string filename;
 		std::string signature;
@@ -256,6 +286,20 @@ namespace assert_impl_ {
 	// produces name and template parameters, not other parameters. I do not know if this is
 	// possible, I haven't found any library or example that can extract this info.
 	#ifdef USE_DBG_HELP_H
+	[[gnu::cold]] [[maybe_unused]]
+	static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
+		// TODO: Popen is a hack. Implement properly with CreateProcess and pipes later.
+		FILE* p = popen(("addr2line -e " + executable + " -fC " + addresses).c_str(), "r");
+		std::string output;
+		constexpr int buffer_size = 4096;
+		char buffer[buffer_size];
+		size_t count = 0;
+		while((count = fread(buffer, 1, buffer_size, p)) > 0) {
+			output.insert(output.end(), buffer, buffer + count);
+		}
+		return output;
+	}
+
 	[[maybe_unused]] static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
 		SymSetOptions(
 			  SYMOPT_DEFERRED_LOADS
@@ -272,6 +316,10 @@ namespace assert_impl_ {
 		int frames = CaptureStackBackTrace(n_skip, n_frames, addrs, NULL);
 		std::vector<stacktrace_entry> trace;
 		trace.reserve(frames);
+		#if IS_GCC
+		std::string executable = get_executable_path();
+		std::vector<std::pair<PVOID, size_t>> deferred;
+		#endif
 		for(int i = 0; i < frames; i++) {
 			char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
 			SYMBOL_INFO* info = (SYMBOL_INFO*)buffer;
@@ -280,14 +328,59 @@ namespace assert_impl_ {
 			DWORD64 displacement;
 			DWORD   displacement2;
 			IMAGEHLP_LINE64 line;
-			SymGetLineFromAddr64(hProcess, (DWORD64)addrs[i], &displacement2, &line);
+			bool got_line = SymGetLineFromAddr64(hProcess, (DWORD64)addrs[i], &displacement2, &line);
 			if(SymFromAddr(hProcess, (DWORD64)addrs[i], &displacement, info)) {
 				//printf("%s:%d %s", line.FileName, info->Name, (int)line.LineNumber);
 				//primitive_assert(SymSetContext(hProcess, ))
-				trace.push_back({line.FileName, info->Name, (int)line.LineNumber});
+				if(got_line) {
+					trace.push_back({line.FileName, info->Name, (int)line.LineNumber});
+				} else {
+					trace.push_back({"", info->Name, 0});
+				}
+			} else {
+				trace.push_back({"", "", 0});
+				#if IS_GCC
+				deferred.push_back({addrs[i], trace.size() - 1});
+				#endif
 			}
 		}
 		SymCleanup(hProcess);
+		#if IS_GCC
+		// If we're compiling with gcc on windows, the debug symbols will be embedded in the
+		// executable and retrievable with addr2line (this is provided by mingw).
+		// The executable will not be PIE. TODO: I don't know if PIE gcc on windows is a
+		// case that we need to worry about, can cross that bridge later.
+		// Currently not doing any file grouping like done in the linux version. Assuming
+		// the only unresolvable symbols are from this binary.
+		// Always two lines per entry?
+		// https://kernel.googlesource.com/pub/scm/linux/kernel/git/hjl/binutils/+/hjl/secondary/binutils/addr2line.c
+		///auto x = resolve_addresses(addresses, file);
+		///puts(x.c_str());
+		///auto output = split(trim(x), "\n");
+		std::string addresses = "";
+		for(auto& [address, _] : deferred) addresses += stringf("%#tx ", address);
+		auto output = split(trim(resolve_addresses(addresses, executable)), "\n");
+		primitive_assert(output.size() == 2 * deferred.size());
+		for(size_t i = 0; i < deferred.size(); i++) {
+			// line info is one of the following:
+			// path:line (descriminator number)
+			// path:line
+			// path:?
+			// ??:?
+			// Regex modified from the linux version to eat the C:\\ at the beginning
+			static std::regex location_re(R"(^((?:\w:\\)?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
+			auto m = match<2>(output[i * 2 + 1], location_re);
+			primitive_assert(m.has_value());
+			auto [path, line] = *m;
+			if(path != "??") {
+				trace[deferred[i].second].filename = path;
+			}
+			trace[deferred[i].second].line = line == "?" ? 0 : std::stoi(line);
+			// signature shouldn't require processing
+			// signature done after path so path can take signature, if needed
+			trace[deferred[i].second].signature = output[i * 2];
+		}
+		#endif
 		return trace;
 	}
 	#endif
@@ -305,14 +398,6 @@ namespace assert_impl_ {
 		int status;
 		waitpid(pid, &status, 0); // -1 && errno == EINTR handles interrupt
 		return WEXITSTATUS(status) == 0;
-	}
-
-	[[gnu::cold]] [[maybe_unused]] static std::string get_executable_path() {
-		char buffer[PATH_MAX + 1];
-		ssize_t s = readlink("/proc/self/exe", buffer, PATH_MAX);
-		primitive_assert(s != -1);
-		buffer[s] = 0;
-		return buffer;
 	}
 
 	// returns 1 for little endian, 2 for big endien, matches elf
@@ -1766,7 +1851,7 @@ namespace assert_impl_ {
 				[](const assert_impl_::stacktrace_entry& e) {
 					return e.signature == "main";
 				});
-			//size_t end = &*main - &trace.front();
+			//size_t end = &*main - &trace.front(); // todo: what if main == .end()
 			size_t end = trace.size() - 1; (void) main;
 			// path preprocessing
 			// raw full path -> components
