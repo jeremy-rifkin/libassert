@@ -191,8 +191,7 @@ decomposition.
 
 1. Copy the header file [`include/assert.hpp`](include/assert.hpp) somewhere in your include path.
 2. Link
-   - On windows with clang link with dbghelp (`-ldbghelp`). Note: A pdb file may need to be present
-     for stacktraces, clang will generate these automatically.
+   - On windows link with dbghelp (`-ldbghelp`).
    - On linux or windows with mingw link with lib dl (`-ldl`)
 
 This library targets >=C++17 and supports gcc and clang on windows and linux.

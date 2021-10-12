@@ -166,6 +166,26 @@ namespace assert_impl_ {
 		return s.substr(l, r - l);
 	}
 
+	[[gnu::cold]]
+	static void replace_all_dynamic(std::string& str, std::string_view text, std::string_view replacement) {
+		std::string::size_type pos = 0;
+		while((pos = str.find(text.data(), pos, text.length())) != std::string::npos) {
+			str.replace(pos, text.length(), replacement.data(), replacement.length());
+			// advancing by one rather than replacement.length() in case replacement leads to another
+			// replacement opportunity, e.g. folding > > > to >> > then >>>
+			pos++;
+		}
+	}
+
+	[[gnu::cold]]
+	static std::string prettify_type(std::string type) {
+		// for now just doing basic > > -> >> replacement
+		// could put in analysis:: but the replacement is basic and this is more convenient for
+		// using in the stringifier too
+		replace_all_dynamic(type, "> >", ">>");
+		return type;
+	}
+
 	template<size_t N>
 	[[gnu::cold]]
 	std::optional<std::array<std::string, N>> match(const std::string s, const std::regex& r) {
@@ -302,18 +322,158 @@ namespace assert_impl_ {
 	}
 	#endif
 
+	// SymFromAddr only returns the function's name. In order to get information about parameters,
+	// important for C++ stack traces where functions may be overloaded, we have to manually use
+	// Windows DIA to walk debug info structures. Resources:
+	// https://web.archive.org/web/20201027025750/http://www.debuginfo.com/articles/dbghelptypeinfo.html
+	// https://web.archive.org/web/20201203160805/http://www.debuginfo.com/articles/dbghelptypeinfofigures.html
+	// https://github.com/DynamoRIO/dynamorio/blob/master/ext/drsyms/drsyms_windows.c#L1370-L1439
+	// TODO: Currently unable to detect rvalue references
+	// TODO: Currently unable to detect const
+	enum class SymTagEnum {
+		SymTagNull, SymTagExe, SymTagCompiland, SymTagCompilandDetails, SymTagCompilandEnv,
+		SymTagFunction, SymTagBlock, SymTagData, SymTagAnnotation, SymTagLabel, SymTagPublicSymbol,
+		SymTagUDT, SymTagEnum, SymTagFunctionType, SymTagPointerType, SymTagArrayType,
+		SymTagBaseType, SymTagTypedef, SymTagBaseClass, SymTagFriend, SymTagFunctionArgType,
+		SymTagFuncDebugStart, SymTagFuncDebugEnd, SymTagUsingNamespace, SymTagVTableShape,
+		SymTagVTable, SymTagCustom, SymTagThunk, SymTagCustomType, SymTagManagedType,
+		SymTagDimension, SymTagCallSite, SymTagInlineSite, SymTagBaseInterface, SymTagVectorType,
+		SymTagMatrixType, SymTagHLSLType, SymTagCaller, SymTagCallee, SymTagExport,
+		SymTagHeapAllocationSite, SymTagCoffGroup, SymTagMax
+	};
+
+	enum class IMAGEHLP_SYMBOL_TYPE_INFO {
+		TI_GET_SYMTAG, TI_GET_SYMNAME, TI_GET_LENGTH, TI_GET_TYPE, TI_GET_TYPEID, TI_GET_BASETYPE,
+		TI_GET_ARRAYINDEXTYPEID, TI_FINDCHILDREN, TI_GET_DATAKIND, TI_GET_ADDRESSOFFSET,
+		TI_GET_OFFSET, TI_GET_VALUE, TI_GET_COUNT, TI_GET_CHILDRENCOUNT, TI_GET_BITPOSITION,
+		TI_GET_VIRTUALBASECLASS, TI_GET_VIRTUALTABLESHAPEID, TI_GET_VIRTUALBASEPOINTEROFFSET,
+		TI_GET_CLASSPARENTID, TI_GET_NESTED, TI_GET_SYMINDEX, TI_GET_LEXICALPARENT, TI_GET_ADDRESS,
+		TI_GET_THISADJUST, TI_GET_UDTKIND, TI_IS_EQUIV_TO, TI_GET_CALLING_CONVENTION,
+		TI_IS_CLOSE_EQUIV_TO, TI_GTIEX_REQS_VALID, TI_GET_VIRTUALBASEOFFSET,
+		TI_GET_VIRTUALBASEDISPINDEX, TI_GET_IS_REFERENCE, TI_GET_INDIRECTVIRTUALBASECLASS,
+		TI_GET_VIRTUALBASETABLETYPE, TI_GET_OBJECTPOINTERTYPE, IMAGEHLP_SYMBOL_TYPE_INFO_MAX
+	};
+
+	enum class BasicType {
+		btNoType = 0, btVoid = 1, btChar = 2, btWChar = 3, btInt = 6, btUInt = 7, btFloat = 8,
+		btBCD = 9, btBool = 10, btLong = 13, btULong = 14, btCurrency = 25, btDate = 26,
+		btVariant = 27, btComplex = 28, btBit = 29, btBSTR = 30, btHresult = 31
+	};
+
+	// SymGetTypeInfo utility
+	template<typename T, IMAGEHLP_SYMBOL_TYPE_INFO SymType>
+	auto get_info(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+		T info;
+		if (!SymGetTypeInfo(proc, modbase, type_index, static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(SymType), &info)) {
+			using namespace std::string_literals;
+			primitive_assert(false, ("SymGetTypeInfo failed: "s +
+					std::system_error(GetLastError(), std::system_category()).what()).c_str());
+		}
+		if constexpr(std::is_same_v<T, WCHAR*>) {
+			static_assert(SymType == IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMNAME);
+			std::string str(info, info + wcslen(info));
+			LocalFree(info);
+			return str;
+		} else {
+			return info;
+		}
+	}
+
+	// Translate basic types to string
+	static std::string_view get_basic_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+		auto basic_type = get_info<BasicType, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_BASETYPE>(type_index, proc, modbase);
+		//auto length = get_info<ULONG64, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_LENGTH>(type_index, proc, modbase);
+		switch(basic_type) {
+			case BasicType::btNoType:
+				return "<no basic type>";
+			case BasicType::btVoid:
+				return "void";
+			case BasicType::btChar:
+				return "char";
+			case BasicType::btWChar:
+				return "wchar_t";
+			case BasicType::btInt:
+				return "int";
+			case BasicType::btUInt:
+				return "unsigned int";
+			case BasicType::btFloat:
+				return "float";
+			case BasicType::btBool:
+				return "bool";
+			case BasicType::btLong:
+				return "long";
+			case BasicType::btULong:
+				return "unsigned long";
+			default:
+				return "<unknown basic type>";
+		}
+	}
+
+	static std::string_view get_type(ULONG, HANDLE, ULONG64);
+
+	// Resolve more complex types
+	static std::string lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+		auto tag = get_info<SymTagEnum, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMTAG>(type_index, proc, modbase);
+		switch(tag) {
+			case SymTagEnum::SymTagBaseType:
+				return std::string(get_basic_type(type_index, proc, modbase));
+			case SymTagEnum::SymTagPointerType: {
+				DWORD underlying_type_id = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
+				return std::string(get_type(underlying_type_id, proc, modbase))
+					 + std::string(get_info<BOOL, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_IS_REFERENCE>(type_index, proc, modbase) ? "&" : "*");
+			}
+			case SymTagEnum::SymTagTypedef:
+			case SymTagEnum::SymTagEnum:
+			case SymTagEnum::SymTagUDT:
+			case SymTagEnum::SymTagBaseClass:
+				return get_info<WCHAR*, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMNAME>(type_index, proc, modbase);
+			default:
+				return "<unknown type>";
+		};
+	}
+
+	static std::unordered_map<ULONG, std::string> type_cache; // memoize types even though it probably does not make a difference
+
+	// top-level type resolution function
+	static std::string_view get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+		if(type_cache.count(type_index)) {
+			return type_cache.at(type_index);
+		} else {
+			auto type = lookup_type(type_index, proc, modbase);
+			auto p = type_cache.insert({type_index, type});
+			return p.first->second;
+		}
+	}
+
+	struct Context {
+		HANDLE proc;
+		ULONG64 modbase;
+		int counter;
+		int n_children;
+		std::string str;
+	};
+
+	static BOOL enumerator_callback(PSYMBOL_INFO pSymInfo, [[maybe_unused]] ULONG SymbolSize, PVOID UserContext) {
+		Context* ctx = (Context*)UserContext;
+		if (ctx->counter++ >= ctx->n_children) {
+			return false;
+		}
+		ctx->str += get_type(pSymInfo->TypeIndex, ctx->proc, ctx->modbase);
+		if(ctx->counter < ctx->n_children) {
+			ctx->str += ", ";
+		}
+		return true;
+	}
+
 	[[maybe_unused]] static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
 		SymSetOptions(
 			  SYMOPT_DEFERRED_LOADS
 			| SYMOPT_INCLUDE_32BIT_MODULES
-		//	| SYMOPT_NO_PUBLICS
-		//	| SYMOPT_UNDNAME
 		    | SYMOPT_AUTO_PUBLICS
 			| SYMOPT_LOAD_LINES
-		//	| SYMOPT_CASE_INSENSITIVE
 			);
-		HANDLE hProcess = GetCurrentProcess();
-		if (!SymInitialize(hProcess, NULL, TRUE)) return {};
+		HANDLE proc = GetCurrentProcess();
+		if (!SymInitialize(proc, NULL, TRUE)) return {};
 		PVOID addrs[n_frames] = { 0 };
 		int frames = CaptureStackBackTrace(n_skip, n_frames, addrs, NULL);
 		std::vector<stacktrace_entry> trace;
@@ -324,20 +484,36 @@ namespace assert_impl_ {
 		#endif
 		for(int i = 0; i < frames; i++) {
 			char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
-			SYMBOL_INFO* info = (SYMBOL_INFO*)buffer;
-			info->SizeOfStruct = sizeof(SYMBOL_INFO);
-			info->MaxNameLen = MAX_SYM_NAME;
-			DWORD64 displacement;
-			DWORD   displacement2;
+			SYMBOL_INFO* symbol = (SYMBOL_INFO*)buffer;
+			symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+			symbol->MaxNameLen = MAX_SYM_NAME;
+			union { DWORD64 a; DWORD b; } displacement;
 			IMAGEHLP_LINE64 line;
-			bool got_line = SymGetLineFromAddr64(hProcess, (DWORD64)addrs[i], &displacement2, &line);
-			if(SymFromAddr(hProcess, (DWORD64)addrs[i], &displacement, info)) {
-				//printf("%s:%d %s", line.FileName, info->Name, (int)line.LineNumber);
-				//primitive_assert(SymSetContext(hProcess, ))
+			bool got_line = SymGetLineFromAddr64(proc, (DWORD64)addrs[i], &displacement.b, &line);
+			if(SymFromAddr(proc, (DWORD64)addrs[i], &displacement.a, symbol)) {
 				if(got_line) {
-					trace.push_back({line.FileName, info->Name, (int)line.LineNumber});
+					using namespace std::string_literals;
+					IMAGEHLP_STACK_FRAME frame;
+					frame.InstructionOffset = symbol->Address;
+					// https://docs.microsoft.com/en-us/windows/win32/api/dbghelp/nf-dbghelp-symsetcontext
+					// "If you call SymSetContext to set the context to its current value, the
+					// function fails but GetLastError returns ERROR_SUCCESS."
+					// This is the stupidest fucking api I've ever worked with.
+					if (SymSetContext(proc, &frame, nullptr) == FALSE && GetLastError() != ERROR_SUCCESS) {
+						fprintf(stderr, "Stack trace: Internal error while calling SymSetContext\n");
+						trace.push_back({line.FileName, symbol->Name, (int)line.LineNumber});
+						continue;
+						//primitive_assert(false, ("SymSetContext failed: "s + std::system_error(GetLastError(), std::system_category()).what()).c_str());
+					}
+					DWORD n_children = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT>(symbol->TypeIndex, proc, symbol->ModBase);
+					Context ctx { proc, symbol->ModBase, 0, int(n_children), "" };
+					SymEnumSymbols(proc, 0, nullptr, enumerator_callback, &ctx);
+					std::string signature = symbol->Name + "("s + ctx.str + ")";
+					static std::regex comma_re(R"(,(?=\S))");
+					signature = std::regex_replace(signature, comma_re, ", ");
+					trace.push_back({line.FileName, signature, (int)line.LineNumber});
 				} else {
-					trace.push_back({"", info->Name, 0});
+					trace.push_back({"", symbol->Name, 0});
 				}
 			} else {
 				trace.push_back({"", "", 0});
@@ -346,7 +522,7 @@ namespace assert_impl_ {
 				#endif
 			}
 		}
-		SymCleanup(hProcess);
+		SymCleanup(proc);
 		#if IS_GCC
 		// If we're compiling with gcc on windows, the debug symbols will be embedded in the
 		// executable and retrievable with addr2line (this is provided by mingw).
@@ -972,7 +1148,7 @@ namespace assert_impl_ {
 				oss<<t;
 				return std::move(oss).str();
 			} else {
-				return stringf("<instance of %s>", std::string(type_name<T>()).c_str());
+				return stringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
 			}
 		}
 	}
@@ -1848,6 +2024,10 @@ namespace assert_impl_ {
 	static void print_stacktrace() {
 		if(auto _trace = get_stacktrace()) {
 			auto trace = *_trace;
+			// prettify signatures
+			for(auto& frame : trace) {
+				frame.signature = prettify_type(frame.signature);
+			}
 			// TODO: lower-bound too, or just include assert internals
 			auto main = std::find_if(trace.rbegin(), trace.rend(),
 				[](const assert_impl_::stacktrace_entry& e) {
