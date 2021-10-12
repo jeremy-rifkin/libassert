@@ -108,7 +108,7 @@ namespace assert_impl_ {
 			} else {
 				fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n", location.file, location.line, location.function, message);
 			}
-			fprintf(stderr, "    assert(%s);\n", expression);
+			fprintf(stderr, "    primitive_assert(%s);\n", expression);
 			abort();
 		}
 	}
@@ -127,15 +127,15 @@ namespace assert_impl_ {
 	}
 
 	[[gnu::cold]] [[maybe_unused]]
-	static std::vector<std::string> split(std::string_view s, std::string_view delim) {
+	static std::vector<std::string> split(std::string_view s, std::string_view delims) {
 		std::vector<std::string> vec;
 		size_t old_pos = 0;
 		size_t pos = 0;
 		std::string token;
-		while((pos = s.find(delim, old_pos)) != std::string::npos) {
+		while((pos = s.find_first_of(delims, old_pos)) != std::string::npos) {
 				token = s.substr(old_pos, pos - old_pos);
 				vec.push_back(token);
-				old_pos = pos + delim.length();
+				old_pos = pos + 1;
 		}
 		vec.push_back(std::string(s.substr(old_pos)));
 		return vec;
@@ -286,6 +286,7 @@ namespace assert_impl_ {
 	// produces name and template parameters, not other parameters. I do not know if this is
 	// possible, I haven't found any library or example that can extract this info.
 	#ifdef USE_DBG_HELP_H
+	#if IS_GCC
 	[[gnu::cold]] [[maybe_unused]]
 	static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
 		// TODO: Popen is a hack. Implement properly with CreateProcess and pipes later.
@@ -299,6 +300,7 @@ namespace assert_impl_ {
 		}
 		return output;
 	}
+	#endif
 
 	[[maybe_unused]] static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
 		SymSetOptions(
@@ -368,7 +370,7 @@ namespace assert_impl_ {
 			// path:?
 			// ??:?
 			// Regex modified from the linux version to eat the C:\\ at the beginning
-			static std::regex location_re(R"(^((?:\w:\\)?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
+			static std::regex location_re(R"(^((?:\w:[\\/])?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
 			auto m = match<2>(output[i * 2 + 1], location_re);
 			primitive_assert(m.has_value());
 			auto [path, line] = *m;
@@ -1674,7 +1676,7 @@ namespace assert_impl_ {
 	[[gnu::cold]] [[maybe_unused]]
 	static path_components parse_path(const std::string_view path) {
 		#ifdef _WIN32
-		 constexpr std::string_view path_delim = "\\";
+		 constexpr std::string_view path_delim = "/\\";
 		#else
 		 constexpr std::string_view path_delim = "/";
 		#endif
@@ -1993,7 +1995,7 @@ namespace assert_impl_ {
 			fprintf(stderr, " ");
 			for(const auto& str : vec) {
 				fprintf(stderr, "%s", analysis::highlight(str).c_str());
-				if(str != *vec.end()--) fprintf(stderr, "  ");
+				if(&str != &*--vec.end()) fprintf(stderr, "  ");
 			}
 			fprintf(stderr, "\n");
 		}
@@ -2011,7 +2013,7 @@ namespace assert_impl_ {
 			for(const auto& str : vec) {
 				auto h = analysis::highlight_blocks(str);
 				blocks.insert(blocks.end(), h.begin(), h.end());
-				if(str != *vec.end()--) blocks.push_back({"", "  "});
+				if(&str != &*--vec.end()) blocks.push_back({"", "  "});
 			}
 			return blocks;
 		}
