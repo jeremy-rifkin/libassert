@@ -61,8 +61,6 @@
  #define USE_EXECINFO_H
 #endif
 
-///#include <iostream>
-
 #ifndef NCOLOR
  #define ESC "\033["
  #define ANSIRGB(r, g, b) ESC "38;2;" #r ";" #g ";" #b "m"
@@ -101,12 +99,14 @@ namespace assert_impl_ {
 	};
 
 	[[gnu::cold]]
-	static void primitive_assert_impl(bool c, const char* expression, const char* message = nullptr, source_location location = {}) {
+	static void primitive_assert_impl(bool c, const char* expression, const char* message = nullptr,
+		source_location location = {}) {
 		if(!c) {
 			if(message == nullptr) {
 				fprintf(stderr, "Assertion failed at %s:%d: %s\n", location.file, location.line, location.function);
 			} else {
-				fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n", location.file, location.line, location.function, message);
+				fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n",
+					location.file, location.line, location.function, message);
 			}
 			fprintf(stderr, "    primitive_assert(%s);\n", expression);
 			abort();
@@ -115,7 +115,10 @@ namespace assert_impl_ {
 
 	#define primitive_assert(c, ...) primitive_assert_impl(c, #c, ##__VA_ARGS__)
 
-	// string utilities
+	/*
+	 * string utilities
+	 */
+
 	template<typename... T>
 	[[gnu::cold]]
 	std::string stringf(T... args) {
@@ -178,12 +181,17 @@ namespace assert_impl_ {
 	}
 
 	[[gnu::cold]]
-	static std::string prettify_type(std::string type) {
-		// for now just doing basic > > -> >> replacement
-		// could put in analysis:: but the replacement is basic and this is more convenient for
-		// using in the stringifier too
-		replace_all_dynamic(type, "> >", ">>");
-		return type;
+	static std::string indent(const std::string_view str, size_t depth, char c=' ', bool ignore_first=false) {
+		size_t i = 0, j;
+		std::string output;
+		while((j = str.find('\n', i)) != std::string::npos) {
+			if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
+			output.insert(output.end(), str.begin() + i, str.begin() + j + 1);
+			i = j + 1;
+		}
+		if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
+		output.insert(output.end(), str.begin() + i, str.end());
+		return output;
 	}
 
 	template<size_t N>
@@ -201,20 +209,24 @@ namespace assert_impl_ {
 		}
 	}
 
+	/*
+	 * system wrappers
+	 */
+
 	[[gnu::cold]] [[maybe_unused]]
 	static void enable_virtual_terminal_processing_if_needed() {
 		// enable colors / ansi processing if necessary
 		#ifdef _WIN32
-		// https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing
-		#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
-		constexpr DWORD ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4;
-		#endif
-		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-		DWORD dwMode = 0;
-		if(hOut == INVALID_HANDLE_VALUE) return;
-		if(!GetConsoleMode(hOut, &dwMode)) return;
-		if(dwMode != (dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-		if(!SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) return;
+		 // https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing
+		 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+		  constexpr DWORD ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4;
+		 #endif
+		 HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		 DWORD dwMode = 0;
+		 if(hOut == INVALID_HANDLE_VALUE) return;
+		 if(!GetConsoleMode(hOut, &dwMode)) return;
+		 if(dwMode != (dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+		 if(!SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) return;
 		#endif
 	}
 
@@ -223,34 +235,34 @@ namespace assert_impl_ {
 	#endif
 	[[gnu::cold]] [[maybe_unused]] static pid_t getpid() {
 		#ifdef _WIN32
-		return _getpid();
+		 return _getpid();
 		#else
-		return ::getpid();
+		 return ::getpid();
 		#endif
 	}
 
 	[[gnu::cold]] [[maybe_unused]] static void wait_for_keypress() {
 		#ifdef _WIN32
-		_getch();
+		 _getch();
 		#else
-		struct termios tty_attr;
-        tcgetattr(0, &tty_attr);
-		struct termios tty_attr_original = tty_attr;
-        tty_attr.c_lflag &= ~(ICANON | ECHO);
-        tty_attr.c_cc[VTIME] = 0;
-        tty_attr.c_cc[VMIN] = 1;
-        tcsetattr(0, TCSAFLUSH, &tty_attr); // formerly used TCSANOW
-		char c;
-		read(STDIN_FILENO, &c, 1);
-        tcsetattr(0, TCSAFLUSH, &tty_attr_original);
+		 struct termios tty_attr;
+		 tcgetattr(0, &tty_attr);
+		 struct termios tty_attr_original = tty_attr;
+		 tty_attr.c_lflag &= ~(ICANON | ECHO);
+		 tty_attr.c_cc[VTIME] = 0;
+		 tty_attr.c_cc[VMIN] = 1;
+		 tcsetattr(0, TCSAFLUSH, &tty_attr); // formerly used TCSANOW
+		 char c;
+		 read(STDIN_FILENO, &c, 1);
+		 tcsetattr(0, TCSAFLUSH, &tty_attr_original);
 		#endif
 	}
 
 	[[gnu::cold]] [[maybe_unused]] static bool isatty(int fd) {
 		#ifdef _WIN32
-		return _isatty(fd);
+		 return _isatty(fd);
 		#else
-		return ::isatty(fd);
+		 return ::isatty(fd);
 		#endif
 	}
 
@@ -264,7 +276,7 @@ namespace assert_impl_ {
 		 return csbi.srWindow.Right - csbi.srWindow.Left + 1;
 		#else
 		 struct winsize w;
-    	 if(ioctl(STDERR_FILENO, TIOCGWINSZ, &w) == -1) return 0;
+		 if(ioctl(STDERR_FILENO, TIOCGWINSZ, &w) == -1) return 0;
 		 return w.ws_col;
 		#endif
 	}
@@ -284,12 +296,26 @@ namespace assert_impl_ {
 		#endif
 	}
 
+	/*
+	 * Stacktrace implementation
+	 * Stack trace strategy:
+	 *  Windows:
+	 *   - Generate stack traces with CaptureStackBackTrace
+	 *   - Resolve with SymFromAddr and SymGetLineFromAddr64 and SymEnumSymbols
+	 *   - For gcc on windows use addr2line for symbols that couldn't be resolved with the previous
+	 *     tools.
+	 *  Linux:
+	 *   - Generate stack traces with execinfo's backtrace
+	 *   - Resolve symbol addresses with ldl
+	 *   - Resolve symbol names and locations with addr2line
+	 */
+
 	struct stacktrace_entry {
-		std::string filename;
+		std::string source_path;
 		std::string signature;
 		int line = 0;
 		bool operator==(const stacktrace_entry& other) const {
-			return line == other.line && signature == other.signature && filename == other.filename;
+			return line == other.line && signature == other.signature && source_path == other.source_path;
 		}
 		bool operator!=(const stacktrace_entry& other) const {
 			return !operator==(other);
@@ -301,10 +327,6 @@ namespace assert_impl_ {
 	constexpr size_t n_frames = 100;
 	constexpr size_t n_skip   = 2;
 
-	// based on https://blog.aaronballman.com/2011/04/generating-a-stack-crawl/
-	// TODO: I'd like to find a way to get a full signature for symbols, at the moment this only
-	// produces name and template parameters, not other parameters. I do not know if this is
-	// possible, I haven't found any library or example that can extract this info.
 	#ifdef USE_DBG_HELP_H
 	#if IS_GCC
 	[[gnu::cold]] [[maybe_unused]]
@@ -318,6 +340,7 @@ namespace assert_impl_ {
 		while((count = fread(buffer, 1, buffer_size, p)) > 0) {
 			output.insert(output.end(), buffer, buffer + count);
 		}
+		pclose(p);
 		return output;
 	}
 	#endif
@@ -362,14 +385,16 @@ namespace assert_impl_ {
 
 	// SymGetTypeInfo utility
 	template<typename T, IMAGEHLP_SYMBOL_TYPE_INFO SymType>
+	[[gnu::cold]]
 	auto get_info(ULONG type_index, HANDLE proc, ULONG64 modbase) {
 		T info;
-		if (!SymGetTypeInfo(proc, modbase, type_index, static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(SymType), &info)) {
+		if(!SymGetTypeInfo(proc, modbase, type_index, static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(SymType), &info)) {
 			using namespace std::string_literals;
 			primitive_assert(false, ("SymGetTypeInfo failed: "s +
 					std::system_error(GetLastError(), std::system_category()).what()).c_str());
 		}
 		if constexpr(std::is_same_v<T, WCHAR*>) {
+			// special case to properly free a buffer and convert string to narrow chars, only used for TI_GET_SYMNAME
 			static_assert(SymType == IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMNAME);
 			std::string str(info, info + wcslen(info));
 			LocalFree(info);
@@ -380,6 +405,7 @@ namespace assert_impl_ {
 	}
 
 	// Translate basic types to string
+	[[gnu::cold]]
 	static std::string_view get_basic_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
 		auto basic_type = get_info<BasicType, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_BASETYPE>(type_index, proc, modbase);
 		//auto length = get_info<ULONG64, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_LENGTH>(type_index, proc, modbase);
@@ -412,15 +438,16 @@ namespace assert_impl_ {
 	static std::string_view get_type(ULONG, HANDLE, ULONG64);
 
 	// Resolve more complex types
-	static std::string lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+	[[gnu::cold]] static std::string lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
 		auto tag = get_info<SymTagEnum, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMTAG>(type_index, proc, modbase);
 		switch(tag) {
 			case SymTagEnum::SymTagBaseType:
 				return std::string(get_basic_type(type_index, proc, modbase));
 			case SymTagEnum::SymTagPointerType: {
-				DWORD underlying_type_id = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
-				return std::string(get_type(underlying_type_id, proc, modbase))
-					 + std::string(get_info<BOOL, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_IS_REFERENCE>(type_index, proc, modbase) ? "&" : "*");
+				DWORD underlying_type_id =
+					get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
+				bool is_ref = get_info<BOOL, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_IS_REFERENCE>(type_index, proc, modbase);
+				return std::string(get_type(underlying_type_id, proc, modbase)) + (is_ref ? "&" : "*");
 			}
 			case SymTagEnum::SymTagTypedef:
 			case SymTagEnum::SymTagEnum:
@@ -432,10 +459,10 @@ namespace assert_impl_ {
 		};
 	}
 
-	static std::unordered_map<ULONG, std::string> type_cache; // memoize types even though it probably does not make a difference
+	static std::unordered_map<ULONG, std::string> type_cache; // memoize, though it hardly matters
 
 	// top-level type resolution function
-	static std::string_view get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+	[[gnu::cold]] static std::string_view get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
 		if(type_cache.count(type_index)) {
 			return type_cache.at(type_index);
 		} else {
@@ -445,7 +472,7 @@ namespace assert_impl_ {
 		}
 	}
 
-	struct Context {
+	struct function_info {
 		HANDLE proc;
 		ULONG64 modbase;
 		int counter;
@@ -453,12 +480,13 @@ namespace assert_impl_ {
 		std::string str;
 	};
 
-	static BOOL enumerator_callback(PSYMBOL_INFO pSymInfo, [[maybe_unused]] ULONG SymbolSize, PVOID UserContext) {
-		Context* ctx = (Context*)UserContext;
+	[[gnu::cold]]
+	static BOOL enumerator_callback(PSYMBOL_INFO symbol_info, [[maybe_unused]] ULONG symbol_size, PVOID data) {
+		function_info* ctx = (function_info*)data;
 		if (ctx->counter++ >= ctx->n_children) {
 			return false;
 		}
-		ctx->str += get_type(pSymInfo->TypeIndex, ctx->proc, ctx->modbase);
+		ctx->str += get_type(symbol_info->TypeIndex, ctx->proc, ctx->modbase);
 		if(ctx->counter < ctx->n_children) {
 			ctx->str += ", ";
 		}
@@ -503,12 +531,12 @@ namespace assert_impl_ {
 						fprintf(stderr, "Stack trace: Internal error while calling SymSetContext\n");
 						trace.push_back({line.FileName, symbol->Name, (int)line.LineNumber});
 						continue;
-						//primitive_assert(false, ("SymSetContext failed: "s + std::system_error(GetLastError(), std::system_category()).what()).c_str());
 					}
 					DWORD n_children = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT>(symbol->TypeIndex, proc, symbol->ModBase);
-					Context ctx { proc, symbol->ModBase, 0, int(n_children), "" };
-					SymEnumSymbols(proc, 0, nullptr, enumerator_callback, &ctx);
-					std::string signature = symbol->Name + "("s + ctx.str + ")";
+					function_info fi { proc, symbol->ModBase, 0, int(n_children), "" };
+					SymEnumSymbols(proc, 0, nullptr, enumerator_callback, &fi);
+					std::string signature = symbol->Name + "("s + fi.str + ")";
+					// There's a phenomina with DIA not inserting commas after template parameters. Fix them here.
 					static std::regex comma_re(R"(,(?=\S))");
 					signature = std::regex_replace(signature, comma_re, ", ");
 					trace.push_back({line.FileName, signature, (int)line.LineNumber});
@@ -532,9 +560,6 @@ namespace assert_impl_ {
 		// the only unresolvable symbols are from this binary.
 		// Always two lines per entry?
 		// https://kernel.googlesource.com/pub/scm/linux/kernel/git/hjl/binutils/+/hjl/secondary/binutils/addr2line.c
-		///auto x = resolve_addresses(addresses, file);
-		///puts(x.c_str());
-		///auto output = split(trim(x), "\n");
 		std::string addresses = "";
 		for(auto& [address, _] : deferred) addresses += stringf("%#tx ", address);
 		auto output = split(trim(resolve_addresses(addresses, executable)), "\n");
@@ -551,7 +576,7 @@ namespace assert_impl_ {
 			primitive_assert(m.has_value());
 			auto [path, line] = *m;
 			if(path != "??") {
-				trace[deferred[i].second].filename = path;
+				trace[deferred[i].second].source_path = path;
 			}
 			trace[deferred[i].second].line = line == "?" ? 0 : std::stoi(line);
 			// signature shouldn't require processing
@@ -567,14 +592,14 @@ namespace assert_impl_ {
 		// Detects if addr2line exists by trying to invoke addr2line --help
 		constexpr int magic = 42;
 		pid_t pid = fork();
-		if(pid == -1) return false; // error? TODO: Diagnostic
+		if(pid == -1) return false;
 		if(pid == 0) { // child
 			close(STDOUT_FILENO);
 			execlp("addr2line", "addr2line", "--help", nullptr);
-			exit(magic); // TODO: Diagnostic?
+			exit(magic);
 		}
 		int status;
-		waitpid(pid, &status, 0); // -1 && errno == EINTR handles interrupt
+		waitpid(pid, &status, 0);
 		return WEXITSTATUS(status) == 0;
 	}
 
@@ -636,10 +661,13 @@ namespace assert_impl_ {
 		void* raw_address = nullptr; // raw_address - obj_base -> addr2line
 	};
 
+	// This is a custom replacement for backtrace_symbols, which makes getting the information we
+	// need impossible in some situations.
 	[[gnu::cold]] [[maybe_unused]]
 	static std::vector<frame> backtrace_frames(void * const * array, size_t size, size_t skip) {
 		// reference: https://github.com/bminor/glibc/blob/master/debug/backtracesyms.c
 		std::vector<frame> frames;
+		frames.reserve(size - skip);
 		for(size_t i = skip; i < size; i++) {
 			Dl_info info;
 			frame frame;
@@ -707,19 +735,13 @@ namespace assert_impl_ {
 	static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
 		void* bt[n_frames];
 		int bt_size = backtrace(bt, n_frames);
-		///char** x = backtrace_symbols(bt, bt_size);
-		///for(int i = 0; i < bt_size; i++) {
-		///	puts(x[i]);
-		///}
 		std::vector<frame> frames = backtrace_frames(bt, bt_size, n_skip);
-		///std::cout<<"path symbol obj_base symbol_address raw_address"<<std::endl;
-		///for(auto& frame : frames) {
-		///	std::cout<<frame.obj_path<<" "<<frame.symbol<<" "<<frame.obj_base<<" "<<frame.raw_address<<std::endl;
-		///}
 		std::vector<stacktrace_entry> trace(frames.size());
 		if(has_addr2line()) {
-			// filename -> { addresses string, target vector }
-			std::unordered_map<std::string, std::pair<std::string, std::vector<stacktrace_entry*>>> entries;
+			// group addresses to resolve by the module name they're from
+			// obj path -> { addresses, targets }
+			std::unordered_map<std::string,
+				std::pair<std::vector<std::string>, std::vector<stacktrace_entry*>>> entries;
 			std::string binary_path = get_executable_path();
 			bool is_pie = get_executable_e_type(binary_path) == ET_DYN;
 			std::optional<std::string> dladdr_name_of_executable;
@@ -743,22 +765,21 @@ namespace assert_impl_ {
 					addr = (uintptr_t)entry.raw_address - (uintptr_t)entry.obj_base;
 				}
 				///printf("%s :: %p\n", entry.obj_path.c_str(), addr);
-				if(entries.count(entry.obj_path) == 0) entries.insert({entry.obj_path, {"", {}}});
-				entries.at(entry.obj_path).first += stringf("%#tx\n", addr);
-				entries.at(entry.obj_path).second.push_back(&trace[i]);
-				trace[i].filename = entry.obj_path;
+				if(entries.count(entry.obj_path) == 0) entries.insert({entry.obj_path, {{}, {}}});
+				auto& obj_entry = entries.at(entry.obj_path);
+				obj_entry.first.push_back(stringf("%#tx", addr));
+				obj_entry.second.push_back(&trace[i]);
+				trace[i].source_path = entry.obj_path;
 			}
 			// perform translations
 			for(auto& [file, pair] : entries) {
 				auto& [addresses, target] = pair;
 				// Always two lines per entry?
 				// https://kernel.googlesource.com/pub/scm/linux/kernel/git/hjl/binutils/+/hjl/secondary/binutils/addr2line.c
-				///auto x = resolve_addresses(addresses, file);
-				///puts(x.c_str());
-				///auto output = split(trim(x), "\n");
-				auto output = split(trim(resolve_addresses(addresses, file)), "\n");
+				auto output = split(trim(resolve_addresses(join(addresses, "\n"), file)), "\n");
+				// Cannot wait until we can write ^ that as:
+				// join(addresses, "\n") |> resolve_addresses(file) |> trim() |> split("\n");
 				primitive_assert(output.size() == 2 * target.size());
-				//printf("%d\n", output.size());
 				for(size_t i = 0; i < target.size(); i++) {
 					// line info is one of the following:
 					// path:line (descriminator number)
@@ -770,7 +791,7 @@ namespace assert_impl_ {
 					primitive_assert(m.has_value());
 					auto [path, line] = *m;
 					if(path != "??") {
-						target[i]->filename = path;
+						target[i]->source_path = path;
 					}
 					target[i]->line = line == "?" ? 0 : std::stoi(line);
 					// signature shouldn't require processing
@@ -783,39 +804,9 @@ namespace assert_impl_ {
 	}
 	#endif
 
-	[[gnu::cold]] [[maybe_unused]]
-	static std::string escape_string(const std::string_view str, char quote) {
-		std::string escaped;
-		escaped += quote;
-		for(unsigned char c : str) {
-			if(c == '\\') escaped += "\\\\";
-			else if(c == '\t') escaped += "\\t";
-			else if(c == '\r') escaped += "\\r";
-			else if(c == '\n') escaped += "\\n";
-			else if(c == quote) escaped += "\\" + std::to_string(quote);
-			else if(c >= 32 && c <= 126) escaped += c; // printable
-			else {
-				constexpr const char * const hexdig = "0123456789abcdef";
-				escaped += std::string("\\x") + hexdig[c >> 4] + hexdig[c & 0xF];
-			}
-		}
-		escaped += quote;
-		return escaped;
-	}
-
-	[[gnu::cold]]
-	static std::string indent(const std::string_view str, size_t depth, char c=' ', bool ignore_first=false) {
-		size_t i = 0, j;
-		std::string output;
-		while((j = str.find('\n', i)) != std::string::npos) {
-			if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
-			output.insert(output.end(), str.begin() + i, str.begin() + j + 1);
-			i = j + 1;
-		}
-		if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
-		output.insert(output.end(), str.begin() + i, str.end());
-		return output;
-	}
+	/*
+	 * Expression decomposition
+	 */
 
 	struct nothing {};
 
@@ -884,40 +875,41 @@ namespace assert_impl_ {
 	// Lots of boilerplate
 	// std:: implementations don't allow two separate types for lhs/rhs
 	// Note: is this macro potentially bad when it comes to debugging(?)
-	// TODO: put all of this in a namespace?
-	#define gen_op_boilerplate(name, op, ...) struct name { \
-		static constexpr std::string_view op_string = #op; \
-		template<typename A, typename B> \
-		constexpr auto operator()(A&& lhs, B&& rhs) const { \
-			__VA_OPT__(if constexpr (is_integral_notb<A> && is_integral_notb<B>) return __VA_ARGS__(lhs, rhs); else) /* no need to forward ints */ \
-			return std::forward<A>(lhs) op std::forward<B>(rhs); \
-		} \
+	namespace ops {
+		#define gen_op_boilerplate(name, op, ...) struct name { \
+			static constexpr std::string_view op_string = #op; \
+			template<typename A, typename B> \
+			constexpr auto operator()(A&& lhs, B&& rhs) const {                      /* no need to forward ints */ \
+				__VA_OPT__(if constexpr (is_integral_notb<A> && is_integral_notb<B>) return __VA_ARGS__(lhs, rhs); \
+				else) return std::forward<A>(lhs) op std::forward<B>(rhs); \
+			} \
+		}
+		gen_op_boilerplate(shl, <<);
+		gen_op_boilerplate(shr, >>);
+		gen_op_boilerplate(eq, ==, cmp_equal); // todo: rename -> equal?
+		gen_op_boilerplate(neq, !=, cmp_not_equal);
+		gen_op_boilerplate(gt, >, cmp_greater);
+		gen_op_boilerplate(lt, <, cmp_less);
+		gen_op_boilerplate(gteq, >=, cmp_greater_equal);
+		gen_op_boilerplate(lteq, <=, cmp_less_equal);
+		gen_op_boilerplate(band, &);
+		gen_op_boilerplate(bxor, ^);
+		gen_op_boilerplate(bor, |);
+		gen_op_boilerplate(land, &&);
+		gen_op_boilerplate(lor, ||);
+		gen_op_boilerplate(assign, =);
+		gen_op_boilerplate(add_assign, +=);
+		gen_op_boilerplate(sub_assign, -=);
+		gen_op_boilerplate(mul_assign, *=);
+		gen_op_boilerplate(div_assign, /=);
+		gen_op_boilerplate(mod_assign, %=);
+		gen_op_boilerplate(shl_assign, <<=);
+		gen_op_boilerplate(shr_assign, >>=);
+		gen_op_boilerplate(band_assign, &=);
+		gen_op_boilerplate(bxor_assign, ^=);
+		gen_op_boilerplate(bor_assign, |=);
+		#undef gen_op_boilerplate
 	}
-	gen_op_boilerplate(shift_left, <<);
-	gen_op_boilerplate(shift_right, >>);
-	gen_op_boilerplate(equal_to, ==, cmp_equal); // todo: rename -> equal?
-	gen_op_boilerplate(not_equal_to, !=, cmp_not_equal);
-	gen_op_boilerplate(greater, >, cmp_greater);
-	gen_op_boilerplate(less, <, cmp_less);
-	gen_op_boilerplate(greater_equal, >=, cmp_greater_equal);
-	gen_op_boilerplate(less_equal, <=, cmp_less_equal);
-	gen_op_boilerplate(bit_and, &);
-	gen_op_boilerplate(bit_xor, ^);
-	gen_op_boilerplate(bit_or, |);
-	gen_op_boilerplate(logical_and, &&);
-	gen_op_boilerplate(logical_or, ||);
-	gen_op_boilerplate(assign, =);
-	gen_op_boilerplate(add_assign, +=);
-	gen_op_boilerplate(minus_assign, -=);
-	gen_op_boilerplate(mul_assign, *=);
-	gen_op_boilerplate(div_assign, /=);
-	gen_op_boilerplate(mod_assign, %=);
-	gen_op_boilerplate(shift_left_assign, <<=);
-	gen_op_boilerplate(shift_right_assign, >>=);
-	gen_op_boilerplate(bit_and_assign, &=);
-	gen_op_boilerplate(bit_xor_assign, ^=);
-	gen_op_boilerplate(bit_or_assign, |=);
-	#undef gen_op_boilerplate
 
 	// I learned this automatic expression decomposition trick from lest:
 	// https://github.com/martinmoene/lest/blob/master/include/lest/lest.hpp#L829-L853
@@ -979,10 +971,10 @@ namespace assert_impl_ {
 				return expression_decomposer<Q, nothing, nothing>(std::forward<O>(operand));
 			} else if constexpr (is_nothing<B>) {
 				static_assert(is_nothing<C>);
-				return expression_decomposer<A, Q, shift_left>(std::forward<A>(a), std::forward<O>(operand));
+				return expression_decomposer<A, Q, ops::shl>(std::forward<A>(a), std::forward<O>(operand));
 			} else {
 				static_assert(!is_nothing<C>);
-				return expression_decomposer<decltype(get_value()), O, shift_left>(std::forward<A>(get_value()), std::forward<O>(operand));
+				return expression_decomposer<decltype(get_value()), O, ops::shl>(std::forward<A>(get_value()), std::forward<O>(operand));
 			}
 		}
 		#define gen_op_boilerplate(functor, op) template<typename O> auto operator op(O&& operand) { \
@@ -996,162 +988,39 @@ namespace assert_impl_ {
 				return expression_decomposer<decltype(get_value()), Q, functor>(std::forward<A>(get_value()), std::forward<O>(operand)); \
 			} \
 		}
-		gen_op_boilerplate(shift_right, >>);
-		gen_op_boilerplate(equal_to, ==);
-		gen_op_boilerplate(not_equal_to, !=);
-		gen_op_boilerplate(greater, >);
-		gen_op_boilerplate(less, <);
-		gen_op_boilerplate(greater_equal, >=);
-		gen_op_boilerplate(less_equal, <=);
-		gen_op_boilerplate(bit_and, &);
-		gen_op_boilerplate(bit_xor, ^);
-		gen_op_boilerplate(bit_or, |);
-		gen_op_boilerplate(logical_and, &&);
-		gen_op_boilerplate(logical_or, ||);
-		gen_op_boilerplate(assign, =);
-		gen_op_boilerplate(add_assign, +=);
-		gen_op_boilerplate(minus_assign, -=);
-		gen_op_boilerplate(mul_assign, *=);
-		gen_op_boilerplate(div_assign, /=);
-		gen_op_boilerplate(mod_assign, %=);
-		gen_op_boilerplate(shift_left_assign, <<=);
-		gen_op_boilerplate(shift_right_assign, >>=);
-		gen_op_boilerplate(bit_and_assign, &=);
-		gen_op_boilerplate(bit_xor_assign, ^=);
-		gen_op_boilerplate(bit_or_assign, |=);
+		gen_op_boilerplate(ops::shr, >>);
+		gen_op_boilerplate(ops::eq, ==);
+		gen_op_boilerplate(ops::neq, !=);
+		gen_op_boilerplate(ops::gt, >);
+		gen_op_boilerplate(ops::lt, <);
+		gen_op_boilerplate(ops::gteq, >=);
+		gen_op_boilerplate(ops::lteq, <=);
+		gen_op_boilerplate(ops::band, &);
+		gen_op_boilerplate(ops::bxor, ^);
+		gen_op_boilerplate(ops::bor, |);
+		gen_op_boilerplate(ops::land, &&);
+		gen_op_boilerplate(ops::lor, ||);
+		gen_op_boilerplate(ops::assign, =);
+		gen_op_boilerplate(ops::add_assign, +=);
+		gen_op_boilerplate(ops::sub_assign, -=);
+		gen_op_boilerplate(ops::mul_assign, *=);
+		gen_op_boilerplate(ops::div_assign, /=);
+		gen_op_boilerplate(ops::mod_assign, %=);
+		gen_op_boilerplate(ops::shl_assign, <<=);
+		gen_op_boilerplate(ops::shr_assign, >>=);
+		gen_op_boilerplate(ops::band_assign, &=);
+		gen_op_boilerplate(ops::bxor_assign, ^=);
+		gen_op_boilerplate(ops::bor_assign, |=);
 		#undef gen_op_boilerplate
 	};
 
 	// for ternary support
-	template<typename U>
-	expression_decomposer(U&&) -> expression_decomposer<std::conditional_t<std::is_rvalue_reference_v<U>, std::remove_reference_t<U>, U>>;
+	template<typename U> expression_decomposer(U&&)
+	         -> expression_decomposer<std::conditional_t<std::is_rvalue_reference_v<U>, std::remove_reference_t<U>, U>>;
 
-	enum class literal_format {
-		dec,
-		hex,
-		octal,
-		binary,
-		none
-	};
-
-	template<typename T>
-	[[gnu::cold]]
-	constexpr std::string_view type_name() {
-		// clang: std::string_view ns::type_name() [T = int]
-		// gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
-		// msvc:  const char *__cdecl ns::type_name<int>(void)
-		auto substring_bounded_by = [](std::string_view sig, std::string_view l, std::string_view r) {
-			primitive_assert(sig.find(l) != std::string_view::npos);
-			primitive_assert(sig.rfind(r) != std::string_view::npos);
-			primitive_assert(sig.find(l) < sig.rfind(r));
-			auto i = sig.find(l) + l.length();
-			return sig.substr(i, sig.rfind(r) - i);
-		};
-		#if defined(__clang__)
-			return substring_bounded_by(__PRETTY_FUNCTION__, "[T = ", "]");
-		#elif defined(__GNUC__) || defined(__GNUG__)
-			return substring_bounded_by(__PRETTY_FUNCTION__, "[with T = ", "; std::string_view = ");
-		#elif defined(_MSC_VER)
-			return substring_bounded_by(__FUNCSIG__, "type_name<", ">(void)");
-		#else
-			// TODO: ?
-			return __PRETTY_FUNCTION__;
-		#endif
-	}
-
-	// https://stackoverflow.com/questions/28309164/checking-for-existence-of-an-overloaded-member-function
-	template<typename T> class has_stream_overload {
-		template<typename C,
-				 typename = decltype(std::declval<std::ostringstream>() << std::declval<C>())>
-		static std::true_type test(int);
-		template<typename C>
-		static std::false_type test(...);
-	public:
-		static constexpr bool value = decltype(test<T>(0))::value;
-	};
-
-	template<typename T> constexpr bool has_stream_overload_v = has_stream_overload<T>::value;
-
-	template<typename T>
-	[[gnu::cold]]
-	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
-		// bool and char need to be before std::is_integral
-		if constexpr (std::is_same_v<strip<T>, std::string>
-					  || std::is_same_v<strip<T>, std::string_view>
-					//|| std::is_same_v<strip<T>, char*>
-					//|| std::is_same_v<strip<T>, const char*>
-					  || std::is_same_v<std::remove_cv_t<std::decay_t<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
-					) {
-			if constexpr(std::is_pointer_v<T>) {
-				if(t == nullptr) {
-					return "nullptr";
-				}
-			}
-			// TODO: re-evaluate this...? What if just comparing two buffer pointers?
-			return escape_string(t, '"'); // string view may need explicit construction?
-		} else if constexpr (std::is_same_v<strip<T>, char>) {
-			return escape_string({&t, 1}, '\'');
-		} else if constexpr (std::is_same_v<strip<T>, bool>) {
-			return t ? "true" : "false"; // streams/boolalpha not needed for this
-		} else if constexpr (std::is_same_v<strip<T>, std::nullptr_t>) {
-			return "nullptr";
-		} else if constexpr (std::is_pointer_v<strip<T>> || std::is_same_v<strip<T>, uintptr_t>) {
-			if(uintptr_t(t) == uintptr_t(nullptr)) { // weird nullptr shenanigans, only prints "nullptr" for nullptr_t
-				return "nullptr";
-			} else {
-				std::ostringstream oss;
-				// Manually format the pointer - ostream::operator<<(void*) falls back to %p which
-				// is implementation-defined. MSVC prints pointers without the leading "0x" which
-				// messes up the highlighter.
-				oss<<std::showbase<<std::hex<<uintptr_t(t);
-				return std::move(oss).str();
-			}
-		} else if constexpr (std::is_integral_v<T>) {
-			std::ostringstream oss;
-			switch(fmt) {
-				case literal_format::dec:
-					break;
-				case literal_format::hex:
-					oss<<std::showbase<<std::hex;
-					break;
-				case literal_format::octal:
-					oss<<std::showbase<<std::oct;
-					break;
-				case literal_format::binary:
-					oss<<"0b"<<std::bitset<sizeof(t) * 8>(t);
-					goto r;
-				default:
-					primitive_assert(false, "unexpected literal format requested for printing");
-			}
-			oss<<t;
-			r: return std::move(oss).str();
-		} else if constexpr (std::is_floating_point_v<T>) {
-			std::ostringstream oss;
-			switch(fmt) {
-				case literal_format::dec:
-					break;
-				case literal_format::hex:
-					// apparently std::hexfloat automatically prepends "0x" while std::hex does not
-					oss<<std::hexfloat;
-					break;
-				case literal_format::octal:
-				case literal_format::binary:
-					return "";
-				default:
-					primitive_assert(false, "unexpected literal format requested for printing");
-			}
-			oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<t;
-			return std::move(oss).str();
-		} else {
-			if constexpr (has_stream_overload_v<T>) {
-				std::ostringstream oss;
-				oss<<t;
-				return std::move(oss).str();
-			} else {
-				return stringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
-			}
-		}
-	}
+	/*
+	 * C++ syntax analysis logic
+	 */
 
 	[[gnu::cold]]
 	static std::string union_regexes(std::initializer_list<std::string_view> regexes) {
@@ -1162,9 +1031,18 @@ namespace assert_impl_ {
 		}
 		return composite;
 	}
+
+	[[gnu::cold]]
+	static std::string prettify_type(std::string type) {
+		// for now just doing basic > > -> >> replacement
+		// could put in analysis:: but the replacement is basic and this is more convenient for
+		// using in the stringifier too
+		replace_all_dynamic(type, "> >", ">>");
+		return type;
+	}
 	
 	// file-local singleton, at most 8 BSS bytes per TU in debug mode is no problem
-	// <1KB heap bytes per TU at runtime but in practice should only happen in one TU
+	// <512 bytes heap bytes per TU at runtime but in practice should only happen in one TU
 	class analysis;
 	static analysis* analysis_singleton;
 
@@ -1187,6 +1065,14 @@ namespace assert_impl_ {
 			whitespace
 		};
 
+		enum class literal_format {
+			dec,
+			hex,
+			octal,
+			binary,
+			none
+		};
+
 		struct token_t {
 			token_e token_type;
 			std::string str;
@@ -1200,12 +1086,6 @@ namespace assert_impl_ {
 	private:
 		// could all be const but I don't want to try to pack everything into an init list
 		std::vector<std::pair<token_e, std::regex>> rules; // could be std::array but I don't want to hard-code a size
-		std::string int_binary;
-		std::string int_octal;
-		std::string int_decimal;
-		std::string int_hex;
-		std::string float_decimal;
-		std::string float_hex;
 		std::regex escapes_re;
 		std::unordered_map<std::string_view, int> precedence;
 		std::unordered_map<std::string_view, std::string_view> braces = {
@@ -1287,10 +1167,11 @@ namespace assert_impl_ {
 			std::sort(std::begin(keywords), std::end(keywords), cmp);
 			std::sort(std::begin(punctuators), std::end(punctuators), cmp);
 			// Escape special characters and add wordbreaks
-			std::transform(std::begin(punctuators), std::end(punctuators), std::begin(punctuators), [](const std::string& str) {
-				const std::regex special_chars { R"([-[\]{}()*+?.,\^$|#\s])" };
-				return std::regex_replace(str + (isalpha(str[0]) ? "\\b" : ""), special_chars, "\\$&");
-			});
+			const std::regex special_chars { R"([-[\]{}()*+?.,\^$|#\s])" };
+			std::transform(std::begin(punctuators), std::end(punctuators), std::begin(punctuators),
+				[&special_chars](const std::string& str) {
+					return std::regex_replace(str + (isalpha(str[0]) ? "\\b" : ""), special_chars, "\\$&");
+				});
 			// https://eel.is/c++draft/lex.pptoken#3.2
 			*std::find(std::begin(punctuators), std::end(punctuators), "<:") += "(?!:[^:>])";
 			// regular expressions
@@ -1298,31 +1179,34 @@ namespace assert_impl_ {
 			std::string punctuators_re = join(punctuators, "|");
 			// numeric literals
 			std::string optional_integer_suffix = "(?:[Uu](?:LL?|ll?|Z|z)?|(?:LL?|ll?|Z|z)[Uu]?)?";
-			int_binary  = "0[Bb][01](?:'?[01])*" + optional_integer_suffix;
+			std::string int_binary  = "0[Bb][01](?:'?[01])*" + optional_integer_suffix;
 			// slightly modified from grammar so 0 is lexed as a decimal literal instead of octal
-			int_octal   = "0(?:'?[0-7])+" + optional_integer_suffix;
-			int_decimal = "(?:0|[1-9](?:'?\\d)*)" + optional_integer_suffix;
-			int_hex	    = "0[Xx](?!')(?:'?[\\da-fA-F])+" + optional_integer_suffix;
+			std::string int_octal   = "0(?:'?[0-7])+" + optional_integer_suffix;
+			std::string int_decimal = "(?:0|[1-9](?:'?\\d)*)" + optional_integer_suffix;
+			std::string int_hex	    = "0[Xx](?!')(?:'?[\\da-fA-F])+" + optional_integer_suffix;
 			std::string digit_sequence = "\\d(?:'?\\d)*";
-			std::string fractional_constant = stringf("(?:(?:%s)?\\.%s|%s\\.)", digit_sequence.c_str(), digit_sequence.c_str(), digit_sequence.c_str());
+			std::string fractional_constant = stringf("(?:(?:%s)?\\.%s|%s\\.)",
+			                                    digit_sequence.c_str(), digit_sequence.c_str(), digit_sequence.c_str());
 			std::string exponent_part = "(?:[Ee][\\+-]?" + digit_sequence + ")";
 			std::string suffix = "[FfLl]";
-			float_decimal = stringf("(?:%s%s?|%s%s)%s?",
+			std::string float_decimal = stringf("(?:%s%s?|%s%s)%s?",
 								fractional_constant.c_str(), exponent_part.c_str(),
 								digit_sequence.c_str(), exponent_part.c_str(), suffix.c_str());
 			std::string hex_digit_sequence = "[\\da-fA-F](?:'?[\\da-fA-F])*";
-			std::string hex_frac_const = stringf("(?:(?:%s)?\\.%s|%s\\.)", hex_digit_sequence.c_str(), hex_digit_sequence.c_str(), hex_digit_sequence.c_str());
+			std::string hex_frac_const = stringf("(?:(?:%s)?\\.%s|%s\\.)",
+			hex_digit_sequence.c_str(), hex_digit_sequence.c_str(), hex_digit_sequence.c_str());
 			std::string binary_exp = "[Pp][\\+-]?" + digit_sequence;
-			float_hex = stringf("0[Xx](?:%s|%s)%s%s?",
-						hex_frac_const.c_str(), hex_digit_sequence.c_str(), binary_exp.c_str(), suffix.c_str());
+			std::string float_hex = stringf("0[Xx](?:%s|%s)%s%s?",
+			                    hex_frac_const.c_str(), hex_digit_sequence.c_str(), binary_exp.c_str(), suffix.c_str());
 			// char and string literals
 			std::string escapes = R"(\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.)";
 			std::string char_literal = R"((?:u8|[UuL])?'(?:)" + escapes + R"(|[^\n'])*')";
 			std::string string_literal = R"((?:u8|[UuL])?"(?:)" + escapes + R"(|[^\n"])*")";
-			std::string raw_string_literal = R"((?:u8|[UuL])?R"([^ ()\\t\r\v\n]*)\((?:(?!\)\2\").)*\)\2")"; // \2 because the first capture is the match without the rest of the file
+			                     // \2 because the first capture is the match without the rest of the file
+			std::string raw_string_literal = R"((?:u8|[UuL])?R"([^ ()\\t\r\v\n]*)\((?:(?!\)\2\").)*\)\2")";
 			escapes_re = std::regex(escapes);
 			// final rule set
-			// regex is greedy, sequencing rules are as follow:
+			// rules must be sequenced as a topological sort adhering to:
 			// keyword > identifier
 			// number > punctuation (for .1f)
 			// float > int (for 1.5 and hex floats)
@@ -1352,7 +1236,8 @@ namespace assert_impl_ {
 			};
 			rules.resize(std::size(rules_raw));
 			for(size_t i = 0; i < std::size(rules_raw); i++) {
-				std::string str = stringf("^(%s)[^]*", rules_raw[i].second.c_str()); // [^] instead of . because . does not match newlines
+				                // [^] instead of . because . does not match newlines
+				std::string str = stringf("^(%s)[^]*", rules_raw[i].second.c_str());
 				#ifdef _0_DEBUG_ASSERT_LEXER_RULES
 				fprintf(stderr, "%s : %s\n", rules_raw[i].first.c_str(), str.c_str());
 				#endif
@@ -1378,7 +1263,8 @@ namespace assert_impl_ {
 				{ -6, { "|" } },
 				{ -7, { "&&" } },
 				{ -8, { "||" } },
-				{ -9, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } }, // Note: associativity logic currently relies on these having precedence -9
+				            // Note: associativity logic currently relies on these having precedence -9
+				{ -9, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } },
 				{ -10, { "," } }
 			};
 			std::unordered_map<std::string_view, int> table;
@@ -1391,7 +1277,7 @@ namespace assert_impl_ {
 		}
 
 		[[gnu::cold]]
-		std::vector<token_t> _tokenize(const std::string& expression, bool decompose_shr=false) {
+		std::vector<token_t> _tokenize(const std::string& expression, bool decompose_shr = false) {
 			std::vector<token_t> tokens;
 			size_t i = 0;
 			while(i < expression.length()) {
@@ -1415,8 +1301,7 @@ namespace assert_impl_ {
 					}
 				}
 				if(!at_least_one_matched) {
-					// TODO: silent fail option / attempt to recover?
-					throw "error: invalid token?";
+					throw "error: invalid token";
 				}
 			}
 			return tokens;
@@ -1424,7 +1309,6 @@ namespace assert_impl_ {
 
 		[[gnu::cold]]
 		std::vector<highlight_block> _highlight(const std::string& expression) try {
-			// TODO: improve highlighting, will require more situational awareness
 			const auto tokens = _tokenize(expression);
 			std::vector<highlight_block> output;
 			for(size_t i = 0; i < tokens.size(); i++) {
@@ -1477,7 +1361,6 @@ namespace assert_impl_ {
 			}
 			return output;
 		} catch(...) {
-			// yes, yes, never use exceptions for control flow, but performance really does not matter here!
 			return {{"", expression}};
 		}
 
@@ -1834,6 +1717,149 @@ namespace assert_impl_ {
 		}
 	};
 
+	using literal_format = analysis::literal_format;
+
+	/*
+	 * stringification
+	 */
+
+	[[gnu::cold]] [[maybe_unused]]
+	static std::string escape_string(const std::string_view str, char quote) {
+		std::string escaped;
+		escaped += quote;
+		for(unsigned char c : str) {
+			if(c == '\\') escaped += "\\\\";
+			else if(c == '\t') escaped += "\\t";
+			else if(c == '\r') escaped += "\\r";
+			else if(c == '\n') escaped += "\\n";
+			else if(c == quote) escaped += "\\" + std::to_string(quote);
+			else if(c >= 32 && c <= 126) escaped += c; // printable
+			else {
+				constexpr const char * const hexdig = "0123456789abcdef";
+				escaped += std::string("\\x") + hexdig[c >> 4] + hexdig[c & 0xF];
+			}
+		}
+		escaped += quote;
+		return escaped;
+	}
+
+	template<typename T>
+	[[gnu::cold]]
+	constexpr std::string_view type_name() {
+		// Cases to handle:
+		// gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
+		// clang: std::string_view ns::type_name() [T = int]
+		auto substring_bounded_by = [](std::string_view sig, std::string_view l, std::string_view r) {
+			primitive_assert(sig.find(l) != std::string_view::npos);
+			primitive_assert(sig.rfind(r) != std::string_view::npos);
+			primitive_assert(sig.find(l) < sig.rfind(r));
+			auto i = sig.find(l) + l.length();
+			return sig.substr(i, sig.rfind(r) - i);
+		};
+		#if IS_CLANG
+		 return substring_bounded_by(__PRETTY_FUNCTION__, "[T = ", "]");
+		#elif IS_GCC
+		 return substring_bounded_by(__PRETTY_FUNCTION__, "[with T = ", "; std::string_view = ");
+		#endif
+	}
+
+	// https://stackoverflow.com/questions/28309164/checking-for-existence-of-an-overloaded-member-function
+	template<typename T> class has_stream_overload {
+		template<typename C, typename = decltype(std::declval<std::ostringstream>() << std::declval<C>())>
+		static std::true_type test(int);
+		template<typename C>
+		static std::false_type test(...);
+	public:
+		static constexpr bool value = decltype(test<T>(0))::value;
+	};
+
+	template<typename T> constexpr bool has_stream_overload_v = has_stream_overload<T>::value;
+
+	template<typename T>
+	[[gnu::cold]]
+	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
+		// bool and char need to be before std::is_integral
+		if constexpr (std::is_same_v<strip<T>, std::string>
+					  || std::is_same_v<strip<T>, std::string_view>
+					//|| std::is_same_v<strip<T>, char*>
+					//|| std::is_same_v<strip<T>, const char*>
+					  || std::is_same_v<std::remove_cv_t<std::decay_t<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
+					) {
+			if constexpr(std::is_pointer_v<T>) {
+				if(t == nullptr) {
+					return "nullptr";
+				}
+			}
+			// TODO: re-evaluate this...? What if just comparing two buffer pointers?
+			return escape_string(t, '"'); // string view may need explicit construction?
+		} else if constexpr (std::is_same_v<strip<T>, char>) {
+			return escape_string({&t, 1}, '\'');
+		} else if constexpr (std::is_same_v<strip<T>, bool>) {
+			return t ? "true" : "false"; // streams/boolalpha not needed for this
+		} else if constexpr (std::is_same_v<strip<T>, std::nullptr_t>) {
+			return "nullptr";
+		} else if constexpr (std::is_pointer_v<strip<T>>) {
+			if(t == nullptr) { // weird nullptr shenanigans, only prints "nullptr" for nullptr_t
+				return "nullptr";
+			} else {
+				std::ostringstream oss;
+				// Manually format the pointer - ostream::operator<<(void*) falls back to %p which
+				// is implementation-defined. MSVC prints pointers without the leading "0x" which
+				// messes up the highlighter.
+				oss<<std::showbase<<std::hex<<uintptr_t(t);
+				return std::move(oss).str();
+			}
+		} else if constexpr (std::is_integral_v<T>) {
+			std::ostringstream oss;
+			switch(fmt) {
+				case literal_format::dec:
+					break;
+				case literal_format::hex:
+					oss<<std::showbase<<std::hex;
+					break;
+				case literal_format::octal:
+					oss<<std::showbase<<std::oct;
+					break;
+				case literal_format::binary:
+					oss<<"0b"<<std::bitset<sizeof(t) * 8>(t);
+					goto r;
+				default:
+					primitive_assert(false, "unexpected literal format requested for printing");
+			}
+			oss<<t;
+			r: return std::move(oss).str();
+		} else if constexpr (std::is_floating_point_v<T>) {
+			std::ostringstream oss;
+			switch(fmt) {
+				case literal_format::dec:
+					break;
+				case literal_format::hex:
+					// apparently std::hexfloat automatically prepends "0x" while std::hex does not
+					oss<<std::hexfloat;
+					break;
+				case literal_format::octal:
+				case literal_format::binary:
+					return "";
+				default:
+					primitive_assert(false, "unexpected literal format requested for printing");
+			}
+			oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<t;
+			return std::move(oss).str();
+		} else {
+			if constexpr (has_stream_overload_v<T>) {
+				std::ostringstream oss;
+				oss<<t;
+				return std::move(oss).str();
+			} else {
+				return stringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
+			}
+		}
+	}
+
+	/*
+	 * stack trace printing
+	 */
+
 	static constexpr int log10(int n) {
 		int t = 1;
 		for(int i = 0; i < [] {
@@ -1862,8 +1888,8 @@ namespace assert_impl_ {
 		// ./demo.exe                           .  demo.exe
 		// ./../demo.exe                        .. demo.exe
 		// ../x.hpp                             .. x.hpp
-		// /foo/./x                             foo        x
-		// /foo//x                              f          x
+		// /foo/./x                                foo        x
+		// /foo//x                                 f          x
 		path_components parts;
 		for(std::string& part : split(path, path_delim)) {
 			if(parts.empty()) {
@@ -1912,7 +1938,7 @@ namespace assert_impl_ {
 			}
 		}
 		path_trie(const path_trie&) = delete;
-		path_trie(path_trie&& other) {
+		path_trie(path_trie&& other) { // needed for std::vector
 			downstream_branches = other.downstream_branches;
 			root = other.root;
 			for(auto& [k, trie] : edges) {
@@ -1960,15 +1986,14 @@ namespace assert_impl_ {
 		std::vector<analysis::highlight_block> blocks;
 	};
 
-	struct cell_t {
-		size_t length;
-		std::string content;
-	};
-
 	static void wrapped_print(std::vector<column_t> columns) {
 		// 2d array rows/columns
-		std::vector<std::vector<cell_t>> lines;
-		lines.push_back(std::vector<cell_t>(columns.size()));
+		struct line_content {
+			size_t length;
+			std::string content;
+		};
+		std::vector<std::vector<line_content>> lines;
+		lines.emplace_back(columns.size());
 		// populate one column at a time
 		for(size_t i = 0; i < columns.size(); i++) {
 			auto [width, blocks] = columns[i];
@@ -1977,7 +2002,7 @@ namespace assert_impl_ {
 				size_t block_i = 0;
 				// digest block
 				while(block_i != block.content.size()) {
-					if(lines.size() == current_line) lines.push_back(std::vector<cell_t>(columns.size()));
+					if(lines.size() == current_line) lines.emplace_back(columns.size());
 					// number of characters we can extract from the block
 					size_t extract = std::min(width - lines[current_line][i].length, block.content.size() - block_i);
 					primitive_assert(block_i + extract <= block.content.size());
@@ -2029,48 +2054,52 @@ namespace assert_impl_ {
 				frame.signature = prettify_type(frame.signature);
 			}
 			// TODO: lower-bound too, or just include assert internals
-			auto main = std::find_if(trace.rbegin(), trace.rend(),
-				[](const assert_impl_::stacktrace_entry& e) {
-					return e.signature == "main";
-				});
-			//size_t end = &*main - &trace.front(); // todo: what if main == .end()
-			size_t end = trace.size() - 1; (void) main;
+			size_t end = [&trace] { // I think this is more readable than the <algorithm> version.
+				for(size_t i = trace.size(); i--; ) {
+					if(trace[i].signature == "main") {
+						return i;
+					}
+				}
+				return trace.size() - 1;
+			}();
 			// path preprocessing
 			// raw full path -> components
-			std::unordered_map<std::string, path_components> components;
-			// file name -> trie
-			std::unordered_map<std::string, path_trie> file_tries;
+			std::unordered_map<std::string, path_components> parsed_paths;
+			// base file name -> path trie
+			std::unordered_map<std::string, path_trie> tries;
 			for(size_t i = 0; i <= end; i++) {
-				const auto& [filename, _1, _2] = trace[i];
-				auto path = parse_path(filename);
-				if(!components.count(filename)) {
-					components.insert({filename, path});
-					if(!file_tries.count(path.back())) {
-						file_tries.insert(std::make_pair(path.back(), path_trie(path.back())));
+				const auto& source_path = trace[i].source_path;
+				if(!parsed_paths.count(source_path)) {
+					auto parsed_path = parse_path(source_path);
+					auto& file_name = parsed_path.back();
+					parsed_paths.insert({source_path, parsed_path});
+					if(tries.count(file_name) == 0) {
+						tries.insert({file_name, path_trie(file_name)});
 					}
-					file_tries.at(path.back()).insert(path);
+					tries.at(file_name).insert(parsed_path);
 				}
 			}
 			// raw full path -> minified path
 			std::unordered_map<std::string, std::string> files;
-			size_t max_file_length = 0;
-			for(auto& [raw, path] : components) {
-				primitive_assert(!files.count(raw));
-				//std::string new_path = raw;
-				std::string new_path = join(file_tries.at(path.back()).disambiguate(path), "/");
-				files.insert({raw, new_path});
-				if(new_path.size() > max_file_length) max_file_length = new_path.size();
+			constexpr size_t max_file_length = 50;
+			size_t longest_file_width = 0;
+			for(auto& [raw, parsed_path] : parsed_paths) {
+				std::string new_path = join(tries.at(parsed_path.back()).disambiguate(parsed_path), "/");
+				primitive_assert(files.insert({raw, new_path}).second);
+				if(new_path.size() > longest_file_width) longest_file_width = new_path.size();
 			}
-			max_file_length = std::min(max_file_length, size_t(80));
-			int max_line_numbers_length = log10(std::max_element(trace.begin(), trace.begin() + end,
+			longest_file_width = std::min(longest_file_width, size_t(50));
+			int max_line_number_width = log10(std::max_element(trace.begin(), trace.begin() + end,
 				[](const assert_impl_::stacktrace_entry& a, const assert_impl_::stacktrace_entry& b) {
 					return std::to_string(a.line).size() < std::to_string(b.line).size();
 				})->line);
 			int frame_offset = 0;
 			int term_width = terminal_width(); // will be 0 on error
+			// do the actual trace
 			for(size_t i = 0; i <= end; i++) {
-				const auto& [filename, signature, _line] = trace[i];
+				const auto& [source_path, signature, _line] = trace[i];
 				std::string line = _line == 0 ? "?" : std::to_string(_line);
+				// look for repeats, i.e. recursion we can fold
 				int recursion_folded = 0;
 				if(end - i >= 4) {
 					size_t j = 1;
@@ -2091,15 +2120,14 @@ namespace assert_impl_ {
 					sig.pop_back();
 					std::string frame = std::to_string(frame_number);
 					size_t left = 2 + std::max((int)frame.length(), 2);
-					size_t middle = std::max((int)line.size(), max_line_numbers_length);
-					//constexpr size_t max_file_length = 20;
+					size_t middle = std::max((int)line.size(), max_line_number_width);
 					size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
 					primitive_assert(remaining_width >= 2);
-					size_t file_width = std::min(max_file_length, remaining_width / 2);
+					size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
 					size_t sig_width = remaining_width - file_width;
 					wrapped_print({
 						{ left,       {{"", (frame_number < 10 ? "#  " : "# ") + frame}} },
-						{ file_width, {{"", files.at(filename)}} },
+						{ file_width, {{"", files.at(source_path)}} },
 						{ middle,     analysis::highlight_blocks(line) }, // intentionally not coloring "?"
 						{ sig_width,  sig }
 					});
@@ -2110,7 +2138,7 @@ namespace assert_impl_ {
 						stderr, "#%2d %s\n      at %s:%s\n",
 						frame_number,
 						sig.c_str(),
-						filename.c_str(),
+						source_path.c_str(),
 						(CYAN + line + RESET).c_str() // yes this is excessive and intentionally coloring "?"
 					);
 				}
@@ -2123,9 +2151,13 @@ namespace assert_impl_ {
 				}
 			}
 		} else {
-			fprintf(stderr, "Error: Unable to generate stacktrace.");
+			fprintf(stderr, "Error while generating stack trace.");
 		}
 	}
+
+	/*
+	 * binary diagnostic printing
+	 */
 
 	[[gnu::cold]]
 	static std::string parenthesize_if_necessary(const std::string& expression, const std::string_view op) {
@@ -2137,10 +2169,10 @@ namespace assert_impl_ {
 	}
 
 	[[gnu::cold]] [[maybe_unused]]
-	static std::string gen_assert_binary(std::string a_str, const std::string_view op, std::string b_str) {
+	static std::string gen_assert_binary(const std::string& a_str, const std::string_view op, const std::string& b_str) {
 		return stringf("assert(%s %s %s);",
 					   parenthesize_if_necessary(a_str, op).c_str(),
-					   std::string(op).c_str(), // string_view isn't null-terminated; TODO: better solution?
+					   std::string(op).c_str(), // string_view isn't guaranteed null-terminated; TODO: better solution?
 					   parenthesize_if_necessary(b_str, op).c_str());
 	}
 
@@ -2205,8 +2237,8 @@ namespace assert_impl_ {
 		// Note: op
 		// figure out what information we need to print in the where clause
 		// find all literal formats involved (literal_format::dec included for everything)
-		literal_format lformat = analysis::get_literal_format(a_str);
-		literal_format rformat = analysis::get_literal_format(b_str);
+		auto lformat = analysis::get_literal_format(a_str);
+		auto rformat = analysis::get_literal_format(b_str);
 		// std::set used so formats are printed in a specific order
 		std::set<literal_format> formats = { literal_format::dec, lformat, rformat };
 		formats.erase(literal_format::none); // none is just for when the expression isn't a literal
@@ -2215,7 +2247,10 @@ namespace assert_impl_ {
 		// generate raw strings for given formats, without highlighting
 		std::vector<std::string> lstrings = generate_stringifications(std::forward<A>(a), formats);
 		std::vector<std::string> rstrings = generate_stringifications(std::forward<B>(b), formats);
+		primitive_assert(lstrings.size() > 0);
+		primitive_assert(rstrings.size() > 0);
 		// pad all columns where there is overlap
+		// TODO: Use column printer instead of manual padding.
 		for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()); i++) {
 			// find which clause, left or right, we're padding (entry i)
 			std::vector<std::string>& which = lstrings[i].length() < rstrings[i].length() ? lstrings : rstrings;
@@ -2224,8 +2259,6 @@ namespace assert_impl_ {
 				which[i].insert(which[i].end(), difference, ' ');
 			}
 		}
-		primitive_assert(lstrings.size() > 0);
-		primitive_assert(rstrings.size() > 0);
 		// determine whether we actually gain anything from printing a where clause (e.g. exclude "1 => 1")
 		struct { bool left, right; } has_useful_where_clause = {
 			formats.size() > 1 || lstrings.size() > 1 || (a_str != lstrings[0] && analysis::trim_suffix(a_str) != lstrings[0]),
@@ -2241,38 +2274,32 @@ namespace assert_impl_ {
 			// Limit lw to about half the screen. TODO: Re-evaluate what we want to do here.
 			if(term_width > 0) lw = std::min(lw, term_width / 2 - 8 /* indent */ - 4 /* arrow */);
 			fprintf(stderr, "    Where:\n");
-			if(has_useful_where_clause.left) {
+			auto print_clause = [term_width, lw](const char* expr_str, std::vector<std::string>& expr_strs) {
 				if(term_width >= 50) {
 					wrapped_print({
 						{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
-						{ lw, analysis::highlight_blocks(a_str) },
+						{ lw, analysis::highlight_blocks(expr_str) },
 						{ 2, {{"", "=>"}} },
-						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(lstrings) }
+						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(expr_strs) }
 					});
 				} else {
 					fprintf(stderr, "        %s%*s => ",
-							analysis::highlight(a_str).c_str(), int(lw - strlen(a_str)), "");
-						print_values(lstrings, lw);
-					//fprintf(stderr, "%s\n", join(get_values(lstrings)))
+							analysis::highlight(expr_str).c_str(), int(lw - strlen(expr_str)), "");
+						print_values(expr_strs, lw);
 				}
+			};
+			if(has_useful_where_clause.left) {
+				print_clause(a_str, lstrings);
 			}
 			if(has_useful_where_clause.right) {
-				if(term_width >= 50) {
-					wrapped_print({
-						{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
-						{ lw, analysis::highlight_blocks(b_str) },
-						{ 2, {{"", "=>"}} },
-						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(rstrings) }
-					});
-				} else {
-					fprintf(stderr, "        %s%*s => ",
-							analysis::highlight(b_str).c_str(), int(lw - strlen(b_str)), "");
-						print_values(rstrings, lw);
-					//fprintf(stderr, "%s\n", join(get_values(rstrings)))
-				}
+				print_clause(b_str, rstrings);
 			}
 		}
 	}
+
+	/*
+	 * actual assertion main bodies, finally
+	 */
 
 	// allow non-fatal assertions
 	enum class ASSERT {
@@ -2371,7 +2398,7 @@ namespace assert_impl_ {
 
 	template<typename C, typename A, typename B>
 	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const std::string& info, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
-		assert(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info.c_str(), fatal, location);
+		assert_binary(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info.c_str(), fatal, location);
 	}
 
 	[[maybe_unused]]
@@ -2431,19 +2458,22 @@ using assert_impl_::ASSERT;
   #define   assert_or(a, b, ...) assert_impl_::assume<assert_impl_::logical_or   >(a, b)
  #endif
 #else
- // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method name, not signature
+ // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
+ // name, not signature
  // assert_impl_::expression_decomposer(assert_impl_::expression_decomposer{}) done for ternary support
+ // Just an alias for __PRETTY_FUNCTION__, can't #undef this so four random characters after P to prevent manespace
+ // collision.
  #define      assert(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                                assert_impl_::assert(assert_impl_::expression_decomposer(assert_impl_::expression_decomposer{} << expr), \
-                                                                                                #expr, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_eq(a, b, ...) assert_impl_::assert_binary<assert_impl_::equal_to     >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define  assert_neq(a, b, ...) assert_impl_::assert_binary<assert_impl_::not_equal_to >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_lt(a, b, ...) assert_impl_::assert_binary<assert_impl_::less         >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_gt(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater      >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define assert_lteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::less_equal   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define assert_gteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::greater_equal>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define  assert_and(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_and  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_or(a, b, ...) assert_impl_::assert_binary<assert_impl_::logical_or   >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+                                assert_impl_::assert(assert_impl_::expression_decomposer( \
+                                            assert_impl_::expression_decomposer{} << expr), #expr, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_eq(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::eq  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define  assert_neq(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::neq >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_lt(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::lt  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_gt(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::gt  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define assert_lteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::lteq>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define assert_gteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::gteq>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define  assert_and(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::land>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+ #define   assert_or(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::lor >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 #endif
 
 #endif

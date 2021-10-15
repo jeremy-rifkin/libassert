@@ -163,15 +163,39 @@ Possible pitfalls of this library:
 
 ### Quick Library Documentation
 
-Assertions are of the form:
+Library functions:
 
-- `void assert(expression, info?, fatal?)`
-- `void assert_op(a, b, info?, fatal?)`
-  - Where `op` is one of `eq`, `neq`, `lt`, `gt`, `lteq`, `gteq`, `and`, or `or`.
+Generic assertion:
+```cpp
+void assert(<any expression>, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL);
+void assert(<any expression>, const std::string& info,    ASSERT fatal = ASSERT::FATAL);
+```
+The assertion expression must be implicitly convertible to boolean.
 
-`info` is optional has overloads for `char*` and `std::string`.
+Expressions with top-level precedence of bitshift below are decomposed automatically, providing
+diagnostic info about the values on both sides of the binary expression.
 
-`fatal` is optional and is `ASSERT::FATAL` or `ASSERT::NONFATAL`.
+Specialized assertions:
+```cpp
+void assert_op(left, right, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL);
+void assert_op(left, right, const std::string& info,    ASSERT fatal = ASSERT::FATAL);
+```
+
+Where `op` ∈ {`eq`, `neq`, `lt`, `gt`, `lteq`, `gteq`, `and`, `or`}.
+
+This is the traditional way to make assertions that provide more diagnostic information. Automatic
+decomposition is far superior.
+
+**Note:** There is no short-circuiting for `assert_and` and `assert_or` or `&&` and `||` in
+expression decomposition.
+
+**Note:** Integral comparisons in the specialized assertion and top-level expression for automatic
+decomposition are automatically done safely with respect to signedness.
+
+**Note:** `left` and `right` and types used in automatically decomposed expressions may be user
+defined as long as they have move semantics.
+
+`fatal` may be `ASSERT::FATAL` or `ASSERT::NONFATAL`.
 
 Build options:
 
@@ -182,10 +206,6 @@ Build options:
   an `NDEBUG` build like exceptions which cannot be optimized away (e.g. `std::unordered_map::at`
   where the lookup cannot be optimized away and ends up not being a helpful compiler hint).
 
-*Note:* There is no short-circuiting for `assert_and` and `assert_or` or `&&` and `||` in expression
-decomposition.
-
-*Note* For user-defined types, only move semantics are required by the assertion processor.
 
 ### How To Use This Library
 
