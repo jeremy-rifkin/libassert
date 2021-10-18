@@ -82,65 +82,71 @@ int some_system_call(int, char*, int) {
 class foo {
 public:
 	template<typename> void bar([[maybe_unused]] std::pair<int, int> x) {
-		baz("");
+		baz();
 	}
 
-	void baz(std::string) {
+	void baz() {
+		puts("");
 		// General demos
-		assert(false, "internal error: mismatched parameters or something");
-		assert(false, ASSERT::NONFATAL);
 		int fd = 2;
 		char buffer1[40];
 		int n = 40;
 		//assert(some_system_call(fd, buffer, n) != -1, "Error while doing XYZ", errno, (uintptr_t)-1, S<S<int>>(2));
-		assert(some_system_call(fd, buffer1, n) > 0, "Error while doing XYZ", errno, fd, n);
+		assert(some_system_call(fd, buffer1, n) > 0, "Internal error with foobars", errno, fd, n);
+		
+		assert(false, "Error while doing XYZ");
+		assert(false);
 
 		std::map<int, int> map {{1,1}};
 		assert(map.count(1) == 2);
-		assert(map.count(1) >= 2 * garple(), "some data not received");
+		assert(map.count(1) >= 2 * garple(), "Error while doing XYZ");
 		assert_eq(0, 2 == garple());
-		assert(0 == (2 == garple()));
 		
 		// Numeric
-		assert(.1f == .1);
-		assert(1.0 == 1.0 + std::numeric_limits<double>::epsilon());
+		assert(1 == 1.5);
+		assert(0.1 + 0.2 == 0.3);
+
 		assert_eq(1, 1 bitand 2);
 		assert(18446744073709551606ULL == -10);
-		assert(0b1000000 == 0x3);
-		const uint16_t flag = 0b000100000;
-		const uint16_t mask = 0b110011101;
-		assert(mask bitand flag);
-		assert(1 == 1.5);
-		assert(.1 == 2);
+		const uint16_t flags = 0b000101010;
+		const uint16_t mask = 0b110010101;
+		assert(mask bitand flags);
 		assert(0xf == 16);
-		assert(true == false);
-		assert(true ? false : true == false);
-		assert(0b100 == 0x3);
-		assert(0b1000000 == 0x3);
 		void* foo = (void*)0xdeadbeef;
-		assert_eq(foo, (int*)nullptr);
-		assert_eq(0x12p2, 12);
-		assert_eq(0x12p2, 0b10);
+		assert_eq(foo, nullptr);
 	
 		// Strings
 		std::string s = "test";
 		assert(s == "test2");
-		assert(s[0] == 'c');
-		assert(BLUE "test" RESET == "test2");
+		int i = 0;
+		assert(s[i] == 'c', "", s, i);
+		assert(BLUE "test" RESET == "test");
+		char* buffer = nullptr;
+		char thing[] = "foo";
+		assert_eq(buffer, thing);
+		assert_eq(buffer, +thing);
+		
 		assert(S<S<int>>(2) == S<S<int>>(4));
 		{
 			S<void> e, f;
 			assert(e == f);
 		}
-		char* buffer = nullptr;
-		char thing[] = "foo";
-		assert_eq(buffer, thing);
-		assert_eq(buffer, +thing);
 
 		// Tests useful during development
+		assert(.1f == .1);
+		assert(1.0 == 1.0 + std::numeric_limits<double>::epsilon());
+		assert_eq(0x12p2, 12);
+		assert_eq(0x12p2, 0b10);
+		assert(0b1000000 == 0x3);
+		assert(.1 == 2);
+		assert(true == false);
+		assert(true ? false : true == false);
+		assert(0b100 == 0x3);
+
+		assert(0 == (2 == garple()));
 		assert_gteq(map.count(1 == 1), 2);
-		assert_eq(map.count(1), 2, "some data not received");
-		assert_gteq(map.count(2 * garple()), 2, "some data not received");
+		assert_eq(map.count(1), 2, "Error while doing XYZ");
+		assert_gteq(map.count(2 * garple()), 2, "Error while doing XYZ");
 		assert(S<S<int>>(2) == S<S<int>>(4));
 		S<S<int>> a(1), b(2);
 		assert_eq(a, b);
@@ -156,6 +162,7 @@ public:
 		assert_and(&a, nullptr && nullptr);
 		assert_and((bool)nullptr && (bool)nullptr, (bool)nullptr);
 		assert_and((uintptr_t)&a, (bool)nullptr && (bool)nullptr); // FIXME: parentheses
+		assert_eq(foo, (int*)nullptr);
 		::foo();
 
 
@@ -199,7 +206,7 @@ public:
 		x = 2;
 		assert(x -= x -= x -= 1);
 		assert(assert_detail::always_false<void> == true);
-		assert(mask bitand flag, std::string("foobar"));
+		assert(mask bitand flags, std::string("foobar"));
 		x = 1;
 		assert(x ^= 1);
 		assert((42 & 3U) == 1UL);
