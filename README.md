@@ -1,10 +1,11 @@
 # Asserts <!-- omit in toc -->
 
 <p align="center">The most over-engineered assertion library.</p>
-<p align="center"><i>"did you just implement syntax highlighting for an assertion library??"</i> - My Russian friend Oleg</p>
+<p align="center"><i>"Did you just implement syntax highlighting for an assertion library??"</i>
+                      - My Russian friend Oleg</p>
 
-**Summary:** Automatic expression decomposition, diagnostics on binary expressions, stack traces,
-syntax highlighting, info messages!
+**Summary:** Automatic expression decomposition, diagnostics on binary expressions, user-provided
+extra diagnostics stack traces, syntax highlighting, errno help, info messages, and more!
 
 ```cpp
 assert(map.count(1) == 2);
@@ -100,7 +101,9 @@ assert_eq(buffer, thing);
 ![](screenshots/g.png)
 ![](screenshots/k.png)
 ```cpp
-// Numbers are always printed in decimal but this expression also involves hex and binary. As such, the processor also displays the hex and binary forms.
+// Numbers are always printed in decimal but the assertion processor will also print binary, hex,
+// or octal when they might be relevant. Here it will print decimal, binary, and hex because those
+// are the literal formats involved.
 assert(0b1000000 == 0x3);
 ```
 ![](screenshots/h.png)
@@ -111,12 +114,12 @@ template<class T> struct S {
     S(T&& x) : x(x) {}
     bool operator==(const S& s) const { return x == s.x; }
     friend std::ostream& operator<<(std::ostream& o, const S& s) {
-        o<<"I'm S<"<<assert_impl_::type_name<T>()<<"> and I contain:"<<std::endl;
+        o<<"I'm S<"<<assert_detail::type_name<T>()<<"> and I contain:"<<std::endl;
         // to-string on s.x
         std::ostringstream oss; oss<<s.x;
-        // print contents, assert_impl_::indent is just a string utility to indent all lines in a string
+        // print contents, assert_detail::indent is just a string utility to indent all lines in a string
 		// the assert logic does its own indentation, too
-        o<<assert_impl_::indent(std::move(oss).str(), 4);
+        o<<assert_detail::indent(std::move(oss).str(), 4);
         return o;
     }
 };
@@ -139,63 +142,39 @@ path in a binary, I'm not concerned with performance in the assertion processor 
 noticeably slow.
 
 **A note on automatic expression decomposition:** In automatic decomposition the assertion processor
-is only able to obtain a the string form of the full expression rather than the left and right parts
-independently. To get the left and right sides of the expression, the library needs to do some basic
-parsing of the expression (just figuring out the very top-level of the expression tree). The
-problem: templates make C++ grammar ambiguous without type information. The assertion processor is
-able to disambiguate many expressions and will just return `{"left", "right"}` if it's unable to
-parse. Disambiguating expressions is currently done by essentially traversing all possible parse
-trees. There is probably a more optimal way to do this.
-
-What I'd like to add and improve on further:
-- Backtraces (a feature of every language's asserts *except* C/C++)
-- Better syntax highlighting (difficult because C++ is not context-free)
-- Allow extra objects to be provided and dumped (nodejs allows this)
-- I think it would be really cool if we could enable the user to automatically, with the press of a
-  button, attach gdb at the assertion fail point. It is tricky to implement this, though.
-
-Possible pitfalls of this library:
-- If there's a bug in the assert processing logic (e.g. something that could cause a crash) the
-  purpose of this library would be defeated. This is a concern
-- Library tries to be smart and stringify values aggressively. If an assert expression is of type
-  `char*`, the library will try to print the string value. Fine in most cases, not fine if the
-  result is a non-null pointer to a non-c string (e.g. a binary buffer).
+is only able to obtain a the string for the full expression instead of the left and right parts
+independently. Because of this the library needs to do some basic expression parsing, just figuring
+out the very top-level of the expression tree. Unfortunately C++ grammar is ambiguous without type
+information. The assertion processor is able to disambiguate many expressions but will return
+`{"left", "right"}` if it's unable to. Disambiguating expressions is currently done by essentially
+traversing all possible parse trees. There is probably a more optimal way to do this.
 
 ### Quick Library Documentation
 
 Library functions:
 
-Generic assertion:
 ```cpp
-void assert(<any expression>, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL);
-void assert(<any expression>, const std::string& info,    ASSERT fatal = ASSERT::FATAL);
+void assert(<expression>, Args...);
+void wassert(<expression>, Args...);
+void assert_op(left, right, Args...);
+void wassert_op(left, right, Args...);
+// Where `op` ∈ {`eq`, `neq`, `lt`, `gt`, `lteq`, `gteq`, `and`, `or`}.
 ```
-The assertion expression must be implicitly convertible to boolean.
+The `<expression>` is automatically decomposed so diagnostic information can be printed for the left
+and right sides. The resultant type must be convertible to boolean.
 
-Expressions with top-level precedence of bitshift below are decomposed automatically, providing
-diagnostic info about the values on both sides of the binary expression.
+Extra diagnostic information may be provided in `Args...` (e.g. `errno`). If the first argument in
+`Args...` is any string type it'll be used for the assertion message. `ASSERT::FATAL` and
+`ASSERT::NONFATAL` may also be passed in any position.
 
-Specialized assertions:
-```cpp
-void assert_op(left, right, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL);
-void assert_op(left, right, const std::string& info,    ASSERT fatal = ASSERT::FATAL);
-```
-
-Where `op` ∈ {`eq`, `neq`, `lt`, `gt`, `lteq`, `gteq`, `and`, `or`}.
-
-This is the traditional way to make assertions that provide more diagnostic information. Automatic
-decomposition is far superior.
+`wassert` and `wassert_op` are shorthands for non-fatal assertions.
 
 **Note:** There is no short-circuiting for `assert_and` and `assert_or` or `&&` and `||` in
 expression decomposition.
 
-**Note:** Integral comparisons in the specialized assertion and top-level expression for automatic
-decomposition are automatically done safely with respect to signedness.
+**Note:** Top-level integral comparisons are automatically done with sign safety.
 
-**Note:** `left` and `right` and types used in automatically decomposed expressions may be user
-defined as long as they have move semantics.
-
-`fatal` may be `ASSERT::FATAL` or `ASSERT::NONFATAL`.
+**Note:** left and right hand types in automatically decomposed expressions require move semantics.
 
 Build options:
 
@@ -205,7 +184,9 @@ Build options:
   always a win. Sometimes assertion expressions have side effects that are undesirable at runtime in
   an `NDEBUG` build like exceptions which cannot be optimized away (e.g. `std::unordered_map::at`
   where the lookup cannot be optimized away and ends up not being a helpful compiler hint).
-
+- `-DASSERT_FAIL_ACTION=...` Can be used to specify what is done on assertion failure, after
+  diagnostic printing, e.g. throwing an exception instead of calling `abort()` which is the default.
+  The function should have signature `void()`.
 
 ### How To Use This Library
 
@@ -243,14 +224,17 @@ Assertions should:
 - Allow the programmer to provide an associated info message.
 - If a comparison fails, provide the values involved.
 
-|                          | C/C++ | Rust | C# | Java | Python | JavaScript | This Library |
-|:--:                      |:--:  |:--:   |:--:|:--:  |:--:    |:--:        |:--:|
-| Expression String        | ✔️   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
-| Location                 | ✔️   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
-| Backtrace                | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | TODO |
-| Info Message             | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
-| Binary specializations   | ❌   | ✔️   | ❌ | ❌  | ❌    | ✔️         | ✔️ |
+|                        | C/C++ | Rust | C# | Java | Python | JavaScript | This Library |
+|:--:                    |:--:   |:--:  |:--:|:--:  |:--:    |:--:        |:--:|
+| Expression String      | ✔️   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
+| Location               | ✔️   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
+| Backtrace              | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | TODO |
+| Info Message           | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
+| Extra diagnostics      | ❌   | ❌*  | ❌*| ❌  | ❌*   | ❌*        | ✔️ |
+| Binary specializations | ❌   | ✔️   | ❌ | ❌  | ❌    | ✔️         | ✔️ |
 | Automatic expression decomposition | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
+
+`*`: Possible through string formatting but that is sub-ideal.
 
 Extras:
 

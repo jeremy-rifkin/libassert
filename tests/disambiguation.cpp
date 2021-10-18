@@ -19,13 +19,14 @@ int main() {
 		{"( 1 + 3 ) == a < 1 == 2 > ()", "==", true},
 		{"( 1 + 3 ) not_eq a < 1 not_eq 2 > ()", "!=", true},
 		{"a<x<x<x<x<x<x<x<x<x<1>>>>>>>>>", "<", true},
+		{"a<x<x<x<x<x<x<x<x<x<x<1>>>>>>>>>>", "<", false}, // <- max depth exceeded
 		{"1 == something<a == b>>2", "==", false}, // <- ambiguous
 		{"1 == something<a == b>>2", "<", false}, // <- should be an error
 		{"1 < something<a < b>>2", "<", false}, // <- ambiguous
 		{"1 < something<a < b>> - 2", "<", false}, // <- ambiguous
 		{"18446744073709551606ULL == -10", "==", true}
 	};
-	using namespace assert_impl_;
+	using namespace assert_detail;
 	for(auto [expression, target_op, should_disambiguate] : tests) {
 		std::cout<<analysis::highlight(expression)<<" target: "<<target_op<<std::endl;
 		auto [l, r] = analysis::decompose_expression(expression, target_op);

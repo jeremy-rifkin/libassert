@@ -1,5 +1,5 @@
 #include "assert.hpp"
 
-void foo() {
+void qux() {
 	assert(false);
 }

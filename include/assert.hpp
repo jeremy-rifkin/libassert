@@ -4,7 +4,9 @@
 // Jeremy Rifkin 2021
 // https://github.com/jeremy-rifkin/asserts
 
+#define _CRT_SECURE_NO_WARNINGS // done only for strerror
 #include <bitset>
+#include <functional>
 #include <iomanip>
 #include <limits>
 #include <optional>
@@ -61,17 +63,25 @@
  #define USE_EXECINFO_H
 #endif
 
+// if defined by a previous #include...
+#ifdef assert
+ #undef assert
+#endif
+
 #ifndef NCOLOR
  #define ESC "\033["
  #define ANSIRGB(r, g, b) ESC "38;2;" #r ";" #g ";" #b "m"
+ #define RESET ESC "0m"
+ // Slightly modified one dark pro colors
+ // Original: https://coolors.co/e06b74-d19a66-e5c07a-98c379-62aeef-55b6c2-c678dd
+ // Modified: https://coolors.co/e06b74-d19a66-e5c07a-90cc66-62aeef-56c2c0-c678dd
  #define RED ANSIRGB(224, 107, 116)
  #define ORANGE ANSIRGB(209, 154, 102)
  #define YELLOW ANSIRGB(229, 192, 122)
- #define GREEN ANSIRGB(152, 195, 121)
+ #define GREEN ANSIRGB(150, 205, 112) // modified
  #define BLUE ANSIRGB(98, 174, 239)
- #define CYAN ANSIRGB(85, 182, 194)
+ #define CYAN ANSIRGB(86, 194, 192) // modified
  #define PURPL ANSIRGB(198, 120, 221)
- #define RESET ESC "0m"
 #else
  #define RED ""
  #define ORANGE ""
@@ -83,7 +93,13 @@
  #define RESET ""
 #endif
 
-namespace assert_impl_ {
+#ifdef ASSERT_FAIL_ACTION
+ extern void ASSERT_FAIL_ACTION();
+#else
+ #define ASSERT_FAIL_ACTION fail
+#endif
+
+namespace assert_detail {
 	// Lightweight helper, eventually may use C++20 std::source_location if this library no longer
 	// targets C++17. Right now std::source_location contains the method signature for a function
 	// while __builtin_FUNCTION is just the name (hence why __PRETTY_FUNCTION__ is used later on).
@@ -322,10 +338,10 @@ namespace assert_impl_ {
 		}
 	};
 	
-	// ... -> print_stacktrace -> get_stacktrace
+	// ... -> assert -> assert_fail -> assert_fail_generic -> print_stacktrace -> get_stacktrace
 	// get 100, skip at least 2
 	constexpr size_t n_frames = 100;
-	constexpr size_t n_skip   = 2;
+	constexpr size_t n_skip   = 5;
 
 	#ifdef USE_DBG_HELP_H
 	#if IS_GCC
@@ -638,6 +654,8 @@ namespace assert_impl_ {
 		partial_elf_file_header h;
 		size_t s = fread(&h, sizeof(partial_elf_file_header), 1, f);
 		if(s != 1) primitive_assert(false, "error while reading file");
+		char magic[] = {0x7F, 'E', 'L', 'F'};
+		primitive_assert(memcmp(h.magic, magic, 4) == 0);
 		if(h.e_data != endianness()) {
 			h.e_type = (h.e_type & 0x00ff) << 8 | (h.e_type & 0xff00) >> 8;
 		}
@@ -818,8 +836,10 @@ namespace assert_impl_ {
 
 	template<typename T> using strip = std::remove_cv_t<std::remove_reference_t<T>>;
 
+	template<typename A, typename B> constexpr bool isa = std::is_same_v<strip<A>, B>; // intentionally not stripping B
+
 	// Is integral but not boolean
-	template<typename T> constexpr bool is_integral_notb = std::is_integral_v<strip<T>> && !std::is_same_v<strip<T>, bool>;
+	template<typename T> constexpr bool is_integral_notb = std::is_integral_v<strip<T>> && !isa<T, bool>;
 
 	// Lots of boilerplate
 	// Using int comparison functions here to support proper signed comparisons. Need to make sure
@@ -832,9 +852,9 @@ namespace assert_impl_ {
 	constexpr bool cmp_equal(T t, U u) {
 		using UT = std::make_unsigned_t<T>;
 		using UU = std::make_unsigned_t<U>;
-		if constexpr (std::is_signed_v<T> == std::is_signed_v<U>)
+		if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
 			return t == u;
-		else if constexpr (std::is_signed_v<T>)
+		else if constexpr(std::is_signed_v<T>)
 			return t < 0 ? false : UT(t) == u;
 		else
 			return u < 0 ? false : t == UU(u);
@@ -849,9 +869,9 @@ namespace assert_impl_ {
 	constexpr bool cmp_less(T t, U u) {
 		using UT = std::make_unsigned_t<T>;
 		using UU = std::make_unsigned_t<U>;
-		if constexpr (std::is_signed_v<T> == std::is_signed_v<U>)
+		if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
 			return t < u;
-		else if constexpr (std::is_signed_v<T>)
+		else if constexpr(std::is_signed_v<T>)
 			return t < 0 ? true : UT(t) < u;
 		else
 			return u < 0 ? false : t < UU(u);
@@ -879,8 +899,8 @@ namespace assert_impl_ {
 		#define gen_op_boilerplate(name, op, ...) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
-			constexpr auto operator()(A&& lhs, B&& rhs) const {                      /* no need to forward ints */ \
-				__VA_OPT__(if constexpr (is_integral_notb<A> && is_integral_notb<B>) return __VA_ARGS__(lhs, rhs); \
+			constexpr auto operator()(A&& lhs, B&& rhs) const {                     /* no need to forward ints */ \
+				__VA_OPT__(if constexpr(is_integral_notb<A> && is_integral_notb<B>) return __VA_ARGS__(lhs, rhs); \
 				else) return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
 		}
@@ -966,10 +986,10 @@ namespace assert_impl_ {
 		// a lot of work and I don't think it's beneficial for this library.
 		template<typename O> auto operator<<(O&& operand) {
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
-			if constexpr (is_nothing<A>) {
+			if constexpr(is_nothing<A>) {
 				static_assert(is_nothing<B> && is_nothing<C>);
 				return expression_decomposer<Q, nothing, nothing>(std::forward<O>(operand));
-			} else if constexpr (is_nothing<B>) {
+			} else if constexpr(is_nothing<B>) {
 				static_assert(is_nothing<C>);
 				return expression_decomposer<A, Q, ops::shl>(std::forward<A>(a), std::forward<O>(operand));
 			} else {
@@ -980,7 +1000,7 @@ namespace assert_impl_ {
 		#define gen_op_boilerplate(functor, op) template<typename O> auto operator op(O&& operand) { \
 			static_assert(!is_nothing<A>); \
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
-			if constexpr (is_nothing<B>) { \
+			if constexpr(is_nothing<B>) { \
 				static_assert(is_nothing<C>); \
 				return expression_decomposer<A, Q, functor>(std::forward<A>(a), std::forward<O>(operand)); \
 			} else { \
@@ -1351,7 +1371,7 @@ namespace assert_impl_ {
 						} else if(peek().str == "::") {
 							output.push_back({YELLOW, token.str});
 						} else {
-							output.push_back({RED, token.str});
+							output.push_back({BLUE, token.str});
 						}
 						break;
 					case token_e::whitespace:
@@ -1372,74 +1392,6 @@ namespace assert_impl_ {
 				}
 			}
 			return literal_format::none; // not a literal
-		}
-
-		[[gnu::cold]]
-		bool _has_precedence_below_or_equal(const std::string& expression, const std::string_view op) {
-			// Scans over top-level of expression and looks for any operators with precedence <=
-			// op's precedence.
-			// Anything between parentheses can be excluded but no attempt is made to figure out
-			// template parameter lists.
-			// We can figure out unary / binary easy enough TODO: we don't actually need to worry about this though
-			// TODO: There is redundant tokenization here
-			// Note: Templates make C++ expressions ambiguous without type info. This function looks
-			// for any occurrance of op that cannot be ruled out. False positives are ok, most stuff
-			// can be ruled out though.
-			const auto tokens = _tokenize(expression);
-			// precedence table is binary, unary operators have highest precedence
-			// we can figure out unary / binary easy enough
-			enum {
-				expecting_operator,
-				expecting_term
-			} state = expecting_term;
-			for(std::size_t i = 0; i < tokens.size(); i++) {
-				const token_t& token = tokens[i];
-				switch(token.token_type) {
-					case token_e::punctuation:
-						if(operators.count(token.str)) {
-							if(state == expecting_term) {
-								// must be unary, continue
-							} else {
-								// binary
-								if(precedence.count(normalize_op(token.str))
-								&& precedence.count(op)
-								&& precedence.at(normalize_op(token.str)) <= precedence.at(op)) {
-									return true;
-								}
-								state = expecting_term;
-							}
-						} else if(braces.count(token.str)) {
-							// We can assume the given expression is valid.
-							// Braces must be balanced.
-							// Scan forward until finding matching brace, don't need to take into
-							// account other types of braces.
-							const std::string_view open = normalize_brace(token.str);
-							const std::string_view close = normalize_brace(braces.at(token.str));
-							int count = 0;
-							while(++i < tokens.size()) {
-								if(normalize_brace(tokens[i].str) == open) count++;
-								else if(normalize_brace(tokens[i].str) == close) {
-									if(count-- == 0) {
-										break;
-									}
-								}
-							}
-							state = expecting_operator;
-						} else {
-							primitive_assert(false, "unhandled punctuation?");
-						}
-						break;
-					case token_e::keyword:
-					case token_e::named_literal:
-					case token_e::number:
-					case token_e::string:
-					case token_e::identifier:
-						state = expecting_operator;
-					case token_e::whitespace:
-						break;
-				}
-			}
-			return false;
 		}
 
 		[[gnu::cold]]
@@ -1464,20 +1416,25 @@ namespace assert_impl_ {
 		// an making an attempt to disambiguate as much as we can. It's potentially O(2^t) (?) with
 		// t being the number of possible templates in the expression, but t is anticipated to
 		// always be small.
-		// TODO: Safeguard? TODO: Count possible matching angle brackets?
-		// TODO: purify?
-		[[gnu::cold]] void pseudoparse(
+		// Returns true if parse tree traversal was a success, false if depth was exceeded
+		static constexpr int max_depth = 10;
+		[[gnu::cold]] bool pseudoparse(
 			const std::vector<token_t>& tokens,
 			const std::string_view target_op,
 			size_t i,
 			int current_lowest_precedence,
 			int template_depth,
 			int middle_index, // where the split currently is, current op = tokens[middle_index]
+			int depth,
 			std::set<int>& output
 		) {
 			#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
 			printf("*");
 			#endif
+			if(depth > max_depth) {
+				printf("Max depth exceeded\n");
+				return false;
+			}
 			// precedence table is binary, unary operators have highest precedence
 			// we can figure out unary / binary easy enough
 			enum {
@@ -1514,7 +1471,11 @@ namespace assert_impl_ {
 								// also must be preceeded by an identifier
 								if(token.str == "<" && find_last_non_ws(tokens, i).token_type == token_e::identifier) {
 									// branch 1: this is a template opening
-									pseudoparse(tokens, target_op, i + 1, current_lowest_precedence, template_depth + 1, middle_index, output);
+									bool success = pseudoparse(tokens, target_op, i + 1, current_lowest_precedence,
+									                           template_depth + 1, middle_index, depth + 1, output);
+									if(!success) { // early exit if we have to discard
+										return false;
+									}
 									// branch 2: this is a binary operator // fallthrough
 								} else if(token.str == "<" && normalize_brace(find_last_non_ws(tokens, i).str) == "]") {
 									// this must be a template parameter list, part of a generic lambda
@@ -1566,7 +1527,7 @@ namespace assert_impl_ {
 							// after the captures list. Not concerned with template parameters at
 							// the moment.
 							if(state == expecting_term && empty && normalize_brace(open) != "[") {
-								return; // this is a failed parse tree
+								return true; // this is a failed parse tree
 							}
 							state = expecting_operator;
 						} else {
@@ -1591,10 +1552,12 @@ namespace assert_impl_ {
 			} else {
 				// failed parse tree, ignore
 			}
+			return true;
 		}
 
 		[[gnu::cold]]
-		std::pair<std::string, std::string> _decompose_expression(const std::string& expression, const std::string_view target_op) {
+		std::pair<std::string, std::string> _decompose_expression(const std::string& expression,
+				const std::string_view target_op) {
 			// While automatic decomposition allows something like `assert(foo(n) == bar<n> + n);`
 			// treated as `assert_eq(foo(n), bar<n> + n);` we only get the full expression's string
 			// representation.
@@ -1636,15 +1599,13 @@ namespace assert_impl_ {
 			// initial tokenization so we can pass the token vector by reference and avoid copying
 			// for every recursive path (O(t^2)). This does not create an issue for syntax
 			// highlighting as long as >> and > are highlighted the same.
-			// TODO: currently exploring all disambiguations, could exit early. Worst-case
-			// complexity does not change though.
 			const auto tokens = _tokenize(expression, true);
 			// We're only looking for the split, we can just store a set of split indices. No need
 			// to store a vector<pair<vector<token_t>, vector<token_t>>>
 			std::set<int> candidates;
-			pseudoparse(std::move(tokens), target_op, 0, 0, 0, -1, candidates);
+			bool success = pseudoparse(std::move(tokens), target_op, 0, 0, 0, -1, 0, candidates);
 			#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
-			printf("\n%d\n", (int)candidates.size());
+			printf("\n%d %d\n", (int)candidates.size(), success);
 			for(size_t m : candidates) {
 				std::vector<std::string> left_strings;
 				std::vector<std::string> right_strings;
@@ -1655,7 +1616,7 @@ namespace assert_impl_ {
 				printf("---\n");
 			}
 			#endif
-			if(candidates.size() == 1) {
+			if(success && candidates.size() == 1) {
 				std::vector<std::string> left_strings;
 				std::vector<std::string> right_strings;
 				size_t m = *candidates.begin();
@@ -1706,10 +1667,6 @@ namespace assert_impl_ {
 		[[gnu::cold]]
 		static bool is_bitwise(std::string_view op) {
 			return get().bitwise_operators.count(op);
-		}
-		[[gnu::cold]]
-		static bool has_precedence_below_or_equal(const std::string& expression, const std::string_view op) {
-			return get()._has_precedence_below_or_equal(expression, op);
 		}
 		[[gnu::cold]]
 		static std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op) {
@@ -1775,30 +1732,44 @@ namespace assert_impl_ {
 
 	template<typename T> constexpr bool has_stream_overload_v = has_stream_overload<T>::value;
 
+	template<typename T> constexpr bool is_string_type =
+	       isa<T, std::string>
+	    || isa<T, std::string_view>
+	    || isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
+	    || isa<std::decay_t<strip<T>>, const char*>;
+
+	// test cases
+	static_assert(is_string_type<char*>);
+	static_assert(is_string_type<const char*>);
+	static_assert(is_string_type<char[5]>);
+	static_assert(is_string_type<const char[5]>);
+	static_assert(!is_string_type<char(*)[5]>);
+	static_assert(is_string_type<char(&)[5]>);
+	static_assert(is_string_type<const char (&)[27]>);
+	static_assert(!is_string_type<std::vector<char>>);
+	static_assert(!is_string_type<int>);
+	static_assert(is_string_type<std::string>);
+	static_assert(is_string_type<std::string_view>);
+
 	template<typename T>
 	[[gnu::cold]]
 	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
 		// bool and char need to be before std::is_integral
-		if constexpr (std::is_same_v<strip<T>, std::string>
-					  || std::is_same_v<strip<T>, std::string_view>
-					//|| std::is_same_v<strip<T>, char*>
-					//|| std::is_same_v<strip<T>, const char*>
-					  || std::is_same_v<std::remove_cv_t<std::decay_t<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
-					) {
-			if constexpr(std::is_pointer_v<T>) {
+		if constexpr(is_string_type<T>) {
+			if constexpr(std::is_pointer_v<strip<T>>) {
 				if(t == nullptr) {
 					return "nullptr";
 				}
 			}
 			// TODO: re-evaluate this...? What if just comparing two buffer pointers?
 			return escape_string(t, '"'); // string view may need explicit construction?
-		} else if constexpr (std::is_same_v<strip<T>, char>) {
+		} else if constexpr(isa<T, char>) {
 			return escape_string({&t, 1}, '\'');
-		} else if constexpr (std::is_same_v<strip<T>, bool>) {
+		} else if constexpr(isa<T, bool>) {
 			return t ? "true" : "false"; // streams/boolalpha not needed for this
-		} else if constexpr (std::is_same_v<strip<T>, std::nullptr_t>) {
+		} else if constexpr(isa<T, std::nullptr_t>) {
 			return "nullptr";
-		} else if constexpr (std::is_pointer_v<strip<T>>) {
+		} else if constexpr(std::is_pointer_v<strip<T>>) {
 			if(t == nullptr) { // weird nullptr shenanigans, only prints "nullptr" for nullptr_t
 				return "nullptr";
 			} else {
@@ -1809,7 +1780,7 @@ namespace assert_impl_ {
 				oss<<std::showbase<<std::hex<<uintptr_t(t);
 				return std::move(oss).str();
 			}
-		} else if constexpr (std::is_integral_v<T>) {
+		} else if constexpr(std::is_integral_v<T>) {
 			std::ostringstream oss;
 			switch(fmt) {
 				case literal_format::dec:
@@ -1828,7 +1799,7 @@ namespace assert_impl_ {
 			}
 			oss<<t;
 			r: return std::move(oss).str();
-		} else if constexpr (std::is_floating_point_v<T>) {
+		} else if constexpr(std::is_floating_point_v<T>) {
 			std::ostringstream oss;
 			switch(fmt) {
 				case literal_format::dec:
@@ -1844,9 +1815,12 @@ namespace assert_impl_ {
 					primitive_assert(false, "unexpected literal format requested for printing");
 			}
 			oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<t;
-			return std::move(oss).str();
+			std::string s = std::move(oss).str();
+			// std::showpoint adds a bunch of unecessary digits, so manually doing it correctly here
+			if(s.find('.') == std::string::npos) s += ".0";
+			return s;
 		} else {
-			if constexpr (has_stream_overload_v<T>) {
+			if constexpr(has_stream_overload_v<T>) {
 				std::ostringstream oss;
 				oss<<t;
 				return std::move(oss).str();
@@ -1860,7 +1834,7 @@ namespace assert_impl_ {
 	 * stack trace printing
 	 */
 
-	static constexpr int log10(int n) {
+	static constexpr int log10(int n) { // returns 1 for log10(0)
 		int t = 1;
 		for(int i = 0; i < [] {
 				int j = 0, n = std::numeric_limits<int>::max(); // note: `j` used instead of `i` because of https://bugs.llvm.org/show_bug.cgi?id=51986
@@ -1984,9 +1958,10 @@ namespace assert_impl_ {
 	struct column_t {
 		size_t width;
 		std::vector<analysis::highlight_block> blocks;
+		bool right_align = false;
 	};
 
-	static void wrapped_print(std::vector<column_t> columns) {
+	static void wrapped_print(const std::vector<column_t>& columns) {
 		// 2d array rows/columns
 		struct line_content {
 			size_t length;
@@ -1996,7 +1971,7 @@ namespace assert_impl_ {
 		lines.emplace_back(columns.size());
 		// populate one column at a time
 		for(size_t i = 0; i < columns.size(); i++) {
-			auto [width, blocks] = columns[i];
+			auto [width, blocks, _] = columns[i];
 			size_t current_line = 0;
 			for(auto& block : blocks) {
 				size_t block_i = 0;
@@ -2036,11 +2011,18 @@ namespace assert_impl_ {
 				}
 			}
 			for(size_t i = 0; i <= last_col; i++) {
-				auto& cell = line[i];
-				fprintf(stderr, "%s%-*s%s",
-					cell.content.c_str(),
-					i == last_col ? 0 : int(columns[i].width - cell.length), "",
-					i == last_col ? "\n" : " ");
+				auto& content = line[i];
+				if(columns[i].right_align) {
+					fprintf(stderr, "%-*s%s%s",
+						i == last_col ? 0 : int(columns[i].width - content.length), "",
+						content.content.c_str(),
+						i == last_col ? "\n" : " ");
+				} else {
+					fprintf(stderr, "%s%-*s%s",
+						content.content.c_str(),
+						i == last_col ? 0 : int(columns[i].width - content.length), "",
+						i == last_col ? "\n" : " ");
+				}
 			}
 		}
 	}
@@ -2053,10 +2035,10 @@ namespace assert_impl_ {
 			for(auto& frame : trace) {
 				frame.signature = prettify_type(frame.signature);
 			}
-			// TODO: lower-bound too, or just include assert internals
+			// Two boundaries: main is found here, assert_detail stuff is cut off during stack trace generation
 			size_t end = [&trace] { // I think this is more readable than the <algorithm> version.
 				for(size_t i = trace.size(); i--; ) {
-					if(trace[i].signature == "main") {
+					if(trace[i].signature == "main" || trace[i].signature.substr(0, 5) == "main(") {
 						return i;
 					}
 				}
@@ -2089,16 +2071,16 @@ namespace assert_impl_ {
 				if(new_path.size() > longest_file_width) longest_file_width = new_path.size();
 			}
 			longest_file_width = std::min(longest_file_width, size_t(50));
-			int max_line_number_width = log10(std::max_element(trace.begin(), trace.begin() + end,
-				[](const assert_impl_::stacktrace_entry& a, const assert_impl_::stacktrace_entry& b) {
+			int max_line_number_width = log10(std::max_element(trace.begin(), trace.begin() + end + 1,
+				[](const assert_detail::stacktrace_entry& a, const assert_detail::stacktrace_entry& b) {
 					return std::to_string(a.line).size() < std::to_string(b.line).size();
 				})->line);
-			int frame_offset = 0;
+			int max_frame_width = log10(end);
 			int term_width = terminal_width(); // will be 0 on error
 			// do the actual trace
 			for(size_t i = 0; i <= end; i++) {
 				const auto& [source_path, signature, _line] = trace[i];
-				std::string line = _line == 0 ? "?" : std::to_string(_line);
+				std::string line_number = _line == 0 ? "?" : std::to_string(_line);
 				// look for repeats, i.e. recursion we can fold
 				int recursion_folded = 0;
 				if(end - i >= 4) {
@@ -2107,28 +2089,26 @@ namespace assert_impl_ {
 						if(trace[i + j] != trace[i] || trace[i + j].signature == "??") break;
 					}
 					if(j >= 4) {
-						trace.erase(trace.begin() + i + 1, trace.begin() + i + j - 1);
-						end -= j - 2;
 						recursion_folded = j - 2;
 					}
 				}
-				int frame_number = i + 1 + frame_offset;
+				int frame_number = i + 1;
 				// pretty print with columns for wide terminals
 				// split printing for small terminals
 				if(term_width >= 50) {
 					auto sig = analysis::highlight_blocks(signature + "("); // hack for the highlighter
 					sig.pop_back();
-					std::string frame = std::to_string(frame_number);
-					size_t left = 2 + std::max((int)frame.length(), 2);
-					size_t middle = std::max((int)line.size(), max_line_number_width);
+					size_t left = 2 + max_frame_width;
+					size_t middle = std::max((int)line_number.size(), max_line_number_width);
 					size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
 					primitive_assert(remaining_width >= 2);
 					size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
 					size_t sig_width = remaining_width - file_width;
 					wrapped_print({
-						{ left,       {{"", (frame_number < 10 ? "#  " : "# ") + frame}} },
+						{ 1,          {{"", "#"}} },
+						{ left - 2,   {{"", std::to_string(frame_number)}}, true },
 						{ file_width, {{"", files.at(source_path)}} },
-						{ middle,     analysis::highlight_blocks(line) }, // intentionally not coloring "?"
+						{ middle,     analysis::highlight_blocks(line_number), true }, // intentionally not coloring "?"
 						{ sig_width,  sig }
 					});
 				} else {
@@ -2139,11 +2119,11 @@ namespace assert_impl_ {
 						frame_number,
 						sig.c_str(),
 						source_path.c_str(),
-						(CYAN + line + RESET).c_str() // yes this is excessive and intentionally coloring "?"
+						(CYAN + line_number + RESET).c_str() // yes this is excessive; intentionally coloring "?"
 					);
 				}
 				if(recursion_folded) {
-					frame_offset += recursion_folded;
+					i += recursion_folded;
 					std::string s = stringf("| %d layers of recursion were folded |", recursion_folded);
 					fprintf(stderr, BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
 					fprintf(stderr, BLUE  "%s"   RESET "\n", s.c_str());
@@ -2151,7 +2131,7 @@ namespace assert_impl_ {
 				}
 			}
 		} else {
-			fprintf(stderr, "Error while generating stack trace.");
+			fprintf(stderr, "Error while generating stack trace.\n");
 		}
 	}
 
@@ -2159,29 +2139,20 @@ namespace assert_impl_ {
 	 * binary diagnostic printing
 	 */
 
-	[[gnu::cold]]
-	static std::string parenthesize_if_necessary(const std::string& expression, const std::string_view op) {
-		if(analysis::has_precedence_below_or_equal(expression, op)) {
-			return "(" + expression + ")";
-		} else {
-			return expression;
-		}
-	}
-
 	[[gnu::cold]] [[maybe_unused]]
-	static std::string gen_assert_binary(const std::string& a_str, const std::string_view op, const std::string& b_str) {
-		return stringf("assert(%s %s %s);",
-					   parenthesize_if_necessary(a_str, op).c_str(),
-					   std::string(op).c_str(), // string_view isn't guaranteed null-terminated; TODO: better solution?
-					   parenthesize_if_necessary(b_str, op).c_str());
+	static std::string gen_assert_binary(const std::string& a_str, const char* op,
+			const std::string& b_str, size_t n_vargs) {
+		return stringf("assert_%s(%s, %s%s);",
+					   op, a_str.c_str(), b_str.c_str(),
+					   n_vargs ? ", ..." : "");
 	}
 
 	template<typename T>
 	[[gnu::cold]]
 	std::vector<std::string> generate_stringifications(T&& v, const std::set<literal_format>& formats) {
 		if constexpr(std::is_arithmetic<strip<T>>::value
-				 && !std::is_same_v<strip<T>, bool>
-				 && !std::is_same_v<strip<T>, char>) {
+				 && !isa<T, bool>
+				 && !isa<T, char>) {
 			std::vector<std::string> vec;
 			for(literal_format fmt : formats) {
 				// TODO: consider pushing empty fillers to keep columns aligned later on? Does not
@@ -2313,92 +2284,162 @@ namespace assert_impl_ {
 			//fprintf(stderr,   "    Press any key to continue\n\n");
 			//wait_for_keypress();
 		}
-		#ifdef _0_ASSERT_DEMO
-		printf("\n");
-		#else
+		#ifndef _0_ASSERT_DEMO
 		fflush(stdout);
 		fflush(stderr);
 		abort();
 		#endif
 	}
 
-	template<typename A, typename B, typename C>
-	[[gnu::cold]] [[gnu::noinline]]
-	void assert_fail(expression_decomposer<A, B, C>& decomposer, const char* expr_str, const char* pretty_func, const char* info, ASSERT fatal, source_location location) {
-		if(info == nullptr) {
-			fprintf(stderr, "Assertion failed at %s:%d: %s:\n", location.file, location.line, pretty_func);
+	#define X(x) #x
+	#define Y(x) X(x)
+	constexpr const std::string_view errno_expansion = Y(errno);
+	#undef Y
+	#undef X
+
+	struct extra_diagnostics {
+		std::optional<ASSERT> fatality;
+		std::string message;
+		std::vector<std::pair<std::string, std::string>> entries;
+		extra_diagnostics& operator+(const extra_diagnostics& other) {
+			if(other.fatality) fatality = other.fatality;
+			if(other.message != "") primitive_assert(false);
+			entries.insert(entries.end(), other.entries.begin(), other.entries.end());
+			return *this;
+		}
+	};
+
+	template<size_t I = 0, size_t N>
+	[[gnu::cold]]
+	void process_args_step(extra_diagnostics&, const char * const (&)[N]) { }
+
+	template<size_t I = 0, size_t N, typename T, typename... Args>
+	[[gnu::cold]]
+	void process_args_step(extra_diagnostics& entry, const char * const (&args_strings)[N], T& t, Args&... args) {
+		if constexpr(isa<T, ASSERT>) {
+			entry.fatality = t;
+		} else if constexpr(I == 0 && is_string_type<T>) {
+			entry.message = t;
 		} else {
-			fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n", location.file, location.line, pretty_func, info);
+			// two cases to handle: errno and regular diagnostics
+			if(isa<T, strip<decltype(errno)>> && args_strings[I] == errno_expansion) {
+				// this is redundant and useless but the body for errno handling needs to be in an
+				// if constexpr wrapper
+				if constexpr(isa<T, strip<decltype(errno)>>) {
+				// errno will expand to something hideous like (*__errno_location()),
+				// may as well replace it with "errno"
+				entry.entries.push_back({ "errno", stringf("%2d \"%s\"", t, std::strerror(t)) });
+				}
+			} else {
+				entry.entries.push_back({ args_strings[I], stringify(t, literal_format::dec) });
+			}
 		}
-		fprintf(stderr, "    %s\n", analysis::highlight(stringf("assert(%s);", expr_str)).c_str());
-		if constexpr(is_nothing<C>) {
-			static_assert(is_nothing<B> && !is_nothing<A>);
-		} else {
-			auto [a_str, b_str] = analysis::decompose_expression(expr_str, C::op_string);
-			print_binary_diagnostic(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b), a_str.c_str(), b_str.c_str(), C::op_string);
-		}
-		fprintf(stderr, "\nStack trace:\n");
-		print_stacktrace();
-		if(fatal == ASSERT::FATAL) {
-			fail();
-		}
+		process_args_step<I + 1>(entry, args_strings, args...);
 	}
 
-	template<typename C, typename A, typename B>
-	[[gnu::cold]] [[gnu::noinline]]
-	void assert_binary_fail(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const char* info, ASSERT fatal, source_location location) {
-		if(info == nullptr) {
-			fprintf(stderr, "Assertion failed at %s:%d: %s:\n", location.file, location.line, pretty_func);
+	template<size_t I = 0, size_t N, typename... Args>
+	[[gnu::cold]]
+	extra_diagnostics process_args(const char * const (&args_strings)[N], Args&... args) {
+		extra_diagnostics entry;
+		process_args_step(entry, args_strings, args...);
+		return entry;
+	}
+
+	template<size_t N, typename... Args>
+	[[gnu::cold]]
+	void assert_fail_generic(const char* pretty_func, source_location location,
+			std::function<void()> assert_printer, const std::string& assert_string,
+			const char * const (&args_strings)[N], Args&... args) {
+		static_assert((sizeof...(args) == 0 && N == 2) || N == sizeof...(args) + 1);
+		auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
+		if(message != "") {
+			fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n",
+				location.file, location.line, pretty_func, message.c_str());
 		} else {
-			fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n", location.file, location.line, pretty_func, info);
+			fprintf(stderr, "Assertion failed at %s:%d: %s:\n", location.file, location.line, pretty_func);
 		}
-		fprintf(stderr, "    %s\n", analysis::highlight(gen_assert_binary(a_str, C::op_string, b_str)).c_str());
-		print_binary_diagnostic(std::forward<A>(a), std::forward<B>(b), a_str, b_str, C::op_string);
+		fprintf(stderr, "    %s\n", analysis::highlight(assert_string).c_str());
+		assert_printer();
+		if(!extra_diagnostics.empty()) {
+			fprintf(stderr, "\n    Extra diagnostics:\n");
+			size_t term_width = terminal_width(); // will be 0 on error
+			size_t lw = 0;
+			for(auto& entry : extra_diagnostics) {
+				lw = std::max(lw, entry.first.size());
+			}
+			for(auto& entry : extra_diagnostics) {
+				wrapped_print({
+					{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
+					{ lw, analysis::highlight_blocks(entry.first) },
+					{ 2, {{"", "=>"}} },
+					{ term_width - lw - 8 /* indent */ - 4 /* arrow */, analysis::highlight_blocks(entry.second) }
+				});
+			}
+		}
 		fprintf(stderr, "\nStack trace:\n");
 		print_stacktrace();
 		if(fatal == ASSERT::FATAL) {
-			fail();
+			ASSERT_FAIL_ACTION();
 		}
+		#ifdef _0_ASSERT_DEMO
+		fprintf(stderr, "\n");
+		#endif
+	}
+
+	template<typename A, typename B, typename C, size_t N, typename... Args>
+	[[gnu::cold]] [[gnu::noinline]]
+	void assert_fail(expression_decomposer<A, B, C>& decomposer, const char* expr_str, const char* pretty_func,
+			source_location location, const char * const (&args_strings)[N], Args&... args) {
+		assert_fail_generic(pretty_func, location, [&]() {
+			if constexpr(is_nothing<C>) {
+				static_assert(is_nothing<B> && !is_nothing<A>);
+			} else {
+				auto [a_str, b_str] = analysis::decompose_expression(expr_str, C::op_string);
+				print_binary_diagnostic(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b),
+						a_str.c_str(), b_str.c_str(), C::op_string);
+			}
+		}, stringf("assert(%s%s);", expr_str, sizeof...(args) > 0 ? ", ..." : ""), args_strings, args...);
+	}
+
+	template<typename C, typename A, typename B, size_t N, typename... Args>
+	[[gnu::cold]] [[gnu::noinline]]
+	void assert_binary_fail(A&& a, B&& b, const char* a_str, const char* b_str, const char* raw_op,
+			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&... args) {
+		assert_fail_generic( pretty_func, location, [&a, &b, a_str, b_str]() {
+			print_binary_diagnostic(std::forward<A>(a), std::forward<B>(b), a_str, b_str, C::op_string);
+		}, gen_assert_binary(a_str, raw_op, b_str, sizeof...(args)), args_strings, args...);
 	}
 
 	// top-level assert functions emplaced by the macros
 	// these are the only non-cold functions
 
-	template<typename A, typename B, typename C>
-	void assert(expression_decomposer<A, B, C> decomposer, const char* expr_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
-		if(!decomposer.get_value()) {
+	template<typename A, typename B, typename C, size_t N, typename... Args>
+	void assert(expression_decomposer<A, B, C> decomposer, const char* expr_str, const char* pretty_func,
+			source_location location, const char * const (&args_strings)[N], Args&&... args) {
+		if(!(bool)decomposer.get_value()) {
 			enable_virtual_terminal_processing_if_needed();
 			// todo: forward decomposer?
-			assert_fail(decomposer, expr_str, analysis::highlight(pretty_func).c_str(), info, fatal, location);
+			assert_fail(decomposer, expr_str,
+					analysis::highlight(pretty_func).c_str(), location, args_strings, args...);
 		} else {
 			#ifdef _0_ASSERT_DEMO
-			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
+			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {}, {"", ""}, "assert should have failed");
 			#endif
 		}
 	}
 
-	template<typename C, typename A, typename B>
-	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const char* info = nullptr, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
+	template<typename C, typename A, typename B, size_t N, typename... Args>
+	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* raw_op,
+			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
 		if(!(bool)C()(a, b)) {
 			enable_virtual_terminal_processing_if_needed();
-			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, analysis::highlight(pretty_func).c_str(), info, fatal, location);
+			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, raw_op,
+					analysis::highlight(pretty_func).c_str(), location, args_strings, args...);
 		} else {
 			#ifdef _0_ASSERT_DEMO
-			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, "assert should have failed");
+			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {}, {"", ""}, "assert should have failed");
 			#endif
 		}
-	}
-
-	// std::string info overloads
-
-	template<typename A, typename B, typename C>
-	void assert(expression_decomposer<A, B, C> decomposer, const char* expr_str, const char* pretty_func, const std::string& info, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
-		assert(std::forward<expression_decomposer<A, B, C>>(decomposer), expr_str, pretty_func, info.c_str(), fatal, location);
-	}
-
-	template<typename C, typename A, typename B>
-	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* pretty_func, const std::string& info, ASSERT fatal = ASSERT::FATAL, source_location location = {}) {
-		assert_binary(std::forward<A>(a), std::forward<B>(b), a_str, b_str, pretty_func, info.c_str(), fatal, location);
 	}
 
 	[[maybe_unused]]
@@ -2429,7 +2470,7 @@ namespace assert_impl_ {
 #undef PURPL
 #undef RESET
 
-using assert_impl_::ASSERT;
+using assert_detail::ASSERT;
 
 #ifdef NDEBUG
  #ifndef ASSUME_ASSERTS
@@ -2447,33 +2488,78 @@ using assert_impl_::ASSERT;
   // undesirable at runtime in an `NDEBUG` build like exceptions on std container operations which
   // cannot be optimized away. These often end up not being helpful hints either.
   // TODO: Need to feed through decomposer to preserve sign-unsigned safety on top-level compare?
-  #define      assert(expr, ...) assert_impl_::assume(expr)
-  #define   assert_eq(a, b, ...) assert_impl_::assume<assert_impl_::equal_to     >(a, b)
-  #define  assert_neq(a, b, ...) assert_impl_::assume<assert_impl_::not_equal_to >(a, b)
-  #define   assert_lt(a, b, ...) assert_impl_::assume<assert_impl_::less         >(a, b)
-  #define   assert_gt(a, b, ...) assert_impl_::assume<assert_impl_::greater      >(a, b)
-  #define assert_lteq(a, b, ...) assert_impl_::assume<assert_impl_::less_equal   >(a, b)
-  #define assert_gteq(a, b, ...) assert_impl_::assume<assert_impl_::greater_equal>(a, b)
-  #define  assert_and(a, b, ...) assert_impl_::assume<assert_impl_::logical_and  >(a, b)
-  #define   assert_or(a, b, ...) assert_impl_::assume<assert_impl_::logical_or   >(a, b)
+  #define      assert(expr, ...) assert_detail::assume(expr)
+  #define   assert_eq(a, b, ...) assert_detail::assume<assert_detail::ops::eq  >(a, b)
+  #define  assert_neq(a, b, ...) assert_detail::assume<assert_detail::ops::neq >(a, b)
+  #define   assert_lt(a, b, ...) assert_detail::assume<assert_detail::ops::lt  >(a, b)
+  #define   assert_gt(a, b, ...) assert_detail::assume<assert_detail::ops::gt  >(a, b)
+  #define assert_lteq(a, b, ...) assert_detail::assume<assert_detail::ops::lteq>(a, b)
+  #define assert_gteq(a, b, ...) assert_detail::assume<assert_detail::ops::gteq>(a, b)
+  #define  assert_and(a, b, ...) assert_detail::assume<assert_detail::ops::land>(a, b)
+  #define   assert_or(a, b, ...) assert_detail::assume<assert_detail::ops::lor >(a, b)
  #endif
+ #define      wassert(expr, ...) (void)0
+ #define   wassert_eq(a, b, ...) (void)0
+ #define  wassert_neq(a, b, ...) (void)0
+ #define   wassert_lt(a, b, ...) (void)0
+ #define   wassert_gt(a, b, ...) (void)0
+ #define wassert_lteq(a, b, ...) (void)0
+ #define wassert_gteq(a, b, ...) (void)0
+ #define  wassert_and(a, b, ...) (void)0
+ #define   wassert_or(a, b, ...) (void)0
 #else
+ // macro foreach / mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
+ #define EVAL0(...) __VA_ARGS__
+ #define EVAL1(...) EVAL0(EVAL0(EVAL0(__VA_ARGS__)))
+ #define EVAL2(...) EVAL1(EVAL1(EVAL1(__VA_ARGS__)))
+ #define EVAL3(...) EVAL2(EVAL2(EVAL2(__VA_ARGS__)))
+ #define EVAL4(...) EVAL3(EVAL3(EVAL3(__VA_ARGS__)))
+ #define EVAL(...)  EVAL4(EVAL4(EVAL4(__VA_ARGS__)))
+ #define MAP_END(...)
+ #define MAP_OUT
+ #define MAP_COMMA ,
+ #define MAP_GET_END2() 0, MAP_END
+ #define MAP_GET_END1(...) MAP_GET_END2
+ #define MAP_GET_END(...) MAP_GET_END1
+ #define MAP_NEXT0(test, next, ...) next MAP_OUT
+ #define MAP_NEXT1(test, next) MAP_NEXT0(test, next, 0)
+ #define MAP_NEXT(test, next)  MAP_NEXT1(MAP_GET_END test, next)
+ #define MAP0(f, x, peek, ...) f(x) MAP_NEXT(peek, MAP1)(f, peek, __VA_ARGS__)
+ #define MAP1(f, x, peek, ...) f(x) MAP_NEXT(peek, MAP0)(f, peek, __VA_ARGS__)
+ #define MAP_LIST_NEXT1(test, next) MAP_NEXT0(test, MAP_COMMA next, 0)
+ #define MAP_LIST_NEXT(test, next)  MAP_LIST_NEXT1(MAP_GET_END test, next)
+ #define MAP_LIST0(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST1)(f, peek, __VA_ARGS__)
+ #define MAP_LIST1(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST0)(f, peek, __VA_ARGS__)
+ #define MAP(f, ...) EVAL(MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
  // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
  // name, not signature
- // assert_impl_::expression_decomposer(assert_impl_::expression_decomposer{}) done for ternary support
- // Just an alias for __PRETTY_FUNCTION__, can't #undef this so four random characters after P to prevent manespace
- // collision.
+ // assert_detail::expression_decomposer(assert_detail::expression_decomposer{}) done for ternary support
+ #define ASSERT_DETAIL_STRINGIFY(x) #x,
+ #define ASSERT_DETAIL_ARGS(...) __PRETTY_FUNCTION__, {}, /* extra string here because of extra comma from map */ \
+ 					{MAP(ASSERT_DETAIL_STRINGIFY, ##__VA_ARGS__) ""} __VA_OPT__(,) ##__VA_ARGS__
  #define      assert(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                                assert_impl_::assert(assert_impl_::expression_decomposer( \
-                                            assert_impl_::expression_decomposer{} << expr), #expr, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_eq(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::eq  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define  assert_neq(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::neq >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_lt(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::lt  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_gt(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::gt  >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define assert_lteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::lteq>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define assert_gteq(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::gteq>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define  assert_and(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::land>(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
- #define   assert_or(a, b, ...) assert_impl_::assert_binary<assert_impl_::ops::lor >(a, b, #a, #b, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+                                assert_detail::assert(assert_detail::expression_decomposer( \
+                                assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__))
+ #define ASSERT_DETAIL_GEN_CALL(a, b, op, ...) \
+ 			assert_detail::assert_binary<assert_detail::ops::op>(a, b, #a, #b, #op, ASSERT_DETAIL_ARGS(__VA_ARGS__))
+ #define   assert_eq(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, eq  , __VA_ARGS__)
+ #define  assert_neq(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, neq , __VA_ARGS__)
+ #define   assert_lt(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lt  , __VA_ARGS__)
+ #define   assert_gt(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, gt  , __VA_ARGS__)
+ #define assert_lteq(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lteq, __VA_ARGS__)
+ #define assert_gteq(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, gteq, __VA_ARGS__)
+ #define  assert_and(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, land, __VA_ARGS__)
+ #define   assert_or(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lor , __VA_ARGS__)
+ // empty VA_ARGS is not allowed, assert needs at least one parameter, so not worrying about the comma
+ #define      wassert(...) assert(__VA_ARGS__, ASSERT::NONFATAL)
+ #define   wassert_eq(...)   assert_eq(__VA_ARGS__, ASSERT::NONFATAL)
+ #define  wassert_neq(...)  assert_neq(__VA_ARGS__, ASSERT::NONFATAL)
+ #define   wassert_lt(...)   assert_lt(__VA_ARGS__, ASSERT::NONFATAL)
+ #define   wassert_gt(...)   assert_gt(__VA_ARGS__, ASSERT::NONFATAL)
+ #define wassert_lteq(...) assert_lteq(__VA_ARGS__, ASSERT::NONFATAL)
+ #define wassert_gteq(...) assert_gteq(__VA_ARGS__, ASSERT::NONFATAL)
+ #define  wassert_and(...) assert_land(__VA_ARGS__, ASSERT::NONFATAL)
+ #define   wassert_or(...)  assert_lor(__VA_ARGS__, ASSERT::NONFATAL)
 #endif
 
 #endif
