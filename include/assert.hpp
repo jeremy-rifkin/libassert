@@ -2202,6 +2202,8 @@ namespace assert_detail {
 		}
 	}
 
+	constexpr int min_term_width = 50;
+
 	template<typename A, typename B>
 	[[gnu::cold]]
 	void print_binary_diagnostic(A&& a, B&& b, const char* a_str, const char* b_str, std::string_view op) {
@@ -2246,7 +2248,7 @@ namespace assert_detail {
 			if(term_width > 0) lw = std::min(lw, term_width / 2 - 8 /* indent */ - 4 /* arrow */);
 			fprintf(stderr, "    Where:\n");
 			auto print_clause = [term_width, lw](const char* expr_str, std::vector<std::string>& expr_strs) {
-				if(term_width >= 50) {
+				if(term_width >= min_term_width) {
 					wrapped_print({
 						{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
 						{ lw, analysis::highlight_blocks(expr_str) },
@@ -2361,19 +2363,25 @@ namespace assert_detail {
 		fprintf(stderr, "    %s\n", analysis::highlight(assert_string).c_str());
 		assert_printer();
 		if(!extra_diagnostics.empty()) {
-			fprintf(stderr, "\n    Extra diagnostics:\n");
+			fprintf(stderr, "    Extra diagnostics:\n");
 			size_t term_width = terminal_width(); // will be 0 on error
 			size_t lw = 0;
 			for(auto& entry : extra_diagnostics) {
 				lw = std::max(lw, entry.first.size());
 			}
 			for(auto& entry : extra_diagnostics) {
-				wrapped_print({
-					{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
-					{ lw, analysis::highlight_blocks(entry.first) },
-					{ 2, {{"", "=>"}} },
-					{ term_width - lw - 8 /* indent */ - 4 /* arrow */, analysis::highlight_blocks(entry.second) }
-				});
+				if(term_width >= min_term_width) {
+					wrapped_print({
+						{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
+						{ lw, analysis::highlight_blocks(entry.first) },
+						{ 2, {{"", "=>"}} },
+						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, analysis::highlight_blocks(entry.second) }
+					});
+				} else {
+					fprintf(stderr, "        %s%*s => %s\n",
+							analysis::highlight(entry.first).c_str(), int(lw - entry.first.length()), "",
+							indent(analysis::highlight(entry.second), 8 + lw + 4, ' ', true).c_str());
+				}
 			}
 		}
 		fprintf(stderr, "\nStack trace:\n");
