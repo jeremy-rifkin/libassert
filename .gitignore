@@ -1,6 +1,7 @@
 .vscode
-*.gch
 *.exe
 *.o
 *.ilk
 *.pdb
+demo
+*.json
