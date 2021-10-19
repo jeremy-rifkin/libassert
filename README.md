@@ -19,8 +19,10 @@ their sources. Assertions should prioritize providing as much information and co
 developer as possible to allow for speedy triage. Unfortunately throughout existing languages and
 tooling a common theme exists: Assertions are very minimal and when `assert(n <= 12);` fails we get
 no information about the value of `n`. There is no reason assertions should be excessively
-lightweight. This library is an exploration looking at how much helpful information and
-functionality we can pack into assertions while still maintaining ease of use for the developer.
+lightweight.
+
+This library is an exploration looking at how much helpful information and functionality we can pack
+into assertions while still maintaining ease of use for the developer.
 
 **The Ideal:**
 
@@ -33,7 +35,8 @@ Ideally assertions can do all of the following:
 - Support extra diagnostic information being provided.
 
 `cassert`/`assert.h` can't do most of these. No tool I know of can do all these, other than this
-tool 😎
+tool 😎 It's fair to say that this is the most overpowered assertion library out there and one of
+the few libraries that can claim to be more bloated than Boost.
 
 #### Table of Contents: <!-- omit in toc -->
 - [Functionality This Library Provides](#functionality-this-library-provides)
@@ -112,9 +115,9 @@ assert(e == f);
 ![](screenshots/i.png)
 
 **A note on performance:** I've kept the impact of `assert`s at callsites minimal. A lot of logic is
-required to process assertion failures once they happen. Because assertion fails are *the coldest*
-path in a binary, I'm not concerned with performance in the assertion processor as long as it's not
-noticeably slow.
+required to process assertion failures once they happen but failures are *the coldest* path in a
+binary, I'm not concerned with performance in the assertion processor as long as it's not noticeably
+slow. Automatic expression decomposition requires a lot of template shenanigans which is not free.
 
 **A note on automatic expression decomposition:** In automatic decomposition the assertion processor
 is only able to obtain a the string for the full expression instead of the left and right parts
@@ -129,23 +132,39 @@ traversing all possible parse trees. There is probably a more optimal way to do 
 Library functions:
 
 ```cpp
-void assert(<expression>, Args...);
-void wassert(<expression>, Args...);
-void assert_op(left, right, Args...);
-void wassert_op(left, right, Args...);
+void assert(<expression>, [optional assertion message], [optional extra diagnostics, ...]);
+
+void ASSERT(<expression>, [optional assertion message], [optional extra diagnostics, ...]);
+void ASSERT_OP(left, right, [optional assertion message], [optional extra diagnostics, ...]);
+
+T&& VERIFY(<expression>, [optional assertion message], [optional extra diagnostics, ...]);
+T&& VERIFY_OP(left, right, [optional assertion message], [optional extra diagnostics, ...]);
+
 // Where `op` ∈ {`eq`, `neq`, `lt`, `gt`, `lteq`, `gteq`, `and`, `or`}.
 ```
 The `<expression>` is automatically decomposed so diagnostic information can be printed for the left
 and right sides. The resultant type must be convertible to boolean.
 
-Extra diagnostic information may be provided in `Args...` (e.g. `errno`). If the first argument in
-`Args...` is any string type it'll be used for the assertion message (if you don't want the first
-parameter that is a string being used for a message simply pass an empty string first).
-`ASSERT::FATAL` and `ASSERT::NONFATAL` may also be passed in any position.
+An optional assertion message may be provided. If the first argument following `<expression>` or
+`left, right` is any string type it will be used as the message (if you want the first parameter,
+which happens to be a string, to be an extra diagnostic simply pass an empty string first).
 
-`wassert` and `wassert_op` are shorthands for non-fatal assertions.
+An aribtray number of extra diagnostic values may be provided. There is special handling when
+`errno` is provided, `strerror` is called automatically. `ASSERT::FATAL` and `ASSERT::NONFATAL` may
+be passed in any position (controlling whether the fail function is called).
 
-**Note:** There is no short-circuiting for `assert_and` and `assert_or` or `&&` and `||` in
+`VERIFY` assertions are fatal but are not disabled with `NDEBUG`. They return the result of the
+`<expression>` or the invocation of the comparison between `left` and `right`. One place this is
+useful is verifying an std::optional has a value, similar to Rust's .unwrap():
+```cpp
+if(auto bar = *VERIFY(foo())) {
+    ...
+}
+```
+
+`assert` is provided as an alias for `ASSERT` to be compatible with C's `assert.h`.
+
+**Note:** There is no short-circuiting for `ASSERT_AND` and `ASSERT_OR` or `&&` and `||` in
 expression decomposition.
 
 **Note:** Top-level integral comparisons are automatically done with sign safety.

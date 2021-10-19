@@ -77,6 +77,8 @@
  #define ASSERT_FAIL_ACTION fail
 #endif
 
+#define PHONY_USE(E) do { using x [[maybe_unused]] = decltype(E); } while(0)
+
 namespace assert_detail {
 	// Lightweight helper, eventually may use C++20 std::source_location if this library no longer
 	// targets C++17. Right now std::source_location contains the method signature for a function
@@ -92,13 +94,17 @@ namespace assert_detail {
 		) : file(file), function(function), line(line) {}
 	};
 
-	#ifndef NO_ASSERT_INTERNAL_DEBUG
-	 void primitive_assert_impl(bool c, const char* expression, const char* message = nullptr,
-          source_location location = {});
-	 #define primitive_assert(c, ...) primitive_assert_impl(c, #c, ##__VA_ARGS__)
+	void primitive_assert_impl(bool c, bool verification, const char* expression,
+		const char* message = nullptr, source_location location = {});
+
+	#ifdef ASSERT_INTERNAL_DEBUG
+	 #define primitive_assert(c, ...) primitive_assert_impl(c, false, #c, ##__VA_ARGS__)
 	#else
-	 #define primitive_assert(c, ...) (void)(c)
+	 #define primitive_assert(c, ...) PHONY_USE(c)
 	#endif
+
+	// Still present in release mode, nonfatal
+	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, ##__VA_ARGS__)
 
 	/*
 	 * string utilities
@@ -197,13 +203,13 @@ namespace assert_detail {
 		else
 			return u < 0 ? false : t == UU(u);
 	}
-	
+
 	template<typename T, typename U>
 	[[gnu::cold]]
 	constexpr bool cmp_not_equal(T t, U u) {
 		return !cmp_equal(t, u);
 	}
-	
+
 	template<typename T, typename U>
 	[[gnu::cold]]
 	constexpr bool cmp_less(T t, U u) {
@@ -216,19 +222,19 @@ namespace assert_detail {
 		else
 			return u < 0 ? false : t < UU(u);
 	}
-	
+
 	template<typename T, typename U>
 	[[gnu::cold]]
 	constexpr bool cmp_greater(T t, U u) {
 		return cmp_less(u, t);
 	}
-	
+
 	template<typename T, typename U>
 	[[gnu::cold]]
 	constexpr bool cmp_less_equal(T t, U u) {
 		return !cmp_greater(t, u);
 	}
-	
+
 	template<typename T, typename U>
 	[[gnu::cold]]
 	constexpr bool cmp_greater_equal(T t, U u) {
@@ -413,15 +419,15 @@ namespace assert_detail {
 	std::string prettify_type(std::string type);
 
 	std::string highlight(const std::string& expression);
-	
+
 	std::vector<highlight_block> highlight_blocks(const std::string& expression);
-	
+
 	literal_format get_literal_format(const std::string& expression);
-	
+
 	std::string trim_suffix(const std::string& expression);
-	
+
 	bool is_bitwise(std::string_view op);
-	
+
 	std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op);
 
 	/*
@@ -584,7 +590,8 @@ namespace assert_detail {
 	 * binary diagnostic printing
 	 */
 
-	std::string gen_assert_binary(const std::string& a_str, const char* op, const std::string& b_str, size_t n_vargs);
+	std::string gen_assert_binary(bool verify,
+		const std::string& a_str, const char* op, const std::string& b_str, size_t n_vargs);
 
 	template<typename T>
 	[[gnu::cold]]
@@ -746,16 +753,18 @@ namespace assert_detail {
 
 	template<size_t N, typename... Args>
 	[[gnu::cold]]
-	void assert_fail_generic(const char* pretty_func, source_location location,
-			std::function<void()> assert_printer, const std::string& assert_string,
+	void assert_fail_generic(bool verify, const char* pretty_func, source_location location,
+			std::function<void()> assert_printer, std::string assert_string,
 			const char * const (&args_strings)[N], Args&... args) {
 		static_assert((sizeof...(args) == 0 && N == 2) || N == sizeof...(args) + 1);
 		auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
+		enable_virtual_terminal_processing_if_needed();
+		const char* action = verify ? "Verification" : "Assertion";
 		if(message != "") {
-			fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n",
+			fprintf(stderr, "%s failed at %s:%d: %s: %s\n", action,
 				location.file, location.line, pretty_func, message.c_str());
 		} else {
-			fprintf(stderr, "Assertion failed at %s:%d: %s:\n", location.file, location.line, pretty_func);
+			fprintf(stderr, "%s failed at %s:%d: %s:\n", action, location.file, location.line, pretty_func);
 		}
 		fprintf(stderr, "    %s\n", highlight(assert_string).c_str());
 		assert_printer();
@@ -793,9 +802,9 @@ namespace assert_detail {
 
 	template<typename A, typename B, typename C, size_t N, typename... Args>
 	[[gnu::cold]] [[gnu::noinline]]
-	void assert_fail(expression_decomposer<A, B, C>& decomposer, const char* expr_str, const char* pretty_func,
-			source_location location, const char * const (&args_strings)[N], Args&... args) {
-		assert_fail_generic(pretty_func, location, [&]() {
+	void assert_fail(expression_decomposer<A, B, C>& decomposer, const char* expr_str, bool verify,
+			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&... args) {
+		assert_fail_generic(verify, pretty_func, location, [&]() {
 			if constexpr(is_nothing<C>) {
 				static_assert(is_nothing<B> && !is_nothing<A>);
 			} else {
@@ -803,32 +812,34 @@ namespace assert_detail {
 				print_binary_diagnostic(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b),
 						a_str.c_str(), b_str.c_str(), C::op_string);
 			}
-		}, stringf("assert(%s%s);", expr_str, sizeof...(args) > 0 ? ", ..." : ""), args_strings, args...);
+		}, stringf("%s(%s%s);", verify ? "verify" : "assert", expr_str, sizeof...(args) > 0 ? ", ..." : ""),
+			args_strings, args...);
 	}
 
 	template<typename C, typename A, typename B, size_t N, typename... Args>
 	[[gnu::cold]] [[gnu::noinline]]
-	void assert_binary_fail(A&& a, B&& b, const char* a_str, const char* b_str, const char* raw_op,
+	void assert_binary_fail(A&& a, B&& b, const char* a_str, const char* b_str, const char* raw_op, bool verify,
 			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&... args) {
-		assert_fail_generic( pretty_func, location, [&a, &b, a_str, b_str]() {
+		assert_fail_generic(verify, pretty_func, location, [&a, &b, a_str, b_str]() {
 			print_binary_diagnostic(std::forward<A>(a), std::forward<B>(b), a_str, b_str, C::op_string);
-		}, gen_assert_binary(a_str, raw_op, b_str, sizeof...(args)), args_strings, args...);
+		}, gen_assert_binary(verify, a_str, raw_op, b_str, sizeof...(args)), args_strings, args...);
 	}
 
 	// top-level assert functions emplaced by the macros
 	// these are the only non-cold functions
 
 	template<typename A, typename B, typename C, size_t N, typename... Args>
-	void assert(expression_decomposer<A, B, C> decomposer, const char* expr_str, const char* pretty_func,
-			source_location location, const char * const (&args_strings)[N], Args&&... args) {
+	void assert_decomposed(expression_decomposer<A, B, C> decomposer, const char* expr_str,
+			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
 		if(!(bool)decomposer.get_value()) {
 			enable_virtual_terminal_processing_if_needed();
 			// todo: forward decomposer?
-			assert_fail(decomposer, expr_str,
+			assert_fail(decomposer, expr_str, false,
 					highlight(pretty_func).c_str(), location, args_strings, args...);
 		} else {
 			#ifdef _0_ASSERT_DEMO
-			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {}, {"", ""}, "assert should have failed");
+			assert_decomposed(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {},
+			                  {"", ""}, "assert should have failed");
 			#endif
 		}
 	}
@@ -838,29 +849,54 @@ namespace assert_detail {
 			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
 		if(!(bool)C()(a, b)) {
 			enable_virtual_terminal_processing_if_needed();
-			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, raw_op,
+			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, raw_op, false,
 					highlight(pretty_func).c_str(), location, args_strings, args...);
 		} else {
 			#ifdef _0_ASSERT_DEMO
-			assert(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {}, {"", ""}, "assert should have failed");
+			assert_decomposed(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {},
+			                  {"", ""}, "assert should have failed");
 			#endif
 		}
 	}
 
-	[[maybe_unused]]
-	static void assume(bool expr) {
-		if(!expr) {
-			__builtin_unreachable();
+	template<typename A, typename B, typename C, size_t N, typename... Args>
+	auto&& verify_decomposed(expression_decomposer<A, B, C> decomposer, const char* expr_str,
+			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
+		auto x = decomposer.get_value();
+		if(!(bool)x) {
+			enable_virtual_terminal_processing_if_needed();
+			// todo: forward decomposer?
+			assert_fail(decomposer, expr_str, true,
+					highlight(pretty_func).c_str(), location, args_strings, args...);
+		} else {
+			#ifdef _0_ASSERT_DEMO
+			assert_decomposed(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {},
+			                  {"", ""}, "assert should have failed");
+			#endif
 		}
+		return std::move(x);
 	}
 
-	template<typename C, typename A, typename B>
-	void assume(A&& a, B&& b) {
-		assume(C()(a, b));
+	template<typename C, typename A, typename B, size_t N, typename... Args>
+	auto&& verify_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* raw_op,
+			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
+		auto x = C()(a, b);
+		if(!(bool)x) {
+			enable_virtual_terminal_processing_if_needed();
+			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, raw_op, true,
+					highlight(pretty_func).c_str(), location, args_strings, args...);
+		} else {
+			#ifdef _0_ASSERT_DEMO
+			assert_decomposed(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {},
+			                  {"", ""}, "assert should have failed");
+			#endif
+		}
+		return std::move(x);
 	}
 
 	#ifndef _0_ASSERT_CPP // keep macros for the .cpp
 	 #undef primitive_assert
+	 #undef internal_verify
 	#endif
 }
 
@@ -881,94 +917,93 @@ namespace assert_detail {
 
 using assert_detail::ASSERT;
 
+// Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
+#define EVAL0(...) __VA_ARGS__
+#define EVAL1(...) EVAL0(EVAL0(EVAL0(__VA_ARGS__)))
+#define EVAL2(...) EVAL1(EVAL1(EVAL1(__VA_ARGS__)))
+#define EVAL3(...) EVAL2(EVAL2(EVAL2(__VA_ARGS__)))
+#define EVAL4(...) EVAL3(EVAL3(EVAL3(__VA_ARGS__)))
+#define EVAL(...)  EVAL4(EVAL4(EVAL4(__VA_ARGS__)))
+#define MAP_END(...)
+#define MAP_OUT
+#define MAP_COMMA ,
+#define MAP_GET_END2() 0, MAP_END
+#define MAP_GET_END1(...) MAP_GET_END2
+#define MAP_GET_END(...) MAP_GET_END1
+#define MAP_NEXT0(test, next, ...) next MAP_OUT
+#define MAP_NEXT1(test, next) MAP_NEXT0(test, next, 0)
+#define MAP_NEXT(test, next)  MAP_NEXT1(MAP_GET_END test, next)
+#define MAP0(f, x, peek, ...) f(x) MAP_NEXT(peek, MAP1)(f, peek, __VA_ARGS__)
+#define MAP1(f, x, peek, ...) f(x) MAP_NEXT(peek, MAP0)(f, peek, __VA_ARGS__)
+#define MAP_LIST_NEXT1(test, next) MAP_NEXT0(test, MAP_COMMA next, 0)
+#define MAP_LIST_NEXT(test, next)  MAP_LIST_NEXT1(MAP_GET_END test, next)
+#define MAP_LIST0(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST1)(f, peek, __VA_ARGS__)
+#define MAP_LIST1(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST0)(f, peek, __VA_ARGS__)
+#define MAP(f, ...) EVAL(MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
+#define ASSERT_DETAIL_STRINGIFY(x) #x,
+// __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
+// name, not signature
+#define ASSERT_DETAIL_ARGS(...) __PRETTY_FUNCTION__, {}, /* extra string here because of extra comma from map */ \
+ 					{MAP(ASSERT_DETAIL_STRINGIFY, ##__VA_ARGS__) ""} __VA_OPT__(,) ##__VA_ARGS__
+
 #ifdef NDEBUG
  #ifndef ASSUME_ASSERTS
-  #define      assert(...) (void)0
-  #define   assert_eq(...) (void)0
-  #define  assert_neq(...) (void)0
-  #define   assert_lt(...) (void)0
-  #define   assert_gt(...) (void)0
-  #define assert_lteq(...) (void)0
-  #define assert_gteq(...) (void)0
-  #define  assert_and(...) (void)0
-  #define   assert_or(...) (void)0
+  #define ASSERT(     expr, ...) (void)0
+  #define ASSERT_EQ(  a, b, ...) (void)0
+  #define ASSERT_NEQ( a, b, ...) (void)0
+  #define ASSERT_LT(  a, b, ...) (void)0
+  #define ASSERT_GT(  a, b, ...) (void)0
+  #define ASSERT_LTEQ(a, b, ...) (void)0
+  #define ASSERT_GTEQ(a, b, ...) (void)0
+  #define ASSERT_AND( a, b, ...) (void)0
+  #define ASSERT_OR(  a, b, ...) (void)0
  #else
   // Note: This is not a default because Sometimes assertion expressions have side effects that are
   // undesirable at runtime in an `NDEBUG` build like exceptions on std container operations which
   // cannot be optimized away. These often end up not being helpful hints either.
   // TODO: Need to feed through decomposer to preserve sign-unsigned safety on top-level compare?
-  #define      assert(expr, ...) assert_detail::assume(expr)
-  #define   assert_eq(a, b, ...) assert_detail::assume<assert_detail::ops::eq  >(a, b)
-  #define  assert_neq(a, b, ...) assert_detail::assume<assert_detail::ops::neq >(a, b)
-  #define   assert_lt(a, b, ...) assert_detail::assume<assert_detail::ops::lt  >(a, b)
-  #define   assert_gt(a, b, ...) assert_detail::assume<assert_detail::ops::gt  >(a, b)
-  #define assert_lteq(a, b, ...) assert_detail::assume<assert_detail::ops::lteq>(a, b)
-  #define assert_gteq(a, b, ...) assert_detail::assume<assert_detail::ops::gteq>(a, b)
-  #define  assert_and(a, b, ...) assert_detail::assume<assert_detail::ops::land>(a, b)
-  #define   assert_or(a, b, ...) assert_detail::assume<assert_detail::ops::lor >(a, b)
+  #define ASSERT(     expr, ...) do { if(!(expr)) __builtin_unreachable(); } while(0)
+  #define ASSERT_EQ(  a, b, ...) do { if(!((a) == (b))) __builtin_unreachable(); } while(0)
+  #define ASSERT_NEQ( a, b, ...) do { if(!((a) != (b))) __builtin_unreachable(); } while(0)
+  #define ASSERT_LT(  a, b, ...) do { if(!((a)  < (b))) __builtin_unreachable(); } while(0)
+  #define ASSERT_GT(  a, b, ...) do { if(!((a)  > (b))) __builtin_unreachable(); } while(0)
+  #define ASSERT_LTEQ(a, b, ...) do { if(!((a) <= (b))) __builtin_unreachable(); } while(0)
+  #define ASSERT_GTEQ(a, b, ...) do { if(!((a) >= (b))) __builtin_unreachable(); } while(0)
+  #define ASSERT_AND( a, b, ...) do { if(!((a) && (b))) __builtin_unreachable(); } while(0)
+  #define ASSERT_OR(  a, b, ...) do { if(!((a) || (b))) __builtin_unreachable(); } while(0)
  #endif
- #define      wassert(expr, ...) (void)0
- #define   wassert_eq(a, b, ...) (void)0
- #define  wassert_neq(a, b, ...) (void)0
- #define   wassert_lt(a, b, ...) (void)0
- #define   wassert_gt(a, b, ...) (void)0
- #define wassert_lteq(a, b, ...) (void)0
- #define wassert_gteq(a, b, ...) (void)0
- #define  wassert_and(a, b, ...) (void)0
- #define   wassert_or(a, b, ...) (void)0
 #else
- // macro foreach / mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
- #define EVAL0(...) __VA_ARGS__
- #define EVAL1(...) EVAL0(EVAL0(EVAL0(__VA_ARGS__)))
- #define EVAL2(...) EVAL1(EVAL1(EVAL1(__VA_ARGS__)))
- #define EVAL3(...) EVAL2(EVAL2(EVAL2(__VA_ARGS__)))
- #define EVAL4(...) EVAL3(EVAL3(EVAL3(__VA_ARGS__)))
- #define EVAL(...)  EVAL4(EVAL4(EVAL4(__VA_ARGS__)))
- #define MAP_END(...)
- #define MAP_OUT
- #define MAP_COMMA ,
- #define MAP_GET_END2() 0, MAP_END
- #define MAP_GET_END1(...) MAP_GET_END2
- #define MAP_GET_END(...) MAP_GET_END1
- #define MAP_NEXT0(test, next, ...) next MAP_OUT
- #define MAP_NEXT1(test, next) MAP_NEXT0(test, next, 0)
- #define MAP_NEXT(test, next)  MAP_NEXT1(MAP_GET_END test, next)
- #define MAP0(f, x, peek, ...) f(x) MAP_NEXT(peek, MAP1)(f, peek, __VA_ARGS__)
- #define MAP1(f, x, peek, ...) f(x) MAP_NEXT(peek, MAP0)(f, peek, __VA_ARGS__)
- #define MAP_LIST_NEXT1(test, next) MAP_NEXT0(test, MAP_COMMA next, 0)
- #define MAP_LIST_NEXT(test, next)  MAP_LIST_NEXT1(MAP_GET_END test, next)
- #define MAP_LIST0(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST1)(f, peek, __VA_ARGS__)
- #define MAP_LIST1(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST0)(f, peek, __VA_ARGS__)
- #define MAP(f, ...) EVAL(MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
- // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
- // name, not signature
- // assert_detail::expression_decomposer(assert_detail::expression_decomposer{}) done for ternary support
- #define ASSERT_DETAIL_STRINGIFY(x) #x,
- #define ASSERT_DETAIL_ARGS(...) __PRETTY_FUNCTION__, {}, /* extra string here because of extra comma from map */ \
- 					{MAP(ASSERT_DETAIL_STRINGIFY, ##__VA_ARGS__) ""} __VA_OPT__(,) ##__VA_ARGS__
- #define      assert(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                                assert_detail::assert(assert_detail::expression_decomposer( \
-                                assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__))
  #define ASSERT_DETAIL_GEN_CALL(a, b, op, ...) \
- 			assert_detail::assert_binary<assert_detail::ops::op>(a, b, #a, #b, #op, ASSERT_DETAIL_ARGS(__VA_ARGS__))
- #define   assert_eq(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, eq  , __VA_ARGS__)
- #define  assert_neq(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, neq , __VA_ARGS__)
- #define   assert_lt(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lt  , __VA_ARGS__)
- #define   assert_gt(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, gt  , __VA_ARGS__)
- #define assert_lteq(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lteq, __VA_ARGS__)
- #define assert_gteq(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, gteq, __VA_ARGS__)
- #define  assert_and(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, land, __VA_ARGS__)
- #define   assert_or(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lor , __VA_ARGS__)
- // empty VA_ARGS is not allowed, assert needs at least one parameter, so not worrying about the comma
- #define      wassert(...) assert(__VA_ARGS__, ASSERT::NONFATAL)
- #define   wassert_eq(...)   assert_eq(__VA_ARGS__, ASSERT::NONFATAL)
- #define  wassert_neq(...)  assert_neq(__VA_ARGS__, ASSERT::NONFATAL)
- #define   wassert_lt(...)   assert_lt(__VA_ARGS__, ASSERT::NONFATAL)
- #define   wassert_gt(...)   assert_gt(__VA_ARGS__, ASSERT::NONFATAL)
- #define wassert_lteq(...) assert_lteq(__VA_ARGS__, ASSERT::NONFATAL)
- #define wassert_gteq(...) assert_gteq(__VA_ARGS__, ASSERT::NONFATAL)
- #define  wassert_and(...) assert_land(__VA_ARGS__, ASSERT::NONFATAL)
- #define   wassert_or(...)  assert_lor(__VA_ARGS__, ASSERT::NONFATAL)
+        assert_detail::assert_binary<assert_detail::ops::op>(a, b, #a, #b, #op, ASSERT_DETAIL_ARGS(__VA_ARGS__))
+ // assert_detail::expression_decomposer(assert_detail::expression_decomposer{}) done for ternary support
+ #define ASSERT(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+                           assert_detail::assert_decomposed(assert_detail::expression_decomposer( \
+                           assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__))
+ #define ASSERT_EQ(  a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, eq  , __VA_ARGS__)
+ #define ASSERT_NEQ( a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, neq , __VA_ARGS__)
+ #define ASSERT_LT(  a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lt  , __VA_ARGS__)
+ #define ASSERT_GT(  a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, gt  , __VA_ARGS__)
+ #define ASSERT_LTEQ(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lteq, __VA_ARGS__)
+ #define ASSERT_GTEQ(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, gteq, __VA_ARGS__)
+ #define ASSERT_AND( a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, land, __VA_ARGS__)
+ #define ASSERT_OR(  a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lor , __VA_ARGS__)
 #endif
+
+#define ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, op, ...) \
+        assert_detail::verify_binary<assert_detail::ops::op>(a, b, #a, #b, #op, ASSERT_DETAIL_ARGS(__VA_ARGS__))
+#define VERIFY(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+                          assert_detail::verify_decomposed(assert_detail::expression_decomposer( \
+                          assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__))
+#define VERIFY_EQ(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, eq  , __VA_ARGS__)
+#define VERIFY_NEQ( a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, neq , __VA_ARGS__)
+#define VERIFY_LT(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, lt  , __VA_ARGS__)
+#define VERIFY_GT(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, gt  , __VA_ARGS__)
+#define VERIFY_LTEQ(a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, lteq, __VA_ARGS__)
+#define VERIFY_GTEQ(a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, gteq, __VA_ARGS__)
+#define VERIFY_AND( a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, land, __VA_ARGS__)
+#define VERIFY_OR(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, lor , __VA_ARGS__)
+
+// Aliases
+#define assert(...) ASSERT(__VA_ARGS__) // provided for <assert.h> compatability
 
 #endif

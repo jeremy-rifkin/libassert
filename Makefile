@@ -2,8 +2,9 @@ C = clang++
 #C = g++
 
 WFLAGS = -Wall -Wextra -Werror=return-type
-FLAGS = -std=c++17 -g -Iinclude -D_0_ASSERT_DEMO -ftime-trace
-LIBFLAGS = -std=c++17 -g -O2 -Iinclude -DNO_ASSERT_INTERNAL_DEBUG
+FLAGS = -std=c++17 -g -Iinclude -D_0_ASSERT_DEMO -ftime-trace # -DASSERT_INTERNAL_DEBUG
+LIBFLAGS = $(FLAGS) -O2
+PIC =
 ifeq ($(OS),Windows_NT)
 	DEMO = demo.exe
 	STATIC_LIB = assert.lib
@@ -14,6 +15,7 @@ else
 	STATIC_LIB = libassert.a
 	SHARED_LIB = libassert.so
 	LDFLAGS = -ldl
+	PIC = -fPIC
 endif
 
 .PHONY: _all
@@ -34,7 +36,7 @@ src/assert.o: src/assert.cpp include/assert.hpp
 $(STATIC_LIB): src/assert.o
 	ar rcs $(STATIC_LIB) src/assert.o
 $(SHARED_LIB): src/assert.cpp
-	$(C) -shared src/assert.cpp -o $(SHARED_LIB) $(WFLAGS) $(LIBFLAGS) -fPIC -Wl,--whole-archive -Wl,--no-whole-archive $(LDFLAGS)
+	$(C) -shared src/assert.cpp -o $(SHARED_LIB) $(WFLAGS) $(LIBFLAGS) $(PIC) -Wl,--whole-archive -Wl,--no-whole-archive $(LDFLAGS)
 
 tests/disambiguation: tests/disambiguation.cpp $(SHARED_LIB)
 	$(C) -Itests tests/disambiguation.cpp -o tests/disambiguation.exe $(FLAGS) $(WFLAGS) -D_0_DEBUG_ASSERT_DISAMBIGUATION
@@ -43,11 +45,9 @@ tests/literals: tests/literals.cpp $(SHARED_LIB)
 tests/tokens_and_highlighting: tests/tokens_and_highlighting.cpp $(SHARED_LIB)
 	$(C) -Itests tests/tokens_and_highlighting.cpp -o tests/tokens_and_highlighting.exe -Iinclude -g -std=c++17 -L. -lassert $(WFLAGS) -D_0_DEBUG_ASSERT_DISAMBIGUATION
 
-.PHONY: tests clean everything
+.PHONY: tests clean
 
 tests: tests/disambiguation tests/literals tests/tokens_and_highlighting
-
-everything: demo tests
 
 clean:
 	rm $(DEMO) *.so *.dll *.lib *.a demo.o foo.o bar.o src/assert.o tests/disambiguation tests/literals tests/tokens_and_highlighting tests/*.pdb tests/*.ilk demo.pdb demo.ilk

@@ -100,20 +100,21 @@ public:
 		std::map<int, int> map {{1,1}};
 		assert(map.count(1) == 2);
 		assert(map.count(1) >= 2 * garple(), "Error while doing XYZ");
-		assert_eq(0, 2 == garple());
+		ASSERT_EQ(0, 2 == garple());
 		
 		// Numeric
 		assert(1 == 1.5);
 		assert(0.1 + 0.2 == 0.3);
+		VERIFY(.1 + .2 == .3);
 
-		assert_eq(1, 1 bitand 2);
+		ASSERT_EQ(1, 1 bitand 2);
 		assert(18446744073709551606ULL == -10);
 		const uint16_t flags = 0b000101010;
 		const uint16_t mask = 0b110010101;
 		assert(mask bitand flags);
 		assert(0xf == 16);
 		void* foo = (void*)0xdeadbeef;
-		assert_eq(foo, nullptr);
+		ASSERT_EQ(foo, nullptr);
 	
 		// Strings
 		std::string s = "test";
@@ -123,8 +124,8 @@ public:
 		assert(BLUE "test" RESET == "test");
 		char* buffer = nullptr;
 		char thing[] = "foo";
-		assert_eq(buffer, thing);
-		assert_eq(buffer, +thing);
+		ASSERT_EQ(buffer, thing);
+		ASSERT_EQ(buffer, +thing);
 		
 		assert(S<S<int>>(2) == S<S<int>>(4));
 		{
@@ -135,8 +136,8 @@ public:
 		// Tests useful during development
 		assert(.1f == .1);
 		assert(1.0 == 1.0 + std::numeric_limits<double>::epsilon());
-		assert_eq(0x12p2, 12);
-		assert_eq(0x12p2, 0b10);
+		ASSERT_EQ(0x12p2, 12);
+		ASSERT_EQ(0x12p2, 0b10);
 		assert(0b1000000 == 0x3);
 		assert(.1 == 2);
 		assert(true == false);
@@ -144,25 +145,25 @@ public:
 		assert(0b100 == 0x3);
 
 		assert(0 == (2 == garple()));
-		assert_gteq(map.count(1 == 1), 2);
-		assert_eq(map.count(1), 2, "Error while doing XYZ");
-		assert_gteq(map.count(2 * garple()), 2, "Error while doing XYZ");
+		ASSERT_GTEQ(map.count(1 == 1), 2);
+		ASSERT_EQ(map.count(1), 2, "Error while doing XYZ");
+		ASSERT_GTEQ(map.count(2 * garple()), 2, "Error while doing XYZ");
 		assert(S<S<int>>(2) == S<S<int>>(4));
 		S<S<int>> a(1), b(2);
-		assert_eq(a, b);
+		ASSERT_EQ(a, b);
 		const S<S<int>> c(4), d(8);
-		assert_eq(c, d);
+		ASSERT_EQ(c, d);
 		S<void> e, f;
-		assert_eq(e, f);
-		assert_eq(1, 2);
-		assert_eq(&a, nullptr);
-		assert_eq((uintptr_t)&a, 0ULL & 0ULL);
-		assert_and(&a, nullptr);
-		assert_and(nullptr && nullptr, nullptr);
-		assert_and(&a, nullptr && nullptr);
-		assert_and((bool)nullptr && (bool)nullptr, (bool)nullptr);
-		assert_and((uintptr_t)&a, (bool)nullptr && (bool)nullptr); // FIXME: parentheses
-		assert_eq(foo, (int*)nullptr);
+		ASSERT_EQ(e, f);
+		ASSERT_EQ(1, 2);
+		ASSERT_EQ(&a, nullptr);
+		ASSERT_EQ((uintptr_t)&a, 0ULL & 0ULL);
+		ASSERT_AND(&a, nullptr);
+		ASSERT_AND(nullptr && nullptr, nullptr);
+		ASSERT_AND(&a, nullptr && nullptr);
+		ASSERT_AND((bool)nullptr && (bool)nullptr, (bool)nullptr);
+		ASSERT_AND((uintptr_t)&a, (bool)nullptr && (bool)nullptr); // FIXME: parentheses
+		ASSERT_EQ(foo, (int*)nullptr);
 		::foo();
 
 
@@ -198,7 +199,7 @@ public:
 		}
 		assert(false);
 		int v = 1, p = 2;
-		assert_eq(v, p);
+		ASSERT_EQ(v, p);
 		int x = 2;
 		assert(x -= 2);
 		x = 2;
@@ -216,7 +217,7 @@ public:
 		} (10, 32) not_eq 42);
 		assert([](){return 42;}() not_eq 42);
 		assert([&]<typename T>(T a, T b){return a+b;}(10, 32) not_eq 42);
-		assert_neq([](int a, int b) {
+		ASSERT_NEQ([](int a, int b) {
 			return a + b;
 		} (10, 32), 42);
 		assert('\n' == '\t');

@@ -36,15 +36,19 @@
 
 namespace assert_detail {
 	[[gnu::cold]]
-	void primitive_assert_impl(bool c, const char* expression, const char* message, source_location location) {
+	void primitive_assert_impl(bool c, bool verification,
+			const char* expression, const char* message, source_location location) {
 		if(!c) {
+			const char* action = verification ? "Verification" : "Assertion";
+			const char* name   = verification ? "verify"       : "assert";
 			if(message == nullptr) {
-				fprintf(stderr, "Assertion failed at %s:%d: %s\n", location.file, location.line, location.function);
+				fprintf(stderr, "%s failed at %s:%d: %s\n",
+					action, location.file, location.line, location.function);
 			} else {
-				fprintf(stderr, "Assertion failed at %s:%d: %s: %s\n",
-					location.file, location.line, location.function, message);
+				fprintf(stderr, "%s failed at %s:%d: %s: %s\n",
+					action, location.file, location.line, location.function, message);
 			}
-			fprintf(stderr, "    primitive_assert(%s);\n", expression);
+			fprintf(stderr, "    primitive_%s(%s);\n", name, expression);
 			abort();
 		}
 	}
@@ -459,7 +463,7 @@ namespace assert_detail {
 				#endif
 			}
 		}
-		SymCleanup(proc);
+		internal_verify(SymCleanup(proc));
 		#if IS_GCC
 		// If we're compiling with gcc on windows, the debug symbols will be embedded in the
 		// executable and retrievable with addr2line (this is provided by mingw).
@@ -545,8 +549,7 @@ namespace assert_detail {
 		FILE* f = fopen(path.c_str(), "rb");
 		primitive_assert(f != NULL);
 		partial_elf_file_header h;
-		size_t s = fread(&h, sizeof(partial_elf_file_header), 1, f);
-		if(s != 1) primitive_assert(false, "error while reading file");
+		internal_verify(fread(&h, sizeof(partial_elf_file_header), 1, f) == 1, "error while reading file");
 		char magic[] = {0x7F, 'E', 'L', 'F'};
 		primitive_assert(memcmp(h.magic, magic, 4) == 0);
 		if(h.e_data != endianness()) {
@@ -596,7 +599,7 @@ namespace assert_detail {
 		primitive_assert(frames.size() == size - skip);
 		return frames;
 	}
-	
+
 	struct pipe_t {
 		union {
 			struct {
@@ -626,7 +629,7 @@ namespace assert_detail {
 			execlp("addr2line", "addr2line", "-e", executable.c_str(), "-f", "-C", nullptr);
 			exit(1); // TODO: Diagnostic?
 		}
-		primitive_assert(write(input_pipe.write_end, addresses.data(), addresses.size()) != -1);
+		internal_verify(write(input_pipe.write_end, addresses.data(), addresses.size()) != -1);
 		close(input_pipe.read_end);
 		close(input_pipe.write_end);
 		close(output_pipe.write_end);
@@ -745,7 +748,6 @@ namespace assert_detail {
 		replace_all_dynamic(type, "> >", ">>");
 		return type;
 	}
-	
 
 	class analysis {
 		enum class token_e {
@@ -808,7 +810,7 @@ namespace assert_detail {
 			"^", "&", "|", "^=", "&=", "|=", "xor", "bitand", "bitor", "and_eq", "or_eq", "xor_eq"
 		};
 		std::vector<std::pair<std::regex, literal_format>> literal_formats;
-	
+
 	private:
 		[[gnu::cold]]
 		analysis() {
@@ -1303,7 +1305,7 @@ namespace assert_detail {
 			}
 		}
 	};
-	
+
 	analysis* analysis::analysis_singleton;
 
 	// public static wrappers
@@ -1620,7 +1622,7 @@ namespace assert_detail {
 			size_t longest_file_width = 0;
 			for(auto& [raw, parsed_path] : parsed_paths) {
 				std::string new_path = join(tries.at(parsed_path.back()).disambiguate(parsed_path), "/");
-				primitive_assert(files.insert({raw, new_path}).second);
+				internal_verify(files.insert({raw, new_path}).second);
 				if(new_path.size() > longest_file_width) longest_file_width = new_path.size();
 			}
 			longest_file_width = std::min(longest_file_width, size_t(50));
@@ -1693,9 +1695,10 @@ namespace assert_detail {
 	 */
 
 	[[gnu::cold]]
-	std::string gen_assert_binary(const std::string& a_str, const char* op,
-			const std::string& b_str, size_t n_vargs) {
-		return stringf("assert_%s(%s, %s%s);",
+	std::string gen_assert_binary(bool verify,
+			const std::string& a_str, const char* op, const std::string& b_str, size_t n_vargs) {
+		return stringf("%s_%s(%s, %s%s);",
+					   verify ? "verify" : "assert",
 					   op, a_str.c_str(), b_str.c_str(),
 					   n_vargs ? ", ..." : "");
 	}
@@ -1738,11 +1741,11 @@ namespace assert_detail {
 
 	[[gnu::cold]]
 	void fail() {
-		if(isatty(STDIN_FILENO) && isatty(STDERR_FILENO)) {
-			//fprintf(stderr, "\n    Process is suspended, run gdb -p %d to attach\n", getpid());
-			//fprintf(stderr,   "    Press any key to continue\n\n");
-			//wait_for_keypress();
-		}
+		//if(isatty(STDIN_FILENO) && isatty(STDERR_FILENO)) {
+		//	//fprintf(stderr, "\n    Process is suspended, run gdb -p %d to attach\n", getpid());
+		//	//fprintf(stderr,   "    Press any key to continue\n\n");
+		//	//wait_for_keypress();
+		//}
 		#ifndef _0_ASSERT_DEMO
 		fflush(stdout);
 		fflush(stderr);
