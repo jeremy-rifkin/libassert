@@ -166,12 +166,17 @@ Build options:
 
 ### How To Use This Library
 
-1. Copy the header file [`include/assert.hpp`](include/assert.hpp) somewhere in your include path.
-2. Link
-   - On windows link with dbghelp (`-ldbghelp`).
-   - On linux or windows with mingw link with lib dl (`-ldl`)
+This library targets >=C++17 and supports gcc and clang on windows and linux. This library is no
+longer single header due to compile times.
 
-This library targets >=C++17 and supports gcc and clang on windows and linux.
+1. Run `make` to compile static and shared libraries
+2. Copy the static or shared library where you want it.
+3. Copy [`include/assert.hpp`](include/assert.hpp) where you want it.
+4. Add a `-I` path if needed, add a `-L` path if needed, link with the library (`-lassert`)
+   - For the shared library you may need to add a path to your `LD_LIBRARY_PATH` environment
+     variable.
+   - If static linking, additionally link with dbghelp (`-ldbghelp`) on windows or lib dl (`-ldl`)
+     on linux.
 
 ### Comparison With Other Languages
 

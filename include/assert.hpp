@@ -97,7 +97,7 @@ namespace assert_detail {
           source_location location = {});
 	 #define primitive_assert(c, ...) primitive_assert_impl(c, #c, ##__VA_ARGS__)
 	#else
-	 #define primitive_assert(...) (void)0
+	 #define primitive_assert(c, ...) (void)(c)
 	#endif
 
 	/*
@@ -113,9 +113,6 @@ namespace assert_detail {
 		snprintf(str.data(), length + 1, args...);
 		return str;
 	}
-
-	[[gnu::cold]] [[maybe_unused]]
-	std::vector<std::string> split(std::string_view s, std::string_view delims);
 
 	template<typename C>
 	[[gnu::cold]]
@@ -133,49 +130,34 @@ namespace assert_detail {
 		return str;
 	}
 
-	[[gnu::cold]] std::string_view trim(const std::string_view s);
-
-	[[gnu::cold]]
 	std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
 
 	/*
 	 * system wrappers
 	 */
 
-	[[gnu::cold]] [[maybe_unused]] void enable_virtual_terminal_processing_if_needed();
+	void enable_virtual_terminal_processing_if_needed();
 
 	#ifdef _WIN32
 	typedef int pid_t;
 	#endif
 
-	[[gnu::cold]] [[maybe_unused]] pid_t getpid();
+	pid_t getpid();
 
-	[[gnu::cold]] [[maybe_unused]] void wait_for_keypress();
+	void wait_for_keypress();
 
-	[[gnu::cold]] [[maybe_unused]] bool isatty(int fd);
+	bool isatty(int fd);
 
 	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-	[[gnu::cold]] [[maybe_unused]] int terminal_width();
+	int terminal_width();
 
-	[[gnu::cold]] std::string strerror_wrapper(int); // stupid C stuff, stupid microsoft stuff
+	std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
 
 	/*
 	 * Stacktrace implementation
 	 */
 
-	struct stacktrace_entry {
-		std::string source_path;
-		std::string signature;
-		int line = 0;
-		bool operator==(const stacktrace_entry& other) const {
-			return line == other.line && signature == other.signature && source_path == other.source_path;
-		}
-		bool operator!=(const stacktrace_entry& other) const {
-			return !operator==(other);
-		}
-	};
-
-	std::optional<std::vector<stacktrace_entry>> get_stacktrace();
+	// All in the .cpp
 
 	/*
 	 * Expression decomposition
@@ -204,6 +186,7 @@ namespace assert_detail {
 	// Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
 	// Not using std:: versions because library is targetting C++17
 	template<typename T, typename U>
+	[[gnu::cold]]
 	constexpr bool cmp_equal(T t, U u) {
 		using UT = std::make_unsigned_t<T>;
 		using UU = std::make_unsigned_t<U>;
@@ -216,11 +199,13 @@ namespace assert_detail {
 	}
 	
 	template<typename T, typename U>
+	[[gnu::cold]]
 	constexpr bool cmp_not_equal(T t, U u) {
 		return !cmp_equal(t, u);
 	}
 	
 	template<typename T, typename U>
+	[[gnu::cold]]
 	constexpr bool cmp_less(T t, U u) {
 		using UT = std::make_unsigned_t<T>;
 		using UU = std::make_unsigned_t<U>;
@@ -233,16 +218,19 @@ namespace assert_detail {
 	}
 	
 	template<typename T, typename U>
+	[[gnu::cold]]
 	constexpr bool cmp_greater(T t, U u) {
 		return cmp_less(u, t);
 	}
 	
 	template<typename T, typename U>
+	[[gnu::cold]]
 	constexpr bool cmp_less_equal(T t, U u) {
 		return !cmp_greater(t, u);
 	}
 	
 	template<typename T, typename U>
+	[[gnu::cold]]
 	constexpr bool cmp_greater_equal(T t, U u) {
 		return !cmp_less(t, u);
 	}
@@ -254,7 +242,7 @@ namespace assert_detail {
 		#define gen_op_boilerplate(name, op, ...) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
-			constexpr auto operator()(A&& lhs, B&& rhs) const {                     /* no need to forward ints */ \
+			[[gnu::cold]] constexpr auto operator()(A&& lhs, B&& rhs) const {       /* no need to forward ints */ \
 				__VA_OPT__(if constexpr(is_integral_notb<A> && is_integral_notb<B>) return __VA_ARGS__(lhs, rhs); \
 				else) return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
@@ -320,12 +308,16 @@ namespace assert_detail {
 	struct expression_decomposer {
 		A a;
 		B b;
+		[[gnu::cold]]
 		explicit expression_decomposer() = default;
 		template<typename U>
+		[[gnu::cold]]
 		explicit expression_decomposer(U&& a) : a(std::forward<U>(a)) {}
 		template<typename U, typename V>
+		[[gnu::cold]]
 		explicit expression_decomposer(U&& a, V&& b) : a(std::forward<U>(a)), b(std::forward<V>(b)) {}
 		// Note: get_value or operator bool() should only be invoked once
+		[[gnu::cold]]
 		auto get_value() {
 			if constexpr(is_nothing<C>) {
 				static_assert(is_nothing<B> && !is_nothing<A>);
@@ -339,7 +331,7 @@ namespace assert_detail {
 		// TODO: spaceship operator?
 		// Note: Could decompose more than just comparison and boolean operators, but it would take
 		// a lot of work and I don't think it's beneficial for this library.
-		template<typename O> auto operator<<(O&& operand) {
+		template<typename O> [[gnu::cold]] auto operator<<(O&& operand) {
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
 			if constexpr(is_nothing<A>) {
 				static_assert(is_nothing<B> && is_nothing<C>);
@@ -352,7 +344,7 @@ namespace assert_detail {
 				return expression_decomposer<decltype(get_value()), O, ops::shl>(std::forward<A>(get_value()), std::forward<O>(operand));
 			}
 		}
-		#define gen_op_boilerplate(functor, op) template<typename O> auto operator op(O&& operand) { \
+		#define gen_op_boilerplate(functor, op) template<typename O> [[gnu::cold]] auto operator op(O&& operand) { \
 			static_assert(!is_nothing<A>); \
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
 			if constexpr(is_nothing<B>) { \
@@ -409,27 +401,33 @@ namespace assert_detail {
 	struct highlight_block {
 		std::string_view color;
 		std::string content;
+		// Get as much code into the .cpp as possible
+		highlight_block(std::string_view, std::string);
+		highlight_block(const highlight_block&);
+		highlight_block(highlight_block&&);
+		~highlight_block();
+		highlight_block& operator=(const highlight_block&);
+		highlight_block& operator=(highlight_block&&);
 	};
 
-	[[gnu::cold]] std::string prettify_type(std::string type);
-	[[gnu::cold]]
+	std::string prettify_type(std::string type);
+
 	std::string highlight(const std::string& expression);
-	[[gnu::cold]]
+	
 	std::vector<highlight_block> highlight_blocks(const std::string& expression);
-	[[gnu::cold]]
+	
 	literal_format get_literal_format(const std::string& expression);
-	[[gnu::cold]]
+	
 	std::string trim_suffix(const std::string& expression);
-	[[gnu::cold]]
+	
 	bool is_bitwise(std::string_view op);
-	[[gnu::cold]]
+	
 	std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op);
 
 	/*
 	 * stringification
 	 */
 
-	[[gnu::cold]] [[maybe_unused]]
 	std::string escape_string(const std::string_view str, char quote);
 
 	template<typename T>
@@ -570,6 +568,12 @@ namespace assert_detail {
 		size_t width;
 		std::vector<highlight_block> blocks;
 		bool right_align = false;
+		column_t(size_t, std::vector<highlight_block>, bool = false);
+		column_t(const column_t&);
+		column_t(column_t&&);
+		~column_t();
+		column_t& operator=(const column_t&);
+		column_t& operator=(column_t&&);
 	};
 
 	void wrapped_print(const std::vector<column_t>& columns);
@@ -580,9 +584,7 @@ namespace assert_detail {
 	 * binary diagnostic printing
 	 */
 
-	[[gnu::cold]] [[maybe_unused]]
-	std::string gen_assert_binary(const std::string& a_str, const char* op,
-			const std::string& b_str, size_t n_vargs);
+	std::string gen_assert_binary(const std::string& a_str, const char* op, const std::string& b_str, size_t n_vargs);
 
 	template<typename T>
 	[[gnu::cold]]
@@ -604,10 +606,8 @@ namespace assert_detail {
 		}
 	}
 
-	[[gnu::cold]] [[maybe_unused]]
 	void print_values(const std::vector<std::string>& vec, size_t lw);
 
-	[[gnu::cold]] [[maybe_unused]]
 	std::vector<highlight_block> get_values(const std::vector<std::string>& vec);
 
 	constexpr int min_term_width = 50;
@@ -687,19 +687,7 @@ namespace assert_detail {
 		NONFATAL, FATAL
 	};
 
-	[[gnu::cold]] [[maybe_unused]]
-	static void fail() {
-		if(isatty(STDIN_FILENO) && isatty(STDERR_FILENO)) {
-			//fprintf(stderr, "\n    Process is suspended, run gdb -p %d to attach\n", getpid());
-			//fprintf(stderr,   "    Press any key to continue\n\n");
-			//wait_for_keypress();
-		}
-		#ifndef _0_ASSERT_DEMO
-		fflush(stdout);
-		fflush(stderr);
-		abort();
-		#endif
-	}
+	void fail();
 
 	#define X(x) #x
 	#define Y(x) X(x)
@@ -711,6 +699,12 @@ namespace assert_detail {
 		std::optional<ASSERT> fatality;
 		std::string message;
 		std::vector<std::pair<std::string, std::string>> entries;
+		extra_diagnostics();
+		extra_diagnostics(const extra_diagnostics&);
+		extra_diagnostics(extra_diagnostics&&);
+		~extra_diagnostics();
+		extra_diagnostics& operator=(const extra_diagnostics&);
+		extra_diagnostics& operator=(extra_diagnostics&&);
 		extra_diagnostics& operator+(const extra_diagnostics& other);
 	};
 

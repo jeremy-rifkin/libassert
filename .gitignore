@@ -5,3 +5,7 @@
 *.pdb
 demo
 *.json
+*.so
+*.dll
+*.lib
+*.a

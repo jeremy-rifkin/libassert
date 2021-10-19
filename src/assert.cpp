@@ -53,8 +53,8 @@ namespace assert_detail {
 	 * string utilities
 	 */
 
-	[[gnu::cold]] [[maybe_unused]]
-	std::vector<std::string> split(std::string_view s, std::string_view delims) {
+	[[gnu::cold]]
+	static std::vector<std::string> split(std::string_view s, std::string_view delims) {
 		std::vector<std::string> vec;
 		size_t old_pos = 0;
 		size_t pos = 0;
@@ -71,14 +71,14 @@ namespace assert_detail {
 	constexpr const char * const ws = " \t\n\r\f\v";
 
 	[[gnu::cold]]
-	std::string_view trim(const std::string_view s) {
+	static std::string_view trim(const std::string_view s) {
 		size_t l = s.find_first_not_of(ws);
 		size_t r = s.find_last_not_of(ws) + 1;
 		return s.substr(l, r - l);
 	}
 
 	[[gnu::cold]]
-	void replace_all_dynamic(std::string& str, std::string_view text, std::string_view replacement) {
+	static void replace_all_dynamic(std::string& str, std::string_view text, std::string_view replacement) {
 		std::string::size_type pos = 0;
 		while((pos = str.find(text.data(), pos, text.length())) != std::string::npos) {
 			str.replace(pos, text.length(), replacement.data(), replacement.length());
@@ -121,7 +121,7 @@ namespace assert_detail {
 	 * system wrappers
 	 */
 
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	void enable_virtual_terminal_processing_if_needed() {
 		// enable colors / ansi processing if necessary
 		#ifdef _WIN32
@@ -138,7 +138,7 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]] [[maybe_unused]] pid_t getpid() {
+	[[gnu::cold]] pid_t getpid() {
 		#ifdef _WIN32
 		 return _getpid();
 		#else
@@ -146,7 +146,7 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]] [[maybe_unused]] void wait_for_keypress() {
+	[[gnu::cold]] void wait_for_keypress() {
 		#ifdef _WIN32
 		 _getch();
 		#else
@@ -163,7 +163,7 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]] [[maybe_unused]] bool isatty(int fd) {
+	[[gnu::cold]] bool isatty(int fd) {
 		#ifdef _WIN32
 		 return _isatty(fd);
 		#else
@@ -172,7 +172,7 @@ namespace assert_detail {
 	}
 
 	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-	[[gnu::cold]] [[maybe_unused]] int terminal_width() {
+	[[gnu::cold]] int terminal_width() {
 		#ifdef _WIN32
 		 CONSOLE_SCREEN_BUFFER_INFO csbi;
 		 HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
@@ -186,7 +186,7 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]] [[maybe_unused]] std::string get_executable_path() {
+	[[gnu::cold]] std::string get_executable_path() {
 		#ifdef _WIN32
 		 char buffer[MAX_PATH + 1];
 		 int s = GetModuleFileNameA(NULL, buffer, sizeof(buffer));
@@ -219,6 +219,18 @@ namespace assert_detail {
 	 *   - Resolve symbol names and locations with addr2line
 	 */
 
+	struct stacktrace_entry {
+		std::string source_path;
+		std::string signature;
+		int line = 0;
+		[[gnu::cold]] bool operator==(const stacktrace_entry& other) const {
+			return line == other.line && signature == other.signature && source_path == other.source_path;
+		}
+		[[gnu::cold]] bool operator!=(const stacktrace_entry& other) const {
+			return !operator==(other);
+		}
+	};
+
 	// ... -> assert -> assert_fail -> assert_fail_generic -> print_stacktrace -> get_stacktrace
 	// get 100, skip at least 2
 	constexpr size_t n_frames = 100;
@@ -226,7 +238,7 @@ namespace assert_detail {
 
 	#ifdef USE_DBG_HELP_H
 	#if IS_GCC
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
 		// TODO: Popen is a hack. Implement properly with CreateProcess and pipes later.
 		FILE* p = popen(("addr2line -e " + executable + " -fC " + addresses).c_str(), "r");
@@ -485,7 +497,7 @@ namespace assert_detail {
 	}
 	#endif
 	#ifdef USE_EXECINFO_H
-	[[gnu::cold]] [[maybe_unused]] static bool has_addr2line() {
+	[[gnu::cold]] static bool has_addr2line() {
 		// Detects if addr2line exists by trying to invoke addr2line --help
 		constexpr int magic = 42;
 		pid_t pid = fork();
@@ -501,7 +513,7 @@ namespace assert_detail {
 	}
 
 	// returns 1 for little endian, 2 for big endien, matches elf
-	[[gnu::cold]] [[maybe_unused]] static int endianness() {
+	[[gnu::cold]] static int endianness() {
 		int n = 1;
 		if(*(char*)&n == 1) {
 			return 1; // little
@@ -529,7 +541,7 @@ namespace assert_detail {
 		ET_DYN = 0x03
 	};
 
-	[[gnu::cold]] [[maybe_unused]] static uint16_t get_executable_e_type(const std::string& path) {
+	[[gnu::cold]] static uint16_t get_executable_e_type(const std::string& path) {
 		FILE* f = fopen(path.c_str(), "rb");
 		primitive_assert(f != NULL);
 		partial_elf_file_header h;
@@ -543,7 +555,7 @@ namespace assert_detail {
 		return h.e_type;
 	}
 
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	static bool paths_refer_to_same(const std::string& path_a, const std::string& path_b) {
 		struct stat a, b;
 		stat(path_a.c_str(), &a);
@@ -562,7 +574,7 @@ namespace assert_detail {
 
 	// This is a custom replacement for backtrace_symbols, which makes getting the information we
 	// need impossible in some situations.
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	static std::vector<frame> backtrace_frames(void * const * array, size_t size, size_t skip) {
 		// reference: https://github.com/bminor/glibc/blob/master/debug/backtracesyms.c
 		std::vector<frame> frames;
@@ -596,7 +608,7 @@ namespace assert_detail {
 	};
 	static_assert(sizeof(pipe_t) == 2 * sizeof(int));
 
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
 		pipe_t output_pipe;
 		pipe_t input_pipe;
@@ -630,8 +642,8 @@ namespace assert_detail {
 		return output;
 	}
 
-	[[gnu::cold]] [[maybe_unused]]
-	std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
+	[[gnu::cold]]
+	static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
 		void* bt[n_frames];
 		int bt_size = backtrace(bt, n_frames);
 		std::vector<frame> frames = backtrace_frames(bt, bt_size, n_skip);
@@ -706,6 +718,14 @@ namespace assert_detail {
 	/*
 	 * C++ syntax analysis logic
 	 */
+
+	[[gnu::cold]]
+	highlight_block::highlight_block(std::string_view color, std::string content) : color(color), content(content) { }
+	[[gnu::cold]] highlight_block::highlight_block(const highlight_block& other) = default;
+	[[gnu::cold]] highlight_block::highlight_block(highlight_block&& other) = default;
+	[[gnu::cold]] highlight_block::~highlight_block() = default;
+	[[gnu::cold]] highlight_block& highlight_block::operator=(const highlight_block&) = default;
+	[[gnu::cold]] highlight_block& highlight_block::operator=(highlight_block&&) = default;
 
 	[[gnu::cold]]
 	std::string union_regexes(std::initializer_list<std::string_view> regexes) {
@@ -1302,6 +1322,7 @@ namespace assert_detail {
 		return str;
 		#endif
 	}
+
 	[[gnu::cold]]
 	std::vector<highlight_block> highlight_blocks(const std::string& expression) {
 		#ifdef NCOLOR
@@ -1310,597 +1331,29 @@ namespace assert_detail {
 		return analysis::get()._highlight(expression);
 		#endif
 	}
-	[[gnu::cold]]
-	literal_format get_literal_format(const std::string& expression) {
+
+	[[gnu::cold]] literal_format get_literal_format(const std::string& expression) {
 		return analysis::get()._get_literal_format(expression);
 	}
-	[[gnu::cold]]
-	std::string trim_suffix(const std::string& expression) {
+
+	[[gnu::cold]] std::string trim_suffix(const std::string& expression) {
 		return expression.substr(0, expression.find_last_not_of("FfUuLlZz") + 1);
 	}
-	[[gnu::cold]]
-	bool is_bitwise(std::string_view op) {
+
+	[[gnu::cold]] bool is_bitwise(std::string_view op) {
 		return analysis::get().bitwise_operators.count(op);
 	}
+
 	[[gnu::cold]]
 	std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op) {
 		return analysis::get()._decompose_expression(expression, target_op);
 	}
 
-	/*analysis& analysis::get() {
-		if(analysis_singleton == nullptr) {
-			analysis_singleton = new analysis();
-		}
-		return *analysis_singleton;
-	}
-	
-	[[gnu::cold]]
-	std::string_view analysis::normalize_op(const std::string_view op) {
-		// Operators need to be normalized to support alternative operators like and and bitand
-		// Normalization instead of just adding to the precedence table because target operators
-		// will always be the normalized operator even when the alternative operator is used.
-		if(alternative_operators_map.count(op)) return alternative_operators_map.at(op);
-		else return op;
-	}
-
-	[[gnu::cold]]
-	std::string_view analysis::normalize_brace(const std::string_view brace) {
-		// Operators need to be normalized to support alternative operators like and and bitand
-		// Normalization instead of just adding to the precedence table because target operators
-		// will always be the normalized operator even when the alternative operator is used.
-		if(digraph_map.count(brace)) return digraph_map.at(brace);
-		else return brace;
-	}
-
-	[[gnu::cold]]
-	analysis::analysis() {
-		braces = {
-			// template angle brackets excluded from this analysis
-			{ "(", ")" }, { "{", "}" }, { "[", "]" }, { "<:", ":>" }, { "<%", "%>" }
-		};
-		digraph_map = {
-			{ "<:", "[" }, { "<%", "{" }, { ":>", "]" }, { "%>", "}" }
-		};
-		// punctuators to highlight
-		highlight_ops = {
-			"~", "!", "+", "-", "*", "/", "%", "^", "&", "|", "=", "+=", "-=", "*=", "/=", "%=",
-			"^=", "&=", "|=", "==", "!=", "<", ">", "<=", ">=", "<=>", "&&", "||", "<<", ">>",
-			"<<=", ">>=", "++", "--", "and", "or", "xor", "not", "bitand", "bitor", "compl",
-			"and_eq", "or_eq", "xor_eq", "not_eq"
-		};
-		// all operators
-		operators = {
-			":", "...", "?", "::", ".", ".*", "->", "->*", "~", "!", "+", "-", "*", "/", "%", "^",
-			"&", "|", "=", "+=", "-=", "*=", "/=", "%=", "^=", "&=", "|=", "==", "!=", "<", ">",
-			"<=", ">=", "<=>", "&&", "||", "<<", ">>", "<<=", ">>=", "++", "--", ",", "and", "or",
-			"xor", "not", "bitand", "bitor", "compl", "and_eq", "or_eq", "xor_eq", "not_eq"
-		};
-		alternative_operators_map = {
-			{"and", "&&"}, {"or", "||"}, {"xor", "^"}, {"not", "!"}, {"bitand", "&"},
-			{"bitor", "|"}, {"compl", "~"}, {"and_eq", "&="}, {"or_eq", "|="}, {"xor_eq", "^="},
-			{"not_eq", "!="}
-		};
-		bitwise_operators = {
-			"^", "&", "|", "^=", "&=", "|=", "xor", "bitand", "bitor", "and_eq", "or_eq", "xor_eq"
-		};
-		// https://eel.is/c++draft/gram.lex
-		// generate regular expressions
-		std::string keywords[] = { "alignas", "constinit", "public", "alignof", "const_cast",
-			"float", "register", "try", "asm", "continue", "for", "reinterpret_cast", "typedef",
-			"auto", "co_await", "friend", "requires", "typeid", "bool", "co_return", "goto",
-			"return", "typename", "break", "co_yield", "if", "short", "union", "case",
-			"decltype", "inline", "signed", "unsigned", "catch", "default", "int", "sizeof",
-			"using", "char", "delete", "long", "static", "virtual", "char8_t", "do", "mutable",
-			"static_assert", "void", "char16_t", "double", "namespace", "static_cast",
-			"volatile", "char32_t", "dynamic_cast", "new", "struct", "wchar_t", "class", "else",
-			"noexcept", "switch", "while", "concept", "enum", "template", "const", "explicit",
-			"operator", "this", "consteval", "export", "private", "thread_local", "constexpr",
-			"extern", "protected", "throw" };
-		std::string punctuators[] = { "{", "}", "[", "]", "(", ")", "<:", ":>", "<%",
-			"%>", ";", ":", "...", "?", "::", ".", ".*", "->", "->*", "~", "!", "+", "-", "*",
-			"/", "%", "^", "&", "|", "=", "+=", "-=", "*=", "/=", "%=", "^=", "&=", "|=", "==",
-			"!=", "<", ">", "<=", ">=", "<=>", "&&", "||", "<<", ">>", "<<=", ">>=", "++", "--",
-			",", "and", "or", "xor", "not", "bitand", "bitor", "compl", "and_eq", "or_eq",
-			"xor_eq", "not_eq", "#" }; // # appears in some lambda signatures
-		// Sort longest -> shortest (secondarily A->Z)
-		const auto cmp = [](const std::string_view a, const std::string_view b) {
-			if(a.length() > b.length()) return true;
-			else if(a.length() == b.length()) return a < b;
-			else return false;
-		};
-		std::sort(std::begin(keywords), std::end(keywords), cmp);
-		std::sort(std::begin(punctuators), std::end(punctuators), cmp);
-		// Escape special characters and add wordbreaks
-		const std::regex special_chars { R"([-[\]{}()*+?.,\^$|#\s])" };
-		std::transform(std::begin(punctuators), std::end(punctuators), std::begin(punctuators),
-			[&special_chars](const std::string& str) {
-				return std::regex_replace(str + (isalpha(str[0]) ? "\\b" : ""), special_chars, "\\$&");
-			});
-		// https://eel.is/c++draft/lex.pptoken#3.2
-		*std::find(std::begin(punctuators), std::end(punctuators), "<:") += "(?!:[^:>])";
-		// regular expressions
-		std::string keywords_re    = "(?:" + join(keywords, "|") + ")\\b";
-		std::string punctuators_re = join(punctuators, "|");
-		// numeric literals
-		std::string optional_integer_suffix = "(?:[Uu](?:LL?|ll?|Z|z)?|(?:LL?|ll?|Z|z)[Uu]?)?";
-		std::string int_binary  = "0[Bb][01](?:'?[01])*" + optional_integer_suffix;
-		// slightly modified from grammar so 0 is lexed as a decimal literal instead of octal
-		std::string int_octal   = "0(?:'?[0-7])+" + optional_integer_suffix;
-		std::string int_decimal = "(?:0|[1-9](?:'?\\d)*)" + optional_integer_suffix;
-		std::string int_hex	    = "0[Xx](?!')(?:'?[\\da-fA-F])+" + optional_integer_suffix;
-		std::string digit_sequence = "\\d(?:'?\\d)*";
-		std::string fractional_constant = stringf("(?:(?:%s)?\\.%s|%s\\.)",
-											digit_sequence.c_str(), digit_sequence.c_str(), digit_sequence.c_str());
-		std::string exponent_part = "(?:[Ee][\\+-]?" + digit_sequence + ")";
-		std::string suffix = "[FfLl]";
-		std::string float_decimal = stringf("(?:%s%s?|%s%s)%s?",
-							fractional_constant.c_str(), exponent_part.c_str(),
-							digit_sequence.c_str(), exponent_part.c_str(), suffix.c_str());
-		std::string hex_digit_sequence = "[\\da-fA-F](?:'?[\\da-fA-F])*";
-		std::string hex_frac_const = stringf("(?:(?:%s)?\\.%s|%s\\.)",
-		hex_digit_sequence.c_str(), hex_digit_sequence.c_str(), hex_digit_sequence.c_str());
-		std::string binary_exp = "[Pp][\\+-]?" + digit_sequence;
-		std::string float_hex = stringf("0[Xx](?:%s|%s)%s%s?",
-							hex_frac_const.c_str(), hex_digit_sequence.c_str(), binary_exp.c_str(), suffix.c_str());
-		// char and string literals
-		std::string escapes = R"(\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.)";
-		std::string char_literal = R"((?:u8|[UuL])?'(?:)" + escapes + R"(|[^\n'])*')";
-		std::string string_literal = R"((?:u8|[UuL])?"(?:)" + escapes + R"(|[^\n"])*")";
-								// \2 because the first capture is the match without the rest of the file
-		std::string raw_string_literal = R"((?:u8|[UuL])?R"([^ ()\\t\r\v\n]*)\((?:(?!\)\2\").)*\)\2")";
-		escapes_re = std::regex(escapes);
-		// final rule set
-		// rules must be sequenced as a topological sort adhering to:
-		// keyword > identifier
-		// number > punctuation (for .1f)
-		// float > int (for 1.5 and hex floats)
-		// hex int > decimal int
-		// named_literal > identifier
-		// string > identifier (for R"(foobar)")
-		// punctuation > identifier (for "not" and other alternative operators)
-		std::pair<token_e, std::string> rules_raw[] = {
-			{ token_e::keyword    , keywords_re },
-			{ token_e::number     , union_regexes({
-				float_decimal,
-				float_hex,
-				int_binary,
-				int_octal,
-				int_hex,
-				int_decimal
-			}) },
-			{ token_e::punctuation, punctuators_re },
-			{ token_e::named_literal, "true|false|nullptr" },
-			{ token_e::string     , union_regexes({
-				char_literal,
-				raw_string_literal,
-				string_literal
-			}) },
-			{ token_e::identifier , R"((?!\d+)(?:[\da-zA-Z_\$]|\\u[\da-fA-F]{4}|\\U[\da-fA-F]{8})+)" },
-			{ token_e::whitespace , R"(\s+)" }
-		};
-		rules.resize(std::size(rules_raw));
-		for(size_t i = 0; i < std::size(rules_raw); i++) {
-							// [^] instead of . because . does not match newlines
-			std::string str = stringf("^(%s)[^]*", rules_raw[i].second.c_str());
-			#ifdef _0_DEBUG_ASSERT_LEXER_RULES
-			fprintf(stderr, "%s : %s\n", rules_raw[i].first.c_str(), str.c_str());
-			#endif
-			rules[i] = { rules_raw[i].first, std::regex(str) };
-		}
-		// setup literal format rules
-		literal_formats = {
-			{ std::regex(int_binary),    literal_format::binary },
-			{ std::regex(int_octal),     literal_format::octal },
-			{ std::regex(int_decimal),   literal_format::dec },
-			{ std::regex(int_hex),       literal_format::hex },
-			{ std::regex(float_decimal), literal_format::dec },
-			{ std::regex(float_hex),     literal_format::hex }
-		};
-		// generate precedence table
-		// bottom few rows of the precedence table:
-		const std::unordered_map<int, std::vector<std::string_view>> precedences = {
-			{ -1, { "<<", ">>" } },
-			{ -2, { "<", "<=", ">=", ">" } },
-			{ -3, { "==", "!=" } },
-			{ -4, { "&" } },
-			{ -5, { "^" } },
-			{ -6, { "|" } },
-			{ -7, { "&&" } },
-			{ -8, { "||" } },
-						// Note: associativity logic currently relies on these having precedence -9
-			{ -9, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } },
-			{ -10, { "," } }
-		};
-		std::unordered_map<std::string_view, int> table;
-		for(const auto& [ p, ops ] : precedences) {
-			for(const auto& op : ops) {
-				table.insert({op, p});
-			}
-		}
-		precedence = table;
-	}
-
-	[[gnu::cold]]
-	auto analysis::_tokenize(const std::string& expression, bool decompose_shr) -> std::vector<token_t> {
-		std::vector<token_t> tokens;
-		size_t i = 0;
-		while(i < expression.length()) {
-			std::smatch match;
-			bool at_least_one_matched = false;
-			for(const auto& [ type, re ] : rules) {
-				if(std::regex_match(std::begin(expression) + i, std::end(expression), match, re)) {
-					#ifdef _0_DEBUG_ASSERT_TOKENIZATION
-					fprintf(stderr, "%s\n", match[1].str().c_str());
-					fflush(stdout);
-					#endif
-					if(decompose_shr && match[1].str() == ">>") { // Do >> decomposition now for templates
-						tokens.push_back({ type, ">" });
-						tokens.push_back({ type, ">" });
-					} else {
-						tokens.push_back({ type, match[1].str() });
-					}
-					i += match[1].length();
-					at_least_one_matched = true;
-					break;
-				}
-			}
-			if(!at_least_one_matched) {
-				throw "error: invalid token";
-			}
-		}
-		return tokens;
-	}
-
-	[[gnu::cold]]
-	auto analysis::_highlight(const std::string& expression) -> std::vector<highlight_block> try {
-		const auto tokens = _tokenize(expression);
-		std::vector<highlight_block> output;
-		for(size_t i = 0; i < tokens.size(); i++) {
-			const auto& token = tokens[i];
-			// Peek next non-whitespace token, return empty whitespace token if end is reached
-			const auto peek = [i, &tokens](size_t j = 1) {
-				for(size_t k = 1; j > 0 && i + k < tokens.size(); k++) {
-					if(tokens[i + k].token_type != token_e::whitespace) {
-						if(--j == 0) {
-							return tokens[i + k];
-						}
-					}
-				}
-				primitive_assert(j != 0);
-				return token_t { token_e::whitespace, "" };
-			};
-			switch(token.token_type) {
-				case token_e::keyword:
-					output.push_back({PURPL, token.str});
-					break;
-				case token_e::punctuation:
-					if(highlight_ops.count(token.str)) {
-						output.push_back({PURPL, token.str});
-					} else {
-						output.push_back({"", token.str});
-					}
-					break;
-				case token_e::named_literal:
-					output.push_back({ORANGE, token.str});
-					break;
-				case token_e::number:
-					output.push_back({CYAN, token.str});
-					break;
-				case token_e::string:
-					output.push_back({GREEN, std::regex_replace(token.str, escapes_re, BLUE "$&" GREEN)});
-					break;
-				case token_e::identifier:
-					if(peek().str == "(") {
-						output.push_back({BLUE, token.str});
-					} else if(peek().str == "::") {
-						output.push_back({YELLOW, token.str});
-					} else {
-						output.push_back({BLUE, token.str});
-					}
-					break;
-				case token_e::whitespace:
-					output.push_back({"", token.str});
-					break;
-			}
-		}
-		return output;
-	} catch(...) {
-		return {{"", expression}};
-}
-
-	[[gnu::cold]]
-	auto analysis::_get_literal_format(const std::string& expression) -> literal_format {
-		for(auto& [ re, type ] : literal_formats) {
-			if(std::regex_match(expression, re)) {
-				return type;
-			}
-		}
-		return literal_format::none; // not a literal
-	}
-
-	[[gnu::cold]]
-	auto analysis::find_last_non_ws(const std::vector<token_t>& tokens, size_t i) -> token_t {
-		// returns empty token_e::whitespace on failure
-		while(i--) {
-			if(tokens[i].token_type != token_e::whitespace) {
-				return tokens[i];
-			}
-		}
-		return {token_e::whitespace, ""};
-	}
-
-	[[gnu::cold]]
-	std::string_view analysis::get_real_op(const std::vector<token_t>& tokens, const size_t i) {
-		// re-coalesce >> if necessary
-		bool is_shr = tokens[i].str == ">" && i < tokens.size() - 1 && tokens[i + 1].str == ">";
-		return is_shr ? std::string_view(">>") : std::string_view(tokens[i].str);
-	}
-
-	// In this function we are essentially exploring all possible parse trees for an expression
-	// an making an attempt to disambiguate as much as we can. It's potentially O(2^t) (?) with
-	// t being the number of possible templates in the expression, but t is anticipated to
-	// always be small.
-	// Returns true if parse tree traversal was a success, false if depth was exceeded
-	static constexpr int max_depth = 10;
-	[[gnu::cold]] bool analysis::pseudoparse(
-		const std::vector<token_t>& tokens,
-		const std::string_view target_op,
-		size_t i,
-		int current_lowest_precedence,
-		int template_depth,
-		int middle_index, // where the split currently is, current op = tokens[middle_index]
-		int depth,
-		std::set<int>& output
-	) {
-		#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
-		printf("*");
-		#endif
-		if(depth > max_depth) {
-			printf("Max depth exceeded\n");
-			return false;
-		}
-		// precedence table is binary, unary operators have highest precedence
-		// we can figure out unary / binary easy enough
-		enum {
-			expecting_operator,
-			expecting_term
-		} state = expecting_term;
-		for(; i < tokens.size(); i++) {
-			const token_t& token = tokens[i];
-			// scan forward to matching brace
-			// can assume braces are balanced
-			const auto scan_forward = [this, &i, &tokens](const std::string_view open, const std::string_view close) {
-				bool empty = true;
-				int count = 0;
-				while(++i < tokens.size()) {
-					if(normalize_brace(tokens[i].str) == normalize_brace(open)) count++;
-					else if(normalize_brace(tokens[i].str) == normalize_brace(close)) {
-						if(count-- == 0) {
-							break;
-						}
-					} else if(tokens[i].token_type != token_e::whitespace) {
-						empty = false;
-					}
-				}
-				if(i == tokens.size() && count != -1) primitive_assert(false, "ill-formed expression input");
-				return empty;
-			};
-			switch(token.token_type) {
-				case token_e::punctuation:
-					if(operators.count(token.str)) {
-						if(state == expecting_term) {
-							// must be unary, continue
-						} else {
-							// template can only open with a < token, no need to check << or <<=
-							// also must be preceeded by an identifier
-							if(token.str == "<" && find_last_non_ws(tokens, i).token_type == token_e::identifier) {
-								// branch 1: this is a template opening
-								bool success = pseudoparse(tokens, target_op, i + 1, current_lowest_precedence,
-															template_depth + 1, middle_index, depth + 1, output);
-								if(!success) { // early exit if we have to discard
-									return false;
-								}
-								// branch 2: this is a binary operator // fallthrough
-							} else if(token.str == "<" && normalize_brace(find_last_non_ws(tokens, i).str) == "]") {
-								// this must be a template parameter list, part of a generic lambda
-								bool empty = scan_forward("<", ">");
-								primitive_assert(!empty);
-								state = expecting_operator;
-								continue;
-							}
-							if(template_depth > 0 && token.str == ">") {
-								// No branch here: This must be a close. C++ standard
-								// Disambiguates by treating > always as a template parameter
-								// list close and >> is broken down.
-								// >= and >>= don't need to be broken down and we don't need to
-								// worry about re-tokenizing beyond just the simple breakdown.
-								// I.e. we don't need to worry about x<2>>>1 which is tokenized
-								// as x < 2 >> > 1 but perhaps being intended as x < 2 > >> 1.
-								// Standard has saved us from this complexity.
-								// Note: >> breakdown moved to initial tokenization so we can
-								// take the token vector by reference.
-								template_depth--;
-								state = expecting_operator;
-								continue;
-							}
-							// binary
-							if(template_depth == 0) { // ignore precedence in template parameter list
-								// re-coalesce >> if necessary
-								std::string_view op = normalize_op(get_real_op(tokens, i));
-								if(precedence.count(op))
-								if(precedence.at(op) < current_lowest_precedence
-								|| (precedence.at(op) == current_lowest_precedence && precedence.at(op) != -9)) {
-									middle_index = i;
-									current_lowest_precedence = precedence.at(op);
-								}
-								if(op == ">>") i++;
-							}
-							state = expecting_term;
-						}
-					} else if(braces.count(token.str)) {
-						// We can assume the given expression is valid.
-						// Braces must be balanced.
-						// Scan forward until finding matching brace, don't need to take into
-						// account other types of braces.
-						const std::string_view open = token.str;
-						const std::string_view close = braces.at(token.str);
-						bool empty = scan_forward(open, close);
-						// Handle () and {} when they aren't a call/initializer
-						// [] may appear in lambdas when state == expecting_term
-						// [](){ ... }() is parsed fine because state == expecting_operator
-						// after the captures list. Not concerned with template parameters at
-						// the moment.
-						if(state == expecting_term && empty && normalize_brace(open) != "[") {
-							return true; // this is a failed parse tree
-						}
-						state = expecting_operator;
-					} else {
-						primitive_assert(false, "unhandled punctuation?");
-					}
-					break;
-				case token_e::keyword:
-				case token_e::named_literal:
-				case token_e::number:
-				case token_e::string:
-				case token_e::identifier:
-					state = expecting_operator;
-				case token_e::whitespace:
-					break;
-			}
-		}
-		if(middle_index != -1
-		&& normalize_op(get_real_op(tokens, middle_index)) == target_op
-		&& template_depth == 0
-		&& state == expecting_operator) {
-			output.insert(middle_index);
-		} else {
-			// failed parse tree, ignore
-		}
-		return true;
-	}
-
-	[[gnu::cold]]
-	std::pair<std::string, std::string> analysis::_decompose_expression(const std::string& expression,
-			const std::string_view target_op) {
-		// While automatic decomposition allows something like `assert(foo(n) == bar<n> + n);`
-		// treated as `assert_eq(foo(n), bar<n> + n);` we only get the full expression's string
-		// representation.
-		// Here we attempt to parse basic info for the raw string representation. Just enough to
-		// decomposition into left and right parts for diagnostic.
-		// Template parameters make C++ grammar ambiguous without type information. That being
-		// said, many expressions can be disambiguated.
-		// This code will make guesses about the grammar, essentially doing a traversal of all
-		// possibly parse trees and looking for ones that could work. This is O(2^t) with the
-		// where t is the number of potential templates. Usually t is small but this should
-		// perhaps be limited.
-		// Will return {"left", "right"} if unable to decompose unambiguously.
-		// Some cases to consider
-		//   tgt  expr
-		//   ==   a < 1 == 2 > ( 1 + 3 )
-		//   ==   a < 1 == 2 > - 3 == ( 1 + 3 )
-		//   ==   ( 1 + 3 ) == a < 1 == 2 > - 3 // <- ambiguous
-		//   ==   ( 1 + 3 ) == a < 1 == 2 > ()
-		//   <    a<x<x<x<x<x<x<x<x<x<1>>>>>>>>>
-		//   ==   1 == something<a == b>>2 // <- ambiguous
-		//   <    1 == something<a == b>>2 // <- should be an error
-		//   <    1 < something<a < b>>2 // <- ambiguous
-		// If there is only one candidate from the parse trees considered, expression has been
-		// disambiguated. If there are no candidates that's an error. If there is more than one
-		// candidate the expression may be ambiguous, but, not necessarily. For example,
-		// a < 1 == 2 > - 3 == ( 1 + 3 ) is split the same regardless of whether a < 1 == 2 > is
-		// treated as a template or not:
-		//   left:  a < 1 == 2 > - 3
-		//   right: ( 1 + 3 )
-		//   ---
-		//   left:  a < 1 == 2 > - 3
-		//   right: ( 1 + 3 )
-		//   ---
-		// Because we're just splitting an expression in half, instead of storing tokens for
-		// both sides we can just store an index of the split.
-		// Note: We don't need to worry about expressions where there is only a single term.
-		// This will only be called on decomposable expressions.
-		// Note: The >> to > > token breakdown needed in template parameter lists is done in the
-		// initial tokenization so we can pass the token vector by reference and avoid copying
-		// for every recursive path (O(t^2)). This does not create an issue for syntax
-		// highlighting as long as >> and > are highlighted the same.
-		const auto tokens = _tokenize(expression, true);
-		// We're only looking for the split, we can just store a set of split indices. No need
-		// to store a vector<pair<vector<token_t>, vector<token_t>>>
-		std::set<int> candidates;
-		bool success = pseudoparse(std::move(tokens), target_op, 0, 0, 0, -1, 0, candidates);
-		#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
-		printf("\n%d %d\n", (int)candidates.size(), success);
-		for(size_t m : candidates) {
-			std::vector<std::string> left_strings;
-			std::vector<std::string> right_strings;
-			for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
-			for(size_t i = m + 1; i < tokens.size(); i++) right_strings.push_back(tokens[i].str);
-			printf("left:  %s\n", highlight(std::string(trim(join(left_strings, "")))).c_str());
-			printf("right: %s\n", highlight(std::string(trim(join(right_strings, "")))).c_str());
-			printf("---\n");
-		}
-		#endif
-		if(success && candidates.size() == 1) {
-			std::vector<std::string> left_strings;
-			std::vector<std::string> right_strings;
-			size_t m = *candidates.begin();
-			for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
-			for(size_t i = m + 1; i < tokens.size(); i++) right_strings.push_back(tokens[i].str);
-			return {
-				std::string(trim(join(left_strings, ""))),
-				std::string(trim(join(right_strings, "")))
-			};
-		} else {
-			return { "left", "right" };
-		}
-	}
-
-	// public static wrappers
-	[[gnu::cold]]
-	std::string analysis::highlight(const std::string& expression) {
-		#ifdef NCOLOR
-		return expression;
-		#else
-		auto blocks = get()._highlight(expression);
-		std::string str;
-		for(auto& block : blocks) {
-			str += block.color;
-			str += block.content;
-			if(!block.color.empty()) str += RESET;
-		}
-		return str;
-		#endif
-	}
-	[[gnu::cold]]
-	auto analysis::highlight_blocks(const std::string& expression) -> std::vector<highlight_block> {
-		#ifdef NCOLOR
-		return expression;
-		#else
-		return get()._highlight(expression);
-		#endif
-	}
-	[[gnu::cold]]
-	literal_format analysis::get_literal_format(const std::string& expression) {
-		return get()._get_literal_format(expression);
-	}
-	[[gnu::cold]]
-	std::string analysis::trim_suffix(const std::string& expression) {
-		return expression.substr(0, expression.find_last_not_of("FfUuLlZz") + 1);
-	}
-	[[gnu::cold]]
-	bool analysis::is_bitwise(std::string_view op) {
-		return get().bitwise_operators.count(op);
-	}
-	[[gnu::cold]]
-	std::pair<std::string, std::string> analysis::decompose_expression(const std::string& expression, const std::string_view target_op) {
-		return get()._decompose_expression(expression, target_op);
-	}*/
-
 	/*
 	 * stringification
 	 */
 
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	std::string escape_string(const std::string_view str, char quote) {
 		std::string escaped;
 		escaped += quote;
@@ -1924,6 +1377,16 @@ namespace assert_detail {
 	 * stack trace printing
 	 */
 
+	[[gnu::cold]]
+	column_t::column_t(size_t width, std::vector<highlight_block> blocks, bool right_align)
+		: width(width), blocks(blocks), right_align(right_align) {}
+	[[gnu::cold]] column_t::column_t(const column_t&) = default;
+	[[gnu::cold]] column_t::column_t(column_t&&) = default;
+	[[gnu::cold]] column_t::~column_t() = default;
+	[[gnu::cold]] column_t& column_t::operator=(const column_t&) = default;
+	[[gnu::cold]] column_t& column_t::operator=(column_t&&) = default;
+
+	[[gnu::cold]]
 	static constexpr int log10(int n) { // returns 1 for log10(0)
 		int t = 1;
 		for(int i = 0; i < [] {
@@ -1939,7 +1402,7 @@ namespace assert_detail {
 
 	using path_components = std::vector<std::string>;
 
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	static path_components parse_path(const std::string_view path) {
 		#ifdef _WIN32
 		 constexpr std::string_view path_delim = "/\\";
@@ -1995,7 +1458,9 @@ namespace assert_detail {
 		std::string root;
 		std::unordered_map<std::string, path_trie*> edges;
 	public:
+		[[gnu::cold]]
 		path_trie(std::string root) : root(root) {};
+		[[gnu::cold]]
 		compl path_trie() {
 			for(auto& [k, trie] : edges) {
 				delete trie;
@@ -2012,10 +1477,12 @@ namespace assert_detail {
 		}
 		path_trie& operator=(const path_trie&) = delete;
 		path_trie& operator=(path_trie&&) = delete;
+		[[gnu::cold]]
 		void insert(const path_components& path) {
 			primitive_assert(path.back() == root);
 			insert(path, (int)path.size() - 2);
 		}
+		[[gnu::cold]]
 		path_components disambiguate(const path_components& path) {
 			path_components result;
 			path_trie* current = this;
@@ -2033,6 +1500,7 @@ namespace assert_detail {
 			return result;
 		}
 	private:
+	[[gnu::cold]]
 		void insert(const path_components& path, int i) {
 			if(i < 0) return;
 			if(!edges.count(path[i])) {
@@ -2045,6 +1513,7 @@ namespace assert_detail {
 		}
 	};
 
+	[[gnu::cold]]
 	void wrapped_print(const std::vector<column_t>& columns) {
 		// 2d array rows/columns
 		struct line_content {
@@ -2223,7 +1692,7 @@ namespace assert_detail {
 	 * binary diagnostic printing
 	 */
 
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	std::string gen_assert_binary(const std::string& a_str, const char* op,
 			const std::string& b_str, size_t n_vargs) {
 		return stringf("assert_%s(%s, %s%s);",
@@ -2231,7 +1700,7 @@ namespace assert_detail {
 					   n_vargs ? ", ..." : "");
 	}
 
-	[[gnu::cold]] [[maybe_unused]]
+	[[gnu::cold]]
 	void print_values(const std::vector<std::string>& vec, size_t lw) {
 		primitive_assert(vec.size() > 0);
 		if(vec.size() == 1) {
@@ -2247,7 +1716,8 @@ namespace assert_detail {
 			fprintf(stderr, "\n");
 		}
 	}
-	[[gnu::cold]] [[maybe_unused]]
+
+	[[gnu::cold]]
 	std::vector<highlight_block> get_values(const std::vector<std::string>& vec) {
 		primitive_assert(vec.size() > 0);
 		if(vec.size() == 1) {
@@ -2265,6 +1735,27 @@ namespace assert_detail {
 			return blocks;
 		}
 	}
+
+	[[gnu::cold]]
+	void fail() {
+		if(isatty(STDIN_FILENO) && isatty(STDERR_FILENO)) {
+			//fprintf(stderr, "\n    Process is suspended, run gdb -p %d to attach\n", getpid());
+			//fprintf(stderr,   "    Press any key to continue\n\n");
+			//wait_for_keypress();
+		}
+		#ifndef _0_ASSERT_DEMO
+		fflush(stdout);
+		fflush(stderr);
+		abort();
+		#endif
+	}
+
+	[[gnu::cold]] extra_diagnostics::extra_diagnostics() = default;
+	[[gnu::cold]] extra_diagnostics::extra_diagnostics(const extra_diagnostics&) = default;
+	[[gnu::cold]] extra_diagnostics::extra_diagnostics(extra_diagnostics&&) = default;
+	[[gnu::cold]] extra_diagnostics::~extra_diagnostics() = default;
+	[[gnu::cold]] extra_diagnostics& extra_diagnostics::operator=(const extra_diagnostics&) = default;
+	[[gnu::cold]] extra_diagnostics& extra_diagnostics::operator=(extra_diagnostics&&) = default;
 
 	extra_diagnostics& extra_diagnostics::operator+(const extra_diagnostics& other) {
 		if(other.fatality) fatality = other.fatality;
