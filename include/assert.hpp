@@ -751,11 +751,21 @@ namespace assert_detail {
 		return entry;
 	}
 
+	struct lock {
+		lock();
+		~lock();
+		lock(const lock&) = delete;
+		lock(lock&&) = delete;
+		lock& operator=(const lock&) = delete;
+		lock& operator=(lock&&) = delete;
+	};
+
 	template<size_t N, typename... Args>
 	[[gnu::cold]]
 	void assert_fail_generic(bool verify, const char* pretty_func, source_location location,
 			std::function<void()> assert_printer, std::string assert_string,
 			const char * const (&args_strings)[N], Args&... args) {
+		lock l;
 		static_assert((sizeof...(args) == 0 && N == 2) || N == sizeof...(args) + 1);
 		auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
 		enable_virtual_terminal_processing_if_needed();

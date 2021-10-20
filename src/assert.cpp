@@ -6,6 +6,7 @@
 // https://github.com/jeremy-rifkin/asserts
 
 #include <regex>
+#include <mutex>
 
 #if IS_WINDOWS
  #include <windows.h>
@@ -238,7 +239,12 @@ namespace assert_detail {
 	// ... -> assert -> assert_fail -> assert_fail_generic -> print_stacktrace -> get_stacktrace
 	// get 100, skip at least 2
 	constexpr size_t n_frames = 100;
+	// TODO: Need to rework this in case of inlining / stack frame elison
+	#if IS_WINDOWS
+	constexpr size_t n_skip   = 4;
+	#else
 	constexpr size_t n_skip   = 5;
+	#endif
 
 	#ifdef USE_DBG_HELP_H
 	#if IS_GCC
@@ -1760,6 +1766,27 @@ namespace assert_detail {
 	[[gnu::cold]] extra_diagnostics::~extra_diagnostics() = default;
 	[[gnu::cold]] extra_diagnostics& extra_diagnostics::operator=(const extra_diagnostics&) = default;
 	[[gnu::cold]] extra_diagnostics& extra_diagnostics::operator=(extra_diagnostics&&) = default;
+
+	#if IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
+	 CRITICAL_SECTION CriticalSection;
+	 [[gnu::constructor]] static void initialize_critical_section() {
+	 	InitializeCriticalSectionAndSpinCount(&CriticalSection, 10);
+	 }
+	 lock::lock() {
+	 	EnterCriticalSection(&CriticalSection);
+	 }
+	 lock::~lock() {
+	 	EnterCriticalSection(&CriticalSection);
+	 }
+	#else
+	 std::mutex global_thread_lock;
+	 lock::lock() {
+	 	global_thread_lock.lock();
+	 }
+	 lock::~lock() {
+	 	global_thread_lock.unlock();
+	 }
+	#endif
 
 	extra_diagnostics& extra_diagnostics::operator+(const extra_diagnostics& other) {
 		if(other.fatality) fatality = other.fatality;
