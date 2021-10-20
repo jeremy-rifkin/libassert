@@ -136,7 +136,7 @@ traversing all possible parse trees. There is probably a more optimal way to do 
 
 ### Quick Library Documentation
 
-Library functions:
+The library provides a set of macros, invoked as so:
 
 ```cpp
 void assert(<expression>, [optional assertion message], [optional extra diagnostics, ...]);
@@ -192,8 +192,9 @@ Build options:
 
 ### How To Use This Library
 
-This library targets >=C++17 and supports gcc and clang on windows and linux. This library is no
-longer single header due to compile times.
+This library targets >=C++17 and supports gcc and clang on windows and linux. Note: The library does
+rely on some compiler extensions / compiler specific features. It supports at least GCC >= 8 and
+Clang >= 9. The library is no longer single header due to compile times.
 
 1. Run `make` to compile static and shared libraries
 2. Copy the static or shared library where you want it.
