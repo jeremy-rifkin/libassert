@@ -144,8 +144,8 @@ void assert(<expression>, [optional assertion message], [optional extra diagnost
 void ASSERT(<expression>, [optional assertion message], [optional extra diagnostics, ...]);
 void ASSERT_OP(left, right, [optional assertion message], [optional extra diagnostics, ...]);
 
-T&& VERIFY(<expression>, [optional assertion message], [optional extra diagnostics, ...]);
-T&& VERIFY_OP(left, right, [optional assertion message], [optional extra diagnostics, ...]);
+T VERIFY(<expression>, [optional assertion message], [optional extra diagnostics, ...]);
+T VERIFY_OP(left, right, [optional assertion message], [optional extra diagnostics, ...]);
 
 // Where `op` ∈ {`eq`, `neq`, `lt`, `gt`, `lteq`, `gteq`, `and`, `or`}.
 ```

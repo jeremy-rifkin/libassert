@@ -860,7 +860,7 @@ namespace assert_detail {
 	}
 
 	template<typename A, typename B, typename C, size_t N, typename... Args>
-	auto&& verify_decomposed(expression_decomposer<A, B, C> decomposer, const char* expr_str,
+	auto verify_decomposed(expression_decomposer<A, B, C> decomposer, const char* expr_str,
 			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
 		auto x = decomposer.get_value();
 		if(!(bool)x) {
@@ -874,11 +874,11 @@ namespace assert_detail {
 			                  {"", ""}, "assert should have failed");
 			#endif
 		}
-		return std::move(x);
+		return x;
 	}
 
 	template<typename C, typename A, typename B, size_t N, typename... Args>
-	auto&& verify_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* raw_op,
+	auto verify_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* raw_op,
 			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
 		auto x = C()(a, b);
 		if(!(bool)x) {
@@ -891,7 +891,7 @@ namespace assert_detail {
 			                  {"", ""}, "assert should have failed");
 			#endif
 		}
-		return std::move(x);
+		return x;
 	}
 
 	#ifndef _0_ASSERT_CPP // keep macros for the .cpp
@@ -991,9 +991,15 @@ using assert_detail::ASSERT;
 
 #define ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, op, ...) \
         assert_detail::verify_binary<assert_detail::ops::op>(a, b, #a, #b, #op, ASSERT_DETAIL_ARGS(__VA_ARGS__))
+#if IS_GCC
+#define VERIFY(expr, ...) ({_Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+                          assert_detail::verify_decomposed(assert_detail::expression_decomposer( \
+                          assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__));})
+#else
 #define VERIFY(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
                           assert_detail::verify_decomposed(assert_detail::expression_decomposer( \
                           assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__))
+#endif
 #define VERIFY_EQ(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, eq  , __VA_ARGS__)
 #define VERIFY_NEQ( a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, neq , __VA_ARGS__)
 #define VERIFY_LT(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, lt  , __VA_ARGS__)

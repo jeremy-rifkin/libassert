@@ -162,7 +162,7 @@ namespace assert_detail {
 		 tty_attr.c_cc[VMIN] = 1;
 		 tcsetattr(0, TCSAFLUSH, &tty_attr); // formerly used TCSANOW
 		 char c;
-		 read(STDIN_FILENO, &c, 1);
+		 auto x = read(STDIN_FILENO, &c, 1); (void) x;
 		 tcsetattr(0, TCSAFLUSH, &tty_attr_original);
 		#endif
 	}
@@ -615,8 +615,8 @@ namespace assert_detail {
 	static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
 		pipe_t output_pipe;
 		pipe_t input_pipe;
-		pipe(output_pipe.data);
-		pipe(input_pipe.data);
+		internal_verify(pipe(output_pipe.data) == 0);
+		internal_verify(pipe(input_pipe.data) == 0);
 		pid_t pid = fork();
 		if(pid == -1) return ""; // error? TODO: Diagnostic
 		if(pid == 0) { // child
@@ -1389,7 +1389,8 @@ namespace assert_detail {
 	[[gnu::cold]] column_t& column_t::operator=(column_t&&) = default;
 
 	[[gnu::cold]]
-	static constexpr int log10(int n) { // returns 1 for log10(0)
+	static constexpr int log10(int n) {
+		if(n <= 1) return 1;
 		int t = 1;
 		for(int i = 0; i < [] {
 				int j = 0, n = std::numeric_limits<int>::max(); // note: `j` used instead of `i` because of https://bugs.llvm.org/show_bug.cgi?id=51986
@@ -1629,8 +1630,8 @@ namespace assert_detail {
 			int max_line_number_width = log10(std::max_element(trace.begin(), trace.begin() + end + 1,
 				[](const assert_detail::stacktrace_entry& a, const assert_detail::stacktrace_entry& b) {
 					return std::to_string(a.line).size() < std::to_string(b.line).size();
-				})->line);
-			int max_frame_width = log10(end);
+				})->line + 1);
+			int max_frame_width = log10(end + 1);
 			int term_width = terminal_width(); // will be 0 on error
 			// do the actual trace
 			for(size_t i = 0; i <= end; i++) {
