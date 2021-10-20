@@ -66,6 +66,9 @@ the few libraries that can claim to be more bloated than Boost.
 - Signed-unsigned comparison is always done safely by the assertion processor.
 - Custom assertion failure action.
 - Optional assert assumptions in release mode.
+- Stack traces are printed in columns aligned, signatures are highlighted, and paths are shortened
+  from full paths to the shortest sub-path needed to differentiate files with the same name to make
+  reading stack traces easy.
 
 Demo: (note that the call to `abort();` on assertion failure is commented out for this demo)
 ```cpp
@@ -85,7 +88,6 @@ assert(1 == 1.5); // not stringified here, it would be redundant
 assert(0.1 + 0.2 == 0.3); // stringified here to expose rounding error
 ```
 ![](screenshots/e.png)
-
 ```cpp
 // Numbers are always printed in decimal but the assertion processor will also print binary, hex,
 // or octal when they might be relevant. Here it will print decimal, binary, and hex because those
@@ -96,7 +98,6 @@ assert(mask bitand flag);
 assert(0xf == 16);
 ```
 ![](screenshots/f.png)
-
 ```cpp
 // Same care is taken with strings: No redundant diagnostics and strings are also escaped.
 assert(s == "test2");
@@ -113,6 +114,12 @@ S<void> e, f; // S<void> doesn't have a printer
 assert(e == f);
 ```
 ![](screenshots/i.png)
+
+And lastly, stack traces don't print the full paths but when multiple files have the same name
+enough of the path is displayed to differentiate:
+
+![](screenshots/j.png)
+
 
 **A note on performance:** I've kept the impact of `assert`s at callsites minimal. A lot of logic is
 required to process assertion failures once they happen but failures are *the coldest* path in a

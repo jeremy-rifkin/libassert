@@ -101,6 +101,10 @@ public:
 		assert(map.count(1) == 2);
 		assert(map.count(1) >= 2 * garple(), "Error while doing XYZ");
 		ASSERT_EQ(0, 2 == garple());
+		std::optional<int> xx;
+		if(auto i = *VERIFY(xx)) {}
+
+		wubble();
 		
 		// Numeric
 		assert(1 == 1.5);
@@ -231,8 +235,6 @@ public:
 		rec(10);
 
 		recursive_a(10);
-
-		wubble();
 		
 		{
 			std::string s = "h1ello";
