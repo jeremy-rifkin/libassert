@@ -245,38 +245,45 @@ namespace assert_detail {
 	// std:: implementations don't allow two separate types for lhs/rhs
 	// Note: is this macro potentially bad when it comes to debugging(?)
 	namespace ops {
-		#define gen_op_boilerplate(name, op, ...) struct name { \
+		#define gen_op_boilerplate(name, op) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
-			[[gnu::cold]] constexpr auto operator()(A&& lhs, B&& rhs) const {       /* no need to forward ints */ \
-				__VA_OPT__(if constexpr(is_integral_notb<A> && is_integral_notb<B>) return __VA_ARGS__(lhs, rhs); \
-				else) return std::forward<A>(lhs) op std::forward<B>(rhs); \
+			[[gnu::cold]] constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
+				return std::forward<A>(lhs) op std::forward<B>(rhs); \
+			} \
+		}
+		#define gen_op_boilerplate_special(name, op, cmp) struct name { \
+			static constexpr std::string_view op_string = #op; \
+			template<typename A, typename B> \
+			[[gnu::cold]] constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
+				if constexpr(is_integral_notb<A> && is_integral_notb<B>) return cmp(lhs, rhs); \
+				else return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
 		}
 		gen_op_boilerplate(shl, <<);
 		gen_op_boilerplate(shr, >>);
-		gen_op_boilerplate(eq, ==, cmp_equal); // todo: rename -> equal?
-		gen_op_boilerplate(neq, !=, cmp_not_equal);
-		gen_op_boilerplate(gt, >, cmp_greater);
-		gen_op_boilerplate(lt, <, cmp_less);
-		gen_op_boilerplate(gteq, >=, cmp_greater_equal);
-		gen_op_boilerplate(lteq, <=, cmp_less_equal);
-		gen_op_boilerplate(band, &);
-		gen_op_boilerplate(bxor, ^);
-		gen_op_boilerplate(bor, |);
-		gen_op_boilerplate(land, &&);
-		gen_op_boilerplate(lor, ||);
+		gen_op_boilerplate_special(eq,   ==, cmp_equal);
+		gen_op_boilerplate_special(neq,  !=, cmp_not_equal);
+		gen_op_boilerplate_special(gt,    >, cmp_greater);
+		gen_op_boilerplate_special(lt,    <, cmp_less);
+		gen_op_boilerplate_special(gteq, >=, cmp_greater_equal);
+		gen_op_boilerplate_special(lteq, <=, cmp_less_equal);
+		gen_op_boilerplate(band,   &);
+		gen_op_boilerplate(bxor,   ^);
+		gen_op_boilerplate(bor,    |);
+		gen_op_boilerplate(land,   &&);
+		gen_op_boilerplate(lor,    ||);
 		gen_op_boilerplate(assign, =);
-		gen_op_boilerplate(add_assign, +=);
-		gen_op_boilerplate(sub_assign, -=);
-		gen_op_boilerplate(mul_assign, *=);
-		gen_op_boilerplate(div_assign, /=);
-		gen_op_boilerplate(mod_assign, %=);
-		gen_op_boilerplate(shl_assign, <<=);
-		gen_op_boilerplate(shr_assign, >>=);
+		gen_op_boilerplate(add_assign,  +=);
+		gen_op_boilerplate(sub_assign,  -=);
+		gen_op_boilerplate(mul_assign,  *=);
+		gen_op_boilerplate(div_assign,  /=);
+		gen_op_boilerplate(mod_assign,  %=);
+		gen_op_boilerplate(shl_assign,  <<=);
+		gen_op_boilerplate(shr_assign,  >>=);
 		gen_op_boilerplate(band_assign, &=);
 		gen_op_boilerplate(bxor_assign, ^=);
-		gen_op_boilerplate(bor_assign, |=);
+		gen_op_boilerplate(bor_assign,  |=);
 		#undef gen_op_boilerplate
 	}
 
@@ -953,8 +960,15 @@ using assert_detail::ASSERT;
 #define ASSERT_DETAIL_STRINGIFY(x) #x,
 // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
 // name, not signature
-#define ASSERT_DETAIL_ARGS(...) __PRETTY_FUNCTION__, {}, /* extra string here because of extra comma from map */ \
- 					{MAP(ASSERT_DETAIL_STRINGIFY, ##__VA_ARGS__) ""} __VA_OPT__(,) ##__VA_ARGS__
+#if IS_GCC
+ // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
+ #define ASSERT_DETAIL_ARGS(...) __PRETTY_FUNCTION__, {}, /* extra string here because of extra comma from map */ \
+                                 {MAP(ASSERT_DETAIL_STRINGIFY, ##__VA_ARGS__) ""} __VA_OPT__(,) ##__VA_ARGS__
+#else
+ // clang properly eats the comma with ##__VA_ARGS__
+ #define ASSERT_DETAIL_ARGS(...) __PRETTY_FUNCTION__, {}, /* extra string here because of extra comma from map */ \
+                                 {MAP(ASSERT_DETAIL_STRINGIFY, ##__VA_ARGS__) ""} , ##__VA_ARGS__
+#endif
 
 #ifdef NDEBUG
  #ifndef ASSUME_ASSERTS
@@ -1002,13 +1016,13 @@ using assert_detail::ASSERT;
 #define ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, op, ...) \
         assert_detail::verify_binary<assert_detail::ops::op>(a, b, #a, #b, #op, ASSERT_DETAIL_ARGS(__VA_ARGS__))
 #if IS_GCC
-#define VERIFY(expr, ...) ({_Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                          assert_detail::verify_decomposed(assert_detail::expression_decomposer( \
-                          assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__));})
+ #define VERIFY(expr, ...) ({_Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+                           assert_detail::verify_decomposed(assert_detail::expression_decomposer( \
+                           assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__));})
 #else
-#define VERIFY(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                          assert_detail::verify_decomposed(assert_detail::expression_decomposer( \
-                          assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__))
+ #define VERIFY(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+                           assert_detail::verify_decomposed(assert_detail::expression_decomposer( \
+                           assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__))
 #endif
 #define VERIFY_EQ(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, eq  , __VA_ARGS__)
 #define VERIFY_NEQ( a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, neq , __VA_ARGS__)
