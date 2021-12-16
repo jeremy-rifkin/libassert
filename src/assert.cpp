@@ -1754,18 +1754,15 @@ namespace assert_detail {
 		//	//wait_for_keypress();
 		//}
 		#ifndef _0_ASSERT_DEMO
-		fflush(stdout);
-		fflush(stderr);
-		abort();
+		 fflush(stdout);
+		 fflush(stderr);
+		 abort();
 		#endif
 	}
 
 	[[gnu::cold]] extra_diagnostics::extra_diagnostics() = default;
-	[[gnu::cold]] extra_diagnostics::extra_diagnostics(const extra_diagnostics&) = default;
-	[[gnu::cold]] extra_diagnostics::extra_diagnostics(extra_diagnostics&&) = default;
 	[[gnu::cold]] extra_diagnostics::~extra_diagnostics() = default;
-	[[gnu::cold]] extra_diagnostics& extra_diagnostics::operator=(const extra_diagnostics&) = default;
-	[[gnu::cold]] extra_diagnostics& extra_diagnostics::operator=(extra_diagnostics&&) = default;
+	[[gnu::cold]] extra_diagnostics::extra_diagnostics(const extra_diagnostics&) = default;
 
 	#if IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
 	 CRITICAL_SECTION CriticalSection;
@@ -1787,12 +1784,5 @@ namespace assert_detail {
 	 	global_thread_lock.unlock();
 	 }
 	#endif
-
-	extra_diagnostics& extra_diagnostics::operator+(const extra_diagnostics& other) {
-		if(other.fatality) fatality = other.fatality;
-		if(other.message != "") primitive_assert(false);
-		entries.insert(entries.end(), other.entries.begin(), other.entries.end());
-		return *this;
-	}
 
 }

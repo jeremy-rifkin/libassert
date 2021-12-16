@@ -710,25 +710,24 @@ namespace assert_detail {
 	#undef X
 
 	struct extra_diagnostics {
-		std::optional<ASSERT> fatality;
+		ASSERT fatality = ASSERT::FATAL;
 		std::string message;
 		std::vector<std::pair<std::string, std::string>> entries;
 		extra_diagnostics();
-		extra_diagnostics(const extra_diagnostics&);
-		extra_diagnostics(extra_diagnostics&&);
 		~extra_diagnostics();
-		extra_diagnostics& operator=(const extra_diagnostics&);
-		extra_diagnostics& operator=(extra_diagnostics&&);
-		extra_diagnostics& operator+(const extra_diagnostics& other);
+		extra_diagnostics(const extra_diagnostics&); // = default; in the .cpp
+		extra_diagnostics(extra_diagnostics&&) = delete;
+		extra_diagnostics& operator=(const extra_diagnostics&) = delete;
+		extra_diagnostics& operator=(extra_diagnostics&&) = delete;
 	};
 
 	template<size_t I = 0, size_t N>
 	[[gnu::cold]]
-	void process_args_step(extra_diagnostics&, const char * const (&)[N]) { }
+	void process_args_step(extra_diagnostics&, const char* const (&)[N]) { }
 
 	template<size_t I = 0, size_t N, typename T, typename... Args>
 	[[gnu::cold]]
-	void process_args_step(extra_diagnostics& entry, const char * const (&args_strings)[N], T& t, Args&... args) {
+	void process_args_step(extra_diagnostics& entry, const char* const (&args_strings)[N], T& t, Args&... args) {
 		if constexpr(isa<T, ASSERT>) {
 			entry.fatality = t;
 		} else if constexpr(I == 0 && is_string_type<T>) {
@@ -752,7 +751,7 @@ namespace assert_detail {
 
 	template<size_t I = 0, size_t N, typename... Args>
 	[[gnu::cold]]
-	extra_diagnostics process_args(const char * const (&args_strings)[N], Args&... args) {
+	extra_diagnostics process_args(const char* const (&args_strings)[N], Args&... args) {
 		extra_diagnostics entry;
 		process_args_step(entry, args_strings, args...);
 		return entry;
@@ -771,7 +770,7 @@ namespace assert_detail {
 	[[gnu::cold]]
 	void assert_fail_generic(bool verify, const char* pretty_func, source_location location,
 			std::function<void()> assert_printer, std::string assert_string,
-			const char * const (&args_strings)[N], Args&... args) {
+			const char* const (&args_strings)[N], Args&... args) {
 		lock l;
 		static_assert((sizeof...(args) == 0 && N == 2) || N == sizeof...(args) + 1);
 		auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
