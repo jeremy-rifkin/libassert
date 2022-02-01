@@ -37,8 +37,8 @@
 
 namespace assert_detail {
 	[[gnu::cold]]
-	void primitive_assert_impl(bool c, bool verification,
-			const char* expression, const char* message, source_location location) {
+	void primitive_assert_impl(bool c, bool verification, const char* expression,
+	                           const char* message, source_location location) {
 		if(!c) {
 			const char* action = verification ? "Verification" : "Assertion";
 			const char* name   = verification ? "verify"       : "assert";
@@ -65,9 +65,9 @@ namespace assert_detail {
 		size_t pos = 0;
 		std::string token;
 		while((pos = s.find_first_of(delims, old_pos)) != std::string::npos) {
-				token = s.substr(old_pos, pos - old_pos);
-				vec.push_back(token);
-				old_pos = pos + 1;
+			token = s.substr(old_pos, pos - old_pos);
+			vec.push_back(token);
+			old_pos = pos + 1;
 		}
 		vec.push_back(std::string(s.substr(old_pos)));
 		return vec;
@@ -1697,19 +1697,6 @@ namespace assert_detail {
 		}
 	}
 
-	/*
-	 * binary diagnostic printing
-	 */
-
-	[[gnu::cold]]
-	std::string gen_assert_binary(bool verify,
-			const std::string& a_str, const char* op, const std::string& b_str, size_t n_vargs) {
-		return stringf("%s_%s(%s, %s%s);",
-					   verify ? "verify" : "assert",
-					   op, a_str.c_str(), b_str.c_str(),
-					   n_vargs ? ", ..." : "");
-	}
-
 	[[gnu::cold]]
 	void print_values(const std::vector<std::string>& vec, size_t lw) {
 		primitive_assert(vec.size() > 0);
@@ -1746,23 +1733,17 @@ namespace assert_detail {
 		}
 	}
 
-	[[gnu::cold]]
-	void fail() {
-		//if(isatty(STDIN_FILENO) && isatty(STDERR_FILENO)) {
-		//	//fprintf(stderr, "\n    Process is suspended, run gdb -p %d to attach\n", getpid());
-		//	//fprintf(stderr,   "    Press any key to continue\n\n");
-		//	//wait_for_keypress();
-		//}
-		#ifndef _0_ASSERT_DEMO
-		 fflush(stdout);
-		 fflush(stderr);
-		 abort();
-		#endif
+	const char* verification_failure::what() const noexcept {
+		return "Call to VERIFY() failed";
+	}
+
+	const char* check_failure::what() const noexcept {
+		return "Call to CHECK() failed";
 	}
 
 	[[gnu::cold]] extra_diagnostics::extra_diagnostics() = default;
 	[[gnu::cold]] extra_diagnostics::~extra_diagnostics() = default;
-	[[gnu::cold]] extra_diagnostics::extra_diagnostics(const extra_diagnostics&) = default;
+	[[gnu::cold]] extra_diagnostics::extra_diagnostics(extra_diagnostics&&) = default;
 
 	#if IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
 	 CRITICAL_SECTION CriticalSection;
@@ -1785,4 +1766,15 @@ namespace assert_detail {
 	 }
 	#endif
 
+	[[gnu::cold]]
+	const char* assert_type_name(assert_type t) {
+		switch(t) {
+			case assert_type::assert: return "Assertion";
+			case assert_type::verify: return "Verification";
+			case assert_type::check: return "Check";
+			default:
+				primitive_assert(false);
+				return "";
+		}
+	}
 }

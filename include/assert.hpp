@@ -71,10 +71,14 @@
  #define RESET ""
 #endif
 
-#ifdef ASSERT_FAIL_ACTION
- extern void ASSERT_FAIL_ACTION();
-#else
- #define ASSERT_FAIL_ACTION fail
+#ifdef ASSERT_FAIL
+ extern void ASSERT_FAIL();
+#endif
+#ifdef VERIFY_FAIL
+ extern void VERIFY_FAIL();
+#endif
+#ifdef CHECK_FAIL
+ extern void CHECK_FAIL();
 #endif
 
 #define PHONY_USE(E) do { using x [[maybe_unused]] = decltype(E); } while(0)
@@ -94,8 +98,9 @@ namespace assert_detail {
 		) : file(file), function(function), line(line) {}
 	};
 
+	// bootstrap with primitive implementations
 	void primitive_assert_impl(bool c, bool verification, const char* expression,
-		const char* message = nullptr, source_location location = {});
+	                           const char* message = nullptr, source_location location = {});
 
 	#ifdef ASSERT_INTERNAL_DEBUG
 	 #define primitive_assert(c, ...) primitive_assert_impl(c, false, #c, ##__VA_ARGS__)
@@ -182,7 +187,7 @@ namespace assert_detail {
 	template<typename A, typename B> constexpr bool isa = std::is_same_v<strip<A>, B>; // intentionally not stripping B
 
 	// Is integral but not boolean
-	template<typename T> constexpr bool is_integral_notb = std::is_integral_v<strip<T>> && !isa<T, bool>;
+	template<typename T> constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
 
 	// Lots of boilerplate
 	// Using int comparison functions here to support proper signed comparisons. Need to make sure
@@ -256,7 +261,7 @@ namespace assert_detail {
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
 			[[gnu::cold]] constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
-				if constexpr(is_integral_notb<A> && is_integral_notb<B>) return cmp(lhs, rhs); \
+				if constexpr(is_integral_and_not_bool<A> && is_integral_and_not_bool<B>) return cmp(lhs, rhs); \
 				else return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
 		}
@@ -290,7 +295,8 @@ namespace assert_detail {
 	// I learned this automatic expression decomposition trick from lest:
 	// https://github.com/martinmoene/lest/blob/master/include/lest/lest.hpp#L829-L853
 	//
-	// I have improved upon the trick by supporting more operators and adding perfect forwarding.
+	// I have improved upon the trick by supporting more operators and generally improving
+	// functionality.
 	//
 	// Some cases to test and consider:
 	//
@@ -329,17 +335,55 @@ namespace assert_detail {
 		template<typename U, typename V>
 		[[gnu::cold]]
 		explicit expression_decomposer(U&& a, V&& b) : a(std::forward<U>(a)), b(std::forward<V>(b)) {}
-		// Note: get_value or operator bool() should only be invoked once
 		[[gnu::cold]]
-		auto get_value() {
+		decltype(auto) get_value() {
+			// TODO: Need to make sure this is only computed once...
 			if constexpr(is_nothing<C>) {
 				static_assert(is_nothing<B> && !is_nothing<A>);
-				return std::forward<A>(a);
+				return (((((((((((((((((((a)))))))))))))))))));
 			} else {
-				return C()(std::forward<A>(a), std::forward<B>(b));
+				return C()(a, b);
 			}
 		}
-		operator bool() { return get_value(); }
+		operator bool() {
+			return (bool)get_value();
+		}
+		[[gnu::cold]]
+		decltype(auto) take_lhs_or_value() {
+			static_assert(!is_nothing<A>);
+			static_assert(is_nothing<B> == is_nothing<C>);
+			if constexpr(is_nothing<C>) {
+				static_assert(!std::is_rvalue_reference<A>::value);
+				if constexpr(std::is_lvalue_reference<A>::value) {
+					return a;
+				} else {
+					return std::move(a);
+				}
+			} else {
+				if constexpr(
+					C::op_string == "=="
+				 || C::op_string == "!="
+				 || C::op_string == "<"
+				 || C::op_string == ">"
+				 || C::op_string == "<="
+				 || C::op_string == ">="
+				 || C::op_string == "&&"
+				 || C::op_string == "||"
+				) {
+					static_assert(!std::is_rvalue_reference<A>::value);
+					if constexpr(std::is_lvalue_reference<A>::value) {
+						return a;
+					} else {
+						return std::move(a);
+					}
+				} else {
+					// might change these later
+					// << >> & ^ |
+					// all compound assignments
+					return get_value();
+				}
+			}
+		}
 		// Need overloads for operators with precedence <= bitshift
 		// TODO: spaceship operator?
 		// Note: Could decompose more than just comparison and boolean operators, but it would take
@@ -460,6 +504,8 @@ namespace assert_detail {
 		 return substring_bounded_by(__PRETTY_FUNCTION__, "[T = ", "]");
 		#elif IS_GCC
 		 return substring_bounded_by(__PRETTY_FUNCTION__, "[with T = ", "; std::string_view = ");
+		#else
+		 static_assert(false, "unsupported compiler")
 		#endif
 	}
 
@@ -593,13 +639,6 @@ namespace assert_detail {
 
 	void print_stacktrace();
 
-	/*
-	 * binary diagnostic printing
-	 */
-
-	std::string gen_assert_binary(bool verify,
-		const std::string& a_str, const char* op, const std::string& b_str, size_t n_vargs);
-
 	template<typename T>
 	[[gnu::cold]]
 	std::vector<std::string> generate_stringifications(T&& v, const std::set<literal_format>& formats) {
@@ -701,7 +740,13 @@ namespace assert_detail {
 		NONFATAL, FATAL
 	};
 
-	void fail();
+	struct verification_failure : std::exception {
+		virtual const char* what() const noexcept final override;
+	};
+
+	struct check_failure : std::exception {
+		virtual const char* what() const noexcept final override;
+	};
 
 	#define X(x) #x
 	#define Y(x) X(x)
@@ -715,8 +760,8 @@ namespace assert_detail {
 		std::vector<std::pair<std::string, std::string>> entries;
 		extra_diagnostics();
 		~extra_diagnostics();
-		extra_diagnostics(const extra_diagnostics&); // = default; in the .cpp
-		extra_diagnostics(extra_diagnostics&&) = delete;
+		extra_diagnostics(const extra_diagnostics&) = delete;
+		extra_diagnostics(extra_diagnostics&&); // = default; in the .cpp
 		extra_diagnostics& operator=(const extra_diagnostics&) = delete;
 		extra_diagnostics& operator=(extra_diagnostics&&) = delete;
 	};
@@ -766,24 +811,41 @@ namespace assert_detail {
 		lock& operator=(lock&&) = delete;
 	};
 
-	template<size_t N, typename... Args>
-	[[gnu::cold]]
-	void assert_fail_generic(bool verify, const char* pretty_func, source_location location,
-			std::function<void()> assert_printer, std::string assert_string,
-			const char* const (&args_strings)[N], Args&... args) {
-		lock l;
+	enum class assert_type {
+		assert,
+		verify,
+		check
+	};
+
+	const char* assert_type_name(assert_type t);
+
+	template<typename A, typename B, typename C, size_t N /* TODO */, typename... Args>
+	[[gnu::cold]] [[gnu::noinline]]
+	void assert_fail(const char* name, assert_type type, expression_decomposer<A, B, C>& decomposer,
+	                 const char* expr_str, const char* pretty_func, source_location location,
+	                 const char * const (&args_strings)[N], Args&... args) {
 		static_assert((sizeof...(args) == 0 && N == 2) || N == sizeof...(args) + 1);
+		lock l;
+		enable_virtual_terminal_processing_if_needed();
 		auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
 		enable_virtual_terminal_processing_if_needed();
-		const char* action = verify ? "Verification" : "Assertion";
 		if(message != "") {
-			fprintf(stderr, "%s failed at %s:%d: %s: %s\n", action,
-				location.file, location.line, pretty_func, message.c_str());
+			fprintf(stderr, "%s failed at %s:%d: %s: %s\n",
+			                 assert_type_name(type), location.file, location.line,
+			                 pretty_func, message.c_str());
 		} else {
-			fprintf(stderr, "%s failed at %s:%d: %s:\n", action, location.file, location.line, pretty_func);
+			fprintf(stderr, "%s failed at %s:%d: %s:\n",
+			                 assert_type_name(type), location.file, location.line, pretty_func);
 		}
-		fprintf(stderr, "    %s\n", highlight(assert_string).c_str());
-		assert_printer();
+		fprintf(stderr, "    %s\n", highlight(stringf("%s(%s%s);", name, expr_str,
+		                                        sizeof...(args) > 0 ? ", ..." : "")).c_str());
+		if constexpr(is_nothing<C>) {
+			static_assert(is_nothing<B> && !is_nothing<A>);
+		} else {
+			auto [a_str, b_str] = decompose_expression(expr_str, C::op_string);
+			print_binary_diagnostic(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b),
+					a_str.c_str(), b_str.c_str(), C::op_string);
+		}
 		if(!extra_diagnostics.empty()) {
 			fprintf(stderr, "    Extra diagnostics:\n");
 			size_t term_width = terminal_width(); // will be 0 on error
@@ -809,105 +871,65 @@ namespace assert_detail {
 		fprintf(stderr, "\nStack trace:\n");
 		print_stacktrace();
 		if(fatal == ASSERT::FATAL) {
-			ASSERT_FAIL_ACTION();
+			#ifndef _0_ASSERT_DEMO
+			 switch(type) {
+			 	case assert_type::assert:
+			 		#ifdef ASSERT_FAIL
+			 		 ::ASSERT_FAIL();
+			 		#else
+			 		 fflush(stdout);
+			 		 fflush(stderr);
+			 		 abort();
+			 		#endif
+			 		break;
+			 	case assert_type::verify:
+			 		#ifdef VERIFY_FAIL
+			 		 ::VERIFY_FAIL();
+			 		#else
+			 		 throw verification_failure();
+			 		#endif
+			 		break;
+			 	case assert_type::check:
+			 		#ifdef CHECK_FAIL
+			 		 ::CHECK_FAIL();
+			 		#else
+			 		 throw check_failure();
+			 		#endif
+			 		break;
+			 }
+			#endif
 		}
 		#ifdef _0_ASSERT_DEMO
-		fprintf(stderr, "\n");
+		 fprintf(stderr, "\n");
 		#endif
-	}
-
-	template<typename A, typename B, typename C, size_t N, typename... Args>
-	[[gnu::cold]] [[gnu::noinline]]
-	void assert_fail(expression_decomposer<A, B, C>& decomposer, const char* expr_str, bool verify,
-			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&... args) {
-		assert_fail_generic(verify, pretty_func, location, [&]() {
-			if constexpr(is_nothing<C>) {
-				static_assert(is_nothing<B> && !is_nothing<A>);
-			} else {
-				auto [a_str, b_str] = decompose_expression(expr_str, C::op_string);
-				print_binary_diagnostic(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b),
-						a_str.c_str(), b_str.c_str(), C::op_string);
-			}
-		}, stringf("%s(%s%s);", verify ? "verify" : "assert", expr_str, sizeof...(args) > 0 ? ", ..." : ""),
-			args_strings, args...);
-	}
-
-	template<typename C, typename A, typename B, size_t N, typename... Args>
-	[[gnu::cold]] [[gnu::noinline]]
-	void assert_binary_fail(A&& a, B&& b, const char* a_str, const char* b_str, const char* raw_op, bool verify,
-			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&... args) {
-		assert_fail_generic(verify, pretty_func, location, [&a, &b, a_str, b_str]() {
-			print_binary_diagnostic(std::forward<A>(a), std::forward<B>(b), a_str, b_str, C::op_string);
-		}, gen_assert_binary(verify, a_str, raw_op, b_str, sizeof...(args)), args_strings, args...);
 	}
 
 	// top-level assert functions emplaced by the macros
 	// these are the only non-cold functions
 
-	template<typename A, typename B, typename C, size_t N, typename... Args>
-	void assert_decomposed(expression_decomposer<A, B, C> decomposer, const char* expr_str,
-			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
+	template<bool R, typename A, typename B, typename C, size_t N, typename... Args>
+	decltype(auto) assert(const char* name, assert_type type, expression_decomposer<A, B, C> decomposer,
+	                      const char* expr_str, const char* pretty_func, source_location location,
+	                      const char* const (&args_strings)[N], Args&&... args) {
 		if(!(bool)decomposer.get_value()) {
-			enable_virtual_terminal_processing_if_needed();
-			// todo: forward decomposer?
-			assert_fail(decomposer, expr_str, false,
-					highlight(pretty_func).c_str(), location, args_strings, args...);
-		} else {
-			#ifdef _0_ASSERT_DEMO
-			assert_decomposed(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {},
-			                  {"", ""}, "assert should have failed");
+			#ifdef NDEBUG
+			 if(type == assert_type::assert) { // will be constant propagated
+				__builtin_unreachable();
+				return;
+			 }
+			 // verify calls will procede with fail call
+			 // check is excluded at macro definition, nothing needed here
 			#endif
-		}
-	}
-
-	template<typename C, typename A, typename B, size_t N, typename... Args>
-	void assert_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* raw_op,
-			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
-		if(!(bool)C()(a, b)) {
-			enable_virtual_terminal_processing_if_needed();
-			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, raw_op, false,
-					highlight(pretty_func).c_str(), location, args_strings, args...);
+			assert_fail(name, type, decomposer, expr_str,
+						highlight(pretty_func).c_str(), location, args_strings, args...);
+		#ifdef _0_ASSERT_DEMO
 		} else {
-			#ifdef _0_ASSERT_DEMO
-			assert_decomposed(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {},
-			                  {"", ""}, "assert should have failed");
-			#endif
+			primitive_assert(false);
+		#endif
 		}
-	}
-
-	template<typename A, typename B, typename C, size_t N, typename... Args>
-	auto verify_decomposed(expression_decomposer<A, B, C> decomposer, const char* expr_str,
-			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
-		auto x = decomposer.get_value();
-		if(!(bool)x) {
-			enable_virtual_terminal_processing_if_needed();
-			// todo: forward decomposer?
-			assert_fail(decomposer, expr_str, true,
-					highlight(pretty_func).c_str(), location, args_strings, args...);
-		} else {
-			#ifdef _0_ASSERT_DEMO
-			assert_decomposed(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {},
-			                  {"", ""}, "assert should have failed");
-			#endif
+		if constexpr(R) { // only false for CHECK
+			return decomposer.take_lhs_or_value();
 		}
-		return x;
-	}
-
-	template<typename C, typename A, typename B, size_t N, typename... Args>
-	auto verify_binary(A&& a, B&& b, const char* a_str, const char* b_str, const char* raw_op,
-			const char* pretty_func, source_location location, const char * const (&args_strings)[N], Args&&... args) {
-		auto x = C()(a, b);
-		if(!(bool)x) {
-			enable_virtual_terminal_processing_if_needed();
-			assert_binary_fail<C>(std::forward<A>(a), std::forward<B>(b), a_str, b_str, raw_op, true,
-					highlight(pretty_func).c_str(), location, args_strings, args...);
-		} else {
-			#ifdef _0_ASSERT_DEMO
-			assert_decomposed(expression_decomposer(false), "false", __PRETTY_FUNCTION__, {},
-			                  {"", ""}, "assert should have failed");
-			#endif
-		}
-		return x;
 	}
 
 	#ifndef _0_ASSERT_CPP // keep macros for the .cpp
@@ -962,77 +984,59 @@ using assert_detail::ASSERT;
 #if IS_GCC
  // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
  #define ASSERT_DETAIL_ARGS(...) __PRETTY_FUNCTION__, {}, /* extra string here because of extra comma from map */ \
-                                 {MAP(ASSERT_DETAIL_STRINGIFY, ##__VA_ARGS__) ""} __VA_OPT__(,) ##__VA_ARGS__
+                                 {MAP(ASSERT_DETAIL_STRINGIFY, __VA_ARGS__) ""} __VA_OPT__(,) __VA_ARGS__
 #else
  // clang properly eats the comma with ##__VA_ARGS__
  #define ASSERT_DETAIL_ARGS(...) __PRETTY_FUNCTION__, {}, /* extra string here because of extra comma from map */ \
-                                 {MAP(ASSERT_DETAIL_STRINGIFY, ##__VA_ARGS__) ""} , ##__VA_ARGS__
+                                 {MAP(ASSERT_DETAIL_STRINGIFY, __VA_ARGS__) ""} , ##__VA_ARGS__
 #endif
 
-#ifdef NDEBUG
- #ifndef ASSUME_ASSERTS
-  #define ASSERT(     expr, ...) (void)0
-  #define ASSERT_EQ(  a, b, ...) (void)0
-  #define ASSERT_NEQ( a, b, ...) (void)0
-  #define ASSERT_LT(  a, b, ...) (void)0
-  #define ASSERT_GT(  a, b, ...) (void)0
-  #define ASSERT_LTEQ(a, b, ...) (void)0
-  #define ASSERT_GTEQ(a, b, ...) (void)0
-  #define ASSERT_AND( a, b, ...) (void)0
-  #define ASSERT_OR(  a, b, ...) (void)0
- #else
-  // Note: This is not a default because Sometimes assertion expressions have side effects that are
-  // undesirable at runtime in an `NDEBUG` build like exceptions on std container operations which
-  // cannot be optimized away. These often end up not being helpful hints either.
-  // TODO: Need to feed through decomposer to preserve sign-unsigned safety on top-level compare?
-  #define ASSERT(     expr, ...) do { if(!(expr)) __builtin_unreachable(); } while(0)
-  #define ASSERT_EQ(  a, b, ...) do { if(!((a) == (b))) __builtin_unreachable(); } while(0)
-  #define ASSERT_NEQ( a, b, ...) do { if(!((a) != (b))) __builtin_unreachable(); } while(0)
-  #define ASSERT_LT(  a, b, ...) do { if(!((a)  < (b))) __builtin_unreachable(); } while(0)
-  #define ASSERT_GT(  a, b, ...) do { if(!((a)  > (b))) __builtin_unreachable(); } while(0)
-  #define ASSERT_LTEQ(a, b, ...) do { if(!((a) <= (b))) __builtin_unreachable(); } while(0)
-  #define ASSERT_GTEQ(a, b, ...) do { if(!((a) >= (b))) __builtin_unreachable(); } while(0)
-  #define ASSERT_AND( a, b, ...) do { if(!((a) && (b))) __builtin_unreachable(); } while(0)
-  #define ASSERT_OR(  a, b, ...) do { if(!((a) || (b))) __builtin_unreachable(); } while(0)
- #endif
+// assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
+#define ASSERT_INVOKE(expr, name, ...) \
+                             (assert_detail::assert<true>)( \
+                               name, \
+                               assert_detail::assert_type::assert, \
+                               __extension__ ({ \
+                                 _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+                                 assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
+							   }), \
+                               #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__) \
+                             )
+
+
+#define ASSERT(expr, ...) ASSERT_INVOKE(expr, "ASSERT", __VA_ARGS__)
+
+#ifndef ASSERT_NO_LOWERCASE
+ // provided for <assert.h> compatability
+ #define assert(expr, ...) ASSERT_INVOKE(expr, "assert", __VA_ARGS__)
+#endif
+
+// assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
+#define VERIFY(expr, ...) (assert_detail::assert<true>)( \
+                            "VERIFY", \
+                            assert_detail::assert_type::verify, \
+                            __extension__ ({ \
+                              _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
+                            }), \
+                            #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__) \
+                          )
+
+#ifndef NDEBUG
+ // assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
+ #define CHECK(expr, ...) (assert_detail::assert<false>)( \
+                            "CHECK", \
+                            assert_detail::assert_type::check, \
+                            __extension__ ({ \
+                              _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
+                            }), \
+                            #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__) \
+                          )
 #else
- #define ASSERT_DETAIL_GEN_CALL(a, b, op, ...) \
-        assert_detail::assert_binary<assert_detail::ops::op>(a, b, #a, #b, #op, ASSERT_DETAIL_ARGS(__VA_ARGS__))
- // assert_detail::expression_decomposer(assert_detail::expression_decomposer{}) done for ternary support
- #define ASSERT(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                           assert_detail::assert_decomposed(assert_detail::expression_decomposer( \
-                           assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__))
- #define ASSERT_EQ(  a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, eq  , __VA_ARGS__)
- #define ASSERT_NEQ( a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, neq , __VA_ARGS__)
- #define ASSERT_LT(  a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lt  , __VA_ARGS__)
- #define ASSERT_GT(  a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, gt  , __VA_ARGS__)
- #define ASSERT_LTEQ(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lteq, __VA_ARGS__)
- #define ASSERT_GTEQ(a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, gteq, __VA_ARGS__)
- #define ASSERT_AND( a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, land, __VA_ARGS__)
- #define ASSERT_OR(  a, b, ...) ASSERT_DETAIL_GEN_CALL(a, b, lor , __VA_ARGS__)
+ // omitting the expression could cause unused variable warnings, surpressing for now
+ // TODO: Is this the right design decision? Re-evaluated whether PHONY_USE should be used here or internally at all
+ #define CHECK(expr, ...) PHONY_USE(expr)
 #endif
-
-#define ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, op, ...) \
-        assert_detail::verify_binary<assert_detail::ops::op>(a, b, #a, #b, #op, ASSERT_DETAIL_ARGS(__VA_ARGS__))
-#if IS_GCC
- #define VERIFY(expr, ...) ({_Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                           assert_detail::verify_decomposed(assert_detail::expression_decomposer( \
-                           assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__));})
-#else
- #define VERIFY(expr, ...) _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                           assert_detail::verify_decomposed(assert_detail::expression_decomposer( \
-                           assert_detail::expression_decomposer{} << expr), #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__))
-#endif
-#define VERIFY_EQ(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, eq  , __VA_ARGS__)
-#define VERIFY_NEQ( a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, neq , __VA_ARGS__)
-#define VERIFY_LT(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, lt  , __VA_ARGS__)
-#define VERIFY_GT(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, gt  , __VA_ARGS__)
-#define VERIFY_LTEQ(a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, lteq, __VA_ARGS__)
-#define VERIFY_GTEQ(a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, gteq, __VA_ARGS__)
-#define VERIFY_AND( a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, land, __VA_ARGS__)
-#define VERIFY_OR(  a, b, ...) ASSERT_DETAIL_GEN_VERIFY_CALL(a, b, lor , __VA_ARGS__)
-
-// Aliases
-#define assert(...) ASSERT(__VA_ARGS__) // provided for <assert.h> compatability
 
 #endif
