@@ -85,31 +85,31 @@
 
 namespace assert_detail {
 	// Lightweight helper, eventually may use C++20 std::source_location if this library no longer
-	// targets C++17. Right now std::source_location contains the method signature for a function
-	// while __builtin_FUNCTION is just the name (hence why __PRETTY_FUNCTION__ is used later on).
+	// targets C++17. Note: __builtin_FUNCTION only returns the name, so __PRETTY_FUNCTION__ is
+	// still needed.
 	struct source_location {
 		const char* const file;
 		const char* const function;
 		const int line;
 		constexpr source_location(
+			const char* function /*= __builtin_FUNCTION()*/,
 			const char* file     = __builtin_FILE(),
-			const char* function = __builtin_FUNCTION(),
 			int line             = __builtin_LINE()
 		) : file(file), function(function), line(line) {}
 	};
 
 	// bootstrap with primitive implementations
-	void primitive_assert_impl(bool c, bool verification, const char* expression,
-	                           const char* message = nullptr, source_location location = {});
+	void primitive_assert_impl(bool condition, bool verify, const char* expression,
+	                           source_location location, const char* message = nullptr);
 
-	#ifdef ASSERT_INTERNAL_DEBUG
-	 #define primitive_assert(c, ...) primitive_assert_impl(c, false, #c, ##__VA_ARGS__)
+	#ifndef NDEBUG
+	 #define primitive_assert(c, ...) primitive_assert_impl(c, false, #c, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 	#else
 	 #define primitive_assert(c, ...) PHONY_USE(c)
 	#endif
 
 	// Still present in release mode, nonfatal
-	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, ##__VA_ARGS__)
+	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 
 	/*
 	 * string utilities
@@ -327,15 +327,25 @@ namespace assert_detail {
 	struct expression_decomposer {
 		A a;
 		B b;
-		[[gnu::cold]]
 		explicit expression_decomposer() = default;
+		// not copyable
+		expression_decomposer(const expression_decomposer&) = delete;
+		expression_decomposer& operator=(const expression_decomposer&) = delete;
 		template<typename U>
-		[[gnu::cold]]
 		explicit expression_decomposer(U&& a) : a(std::forward<U>(a)) {}
 		template<typename U, typename V>
-		[[gnu::cold]]
 		explicit expression_decomposer(U&& a, V&& b) : a(std::forward<U>(a)), b(std::forward<V>(b)) {}
-		[[gnu::cold]]
+		/* Ownership logic:
+		 *  One of two things can happen to this class
+		 *   - Either it is composed with another operation
+		 * 	    + The value of the subexpression represented by this is computed (either get_value()
+		 *        or operator bool), either A& or C()(a, b)
+		 *      + Or, just the lhs is moved B is nothing
+		 *   - Or this class represents the whole expression
+		 *      + The value is computed (either A& or C()(a, b))
+		 *      + a and b are referenced freely
+		 *      + Either the value is taken or a is moved out
+		 */
 		decltype(auto) get_value() {
 			// TODO: Need to make sure this is only computed once...
 			if constexpr(is_nothing<C>) {
@@ -345,20 +355,16 @@ namespace assert_detail {
 				return C()(a, b);
 			}
 		}
-		operator bool() {
-			return (bool)get_value();
-		}
-		[[gnu::cold]]
-		decltype(auto) take_lhs_or_value() {
+		//operator bool() { // for ternary support
+		//	return (bool)get_value();
+		//}
+		// return true if the lhs should be returned, false if full computed value should be
+		constexpr bool ret_lhs() {
 			static_assert(!is_nothing<A>);
 			static_assert(is_nothing<B> == is_nothing<C>);
 			if constexpr(is_nothing<C>) {
-				static_assert(!std::is_rvalue_reference<A>::value);
-				if constexpr(std::is_lvalue_reference<A>::value) {
-					return a;
-				} else {
-					return std::move(a);
-				}
+				// if there is no top-level binary operation, A is the only thing that can be returned
+				return true;
 			} else {
 				if constexpr(
 					C::op_string == "=="
@@ -370,25 +376,28 @@ namespace assert_detail {
 				 || C::op_string == "&&"
 				 || C::op_string == "||"
 				) {
-					static_assert(!std::is_rvalue_reference<A>::value);
-					if constexpr(std::is_lvalue_reference<A>::value) {
-						return a;
-					} else {
-						return std::move(a);
-					}
+					return true;
 				} else {
 					// might change these later
 					// << >> & ^ |
 					// all compound assignments
-					return get_value();
+					return false;
 				}
+			}
+		}
+		decltype(auto) take_lhs() { // should only be called if ret_lhs() == true
+			static_assert(!std::is_rvalue_reference<A>::value);
+			if constexpr(std::is_lvalue_reference<A>::value) {
+				return ((((a))));
+			} else {
+				return std::move(a);
 			}
 		}
 		// Need overloads for operators with precedence <= bitshift
 		// TODO: spaceship operator?
 		// Note: Could decompose more than just comparison and boolean operators, but it would take
 		// a lot of work and I don't think it's beneficial for this library.
-		template<typename O> [[gnu::cold]] auto operator<<(O&& operand) {
+		template<typename O> auto operator<<(O&& operand) {
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
 			if constexpr(is_nothing<A>) {
 				static_assert(is_nothing<B> && is_nothing<C>);
@@ -401,7 +410,7 @@ namespace assert_detail {
 				return expression_decomposer<decltype(get_value()), O, ops::shl>(std::forward<A>(get_value()), std::forward<O>(operand));
 			}
 		}
-		#define gen_op_boilerplate(functor, op) template<typename O> [[gnu::cold]] auto operator op(O&& operand) { \
+		#define gen_op_boilerplate(functor, op) template<typename O> auto operator op(O&& operand) { \
 			static_assert(!is_nothing<A>); \
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
 			if constexpr(is_nothing<B>) { \
@@ -412,29 +421,29 @@ namespace assert_detail {
 				return expression_decomposer<decltype(get_value()), Q, functor>(std::forward<A>(get_value()), std::forward<O>(operand)); \
 			} \
 		}
-		gen_op_boilerplate(ops::shr, >>);
-		gen_op_boilerplate(ops::eq, ==);
-		gen_op_boilerplate(ops::neq, !=);
-		gen_op_boilerplate(ops::gt, >);
-		gen_op_boilerplate(ops::lt, <);
-		gen_op_boilerplate(ops::gteq, >=);
-		gen_op_boilerplate(ops::lteq, <=);
-		gen_op_boilerplate(ops::band, &);
-		gen_op_boilerplate(ops::bxor, ^);
-		gen_op_boilerplate(ops::bor, |);
-		gen_op_boilerplate(ops::land, &&);
-		gen_op_boilerplate(ops::lor, ||);
-		gen_op_boilerplate(ops::assign, =);
-		gen_op_boilerplate(ops::add_assign, +=);
-		gen_op_boilerplate(ops::sub_assign, -=);
-		gen_op_boilerplate(ops::mul_assign, *=);
-		gen_op_boilerplate(ops::div_assign, /=);
-		gen_op_boilerplate(ops::mod_assign, %=);
-		gen_op_boilerplate(ops::shl_assign, <<=);
-		gen_op_boilerplate(ops::shr_assign, >>=);
-		gen_op_boilerplate(ops::band_assign, &=);
-		gen_op_boilerplate(ops::bxor_assign, ^=);
-		gen_op_boilerplate(ops::bor_assign, |=);
+		gen_op_boilerplate(ops::shr, >>)
+		gen_op_boilerplate(ops::eq, ==)
+		gen_op_boilerplate(ops::neq, !=)
+		gen_op_boilerplate(ops::gt, >)
+		gen_op_boilerplate(ops::lt, <)
+		gen_op_boilerplate(ops::gteq, >=)
+		gen_op_boilerplate(ops::lteq, <=)
+		gen_op_boilerplate(ops::band, &)
+		gen_op_boilerplate(ops::bxor, ^)
+		gen_op_boilerplate(ops::bor, |)
+		gen_op_boilerplate(ops::land, &&)
+		gen_op_boilerplate(ops::lor, ||)
+		gen_op_boilerplate(ops::assign, =)
+		gen_op_boilerplate(ops::add_assign, +=)
+		gen_op_boilerplate(ops::sub_assign, -=)
+		gen_op_boilerplate(ops::mul_assign, *=)
+		gen_op_boilerplate(ops::div_assign, /=)
+		gen_op_boilerplate(ops::mod_assign, %=)
+		gen_op_boilerplate(ops::shl_assign, <<=)
+		gen_op_boilerplate(ops::shr_assign, >>=)
+		gen_op_boilerplate(ops::band_assign, &=)
+		gen_op_boilerplate(ops::bxor_assign, ^=)
+		gen_op_boilerplate(ops::bor_assign, |=)
 		#undef gen_op_boilerplate
 	};
 
@@ -766,20 +775,18 @@ namespace assert_detail {
 		extra_diagnostics& operator=(extra_diagnostics&&) = delete;
 	};
 
-	template<size_t I = 0, size_t N>
-	[[gnu::cold]]
-	void process_args_step(extra_diagnostics&, const char* const (&)[N]) { }
+	[[gnu::cold]] [[maybe_unused]]
+	static void process_args_step(extra_diagnostics&, size_t, const char* const* const) { }
 
-	template<size_t I = 0, size_t N, typename T, typename... Args>
+	template<typename T, typename... Args>
 	[[gnu::cold]]
-	void process_args_step(extra_diagnostics& entry, const char* const (&args_strings)[N], T& t, Args&... args) {
+	void process_args_step(extra_diagnostics& entry, size_t i,
+	                       const char* const* const args_strings, T& t, Args&... args) {
 		if constexpr(isa<T, ASSERT>) {
 			entry.fatality = t;
-		} else if constexpr(I == 0 && is_string_type<T>) {
-			entry.message = t;
 		} else {
 			// two cases to handle: errno and regular diagnostics
-			if(isa<T, strip<decltype(errno)>> && args_strings[I] == errno_expansion) {
+			if(isa<T, strip<decltype(errno)>> && args_strings[i] == errno_expansion) {
 				// this is redundant and useless but the body for errno handling needs to be in an
 				// if constexpr wrapper
 				if constexpr(isa<T, strip<decltype(errno)>>) {
@@ -788,17 +795,27 @@ namespace assert_detail {
 				entry.entries.push_back({ "errno", stringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
 				}
 			} else {
-				entry.entries.push_back({ args_strings[I], stringify(t, literal_format::dec) });
+				entry.entries.push_back({ args_strings[i], stringify(t, literal_format::dec) });
 			}
 		}
-		process_args_step<I + 1>(entry, args_strings, args...);
+		process_args_step(entry, i + 1, args_strings, args...);
 	}
 
-	template<size_t I = 0, size_t N, typename... Args>
+	[[gnu::cold]] [[maybe_unused]]
+	static extra_diagnostics process_args(const char* const* const) {
+		return {};
+	}
+
+	template<typename T, typename... Args>
 	[[gnu::cold]]
-	extra_diagnostics process_args(const char* const (&args_strings)[N], Args&... args) {
+	extra_diagnostics process_args(const char* const* const args_strings, T& t, Args&... args) {
 		extra_diagnostics entry;
-		process_args_step(entry, args_strings, args...);
+		if constexpr(is_string_type<T>) {
+			entry.message = t;
+			process_args_step(entry, 1, args_strings, args...);
+		} else {
+			process_args_step(entry, 0, args_strings, t, args...);
+		}
 		return entry;
 	}
 
@@ -819,23 +836,27 @@ namespace assert_detail {
 
 	const char* assert_type_name(assert_type t);
 
-	template<typename A, typename B, typename C, size_t N /* TODO */, typename... Args>
+	size_t count_args_strings(const char* const* const);
+
+	template<typename A, typename B, typename C, typename... Args> //,
+	        // std::enable_if<(sizeof(expression_decomposer<A, B, C>) > 32), int>::type = 0>
 	[[gnu::cold]] [[gnu::noinline]]
 	void assert_fail(const char* name, assert_type type, expression_decomposer<A, B, C>& decomposer,
-	                 const char* expr_str, const char* pretty_func, source_location location,
-	                 const char * const (&args_strings)[N], Args&... args) {
-		static_assert((sizeof...(args) == 0 && N == 2) || N == sizeof...(args) + 1);
+	                 const char* expr_str, const source_location& location,
+	                 const char* const* const args_strings, Args&&... args) {
 		lock l;
-		enable_virtual_terminal_processing_if_needed();
+		size_t args_strings_count = count_args_strings(args_strings);
+		primitive_assert((sizeof...(args) == 0 && args_strings_count == 2)
+		                 || args_strings_count == sizeof...(args) + 1);
 		auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
 		enable_virtual_terminal_processing_if_needed();
 		if(message != "") {
 			fprintf(stderr, "%s failed at %s:%d: %s: %s\n",
 			                 assert_type_name(type), location.file, location.line,
-			                 pretty_func, message.c_str());
+			                 highlight(location.function).c_str(), message.c_str());
 		} else {
-			fprintf(stderr, "%s failed at %s:%d: %s:\n",
-			                 assert_type_name(type), location.file, location.line, pretty_func);
+			fprintf(stderr, "%s failed at %s:%d: %s:\n", assert_type_name(type),
+			                          location.file, location.line, highlight(location.function).c_str());
 		}
 		fprintf(stderr, "    %s\n", highlight(stringf("%s(%s%s);", name, expr_str,
 		                                        sizeof...(args) > 0 ? ", ..." : "")).c_str());
@@ -843,7 +864,7 @@ namespace assert_detail {
 			static_assert(is_nothing<B> && !is_nothing<A>);
 		} else {
 			auto [a_str, b_str] = decompose_expression(expr_str, C::op_string);
-			print_binary_diagnostic(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b),
+			print_binary_diagnostic(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b), // TODO: Are these forwards bad?
 					a_str.c_str(), b_str.c_str(), C::op_string);
 		}
 		if(!extra_diagnostics.empty()) {
@@ -896,6 +917,9 @@ namespace assert_detail {
 			 		 throw check_failure();
 			 		#endif
 			 		break;
+				default:
+					primitive_assert(false);
+					__builtin_unreachable();
 			 }
 			#endif
 		}
@@ -903,15 +927,23 @@ namespace assert_detail {
 		 fprintf(stderr, "\n");
 		#endif
 	}
+	//template<typename A, typename B, typename C, typename... Args>
+	//[[gnu::cold]] [[gnu::noinline]]
+	//void assert_fail_small(const char* name, assert_type type, expression_decomposer<A, B, C> decomposer,
+	//                       const char* expr_str, const source_location& location,
+	//                       const char* const* const args_strings, Args&&... args) {
+	//
+	//}
 
 	// top-level assert functions emplaced by the macros
 	// these are the only non-cold functions
 
-	template<bool R, typename A, typename B, typename C, size_t N, typename... Args>
+	template<bool R, typename A, typename B, typename C, typename... Args>
 	decltype(auto) assert(const char* name, assert_type type, expression_decomposer<A, B, C> decomposer,
-	                      const char* expr_str, const char* pretty_func, source_location location,
-	                      const char* const (&args_strings)[N], Args&&... args) {
-		if(!(bool)decomposer.get_value()) {
+	                      const char* expr_str, const source_location* location,
+	                      const char* const* const args_strings, Args&&... args) {
+		decltype(auto) value = decomposer.get_value();
+		if(__builtin_expect_with_probability(!(bool)value, 0, 1)) {
 			#ifdef NDEBUG
 			 if(type == assert_type::assert) { // will be constant propagated
 				__builtin_unreachable();
@@ -920,15 +952,19 @@ namespace assert_detail {
 			 // verify calls will procede with fail call
 			 // check is excluded at macro definition, nothing needed here
 			#endif
-			assert_fail(name, type, decomposer, expr_str,
-						highlight(pretty_func).c_str(), location, args_strings, args...);
+			assert_fail(name, type, decomposer, expr_str, *location,
+			            args_strings, std::forward<Args>(args)...);
 		#ifdef _0_ASSERT_DEMO
 		} else {
 			primitive_assert(false);
 		#endif
 		}
-		if constexpr(R) { // only false for CHECK
-			return decomposer.take_lhs_or_value();
+		if constexpr(R) { // return lhs or value for assert and verify
+			if constexpr(decomposer.ret_lhs()) {
+				return decomposer.take_lhs();
+			} else {
+				return (value);
+			}
 		}
 	}
 
@@ -981,17 +1017,37 @@ using assert_detail::ASSERT;
 #define ASSERT_DETAIL_STRINGIFY(x) #x,
 // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
 // name, not signature
+#define ASSERT_DETAIL_ARGS_ARRAY(...) __extension__ ({ \
+                                        static constexpr const char* const args[] = { /* extra string here because */ \
+                                          MAP(ASSERT_DETAIL_STRINGIFY, __VA_ARGS__) "" /* of extra comma from map */ \
+                                        }; \
+                                        args; \
+                                      })
+#define ASSERT_DETAIL_SOURCE_LOCATION __extension__ ({ \
+                                        static constexpr assert_detail::source_location l(__PRETTY_FUNCTION__)}; \
+                                        &l; \
+                                      })
 #if IS_GCC
  // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
- #define ASSERT_DETAIL_ARGS(...) __PRETTY_FUNCTION__, {}, /* extra string here because of extra comma from map */ \
-                                 {MAP(ASSERT_DETAIL_STRINGIFY, __VA_ARGS__) ""} __VA_OPT__(,) __VA_ARGS__
+ #define ASSERT_DETAIL_ARGS(...) ASSERT_DETAIL_SOURCE_LOCATION, \
+                                 ASSERT_DETAIL_ARGS_ARRAY(__VA_ARGS__) __VA_OPT__(,) __VA_ARGS__
 #else
  // clang properly eats the comma with ##__VA_ARGS__
- #define ASSERT_DETAIL_ARGS(...) __PRETTY_FUNCTION__, {}, /* extra string here because of extra comma from map */ \
-                                 {MAP(ASSERT_DETAIL_STRINGIFY, __VA_ARGS__) ""} , ##__VA_ARGS__
+ #define ASSERT_DETAIL_ARGS(...) ASSERT_DETAIL_SOURCE_LOCATION, \
+                                 ASSERT_DETAIL_ARGS_ARRAY(__VA_ARGS__) , ##__VA_ARGS__
 #endif
 
-// assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
+// Note: assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
+// Note about statement expressions: These are needed for two reasons. The first is putting the arg string array and
+// source location structure in .rodata rather than on the stack, the second is a _Pragma for warnings which isn't
+// allowed in the middle of an expression by GCC. The semantics are similar to a function return:
+// Given M m; in parent scope, ({ m; }) is an rvalue M&& rather than an lvalue
+// ({ M m; m; }) doesn't move, it copies
+// ({ M{}; }) does move
+// Of relevance to this: in foo(__extension__ ({ M{1} + M{1}; })); the lifetimes of the M{1} objects end during the
+// statement expression but the lifetime of the returned object is extend to the end of the full foo() expression.
+// Note: There is a current issue with tarnaries: auto x = assert(b ? y : y); must copy y. This can be fixed with
+// lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
 #define ASSERT_INVOKE(expr, name, ...) \
                              (assert_detail::assert<true>)( \
                                name, \
@@ -999,7 +1055,7 @@ using assert_detail::ASSERT;
                                __extension__ ({ \
                                  _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
                                  assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
-							   }), \
+                               }), \
                                #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__) \
                              )
 

@@ -37,9 +37,9 @@
 
 namespace assert_detail {
 	[[gnu::cold]]
-	void primitive_assert_impl(bool c, bool verification, const char* expression,
-	                           const char* message, source_location location) {
-		if(!c) {
+	void primitive_assert_impl(bool condition, bool verification, const char* expression,
+	                           source_location location, const char* message) {
+		if(!condition) {
 			const char* action = verification ? "Verification" : "Assertion";
 			const char* name   = verification ? "verify"       : "assert";
 			if(message == nullptr) {
@@ -1776,5 +1776,14 @@ namespace assert_detail {
 				primitive_assert(false);
 				return "";
 		}
+	}
+
+	[[gnu::cold]]
+	size_t count_args_strings(const char* const* const arr) {
+		size_t c = 0;
+		for(size_t i = 0; *arr[i]; i++) {
+			c++;
+		}
+		return c + 1; // plus one, count the empty string
 	}
 }
