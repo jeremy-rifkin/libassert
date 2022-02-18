@@ -103,13 +103,13 @@ namespace assert_detail {
 	                           source_location location, const char* message = nullptr);
 
 	#ifndef NDEBUG
-	 #define primitive_assert(c, ...) primitive_assert_impl(c, false, #c, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+	 #define primitive_assert(c, ...) primitive_assert_impl(c, false, #c, __extension__ __PRETTY_FUNCTION__, ##__VA_ARGS__)
 	#else
 	 #define primitive_assert(c, ...) PHONY_USE(c)
 	#endif
 
 	// Still present in release mode, nonfatal
-	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, __extension__ __PRETTY_FUNCTION__, ##__VA_ARGS__)
 
 	/*
 	 * string utilities
@@ -331,6 +331,10 @@ namespace assert_detail {
 		// not copyable
 		expression_decomposer(const expression_decomposer&) = delete;
 		expression_decomposer& operator=(const expression_decomposer&) = delete;
+		// allow move assignment
+		expression_decomposer(expression_decomposer&&) = default;
+		expression_decomposer& operator=(expression_decomposer&&) = delete;
+		// value constructors
 		template<typename U>
 		explicit expression_decomposer(U&& a) : a(std::forward<U>(a)) {}
 		template<typename U, typename V>
@@ -345,9 +349,9 @@ namespace assert_detail {
 		 *      + The value is computed (either A& or C()(a, b))
 		 *      + a and b are referenced freely
 		 *      + Either the value is taken or a is moved out
+		 * Ensuring the value is only computed once is left to the assert handler
 		 */
 		decltype(auto) get_value() {
-			// TODO: Need to make sure this is only computed once...
 			if constexpr(is_nothing<C>) {
 				static_assert(is_nothing<B> && !is_nothing<A>);
 				return (((((((((((((((((((a)))))))))))))))))));
@@ -355,9 +359,9 @@ namespace assert_detail {
 				return C()(a, b);
 			}
 		}
-		//operator bool() { // for ternary support
-		//	return (bool)get_value();
-		//}
+		operator bool() { // for ternary support
+			return (bool)get_value();
+		}
 		// return true if the lhs should be returned, false if full computed value should be
 		constexpr bool ret_lhs() {
 			static_assert(!is_nothing<A>);
@@ -385,8 +389,7 @@ namespace assert_detail {
 				}
 			}
 		}
-		decltype(auto) take_lhs() { // should only be called if ret_lhs() == true
-			static_assert(!std::is_rvalue_reference<A>::value);
+		A take_lhs() { // should only be called if ret_lhs() == true
 			if constexpr(std::is_lvalue_reference<A>::value) {
 				return ((((a))));
 			} else {
@@ -446,6 +449,14 @@ namespace assert_detail {
 		gen_op_boilerplate(ops::bor_assign, |=)
 		#undef gen_op_boilerplate
 	};
+
+	#ifndef NDEBUG
+	 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, nothing, nothing>>().get_value()), int&>::value);
+	 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, nothing, nothing>>().get_value()), int&>::value);
+	 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().get_value()), bool>::value);
+	 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().take_lhs()), int>::value);
+	 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, int, ops::lteq>>().take_lhs()), int&>::value);
+	#endif
 
 	// for ternary support
 	template<typename U> expression_decomposer(U&&)
@@ -510,9 +521,9 @@ namespace assert_detail {
 			return sig.substr(i, sig.rfind(r) - i);
 		};
 		#if IS_CLANG
-		 return substring_bounded_by(__PRETTY_FUNCTION__, "[T = ", "]");
+		 return substring_bounded_by(__extension__ __PRETTY_FUNCTION__, "[T = ", "]");
 		#elif IS_GCC
-		 return substring_bounded_by(__PRETTY_FUNCTION__, "[with T = ", "; std::string_view = ");
+		 return substring_bounded_by(__extension__ __PRETTY_FUNCTION__, "[with T = ", "; std::string_view = ");
 		#else
 		 static_assert(false, "unsupported compiler")
 		#endif
@@ -836,15 +847,23 @@ namespace assert_detail {
 
 	const char* assert_type_name(assert_type t);
 
+	// collection of assertion data that can be put in static storage and all passed by a single pointer
+	struct assert_static_parameters {
+		const char* name;
+		assert_type type;
+		const char* expr_str;
+		source_location location;
+		const char* const* args_strings;
+	};
+
 	size_t count_args_strings(const char* const* const);
 
-	template<typename A, typename B, typename C, typename... Args> //,
-	        // std::enable_if<(sizeof(expression_decomposer<A, B, C>) > 32), int>::type = 0>
+	template<typename A, typename B, typename C, typename... Args>
 	[[gnu::cold]] [[gnu::noinline]]
-	void assert_fail(const char* name, assert_type type, expression_decomposer<A, B, C>& decomposer,
-	                 const char* expr_str, const source_location& location,
-	                 const char* const* const args_strings, Args&&... args) {
+	void assert_fail(expression_decomposer<A, B, C>& decomposer,
+	                 const assert_static_parameters* params, Args&&... args) {
 		lock l;
+		const auto [ name, type, expr_str, location, args_strings ] = *params;
 		size_t args_strings_count = count_args_strings(args_strings);
 		primitive_assert((sizeof...(args) == 0 && args_strings_count == 2)
 		                 || args_strings_count == sizeof...(args) + 1);
@@ -927,41 +946,50 @@ namespace assert_detail {
 		 fprintf(stderr, "\n");
 		#endif
 	}
-	//template<typename A, typename B, typename C, typename... Args>
-	//[[gnu::cold]] [[gnu::noinline]]
-	//void assert_fail_small(const char* name, assert_type type, expression_decomposer<A, B, C> decomposer,
-	//                       const char* expr_str, const source_location& location,
-	//                       const char* const* const args_strings, Args&&... args) {
-	//
-	//}
+
+	template<typename A, typename B, typename C, typename... Args>
+	[[gnu::cold]] [[gnu::noinline]]
+	expression_decomposer<A, B, C> assert_fail_m(expression_decomposer<A, B, C> decomposer,
+	                                             const assert_static_parameters* params, Args&&... args) {
+		assert_fail(decomposer, params, std::forward<Args>(args)...);
+		return decomposer;
+	}
 
 	// top-level assert functions emplaced by the macros
 	// these are the only non-cold functions
-
 	template<bool R, typename A, typename B, typename C, typename... Args>
-	decltype(auto) assert(const char* name, assert_type type, expression_decomposer<A, B, C> decomposer,
-	                      const char* expr_str, const source_location* location,
-	                      const char* const* const args_strings, Args&&... args) {
+	decltype(auto) assert(expression_decomposer<A, B, C> decomposer,
+	                      const assert_static_parameters* params, Args&&... args) {
 		decltype(auto) value = decomposer.get_value();
-		if(__builtin_expect_with_probability(!(bool)value, 0, 1)) {
+		constexpr bool ret_lhs = decomposer.ret_lhs();
+		if(__builtin_expect_with_probability(!static_cast<bool>(value), 0, 1)) {
 			#ifdef NDEBUG
-			 if(type == assert_type::assert) { // will be constant propagated
+			 if(params->type == assert_type::assert) { // will be constant propagated
 				__builtin_unreachable();
-				return;
 			 }
 			 // verify calls will procede with fail call
 			 // check is excluded at macro definition, nothing needed here
 			#endif
-			assert_fail(name, type, decomposer, expr_str, *location,
-			            args_strings, std::forward<Args>(args)...);
+			// TODO: decide threshold, maybe check trivially movable too?
+			if constexpr(sizeof decomposer > 32) {
+				assert_fail(decomposer, params, std::forward<Args>(args)...);
+			} else {
+				// std::move it to assert_fail_m, will be moved back to r
+				auto r = assert_fail_m(std::move(decomposer), params, std::forward<Args>(args)...);
+				// can't move-assign back to decomposer if it holds reference members
+				decomposer.compl expression_decomposer();
+				new (&decomposer) expression_decomposer(std::move(r));
+			}
 		#ifdef _0_ASSERT_DEMO
 		} else {
 			primitive_assert(false);
 		#endif
 		}
 		if constexpr(R) { // return lhs or value for assert and verify
-			if constexpr(decomposer.ret_lhs()) {
-				return decomposer.take_lhs();
+			if constexpr(ret_lhs) {
+				// Note: std::launder needed in 17 in case of placement new / move shenanigans above
+				// https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3
+				return std::launder(&decomposer)->take_lhs();
 			} else {
 				return (value);
 			}
@@ -1014,27 +1042,33 @@ using assert_detail::ASSERT;
 #define MAP_LIST0(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST1)(f, peek, __VA_ARGS__)
 #define MAP_LIST1(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST0)(f, peek, __VA_ARGS__)
 #define MAP(f, ...) EVAL(MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
+
 #define ASSERT_DETAIL_STRINGIFY(x) #x,
+
 // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
 // name, not signature
-#define ASSERT_DETAIL_ARGS_ARRAY(...) __extension__ ({ \
-                                        static constexpr const char* const args[] = { /* extra string here because */ \
-                                          MAP(ASSERT_DETAIL_STRINGIFY, __VA_ARGS__) "" /* of extra comma from map */ \
-                                        }; \
-                                        args; \
-                                      })
-#define ASSERT_DETAIL_SOURCE_LOCATION __extension__ ({ \
-                                        static constexpr assert_detail::source_location l(__PRETTY_FUNCTION__)}; \
-                                        &l; \
-                                      })
+#define ASSERT_DETAIL_STATIC_DATA(name, type, expr_str, ...) \
+                                  __extension__ ({ \
+                                    /* extra string here because of extra comma from map and also serves as terminator */ \
+                                    static constexpr const char* const arg_strings[] = { \
+                                      MAP(ASSERT_DETAIL_STRINGIFY, __VA_ARGS__) "" \
+                                    }; \
+                                    static constexpr assert_detail::assert_static_parameters params = { \
+                                      name, \
+                                      type, \
+                                      expr_str, \
+                                      __extension__ __PRETTY_FUNCTION__, \
+                                      arg_strings, \
+                                    }; \
+                                    &params; \
+                                  })
+
 #if IS_GCC
  // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
- #define ASSERT_DETAIL_ARGS(...) ASSERT_DETAIL_SOURCE_LOCATION, \
-                                 ASSERT_DETAIL_ARGS_ARRAY(__VA_ARGS__) __VA_OPT__(,) __VA_ARGS__
+ #define ASSERT_DETAIL_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
 #else
  // clang properly eats the comma with ##__VA_ARGS__
- #define ASSERT_DETAIL_ARGS(...) ASSERT_DETAIL_SOURCE_LOCATION, \
-                                 ASSERT_DETAIL_ARGS_ARRAY(__VA_ARGS__) , ##__VA_ARGS__
+ #define ASSERT_DETAIL_VA_ARGS(...) , ##__VA_ARGS__
 #endif
 
 // Note: assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
@@ -1049,16 +1083,14 @@ using assert_detail::ASSERT;
 // Note: There is a current issue with tarnaries: auto x = assert(b ? y : y); must copy y. This can be fixed with
 // lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
 #define ASSERT_INVOKE(expr, name, ...) \
-                             (assert_detail::assert<true>)( \
-                               name, \
-                               assert_detail::assert_type::assert, \
-                               __extension__ ({ \
-                                 _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                                 assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
-                               }), \
-                               #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__) \
-                             )
-
+                          assert_detail::assert<true>( \
+                            __extension__ ({ \
+                              _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
+                            }), \
+                            ASSERT_DETAIL_STATIC_DATA(name, assert_detail::assert_type::assert, #expr, __VA_ARGS__) \
+                            ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
+                          )
 
 #define ASSERT(expr, ...) ASSERT_INVOKE(expr, "ASSERT", __VA_ARGS__)
 
@@ -1068,26 +1100,25 @@ using assert_detail::ASSERT;
 #endif
 
 // assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
-#define VERIFY(expr, ...) (assert_detail::assert<true>)( \
-                            "VERIFY", \
-                            assert_detail::assert_type::verify, \
+#define VERIFY(expr, ...) assert_detail::assert<true>( \
                             __extension__ ({ \
                               _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
                               assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
                             }), \
-                            #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__) \
+                            ASSERT_DETAIL_STATIC_DATA("VERIFY", assert_detail::assert_type::verify, \
+                                                      #expr, __VA_ARGS__) \
+                            ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
                           )
 
 #ifndef NDEBUG
  // assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
- #define CHECK(expr, ...) (assert_detail::assert<false>)( \
-                            "CHECK", \
-                            assert_detail::assert_type::check, \
+ #define CHECK(expr, ...) assert_detail::assert<false>( \
                             __extension__ ({ \
                               _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
                               assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
                             }), \
-                            #expr, ASSERT_DETAIL_ARGS(__VA_ARGS__) \
+                            ASSERT_DETAIL_STATIC_DATA("CHECK", assert_detail::assert_type::check, #expr, __VA_ARGS__) \
+                            ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
                           )
 #else
  // omitting the expression could cause unused variable warnings, surpressing for now
