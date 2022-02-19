@@ -1,196 +1,276 @@
 # Asserts <!-- omit in toc -->
 
-<p align="center">The most over-engineered assertion library.</p>
-<p align="center"><i>"Did you just implement syntax highlighting for an assertion library??"</i>
-                      - My Russian friend Oleg</p>
-
-**Summary:** Automatic expression decomposition, diagnostics on binary expressions, assert messages,
-extra diagnostic values, stack traces, syntax highlighting, errno help, and more!
+<p align="center">The most over-engineered assertion library</p>
 
 ```cpp
-assert(some_system_call(fd, buffer1, n) > 0, "Internal error with foobars", errno, fd, n);
+void zoog(std::vector<int>& vec) {
+	assert(vec.size() > 10, "vector doesn't have enough items");
+}
+```
+![](screenshots/a.png)
+
+```cpp
+const char* path = "/home/foobar";
+FILE* f = VERIFY(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
 ```
 ![](screenshots/b.png)
 
-**The Problem:**
+```cpp
+std::optional<float> get_param();
+float f = *assert(get_param());
+```
+![](screenshots/c.png)
 
-Asserts are sanity checks for developers: Validating assumptions and helping identify problems at
-their sources. Assertions should prioritize providing as much information and context to the
-developer as possible to allow for speedy triage. Unfortunately throughout existing languages and
-tooling a common theme exists: Assertions are very minimal and when `assert(n <= 12);` fails we get
-no information about the value of `n`. There is no reason assertions should be excessively
-lightweight.
-
-This library is an exploration looking at how much helpful information and functionality we can pack
-into assertions while still maintaining ease of use for the developer.
-
-**The Ideal:**
-
-Ideally assertions can do all of the following:
-- Provide expression strings.
-- Provide values involved in binary expressions, such as `assert(count > 0);`.
-- Provide failure location and a stacktrace.
-- Display values in useful formats.
-- Support an optional diagnostic message (make assertions self documenting).
-- Support extra diagnostic information being provided.
-
-`cassert`/`assert.h` can't do most of these. No tool I know of can do all these, other than this
-tool 😎 It's fair to say that this is the most overpowered assertion library out there and one of
-the few libraries that can claim to be more bloated than Boost.
-
-#### Table of Contents: <!-- omit in toc -->
-- [Functionality This Library Provides](#functionality-this-library-provides)
-- [Quick Library Documentation](#quick-library-documentation)
+### Table of Contents: <!-- omit in toc -->
+- [Philosophy](#philosophy)
+- [Methodology](#methodology)
+- [Considerations](#considerations)
+- [Features](#features)
+- [Documentation](#documentation)
+	- [Parameters](#parameters)
+	- [Return value](#return-value)
+	- [Failure](#failure)
+	- [Configuration options:](#configuration-options)
 - [How To Use This Library](#how-to-use-this-library)
 - [Comparison With Other Languages](#comparison-with-other-languages)
 
-### Functionality This Library Provides
+## Philosophy
 
-- Optional assertion messages
-- Non-fatal assertions option
-- `assert_eq` and variants for `!=`, `<`, `>`, `<=`, `>=`, `&&`, and `||`.
-- **Automatic expression decomposition:** `assert(foo() == bar());` is automatically understood as
-  `assert_eq(foo(), bar());`. `assert_eq` and variants may be deprecated once support for automatic
-  decomposition improves.
-  - Displaying good diagnostic info here requires some attempt to parse C++ expression grammar,
-    which is ambiguous without type info.
-- Comprehensive stringification (attempts to display a wide variety of types effectively and
-  supports user-defined types).
-- Smart diagnostic info
-  - `1 => 1` and other such redundant expression-value diagnostics are not displayed.
-  - The library tries to provide format consistency: If a comparison involves an expression and a
-    hex literal, the values of the left and right side are printed in both decimal and hex.
-- Support for providing extra diagnostic information.
-- Automatic `strerror` for `errno`.
-- Syntax highlighting, because why not!
-- Signed-unsigned comparison is always done safely by the assertion processor.
-- Custom assertion failure action.
-- Optional assert assumptions in release mode.
-- Stack traces are printed in columns aligned, signatures are highlighted, and paths are shortened
-  from full paths to the shortest sub-path needed to differentiate files with the same name to make
-  reading stack traces easy.
+Fundamentally the role of assertions is to verify assumptions made in software and identify
+violations close to their sources. Assertion tooling should prioritize providing as much information
+and context to the developer as possible to allow for speedy triage. Unfortunately, existing
+language and library tooling provides very limited triage information.
 
-Demo: (note that the call to `abort();` on assertion failure is commented out for this demo)
+For example with stdlib asserts, when `assert(n <= 12);` fails we may get no information about why
+(i.e., the value of `n`) and we don't get stack trace. Ideally an assertion failure should provide
+enough diagnostic information that we don't have to rerun in a debugger to pinpoint the problem.
+
+This library is an exploration looking at how much helpful information and functionality can be
+packed into assertions while also providing a quick and easy interface for the developer.
+
+## Methodology
+
+Different types of assumptions call for different handling. This library has a tiered assertion
+system:
+- For core assumptions that must always be true under normal operation use `ASSERT`
+- For convenient assumptions, e.g. not worrying about an edge case for the time being, use `VERIFY`
+- For quick development/sanity checks, use `CHECK`
+
+| Name     | When to Use                 | Effect |
+| -------- | --------------------------- | ------ |
+| `ASSERT` / `assert` | Core assumptions | Checked in debug, assumed in release |
+| `VERIFY` | Convenient assumptions      | Checked always |
+| `CHECK`  | Sanity checks               | Checked in debug, does nothing in release |
+
+Rationale for `CHECK`: Sometimes it's problematic to assume expressions, e.g. a call to
+`std::unordered_map::at` call can't be optimized away even if the result is unused.
+
+`VERIFY` and `CHECK` calls may specified to be nonfatal. If marked nonfatal `CHECK`/`VERIFY` will
+simply log a failure message but not abort or throw an exception.
+
+## Considerations
+
+Automatic expression decomposition requires a lot of template metaprogramming shenanigans. This adds
+a lot of work at the callsite just to setup an assertion expression. These calls are swiftly inlined
+in an optimized build, but it is a consideration for unoptimized builds.
+
+All the TMP work required to setup and process assertions is a consideration for build speeds, there
+will be an impact on build speeds from using this library. This is the price we pay for nice things.
+As stated previously, this library is a proof of concept. Doing this better might require language
+support.
+
+As far as runtime performance goes, the impact at callsites is very minimal under `-Og` or higher,
+potentially even less than a stdlib assert.
+
+A lot of work is required to process assertion failures once they happen but failures are *the
+coldest* path in a binary, I'm not concerned with performance in the assertion processor as long as
+it's not noticeably slow.
+
+## Features
+
+Here are some of the most notable features I'd like to highlight:
+
+#### Automatic Expression Decomposition <!-- omit in toc -->
+The most important feature this library supports is automatic expression decomposition. No need for
+`ASSERT_LT` or other such hassle, `assert(vec.size() > 10);` is automatically understood, as
+showcased above.
+
+#### Expression Diagnostics <!-- omit in toc -->
+Values involved in assert expressions are displayed. Redundant diagnostics like `7 => 7` are
+avoided.
+
 ```cpp
-assert(false, "Error while doing XYZ"); // optional assert message
-assert(false);
+assert(vec.size() > 7);
 ```
-![](screenshots/a.png)
+
+![](screenshots/d.png)
+
+Only the full assert expression is able to be extracted from a macro call. Showing which parts of
+the expression correspond to what values requires some basic expression parsing. C++ grammar is
+ambiguous but most expressions can be disambiguated.
+
+#### Extra Diagnostics <!-- omit in toc -->
+Asserts, checks, and verifies support optional diagnostic messages as well as arbitrary other
+diagnostic messages.
+
 ```cpp
-// Diagnostics omit redundant "2 => 2"
-assert(map.count(1) == 2);
-assert(map.count(1) >= 2 * garple(), "Error while doing XYZ");
+FILE* f = VERIFY(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
 ```
-![](screenshots/c.png)
-```cpp
-// Floating point stringificaiton done carefully to provide the most helpful diagnostic info
-assert(1 == 1.5); // not stringified here, it would be redundant
-assert(0.1 + 0.2 == 0.3); // stringified here to expose rounding error
-```
-![](screenshots/e.png)
-```cpp
-// Numbers are always printed in decimal but the assertion processor will also print binary, hex,
-// or octal when they might be relevant. Here it will print decimal, binary, and hex because those
-// are the literal formats involved.
-assert_eq(1, 1 bitand 2);
-assert(18446744073709551606ULL == -10); // signed-unsigned comparisons are always done safely
-assert(mask bitand flag);
-assert(0xf == 16);
-```
+
+Special handling is provided for `errno`, and strerror is automatically called.
+
 ![](screenshots/f.png)
-```cpp
-// Same care is taken with strings: No redundant diagnostics and strings are also escaped.
-assert(s == "test2");
-assert(s[i] == 'c', "", s, i);
-assert(BLUE "test" RESET == "test");
-// The assertion processor takes care not to segfault when attempting to stringify
-assert_eq(buffer, thing);
-```
-![](screenshots/g.png)
-```cpp
-// S<T> has a custom printer (i.e. an std::ostream<< friend)
-assert(S<S<int>>(2) == S<S<int>>(4));
-S<void> e, f; // S<void> doesn't have a printer
-assert(e == f);
-```
+
+#### Stack Traces <!-- omit in toc -->
+
+A lot of work has been put into generating pretty stack traces and formatting them as nicely as
+possible.
+
+One feature worth noting is that instead of always printing full paths, only the minimum number of
+directories needed to differentiate paths are printed.
+
 ![](screenshots/i.png)
 
-And lastly, stack traces don't print the full paths but when multiple files have the same name
-enough of the path is displayed to differentiate:
+Another feature worth pointing out is that the stack traces will fold deep recursion traces:
+
+![](screenshots/g.png)
+
+#### Automatic Safe Comparisons <!-- omit in toc -->
+
+Because expressions are already being automatically decomposed, signed-unsigned comparisons are
+automatically done with sign safety (same mechanism as C++20 `std::cmp_equal`, `std::cmp_less`,
+...):
+
+```cpp
+assert(18446744073709551606ULL == -10);
+```
+
+![](screenshots/h.png)
+
+#### Syntax Highlighting <!-- omit in toc -->
+
+The assertion handler applies syntax highlighting wherever appropriate, as seen in all the
+screenshots above. This is to help enhance readability.
+
+#### Object Printing <!-- omit in toc -->
+
+A lot of care is given to printing values as effectively as possible: Strings, characters, numbers,
+should all be printed as you'd expect. If a user defined type overloads `operator<<(std::ostream& o,
+const S& s)`, that overload will be called. Otherwise it a default message will be printed.
 
 ![](screenshots/j.png)
 
+![](screenshots/k.png)
 
-**A note on performance:** I've kept the impact of `assert`s at callsites minimal. A lot of logic is
-required to process assertion failures once they happen but failures are *the coldest* path in a
-binary, I'm not concerned with performance in the assertion processor as long as it's not noticeably
-slow. Automatic expression decomposition requires a lot of template shenanigans which is not free.
-
-**A note on automatic expression decomposition:** In automatic decomposition the assertion processor
-is only able to obtain a the string for the full expression instead of the left and right parts
-independently. Because of this the library needs to do some basic expression parsing, just figuring
-out the very top-level of the expression tree. Unfortunately C++ grammar is ambiguous without type
-information. The assertion processor is able to disambiguate many expressions but will return
-`{"left", "right"}` if it's unable to. Disambiguating expressions is currently done by essentially
-traversing all possible parse trees. There is probably a more optimal way to do this.
-
-### Quick Library Documentation
-
-The library provides a set of macros, invoked as so:
+Assertion values are printed in hex or binary as well as decimal if hex/binary are used on either
+side of an assertion expression:
 
 ```cpp
-void assert(<expression>, [optional assertion message], [optional extra diagnostics, ...]);
-
-void ASSERT(<expression>, [optional assertion message], [optional extra diagnostics, ...]);
-void ASSERT_OP(left, right, [optional assertion message], [optional extra diagnostics, ...]);
-
-T VERIFY(<expression>, [optional assertion message], [optional extra diagnostics, ...]);
-T VERIFY_OP(left, right, [optional assertion message], [optional extra diagnostics, ...]);
-
-// Where `op` ∈ {`eq`, `neq`, `lt`, `gt`, `lteq`, `gteq`, `and`, `or`}.
+assert(get_mask() == 0b00001101);
 ```
-The `<expression>` is automatically decomposed so diagnostic information can be printed for the left
-and right sides. The resultant type must be convertible to boolean.
 
-An optional assertion message may be provided. If the first argument following `<expression>` or
-`left, right` is any string type it will be used as the message (if you want the first parameter,
-which happens to be a string, to be an extra diagnostic simply pass an empty string first).
+![](screenshots/e.png)
 
-An aribtray number of extra diagnostic values may be provided. There is special handling when
-`errno` is provided, `strerror` is called automatically. `ASSERT::FATAL` and `ASSERT::NONFATAL` may
-be passed in any position (controlling whether the fail function is called).
+## Documentation
 
-`VERIFY` assertions are fatal but are not disabled with `NDEBUG`. They return the result of the
-`<expression>` or the invocation of the comparison between `left` and `right`. One place this is
-useful is verifying an std::optional has a value, similar to Rust's .unwrap():
+The library provides a set of macros which effectively function as such:
+
 ```cpp
-if(auto bar = *VERIFY(foo())) {
-    ...
-}
+decltype(auto) assert(<expression>, [optional assertion message],
+                                    [optional extra diagnostics, ...], fatal?);
+decltype(auto) ASSERT(<expression>, [optional assertion message],
+                                    [optional extra diagnostics, ...], fatal?);
+decltype(auto) VERIFY(<expression>, [optional assertion message],
+                                    [optional extra diagnostics, ...], fatal?);
+void CHECK(<expression>, [optional assertion message],
+                         [optional extra diagnostics, ...], fatal?);
 ```
 
-`assert` is provided as an alias for `ASSERT` to be compatible with C's `assert.h`.
+The macros are all caps to conform with macro hygiene practice - "check" and "verify" they're likely
+to conflict with other identifiers. `assert` is provided for compatibility with `assert.h` code and
+it is an identifier that will not conflict.
 
-**Note:** There is no short-circuiting for `ASSERT_AND` and `ASSERT_OR` or `&&` and `||` in
-expression decomposition.
+### Parameters
 
-**Note:** Top-level integral comparisons are automatically done with sign safety.
+#### `expression` <!-- omit in toc -->
 
-**Note:** left and right hand types in automatically decomposed expressions require move semantics.
+The `<expression>` is automatically decomposed so diagnostic information can be provided. The
+resultant type must be convertible to boolean.
 
-Build options:
+The operation between left and right hand sides of the top-level operation in the expression tree is
+evaluated by a functor.
 
-- `-DNCOLOR` Turns off colors
-- `-DNDEBUG` Disables assertions
-- `-DASSUME_ASSERTS` Makes assertions serve as optimizer hints in `NDEBUG` mode. *Note:* This is not
-  always a win. Sometimes assertion expressions have side effects that are undesirable at runtime in
-  an `NDEBUG` build like exceptions which cannot be optimized away (e.g. `std::unordered_map::at`
-  where the lookup cannot be optimized away and ends up not being a helpful compiler hint).
-- `-DASSERT_FAIL_ACTION=...` Can be used to specify what is done on assertion failure, after
-  diagnostic printing, e.g. throwing an exception instead of calling `abort()` which is the default.
-  The function should have signature `void()`.
+If the operation is a comparison (`==`, `!=`, `<`, `<=`, `>`, `>=`) and the operands are integers,
+the comparison is automatically done with sign safety.
 
-### How To Use This Library
+Note: Short circuiting does not occur for a top level operation of `&&` or `||`.
+
+#### `assertion message` <!-- omit in toc -->
+
+An optional assertion message may be provided. If the first argument following `<expression>` is any
+string type it will be used as the message (if you want the first parameter, which happens to be a
+string, to be an extra diagnostic value instead simply pass an empty string first, i.e.
+`assert(foo, "", str);`).
+
+#### `extra diagnostics` <!-- omit in toc -->
+
+An arbitrary number of extra diagnostic values may be provided. These are displayed below the
+expression diagnostics if a check fails.
+
+There is special handling when `errno` is provided: The value of `strerror` is displayed
+automatically.
+
+#### `fatal?` <!-- omit in toc -->
+
+`ASSERT::FATAL` and `ASSERT::NONFATAL` may be passed in any position in a call. By default asserts,
+verifies, and checks are fatal. If nonfatal, failure will simply be logged but abort isn't called
+and exceptions aren't raised.
+
+### Return value
+
+To facilitate ease of integration into code, `ASSERT` and `VERIFY` return a value from the assert
+expression. The returned value is the following:
+
+- If there is no top-level binary operation (e.g. as in `assert(foo());` or `assert(false);`) in the
+  `<expression>`, the value of the expression is simply returned.
+- Otherwise if the top-level binary operation is `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, or
+  or any assignment or compound assignment then the value of the __left-hand operand__ is returned.
+- Otherwise if the top-level binary operation is `&`, `|`, `^`, `<<`, `>>`, or any binary operator
+  with precedence above bitshift then value of the whole expression is returned.
+
+If the value from `<expression>` selected to be returned is an lvalue, the type of the
+`ASSERT`/`VERIFY` call will be an lvalue reference. If the value from `<expression>` is an rvalue
+then the type of the call will be an rvalue.
+
+`CHECK` does not return anything as its expression is not evaluated at all under `-DNDEBUG`.
+
+### Failure
+
+After the assertion handler processes the failure and prints diagnostic information it will invoke
+an assert failure action. These may be overridden by the user on a per-TU basis, the default
+behaviors are:
+
+| Name     | Failure |
+| -------- | ------- |
+| `ASSERT` / `assert` | `stdout` and `stderr` are flushed, `abort()` is called |
+| `VERIFY` | `assert_detail::verification_failure` is thrown |
+| `CHECK`  | `assert_detail::check_failure` is thrown |
+
+### Configuration options:
+
+- `-DNCOLOR` Turns off colors / syntax highlighting
+- `-DNDEBUG` Disables assertion checks for release (assertion conditions are assumed for the
+  optimizer's benefit)
+- `-DASSERT_NO_LOWERCASE` Disables `assert` alias for `ASSERT`
+
+Custom failure actions: These are called when an assertion fails after diagnostic messages are
+printed. Set these macros to the name of the failure action function, signature should be `void()`.
+
+- `-DASSERT_FAIL=...` Default action: Flushes `stdout` and `stderr` then calls `abort()`.
+- `-DVERIFY_FAIL=...` Default action: `assert_detail::verification_failure` is thrown.
+- `-DCHECK_FAIL=...` Default action: `assert_detail::check_failure` is thrown.
+
+## How To Use This Library
 
 This library targets >=C++17 and supports gcc and clang on windows and linux. Note: The library does
 rely on some compiler extensions / compiler specific features. It supports at least GCC >= 8 and
@@ -205,7 +285,7 @@ Clang >= 9. The library is no longer single header due to compile times.
    - If static linking, additionally link with dbghelp (`-ldbghelp`) on windows or lib dl (`-ldl`)
      on linux.
 
-### Comparison With Other Languages
+## Comparison With Other Languages
 
 Even when standard libraries provide constructs like `assert_eq` they don't always do a good job of
 providing helpful diagnostics. E.g. Rust where the left and right values are displayed but not the
@@ -226,6 +306,8 @@ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 This is not as helpful as it could be.
 
+Functionality other languages / their standard libraries provide:
+
 |                        | C/C++ | Rust | C# | Java | Python | JavaScript | This Library |
 |:--                     |:--:   |:--:  |:--:|:--:  |:--:    |:--:        |:--:|
 | Expression string      | ✔️   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
@@ -242,8 +324,9 @@ Extras:
 
 |                 | C/C++ | Rust | C# | Java | Python | JavaScript | This Library |
 |:--              |:--:  |:--:  |:--: |:--:  |:--:    |:--:        |:--:|
-| Automatically Attach GDB At Failure Point | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Will investigate further |
 | Syntax Highlighting   | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
 | Non-Fatal Assertions  | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
 | Format Consistency    | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
+| Expression strings and expression values everywhere | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
 | Safe signed-unsigned comparison | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
+| Return values from the assert to allow asserts to be integrated into expressions inline | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |

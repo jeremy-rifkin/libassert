@@ -22,7 +22,12 @@
 template<class T> struct S {
 	T x;
 	S() = default;
-	S(T&& x) : x(x) {}
+	S(T&& x) : x(std::forward<T>(x)) {}
+	// moveable, not copyable
+	S(const S&) = delete;
+	S(S&&) = default;
+	S& operator=(const S&) = delete;
+	S& operator=(S&&) = default;
 	bool operator==(const S& s) const { return x == s.x; }
 	friend std::ostream& operator<<(std::ostream& o, const S& s) {
 		o<<"I'm S<"<<assert_detail::type_name<T>()<<"> and I contain:"<<std::endl;
@@ -51,7 +56,27 @@ struct P {
 	}
 };
 
+struct M {
+	M() = default;
+	compl M() {
+		puts("M::compl M(); called");
+	}
+	M(const M&) = delete;
+	M(M&&) = default; // only move-constructable
+	M& operator=(const M&) = delete;
+	M& operator=(M&&) = delete;
+	bool operator<(int) const & {
+		puts("M::operator<(int)& called");
+		return false;
+	}
+	bool operator<(int) const && {
+		puts("M::operator<(int)&& called");
+		return false;
+	}
+};
+
 void qux();
+
 int garple() {
 	return 2;
 }
@@ -73,10 +98,27 @@ void recursive_b(int n) {
 	else recursive_a(n - 1);
 }
 
-int some_system_call(int, char*, int) {
-	// simulate fail
-	errno = 13;
-	return -1;
+auto min_items() {
+	return 10;
+}
+
+void zoog(std::vector<int>& vec) {
+	assert(vec.size() > min_items(), "vector doesn't have enough items");
+	assert(vec.size() > 7);
+}
+
+#include <unistd.h>
+#include <fcntl.h>
+#ifndef O_RDONLY // quick hack
+#define O_RDONLY 0
+#endif
+
+std::optional<float> get_param() {
+	return {};
+}
+
+int get_mask() {
+	return 0b00101101;
 }
 
 class foo {
@@ -88,37 +130,97 @@ public:
 	void baz() {
 		puts("");
 		// General demos
-		int fd = 2;
-		char buffer1[40];
-		int n = 40;
-		//assert(some_system_call(fd, buffer, n) != -1, "Error while doing XYZ", errno, (uintptr_t)-1, S<S<int>>(2));
-		assert(some_system_call(fd, buffer1, n) > 0, "Internal error with foobars", errno, fd, n);
-		
+		{
+			std::vector<int> vec = {1, 2, 3, 4, 5, 6, 7};
+			zoog(vec);
+		}
+		const char* path = "/home/foobar/baz";
+		{
+			int fd = open(path, O_RDONLY);
+			assert(fd >= 0, "Internal error with foobars", errno, path);
+			PHONY_USE(fd);
+		}
+		{
+			assert(open(path, O_RDONLY) >= 0, "Internal error with foobars", errno, path);
+		}
+		{
+			FILE* f = VERIFY(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
+			PHONY_USE(f);
+		}
 		assert(false, "Error while doing XYZ");
 		assert(false);
+		CHECK((puts("CHECK called") && false));
 
-		std::map<int, int> map {{1,1}};
-		assert(map.count(1) == 2);
-		assert(map.count(1) >= 2 * garple(), "Error while doing XYZ");
-		ASSERT_EQ(0, 2 == garple());
-		std::optional<int> xx;
-		if(auto i = *VERIFY(xx)) {}
+		{
+			std::map<int, int> map {{1,1}};
+			assert(map.count(1) == 2);
+			assert(map.count(1) >= 2 * garple(), "Error while doing XYZ");
+		}
+		assert(0, 2 == garple());
+		{
+			std::optional<float> parameter;
+			if(auto i = *VERIFY(parameter)) {
+				static_assert(std::is_same<decltype(i), float>::value);
+			}
+			float f = *assert(get_param());
+			auto x = [&] () -> decltype(auto) { return VERIFY(parameter); };
+			static_assert(std::is_same<decltype(x()), std::optional<float>&>::value);
+		}
+		
+		qux();
+
+		{
+			M() < 2;
+			puts("----");
+			assert(M() < 2);
+			puts("----");
+			M m;
+			puts("----");
+			assert(m < 2);
+			puts("----");
+		}
+
+
+		assert(true ? false : true == false);
+		assert(true ? false : true, "pffft");
 
 		wubble();
-		
+
+		rec(10);
+
+		recursive_a(10);
+
+		assert(18446744073709551606ULL == -10);
+
+		assert(get_mask() == 0b00001101);
+		assert(0xf == 16);
+
+		{
+			std::string s = "test\n";
+			int i = 0;
+			assert(s == "test");
+			assert(s[i] == 'c', "", s, i);
+		}
+		{
+			assert(S<S<int>>(2) == S<S<int>>(4));
+			S<void> e, f;
+			assert(e == f);
+		}
+
 		// Numeric
-		assert(1 == 1.5);
+		/*assert(1 == 1.5);
 		assert(0.1 + 0.2 == 0.3);
 		VERIFY(.1 + .2 == .3);
 
-		ASSERT_EQ(1, 1 bitand 2);
+		//ASSERT(1 = (1 bitand 2)); // <- TODO: Not evaluated correctly
+		ASSERT(1 == (1 bitand 2));
 		assert(18446744073709551606ULL == -10);
 		const uint16_t flags = 0b000101010;
 		const uint16_t mask = 0b110010101;
 		assert(mask bitand flags);
 		assert(0xf == 16);
 		void* foo = (void*)0xdeadbeef;
-		ASSERT_EQ(foo, nullptr);
+		//ASSERT_EQ(foo, nullptr);
 	
 		// Strings
 		std::string s = "test";
@@ -128,8 +230,8 @@ public:
 		assert(BLUE "test" RESET == "test");
 		char* buffer = nullptr;
 		char thing[] = "foo";
-		ASSERT_EQ(buffer, thing);
-		ASSERT_EQ(buffer, +thing);
+		//ASSERT_EQ(buffer, thing);
+		//ASSERT_EQ(buffer, +thing);
 		
 		assert(S<S<int>>(2) == S<S<int>>(4));
 		{
@@ -138,7 +240,7 @@ public:
 		}
 
 		// Tests useful during development
-		assert(.1f == .1);
+		/*assert(.1f == .1);
 		assert(1.0 == 1.0 + std::numeric_limits<double>::epsilon());
 		ASSERT_EQ(0x12p2, 12);
 		ASSERT_EQ(0x12p2, 0b10);
@@ -157,8 +259,8 @@ public:
 		ASSERT_EQ(a, b);
 		const S<S<int>> c(4), d(8);
 		ASSERT_EQ(c, d);
-		S<void> e, f;
-		ASSERT_EQ(e, f);
+		S<void> g, h;
+		ASSERT_EQ(g, h);
 		ASSERT_EQ(1, 2);
 		ASSERT_EQ(&a, nullptr);
 		ASSERT_EQ((uintptr_t)&a, 0ULL & 0ULL);
@@ -168,7 +270,6 @@ public:
 		ASSERT_AND((bool)nullptr && (bool)nullptr, (bool)nullptr);
 		ASSERT_AND((uintptr_t)&a, (bool)nullptr && (bool)nullptr); // FIXME: parentheses
 		ASSERT_EQ(foo, (int*)nullptr);
-		::foo();
 
 
 		assert(0 == (2  ==  garple()));
@@ -245,7 +346,11 @@ public:
 			}) == s.end());
 		}
 
-		assert(true); // this should lead to another assert(false) because we're in demo mode
+		assert(0.1 == 0.2);
+		assert(.1 == 0.2);
+		assert(.1f == 0.2);
+
+		assert(true); // this should lead to another assert(false) because we're in demo mode*/
 	}
 };
 
