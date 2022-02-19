@@ -661,7 +661,7 @@ namespace assert_detail {
 
 	template<typename T>
 	[[gnu::cold]]
-	std::vector<std::string> generate_stringifications(T&& v, const std::set<literal_format>& formats) {
+	std::vector<std::string> generate_stringifications(const T& v, const std::set<literal_format>& formats) {
 		if constexpr(std::is_arithmetic<strip<T>>::value
 				 && !isa<T, bool>
 				 && !isa<T, char>) {
@@ -687,7 +687,7 @@ namespace assert_detail {
 
 	template<typename A, typename B>
 	[[gnu::cold]]
-	void print_binary_diagnostic(A&& a, B&& b, const char* a_str, const char* b_str, std::string_view op) {
+	void print_binary_diagnostic(const A& a, const B& b, const char* a_str, const char* b_str, std::string_view op) {
 		// Note: op
 		// figure out what information we need to print in the where clause
 		// find all literal formats involved (literal_format::dec included for everything)
@@ -699,8 +699,8 @@ namespace assert_detail {
 		if(is_bitwise(op)) formats.insert(literal_format::binary); // always display binary for bitwise
 		primitive_assert(formats.size() > 0);
 		// generate raw strings for given formats, without highlighting
-		std::vector<std::string> lstrings = generate_stringifications(std::forward<A>(a), formats);
-		std::vector<std::string> rstrings = generate_stringifications(std::forward<B>(b), formats);
+		std::vector<std::string> lstrings = generate_stringifications(a, formats);
+		std::vector<std::string> rstrings = generate_stringifications(b, formats);
 		primitive_assert(lstrings.size() > 0);
 		primitive_assert(rstrings.size() > 0);
 		// pad all columns where there is overlap
@@ -789,14 +789,13 @@ namespace assert_detail {
 	[[gnu::cold]] [[maybe_unused]]
 	static void process_args_step(extra_diagnostics&, size_t, const char* const* const) { }
 
-	template<typename T, typename... Args>
+	template<typename T>
 	[[gnu::cold]]
-	void process_args_step(extra_diagnostics& entry, size_t i,
-	                       const char* const* const args_strings, T& t, Args&... args) {
+	void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, T& t) {
 		if constexpr(isa<T, ASSERT>) {
 			entry.fatality = t;
 		} else {
-			// two cases to handle: errno and regular diagnostics
+			// three cases to handle: assert message, errno, and regular diagnostics
 			if(isa<T, strip<decltype(errno)>> && args_strings[i] == errno_expansion) {
 				// this is redundant and useless but the body for errno handling needs to be in an
 				// if constexpr wrapper
@@ -806,27 +805,22 @@ namespace assert_detail {
 				entry.entries.push_back({ "errno", stringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
 				}
 			} else {
-				entry.entries.push_back({ args_strings[i], stringify(t, literal_format::dec) });
+				if(i == 0) {
+					entry.message = t;
+				} else {
+					entry.entries.push_back({ args_strings[i], stringify(t, literal_format::dec) });
+				}
 			}
 		}
-		process_args_step(entry, i + 1, args_strings, args...);
 	}
 
-	[[gnu::cold]] [[maybe_unused]]
-	static extra_diagnostics process_args(const char* const* const) {
-		return {};
-	}
-
-	template<typename T, typename... Args>
+	template<typename... Args>
 	[[gnu::cold]]
-	extra_diagnostics process_args(const char* const* const args_strings, T& t, Args&... args) {
+	extra_diagnostics process_args(const char* const* const args_strings, Args&... args) {
 		extra_diagnostics entry;
-		if constexpr(is_string_type<T>) {
-			entry.message = t;
-			process_args_step(entry, 1, args_strings, args...);
-		} else {
-			process_args_step(entry, 0, args_strings, t, args...);
-		}
+		size_t i = 0;
+		(process_arg(entry, i++, args_strings, args), ...);
+		(void)args_strings;
 		return entry;
 	}
 
@@ -867,6 +861,7 @@ namespace assert_detail {
 		size_t args_strings_count = count_args_strings(args_strings);
 		primitive_assert((sizeof...(args) == 0 && args_strings_count == 2)
 		                 || args_strings_count == sizeof...(args) + 1);
+		// process_args needs to be called as soon as possible in case errno needs to be read
 		auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
 		enable_virtual_terminal_processing_if_needed();
 		if(message != "") {
@@ -883,8 +878,7 @@ namespace assert_detail {
 			static_assert(is_nothing<B> && !is_nothing<A>);
 		} else {
 			auto [a_str, b_str] = decompose_expression(expr_str, C::op_string);
-			print_binary_diagnostic(std::forward<A>(decomposer.a), std::forward<B>(decomposer.b), // TODO: Are these forwards bad?
-					a_str.c_str(), b_str.c_str(), C::op_string);
+			print_binary_diagnostic(decomposer.a, decomposer.b, a_str.c_str(), b_str.c_str(), C::op_string);
 		}
 		if(!extra_diagnostics.empty()) {
 			fprintf(stderr, "    Extra diagnostics:\n");
