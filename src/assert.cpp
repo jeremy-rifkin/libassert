@@ -237,14 +237,9 @@ namespace assert_detail {
 	};
 
 	// ... -> assert -> assert_fail -> assert_fail_generic -> print_stacktrace -> get_stacktrace
-	// get 100, skip at least 2
+	// get 100, can skip a few but inlining interferes so figure it out later
 	constexpr size_t n_frames = 100;
-	// TODO: Need to rework this in case of inlining / stack frame elison
-	#if IS_WINDOWS
-	constexpr size_t n_skip   = 4;
-	#else
-	constexpr size_t n_skip   = 5;
-	#endif
+	constexpr size_t n_skip   = 0;
 
 	#ifdef USE_DBG_HELP_H
 	#if IS_GCC
@@ -1399,7 +1394,8 @@ namespace assert_detail {
 		if(n <= 1) return 1;
 		int t = 1;
 		for(int i = 0; i < [] {
-				int j = 0, n = std::numeric_limits<int>::max(); // note: `j` used instead of `i` because of https://bugs.llvm.org/show_bug.cgi?id=51986
+				// was going to reuse `i` but https://bugs.llvm.org/show_bug.cgi?id=51986
+				int j = 0, n = std::numeric_limits<int>::max();
 				while(n /= 10) j++;
 				return j;
 			} () - 1; i++) {
@@ -1408,6 +1404,11 @@ namespace assert_detail {
 		}
 		return t;
 	}
+
+	static_assert(log10(1) == 1);
+	static_assert(log10(9) == 1);
+	static_assert(log10(10) == 1);
+	static_assert(log10(11) == 2);
 
 	using path_components = std::vector<std::string>;
 
@@ -1590,6 +1591,53 @@ namespace assert_detail {
 	}
 
 	[[gnu::cold]]
+	auto get_trace_window(const std::vector<stacktrace_entry>& trace) {
+		// Two boundaries: assert_detail and main
+		// Both are found here, nothing is filtered currently at stack trace generation
+		// (inlining and platform idiosyncrasies interfere)
+		size_t start = 0;
+		size_t end = trace.size() - 1;
+		for(size_t i = 0; i < trace.size(); i++) {
+			if(trace[i].signature.find("assert_detail::") != std::string::npos) {
+				start = i + 1;
+			}
+			if(trace[i].signature == "main" || trace[i].signature.find("main(") == 0) {
+				end = i;
+			}
+		}
+		return std::pair(start, end);
+	}
+
+	[[gnu::cold]]
+	auto process_paths(const std::vector<stacktrace_entry>& trace, size_t start, size_t end) {
+		// raw full path -> components
+		std::unordered_map<std::string, path_components> parsed_paths;
+		// base file name -> path trie
+		std::unordered_map<std::string, path_trie> tries;
+		for(size_t i = start; i <= end; i++) {
+			const auto& source_path = trace[i].source_path;
+			if(!parsed_paths.count(source_path)) {
+				auto parsed_path = parse_path(source_path);
+				auto& file_name = parsed_path.back();
+				parsed_paths.insert({source_path, parsed_path});
+				if(tries.count(file_name) == 0) {
+					tries.insert({file_name, path_trie(file_name)});
+				}
+				tries.at(file_name).insert(parsed_path);
+			}
+		}
+		// raw full path -> minified path
+		std::unordered_map<std::string, std::string> files;
+		size_t longest_file_width = 0;
+		for(auto& [raw, parsed_path] : parsed_paths) {
+			std::string new_path = join(tries.at(parsed_path.back()).disambiguate(parsed_path), "/");
+			internal_verify(files.insert({raw, new_path}).second);
+			if(new_path.size() > longest_file_width) longest_file_width = new_path.size();
+		}
+		return std::pair(files, std::min(longest_file_width, size_t(50)));
+	}
+
+	[[gnu::cold]]
 	void print_stacktrace() {
 		if(auto _trace = get_stacktrace()) {
 			auto trace = *_trace;
@@ -1597,50 +1645,19 @@ namespace assert_detail {
 			for(auto& frame : trace) {
 				frame.signature = prettify_type(frame.signature);
 			}
-			// Two boundaries: main is found here, assert_detail stuff is cut off during stack trace generation
-			size_t end = [&trace] { // I think this is more readable than the <algorithm> version.
-				for(size_t i = trace.size(); i--; ) {
-					if(trace[i].signature == "main" || trace[i].signature.substr(0, 5) == "main(") {
-						return i;
-					}
-				}
-				return trace.size() - 1;
-			}();
+			// [start, end] is an inclusive range
+			auto [start, end] = get_trace_window(trace);
 			// path preprocessing
-			// raw full path -> components
-			std::unordered_map<std::string, path_components> parsed_paths;
-			// base file name -> path trie
-			std::unordered_map<std::string, path_trie> tries;
-			for(size_t i = 0; i <= end; i++) {
-				const auto& source_path = trace[i].source_path;
-				if(!parsed_paths.count(source_path)) {
-					auto parsed_path = parse_path(source_path);
-					auto& file_name = parsed_path.back();
-					parsed_paths.insert({source_path, parsed_path});
-					if(tries.count(file_name) == 0) {
-						tries.insert({file_name, path_trie(file_name)});
-					}
-					tries.at(file_name).insert(parsed_path);
-				}
-			}
-			// raw full path -> minified path
-			std::unordered_map<std::string, std::string> files;
 			constexpr size_t max_file_length = 50;
-			size_t longest_file_width = 0;
-			for(auto& [raw, parsed_path] : parsed_paths) {
-				std::string new_path = join(tries.at(parsed_path.back()).disambiguate(parsed_path), "/");
-				internal_verify(files.insert({raw, new_path}).second);
-				if(new_path.size() > longest_file_width) longest_file_width = new_path.size();
-			}
-			longest_file_width = std::min(longest_file_width, size_t(50));
+			auto [files, longest_file_width] = process_paths(trace, start, end);
 			int max_line_number_width = log10(std::max_element(trace.begin(), trace.begin() + end + 1,
 				[](const assert_detail::stacktrace_entry& a, const assert_detail::stacktrace_entry& b) {
 					return std::to_string(a.line).size() < std::to_string(b.line).size();
-				})->line + 1);
-			int max_frame_width = log10(end + 1);
+				})->line - start + 1 + 1); // +1 for indices starting at 0, +1 again for log
+			int max_frame_width = log10(end - start + 1 + 1); // ^
 			int term_width = terminal_width(); // will be 0 on error
 			// do the actual trace
-			for(size_t i = 0; i <= end; i++) {
+			for(size_t i = start; i <= end; i++) {
 				const auto& [source_path, signature, _line] = trace[i];
 				std::string line_number = _line == 0 ? "?" : std::to_string(_line);
 				// look for repeats, i.e. recursion we can fold
@@ -1654,14 +1671,14 @@ namespace assert_detail {
 						recursion_folded = j - 2;
 					}
 				}
-				int frame_number = i + 1;
+				int frame_number = i - start + 1;
 				// pretty print with columns for wide terminals
 				// split printing for small terminals
 				if(term_width >= 50) {
 					auto sig = highlight_blocks(signature + "("); // hack for the highlighter
 					sig.pop_back();
 					size_t left = 2 + max_frame_width;
-					size_t middle = std::max((int)line_number.size(), max_line_number_width);
+					size_t middle = std::max((int)line_number.size(), max_line_number_width); // todo: is this looking right...?
 					size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
 					primitive_assert(remaining_width >= 2);
 					size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
