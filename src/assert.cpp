@@ -1423,6 +1423,15 @@ namespace assert_detail {
 		return escaped;
 	}
 
+	[[gnu::cold]]
+	std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r) {
+		primitive_assert(sig.find(l) != std::string_view::npos);
+		primitive_assert(sig.rfind(r) != std::string_view::npos);
+		primitive_assert(sig.find(l) < sig.rfind(r));
+		auto i = sig.find(l) + l.length();
+		return sig.substr(i, sig.rfind(r) - i);
+	}
+
 	/*
 	 * stack trace printing
 	 */
@@ -1801,6 +1810,87 @@ namespace assert_detail {
 			}
 			return blocks;
 		}
+	}
+
+	[[gnu::cold]]
+	std::string print_binary_diagnostic_defferred(std::set<literal_format>& formats, std::vector<std::string>& lstrings,
+	                                              std::vector<std::string>& rstrings, const char* a_str,
+	                                              const char* b_str) {
+		primitive_assert(lstrings.size() > 0);
+		primitive_assert(rstrings.size() > 0);
+		// pad all columns where there is overlap
+		// TODO: Use column printer instead of manual padding.
+		for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()); i++) {
+			// find which clause, left or right, we're padding (entry i)
+			std::vector<std::string>& which = lstrings[i].length() < rstrings[i].length() ? lstrings : rstrings;
+			int difference = std::abs((int)lstrings[i].length() - (int)rstrings[i].length());
+			if(i != which.size() - 1) { // last column excluded as padding is not necessary at the end of the line
+				which[i].insert(which[i].end(), difference, ' ');
+			}
+		}
+		// determine whether we actually gain anything from printing a where clause (e.g. exclude "1 => 1")
+		struct { bool left, right; } has_useful_where_clause = {
+			formats.size() > 1 || lstrings.size() > 1 || (a_str != lstrings[0] && trim_suffix(a_str) != lstrings[0]),
+			formats.size() > 1 || rstrings.size() > 1 || (b_str != rstrings[0] && trim_suffix(b_str) != rstrings[0])
+		};
+		// print where clause
+		std::string where;
+		if(has_useful_where_clause.left || has_useful_where_clause.right) {
+			size_t lw = std::max(
+				has_useful_where_clause.left  ? strlen(a_str) : 0,
+				has_useful_where_clause.right ? strlen(b_str) : 0
+			);
+			size_t term_width = terminal_width(); // will be 0 on error
+			// Limit lw to about half the screen. TODO: Re-evaluate what we want to do here.
+			if(term_width > 0) lw = std::min(lw, term_width / 2 - 8 /* indent */ - 4 /* arrow */);
+			where += "    Where:\n";
+			auto print_clause = [term_width, lw, &where](const char* expr_str, std::vector<std::string>& expr_strs) {
+				if(term_width >= min_term_width) {
+					where += wrapped_print({
+						{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
+						{ lw, highlight_blocks(expr_str) },
+						{ 2, {{"", "=>"}} },
+						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(expr_strs) }
+					});
+				} else {
+					where += bstringf("        %s%*s => ",
+							          highlight(expr_str).c_str(), int(lw - strlen(expr_str)), "");
+					where += print_values(expr_strs, lw);
+				}
+			};
+			if(has_useful_where_clause.left) {
+				print_clause(a_str, lstrings);
+			}
+			if(has_useful_where_clause.right) {
+				print_clause(b_str, rstrings);
+			}
+		}
+		return where;
+	}
+
+	[[gnu::cold]]
+	std::string print_extra_diagnostics(const decltype(extra_diagnostics::entries)& extra_diagnostics) {
+		std::string output = "    Extra diagnostics:\n";
+		size_t term_width = terminal_width(); // will be 0 on error
+		size_t lw = 0;
+		for(auto& entry : extra_diagnostics) {
+			lw = std::max(lw, entry.first.size());
+		}
+		for(auto& entry : extra_diagnostics) {
+			if(term_width >= min_term_width) {
+				output += wrapped_print({
+					{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
+					{ lw, highlight_blocks(entry.first) },
+					{ 2, {{"", "=>"}} },
+					{ term_width - lw - 8 /* indent */ - 4 /* arrow */, highlight_blocks(entry.second) }
+				});
+			} else {
+				output += bstringf("        %s%*s => %s\n",
+								   highlight(entry.first).c_str(), int(lw - entry.first.length()), "",
+								   indent(highlight(entry.second), 8 + lw + 4, ' ', true).c_str());
+			}
+		}
+		return output;
 	}
 
 	const char* verification_failure::what() const noexcept {
