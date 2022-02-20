@@ -2,7 +2,7 @@ C = clang++
 #C = g++
 
 WFLAGS = -Wall -Wextra -Werror=return-type
-FLAGS = -std=c++17 -g -Iinclude #-D_0_ASSERT_DEMO -ftime-trace # -DASSERT_INTERNAL_DEBUG
+FLAGS = -std=c++17 -g -Iinclude -DASSERT_FAIL=custom_fail #-fsanitize=address #-D_0_ASSERT_DEMO #-ftime-trace
 LIBFLAGS = $(FLAGS) -O2
 PIC =
 ifeq ($(OS),Windows_NT)
@@ -14,7 +14,7 @@ else
 	DEMO = demo
 	STATIC_LIB = libassert.a
 	SHARED_LIB = libassert.so
-	LDFLAGS = -ldl
+	LDFLAGS = -ldl #-fsanitize=address
 	PIC = -fPIC
 endif
 
@@ -22,8 +22,9 @@ endif
 
 _all: $(STATIC_LIB) $(SHARED_LIB)
 
-$(DEMO): demo.o foo.o bar.o $(SHARED_LIB)
+$(DEMO): demo.o foo.o bar.o $(SHARED_LIB) # $(STATIC_LIB)
 	$(C) demo.o foo.o bar.o -L. -lassert -o $(DEMO) $(WFLAGS) $(FLAGS)
+	#$(C) demo.o foo.o bar.o $(STATIC_LIB) -o $(DEMO) $(WFLAGS) $(FLAGS) $(LDFLAGS)
 demo.o: demo.cpp include/assert.hpp
 	$(C) demo.cpp -c -o demo.o $(WFLAGS) $(FLAGS)
 foo.o: foo.cpp include/assert.hpp

@@ -19,6 +19,10 @@
 #define DARK ESC "1;30m"
 #define RESET ESC "0m"
 
+void custom_fail(std::string message, assert_detail::assert_type, assert_detail::ASSERTION) {
+	std::cerr<<message<<std::endl<<std::endl;
+}
+
 template<class T> struct S {
 	T x;
 	S() = default;
@@ -355,6 +359,7 @@ public:
 };
 
 int main() {
+	assert_detail::enable_virtual_terminal_processing_if_needed();
 	foo f;
 	f.bar<int>({});
 }

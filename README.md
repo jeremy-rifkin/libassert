@@ -65,6 +65,10 @@ system:
 Rationale for `CHECK`: Sometimes it's problematic to assume expressions, e.g. a call to
 `std::unordered_map::at` call can't be optimized away even if the result is unused.
 
+Under `-DNDEBUG` assertions will mark the fail path as unreachable, potentially providing helpful
+information to the optimizer. It's important to note the immediate consequence of this is tha
+assertion failure in `-DNDEBUG` can lead to UB.
+
 `VERIFY` and `CHECK` calls may specified to be nonfatal. If marked nonfatal `CHECK`/`VERIFY` will
 simply log a failure message but not abort or throw an exception.
 
@@ -252,11 +256,11 @@ behaviors are:
 
 | Name     | Failure |
 | -------- | ------- |
-| `ASSERT` / `assert` | `stdout` and `stderr` are flushed, `abort()` is called |
+| `ASSERT` / `assert` | `abort()` is called. In `-DNDEBUG`, fail path is marked unreachable. |
 | `VERIFY` | `assert_detail::verification_failure` is thrown |
 | `CHECK`  | `assert_detail::check_failure` is thrown |
 
-### Configuration options:
+### Configuration
 
 - `-DNCOLOR` Turns off colors / syntax highlighting
 - `-DNDEBUG` Disables assertion checks for release (assertion conditions are assumed for the
@@ -264,11 +268,33 @@ behaviors are:
 - `-DASSERT_NO_LOWERCASE` Disables `assert` alias for `ASSERT`
 
 Custom failure actions: These are called when an assertion fails after diagnostic messages are
-printed. Set these macros to the name of the failure action function, signature should be `void()`.
+printed. Set these macros to the name of the failure action function, signature is expected to be
+`void custom_fail(std::string message, assert_detail::assert_type type, assert_detail::ASSERT fatal)`.
+`assertion_failure_message` is the processed assertion failure output. `fatal` indicates whether an
+assertion is fatal. A typical implementation looks like:
+```cpp
+void custom_fail(std::string message, assert_detail::assert_type type, assert_detail::ASSERT fatal) {
+	using assert_detail::ASSERT;
+	using assert_detail::assert_type;
+	assert_detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
+	std::cerr<<message<<std::endl;
+	if(fatal == ASSERT::FATAL) {
+		switch(type) {
+			case assert_type::assertion:
+				abort();
+			case assert_type::verify:
+				throw assert_detail::verification_failure();
+			case assert_type::check:
+				throw assert_detail::check_failure();
+			default:
+				assert(false);
+		}
+	}
+}
+```
 
-- `-DASSERT_FAIL=...` Default action: Flushes `stdout` and `stderr` then calls `abort()`.
-- `-DVERIFY_FAIL=...` Default action: `assert_detail::verification_failure` is thrown.
-- `-DCHECK_FAIL=...` Default action: `assert_detail::check_failure` is thrown.
+Custom fail actions for asserts, verifies, and checks can be set on a per-TU basis with
+`-DASSERT_FAIL=fn`.
 
 ## How To Use This Library
 

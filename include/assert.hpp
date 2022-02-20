@@ -71,14 +71,20 @@
  #define RESET ""
 #endif
 
+namespace assert_detail {
+	enum class ASSERTION {
+		NONFATAL, FATAL
+	};
+
+	enum class assert_type {
+		assertion,
+		verify,
+		check
+	};
+}
+
 #ifdef ASSERT_FAIL
- extern void ASSERT_FAIL();
-#endif
-#ifdef VERIFY_FAIL
- extern void VERIFY_FAIL();
-#endif
-#ifdef CHECK_FAIL
- extern void CHECK_FAIL();
+ void ASSERT_FAIL(std::string message, assert_detail::assert_type type, assert_detail::ASSERTION fatal);
 #endif
 
 #define PHONY_USE(E) do { using x [[maybe_unused]] = decltype(E); } while(0)
@@ -466,7 +472,6 @@ namespace assert_detail {
 	 * C++ syntax analysis logic
 	 */
 
-
 	enum class literal_format {
 		dec,
 		hex,
@@ -655,9 +660,9 @@ namespace assert_detail {
 		column_t& operator=(column_t&&);
 	};
 
-	void wrapped_print(const std::vector<column_t>& columns);
+	std::string wrapped_print(const std::vector<column_t>& columns);
 
-	void print_stacktrace();
+	std::string print_stacktrace();
 
 	template<typename T>
 	[[gnu::cold]]
@@ -679,7 +684,7 @@ namespace assert_detail {
 		}
 	}
 
-	void print_values(const std::vector<std::string>& vec, size_t lw);
+	std::string print_values(const std::vector<std::string>& vec, size_t lw);
 
 	std::vector<highlight_block> get_values(const std::vector<std::string>& vec);
 
@@ -687,7 +692,7 @@ namespace assert_detail {
 
 	template<typename A, typename B>
 	[[gnu::cold]]
-	void print_binary_diagnostic(const A& a, const B& b, const char* a_str, const char* b_str, std::string_view op) {
+	std::string print_binary_diagnostic(const A& a, const B& b, const char* a_str, const char* b_str, std::string_view op) {
 		// Note: op
 		// figure out what information we need to print in the where clause
 		// find all literal formats involved (literal_format::dec included for everything)
@@ -719,6 +724,7 @@ namespace assert_detail {
 			formats.size() > 1 || rstrings.size() > 1 || (b_str != rstrings[0] && trim_suffix(b_str) != rstrings[0])
 		};
 		// print where clause
+		std::string where;
 		if(has_useful_where_clause.left || has_useful_where_clause.right) {
 			size_t lw = std::max(
 				has_useful_where_clause.left  ? strlen(a_str) : 0,
@@ -727,19 +733,19 @@ namespace assert_detail {
 			size_t term_width = terminal_width(); // will be 0 on error
 			// Limit lw to about half the screen. TODO: Re-evaluate what we want to do here.
 			if(term_width > 0) lw = std::min(lw, term_width / 2 - 8 /* indent */ - 4 /* arrow */);
-			fprintf(stderr, "    Where:\n");
-			auto print_clause = [term_width, lw](const char* expr_str, std::vector<std::string>& expr_strs) {
+			where += "    Where:\n";
+			auto print_clause = [term_width, lw, &where](const char* expr_str, std::vector<std::string>& expr_strs) {
 				if(term_width >= min_term_width) {
-					wrapped_print({
+					where += wrapped_print({
 						{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
 						{ lw, highlight_blocks(expr_str) },
 						{ 2, {{"", "=>"}} },
 						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(expr_strs) }
 					});
 				} else {
-					fprintf(stderr, "        %s%*s => ",
-							highlight(expr_str).c_str(), int(lw - strlen(expr_str)), "");
-						print_values(expr_strs, lw);
+					where += stringf("        %s%*s => ",
+							          highlight(expr_str).c_str(), int(lw - strlen(expr_str)), "");
+					where += print_values(expr_strs, lw);
 				}
 			};
 			if(has_useful_where_clause.left) {
@@ -749,16 +755,12 @@ namespace assert_detail {
 				print_clause(b_str, rstrings);
 			}
 		}
+		return where;
 	}
 
 	/*
-	 * actual assertion main bodies, finally
+	 * actual assertion handling, finally
 	 */
-
-	// allow non-fatal assertions
-	enum class ASSERT {
-		NONFATAL, FATAL
-	};
 
 	struct verification_failure : std::exception {
 		virtual const char* what() const noexcept final override;
@@ -768,6 +770,8 @@ namespace assert_detail {
 		virtual const char* what() const noexcept final override;
 	};
 
+	void default_fail_action(std::string, assert_detail::assert_type, assert_detail::ASSERTION);
+
 	#define X(x) #x
 	#define Y(x) X(x)
 	constexpr const std::string_view errno_expansion = Y(errno);
@@ -775,7 +779,7 @@ namespace assert_detail {
 	#undef X
 
 	struct extra_diagnostics {
-		ASSERT fatality = ASSERT::FATAL;
+		ASSERTION fatality = ASSERTION::FATAL;
 		std::string message;
 		std::vector<std::pair<std::string, std::string>> entries;
 		extra_diagnostics();
@@ -792,7 +796,7 @@ namespace assert_detail {
 	template<typename T>
 	[[gnu::cold]]
 	void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, T& t) {
-		if constexpr(isa<T, ASSERT>) {
+		if constexpr(isa<T, ASSERTION>) {
 			entry.fatality = t;
 		} else {
 			// three cases to handle: assert message, errno, and regular diagnostics
@@ -833,12 +837,6 @@ namespace assert_detail {
 		lock& operator=(lock&&) = delete;
 	};
 
-	enum class assert_type {
-		assert,
-		verify,
-		check
-	};
-
 	const char* assert_type_name(assert_type t);
 
 	// collection of assertion data that can be put in static storage and all passed by a single pointer
@@ -862,18 +860,18 @@ namespace assert_detail {
 		primitive_assert((sizeof...(args) == 0 && args_strings_count == 2)
 		                 || args_strings_count == sizeof...(args) + 1);
 		// process_args needs to be called as soon as possible in case errno needs to be read
-		auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
-		enable_virtual_terminal_processing_if_needed();
+		const auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
+		std::string output;
 		if(message != "") {
-			fprintf(stderr, "%s failed at %s:%d: %s: %s\n",
-			                 assert_type_name(type), location.file, location.line,
-			                 highlight(location.function).c_str(), message.c_str());
+			output += stringf("%s failed at %s:%d: %s: %s\n",
+			                   assert_type_name(type), location.file, location.line,
+			                   highlight(location.function).c_str(), message.c_str());
 		} else {
-			fprintf(stderr, "%s failed at %s:%d: %s:\n", assert_type_name(type),
-			                          location.file, location.line, highlight(location.function).c_str());
+			output += stringf("%s failed at %s:%d: %s:\n", assert_type_name(type),
+			                   location.file, location.line, highlight(location.function).c_str());
 		}
-		fprintf(stderr, "    %s\n", highlight(stringf("%s(%s%s);", name, expr_str,
-		                                        sizeof...(args) > 0 ? ", ..." : "")).c_str());
+		output += stringf("    %s\n", highlight(stringf("%s(%s%s);", name, expr_str,
+		                                         sizeof...(args) > 0 ? ", ..." : "")).c_str());
 		if constexpr(is_nothing<C>) {
 			static_assert(is_nothing<B> && !is_nothing<A>);
 		} else {
@@ -881,7 +879,7 @@ namespace assert_detail {
 			print_binary_diagnostic(decomposer.a, decomposer.b, a_str.c_str(), b_str.c_str(), C::op_string);
 		}
 		if(!extra_diagnostics.empty()) {
-			fprintf(stderr, "    Extra diagnostics:\n");
+			output += "    Extra diagnostics:\n";
 			size_t term_width = terminal_width(); // will be 0 on error
 			size_t lw = 0;
 			for(auto& entry : extra_diagnostics) {
@@ -889,55 +887,25 @@ namespace assert_detail {
 			}
 			for(auto& entry : extra_diagnostics) {
 				if(term_width >= min_term_width) {
-					wrapped_print({
+					output += wrapped_print({
 						{ 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
 						{ lw, highlight_blocks(entry.first) },
 						{ 2, {{"", "=>"}} },
 						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, highlight_blocks(entry.second) }
 					});
 				} else {
-					fprintf(stderr, "        %s%*s => %s\n",
-							highlight(entry.first).c_str(), int(lw - entry.first.length()), "",
-							indent(highlight(entry.second), 8 + lw + 4, ' ', true).c_str());
+					output += stringf("        %s%*s => %s\n",
+					                   highlight(entry.first).c_str(), int(lw - entry.first.length()), "",
+					                   indent(highlight(entry.second), 8 + lw + 4, ' ', true).c_str());
 				}
 			}
 		}
-		fprintf(stderr, "\nStack trace:\n");
-		print_stacktrace();
-		if(fatal == ASSERT::FATAL) {
-			#ifndef _0_ASSERT_DEMO
-			 switch(type) {
-			 	case assert_type::assert:
-			 		#ifdef ASSERT_FAIL
-			 		 ::ASSERT_FAIL();
-			 		#else
-			 		 fflush(stdout);
-			 		 fflush(stderr);
-			 		 abort();
-			 		#endif
-			 		break;
-			 	case assert_type::verify:
-			 		#ifdef VERIFY_FAIL
-			 		 ::VERIFY_FAIL();
-			 		#else
-			 		 throw verification_failure();
-			 		#endif
-			 		break;
-			 	case assert_type::check:
-			 		#ifdef CHECK_FAIL
-			 		 ::CHECK_FAIL();
-			 		#else
-			 		 throw check_failure();
-			 		#endif
-			 		break;
-				default:
-					primitive_assert(false);
-					__builtin_unreachable();
-			 }
-			#endif
-		}
-		#ifdef _0_ASSERT_DEMO
-		 fprintf(stderr, "\n");
+		output += "\nStack trace:\n";
+		output += print_stacktrace();
+		#ifdef ASSERT_FAIL
+		 ::ASSERT_FAIL(output, type, fatal);
+		#else
+		 default_fail_action(output, type, fatal);
 		#endif
 	}
 
@@ -958,8 +926,16 @@ namespace assert_detail {
 		constexpr bool ret_lhs = decomposer.ret_lhs();
 		if(__builtin_expect_with_probability(!static_cast<bool>(value), 0, 1)) {
 			#ifdef NDEBUG
-			 if(params->type == assert_type::assert) { // will be constant propagated
+			 if(params->type == assert_type::assertion) { // will be constant propagated
 				__builtin_unreachable();
+			 }
+			 // If an assert fails under -DNDEBUG this whole branch will be marked unreachable but
+			 // without optimizations control flow can fallthrough the above statement. It's of
+			 // course all UB once an assertion fails in -DNDEBUG but this is an attempt to produce
+			 // better behavior.
+			 if(params->type == assert_type::assertion) {
+				fprintf(stderr, "Catastropic error: Assertion failed in -DNDEBUG\n");
+				abort();
 			 }
 			 // verify calls will procede with fail call
 			 // check is excluded at macro definition, nothing needed here
@@ -1011,7 +987,7 @@ namespace assert_detail {
  #undef RESET
 #endif
 
-using assert_detail::ASSERT;
+using assert_detail::ASSERTION;
 
 // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
 #define EVAL0(...) __VA_ARGS__
@@ -1082,7 +1058,7 @@ using assert_detail::ASSERT;
                               _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
                               assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
                             }), \
-                            ASSERT_DETAIL_STATIC_DATA(name, assert_detail::assert_type::assert, #expr, __VA_ARGS__) \
+                            ASSERT_DETAIL_STATIC_DATA(name, assert_detail::assert_type::assertion, #expr, __VA_ARGS__) \
                             ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
                           )
 

@@ -5,8 +5,9 @@
 // Jeremy Rifkin 2021
 // https://github.com/jeremy-rifkin/asserts
 
-#include <regex>
+#include <iostream>
 #include <mutex>
+#include <regex>
 
 #if IS_WINDOWS
  #include <windows.h>
@@ -1104,10 +1105,10 @@ namespace assert_detail {
 			std::set<int>& output
 		) {
 			#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
-			printf("*");
+			fprintf(stderr, "*");
 			#endif
 			if(depth > max_depth) {
-				printf("Max depth exceeded\n");
+				fprintf(stderr, "Max depth exceeded\n");
 				return false;
 			}
 			// precedence table is binary, unary operators have highest precedence
@@ -1280,15 +1281,15 @@ namespace assert_detail {
 			std::set<int> candidates;
 			bool success = pseudoparse(std::move(tokens), target_op, 0, 0, 0, -1, 0, candidates);
 			#ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
-			printf("\n%d %d\n", (int)candidates.size(), success);
+			fprintf(stderr, "\n%d %d\n", (int)candidates.size(), success);
 			for(size_t m : candidates) {
 				std::vector<std::string> left_strings;
 				std::vector<std::string> right_strings;
 				for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
 				for(size_t i = m + 1; i < tokens.size(); i++) right_strings.push_back(tokens[i].str);
-				printf("left:  %s\n", highlight(std::string(trim(join(left_strings, "")))).c_str());
-				printf("right: %s\n", highlight(std::string(trim(join(right_strings, "")))).c_str());
-				printf("---\n");
+				fprintf(stderr, "left:  %s\n", highlight(std::string(trim(join(left_strings, "")))).c_str());
+				fprintf(stderr, "right: %s\n", highlight(std::string(trim(join(right_strings, "")))).c_str());
+				fprintf(stderr, "---\n");
 			}
 			#endif
 			if(success && candidates.size() == 1) {
@@ -1524,7 +1525,7 @@ namespace assert_detail {
 	};
 
 	[[gnu::cold]]
-	void wrapped_print(const std::vector<column_t>& columns) {
+	std::string wrapped_print(const std::vector<column_t>& columns) {
 		// 2d array rows/columns
 		struct line_content {
 			size_t length;
@@ -1564,6 +1565,7 @@ namespace assert_detail {
 			}
 		}
 		// print
+		std::string output;
 		for(auto& line : lines) {
 			// don't print empty columns with no content in subsequent columns and more importantly
 			// don't print empty spaces they'll mess up lines after terminal resizing even more
@@ -1576,18 +1578,19 @@ namespace assert_detail {
 			for(size_t i = 0; i <= last_col; i++) {
 				auto& content = line[i];
 				if(columns[i].right_align) {
-					fprintf(stderr, "%-*s%s%s",
-						i == last_col ? 0 : int(columns[i].width - content.length), "",
-						content.content.c_str(),
-						i == last_col ? "\n" : " ");
+					output += stringf("%-*s%s%s",
+					                  i == last_col ? 0 : int(columns[i].width - content.length), "",
+					                  content.content.c_str(),
+					                  i == last_col ? "\n" : " ");
 				} else {
-					fprintf(stderr, "%s%-*s%s",
-						content.content.c_str(),
-						i == last_col ? 0 : int(columns[i].width - content.length), "",
-						i == last_col ? "\n" : " ");
+					output += stringf("%s%-*s%s",
+					                  content.content.c_str(),
+					                  i == last_col ? 0 : int(columns[i].width - content.length), "",
+					                  i == last_col ? "\n" : " ");
 				}
 			}
 		}
+		return output;
 	}
 
 	[[gnu::cold]]
@@ -1638,7 +1641,8 @@ namespace assert_detail {
 	}
 
 	[[gnu::cold]]
-	void print_stacktrace() {
+	std::string print_stacktrace() {
+		std::string stacktrace;
 		if(auto _trace = get_stacktrace()) {
 			auto trace = *_trace;
 			// prettify signatures
@@ -1683,7 +1687,7 @@ namespace assert_detail {
 					primitive_assert(remaining_width >= 2);
 					size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
 					size_t sig_width = remaining_width - file_width;
-					wrapped_print({
+					stacktrace += wrapped_print({
 						{ 1,          {{"", "#"}} },
 						{ left - 2,   {{"", std::to_string(frame_number)}}, true },
 						{ file_width, {{"", files.at(source_path)}} },
@@ -1693,8 +1697,8 @@ namespace assert_detail {
 				} else {
 					auto sig = highlight(signature + "("); // hack for the highlighter
 					sig = sig.substr(0, sig.rfind("("));
-					fprintf(
-						stderr, "#%2d %s\n      at %s:%s\n",
+					stacktrace += stringf(
+						"#%2d %s\n      at %s:%s\n",
 						frame_number,
 						sig.c_str(),
 						source_path.c_str(),
@@ -1704,31 +1708,34 @@ namespace assert_detail {
 				if(recursion_folded) {
 					i += recursion_folded;
 					std::string s = stringf("| %d layers of recursion were folded |", recursion_folded);
-					fprintf(stderr, BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
-					fprintf(stderr, BLUE  "%s"   RESET "\n", s.c_str());
-					fprintf(stderr, BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
+					stacktrace += stringf(BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
+					stacktrace += stringf(BLUE  "%s"   RESET "\n", s.c_str());
+					stacktrace += stringf(BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
 				}
 			}
 		} else {
-			fprintf(stderr, "Error while generating stack trace.\n");
+			stacktrace += "Error while generating stack trace.\n";
 		}
+		return stacktrace;
 	}
 
 	[[gnu::cold]]
-	void print_values(const std::vector<std::string>& vec, size_t lw) {
+	std::string print_values(const std::vector<std::string>& vec, size_t lw) {
 		primitive_assert(vec.size() > 0);
+		std::string values;
 		if(vec.size() == 1) {
-			fprintf(stderr, "%s\n", indent(highlight(vec[0]), 8 + lw + 4, ' ', true).c_str());
+			values += stringf("%s\n", indent(highlight(vec[0]), 8 + lw + 4, ' ', true).c_str());
 		} else {
 			// spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
 			// no indentation done here for multiple value printing
-			fprintf(stderr, " ");
+			values += " ";
 			for(const auto& str : vec) {
-				fprintf(stderr, "%s", highlight(str).c_str());
-				if(&str != &*--vec.end()) fprintf(stderr, "  ");
+				values += stringf("%s", highlight(str).c_str());
+				if(&str != &*--vec.end()) values += "  ";
 			}
-			fprintf(stderr, "\n");
+			values += "\n";
 		}
+		return values;
 	}
 
 	[[gnu::cold]]
@@ -1756,6 +1763,23 @@ namespace assert_detail {
 
 	const char* check_failure::what() const noexcept {
 		return "Call to CHECK() failed";
+	}
+
+	void default_fail_action(std::string message, assert_type type, assert_detail::ASSERTION fatal) {
+		assert_detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
+		std::cerr<<message<<std::endl;
+		if(fatal == ASSERTION::FATAL) {
+			switch(type) {
+				case assert_type::assertion:
+					abort();
+				case assert_type::verify:
+					throw assert_detail::verification_failure();
+				case assert_type::check:
+					throw assert_detail::check_failure();
+				default:
+					assert(false);
+			}
+		}
 	}
 
 	[[gnu::cold]] extra_diagnostics::extra_diagnostics() = default;
@@ -1786,7 +1810,7 @@ namespace assert_detail {
 	[[gnu::cold]]
 	const char* assert_type_name(assert_type t) {
 		switch(t) {
-			case assert_type::assert: return "Assertion";
+			case assert_type::assertion: return "Assertion";
 			case assert_type::verify: return "Verification";
 			case assert_type::check: return "Check";
 			default:
