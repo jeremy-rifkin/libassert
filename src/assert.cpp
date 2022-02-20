@@ -7,7 +7,11 @@
 
 #include <iostream>
 #include <mutex>
+#include <optional>
 #include <regex>
+#include <stdarg.h>
+#include <unordered_map>
+#include <unordered_set>
 
 #if IS_WINDOWS
  #include <windows.h>
@@ -59,6 +63,32 @@ namespace assert_detail {
 	 * string utilities
 	 */
 
+	template<typename... T>
+	[[gnu::cold]]
+	std::string stringf(T... args) {
+		int length = snprintf(0, 0, args...);
+		if(length < 0) primitive_assert(false, "Invalid arguments to stringf");
+		std::string str(length, 0);
+		snprintf(str.data(), length + 1, args...);
+		return str;
+	}
+
+	// to save template instantiation work in TUs a variadic stringf is used
+	[[gnu::cold]]
+	std::string bstringf(const char* format, ...) {
+		va_list args1;
+		va_list args2;
+		va_start(args1, format);
+		va_start(args2, format);
+		int length = vsnprintf(0, 0, format, args1);
+		if(length < 0) primitive_assert(false, "Invalid arguments to stringf");
+		std::string str(length, 0);
+		vsnprintf(str.data(), length + 1, format, args2);
+		va_end(args1);
+		va_end(args2);
+		return str;
+	}
+
 	[[gnu::cold]]
 	static std::vector<std::string> split(std::string_view s, std::string_view delims) {
 		std::vector<std::string> vec;
@@ -72,6 +102,22 @@ namespace assert_detail {
 		}
 		vec.push_back(std::string(s.substr(old_pos)));
 		return vec;
+	}
+
+	template<typename C>
+	[[gnu::cold]]
+	static std::string join(const C& container, const std::string_view delim) {
+		auto iter = std::begin(container);
+		auto end = std::end(container);
+		std::string str;
+		if(std::distance(iter, end) > 0) {
+			str += *iter;
+			while(++iter != end) {
+				str += delim;
+				str += *iter;
+			}
+		}
+		return str;
 	}
 
 	constexpr const char * const ws = " \t\n\r\f\v";

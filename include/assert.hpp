@@ -5,19 +5,15 @@
 // https://github.com/jeremy-rifkin/asserts
 
 #include <bitset>
-#include <functional>
 #include <iomanip>
 #include <limits>
-#include <optional>
 #include <set>
 #include <sstream>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string_view>
 #include <string.h>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
+#include <vector>
 
 #if defined(__clang__)
  #define IS_CLANG 1
@@ -120,33 +116,10 @@ namespace assert_detail {
 	/*
 	 * string utilities
 	 */
+	[[nodiscard]]
+	std::string bstringf(const char* format, ...);
 
-	template<typename... T>
-	[[gnu::cold]]
-	std::string stringf(T... args) {
-		int length = snprintf(0, 0, args...);
-		if(length < 0) primitive_assert(false, "Invalid arguments to stringf");
-		std::string str(length, 0);
-		snprintf(str.data(), length + 1, args...);
-		return str;
-	}
-
-	template<typename C>
-	[[gnu::cold]]
-	static std::string join(const C& container, const std::string_view delim) {
-		auto iter = std::begin(container);
-		auto end = std::end(container);
-		std::string str;
-		if(std::distance(iter, end) > 0) {
-			str += *iter;
-			while(++iter != end) {
-				str += delim;
-				str += *iter;
-			}
-		}
-		return str;
-	}
-
+	[[nodiscard]]
 	std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
 
 	/*
@@ -159,15 +132,19 @@ namespace assert_detail {
 	typedef int pid_t;
 	#endif
 
+	[[nodiscard]]
 	pid_t getpid();
 
 	void wait_for_keypress();
 
+	[[nodiscard]]
 	bool isatty(int fd);
 
 	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
+	[[nodiscard]]
 	int terminal_width();
 
+	[[nodiscard]]
 	std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
 
 	/*
@@ -203,7 +180,7 @@ namespace assert_detail {
 	// Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
 	// Not using std:: versions because library is targetting C++17
 	template<typename T, typename U>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	constexpr bool cmp_equal(T t, U u) {
 		using UT = std::make_unsigned_t<T>;
 		using UU = std::make_unsigned_t<U>;
@@ -216,13 +193,13 @@ namespace assert_detail {
 	}
 
 	template<typename T, typename U>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	constexpr bool cmp_not_equal(T t, U u) {
 		return !cmp_equal(t, u);
 	}
 
 	template<typename T, typename U>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	constexpr bool cmp_less(T t, U u) {
 		using UT = std::make_unsigned_t<T>;
 		using UU = std::make_unsigned_t<U>;
@@ -235,19 +212,19 @@ namespace assert_detail {
 	}
 
 	template<typename T, typename U>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	constexpr bool cmp_greater(T t, U u) {
 		return cmp_less(u, t);
 	}
 
 	template<typename T, typename U>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	constexpr bool cmp_less_equal(T t, U u) {
 		return !cmp_greater(t, u);
 	}
 
 	template<typename T, typename U>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	constexpr bool cmp_greater_equal(T t, U u) {
 		return !cmp_less(t, u);
 	}
@@ -259,14 +236,16 @@ namespace assert_detail {
 		#define gen_op_boilerplate(name, op) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
-			[[gnu::cold]] constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
+			[[gnu::cold]] [[nodiscard]] \
+			constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
 				return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
 		}
 		#define gen_op_boilerplate_special(name, op, cmp) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
-			[[gnu::cold]] constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
+			[[gnu::cold]] [[nodiscard]] \
+			constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
 				if constexpr(is_integral_and_not_bool<A> && is_integral_and_not_bool<B>) return cmp(lhs, rhs); \
 				else return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
@@ -357,6 +336,7 @@ namespace assert_detail {
 		 *      + Either the value is taken or a is moved out
 		 * Ensuring the value is only computed once is left to the assert handler
 		 */
+		[[nodiscard]]
 		decltype(auto) get_value() {
 			if constexpr(is_nothing<C>) {
 				static_assert(is_nothing<B> && !is_nothing<A>);
@@ -365,10 +345,12 @@ namespace assert_detail {
 				return C()(a, b);
 			}
 		}
+		[[nodiscard]]
 		operator bool() { // for ternary support
 			return (bool)get_value();
 		}
 		// return true if the lhs should be returned, false if full computed value should be
+		[[nodiscard]]
 		constexpr bool ret_lhs() {
 			static_assert(!is_nothing<A>);
 			static_assert(is_nothing<B> == is_nothing<C>);
@@ -395,6 +377,7 @@ namespace assert_detail {
 				}
 			}
 		}
+		[[nodiscard]]
 		A take_lhs() { // should only be called if ret_lhs() == true
 			if constexpr(std::is_lvalue_reference<A>::value) {
 				return ((((a))));
@@ -406,7 +389,7 @@ namespace assert_detail {
 		// TODO: spaceship operator?
 		// Note: Could decompose more than just comparison and boolean operators, but it would take
 		// a lot of work and I don't think it's beneficial for this library.
-		template<typename O> auto operator<<(O&& operand) {
+		template<typename O> [[nodiscard]] auto operator<<(O&& operand) && {
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
 			if constexpr(is_nothing<A>) {
 				static_assert(is_nothing<B> && is_nothing<C>);
@@ -419,7 +402,7 @@ namespace assert_detail {
 				return expression_decomposer<decltype(get_value()), O, ops::shl>(std::forward<A>(get_value()), std::forward<O>(operand));
 			}
 		}
-		#define gen_op_boilerplate(functor, op) template<typename O> auto operator op(O&& operand) { \
+		#define gen_op_boilerplate(functor, op) template<typename O> [[nodiscard]] auto operator op(O&& operand) && { \
 			static_assert(!is_nothing<A>); \
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
 			if constexpr(is_nothing<B>) { \
@@ -492,28 +475,35 @@ namespace assert_detail {
 		highlight_block& operator=(highlight_block&&);
 	};
 
+	[[nodiscard]]
 	std::string prettify_type(std::string type);
 
+	[[nodiscard]]
 	std::string highlight(const std::string& expression);
 
+	[[nodiscard]]
 	std::vector<highlight_block> highlight_blocks(const std::string& expression);
 
+	[[nodiscard]]
 	literal_format get_literal_format(const std::string& expression);
 
+	[[nodiscard]]
 	std::string trim_suffix(const std::string& expression);
 
+	[[nodiscard]]
 	bool is_bitwise(std::string_view op);
 
+	[[nodiscard]]
 	std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op);
 
 	/*
 	 * stringification
 	 */
 
-	std::string escape_string(const std::string_view str, char quote);
+	[[nodiscard]] std::string escape_string(const std::string_view str, char quote);
 
 	template<typename T>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	constexpr std::string_view type_name() {
 		// Cases to handle:
 		// gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
@@ -566,7 +556,7 @@ namespace assert_detail {
 	static_assert(is_string_type<std::string_view>);
 
 	template<typename T>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
 		// bool and char need to be before std::is_integral
 		if constexpr(is_string_type<T>) {
@@ -639,7 +629,7 @@ namespace assert_detail {
 				oss<<t;
 				return std::move(oss).str();
 			} else {
-				return stringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
+				return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
 			}
 		}
 	}
@@ -660,12 +650,14 @@ namespace assert_detail {
 		column_t& operator=(column_t&&);
 	};
 
+	[[nodiscard]]
 	std::string wrapped_print(const std::vector<column_t>& columns);
 
+	[[nodiscard]]
 	std::string print_stacktrace();
 
 	template<typename T>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	std::vector<std::string> generate_stringifications(const T& v, const std::set<literal_format>& formats) {
 		if constexpr(std::is_arithmetic<strip<T>>::value
 				 && !isa<T, bool>
@@ -684,14 +676,16 @@ namespace assert_detail {
 		}
 	}
 
+	[[nodiscard]]
 	std::string print_values(const std::vector<std::string>& vec, size_t lw);
 
+	[[nodiscard]]
 	std::vector<highlight_block> get_values(const std::vector<std::string>& vec);
 
 	constexpr int min_term_width = 50;
 
 	template<typename A, typename B>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	std::string print_binary_diagnostic(const A& a, const B& b, const char* a_str, const char* b_str, std::string_view op) {
 		// Note: op
 		// figure out what information we need to print in the where clause
@@ -743,7 +737,7 @@ namespace assert_detail {
 						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(expr_strs) }
 					});
 				} else {
-					where += stringf("        %s%*s => ",
+					where += bstringf("        %s%*s => ",
 							          highlight(expr_str).c_str(), int(lw - strlen(expr_str)), "");
 					where += print_values(expr_strs, lw);
 				}
@@ -790,9 +784,6 @@ namespace assert_detail {
 		extra_diagnostics& operator=(extra_diagnostics&&) = delete;
 	};
 
-	[[gnu::cold]] [[maybe_unused]]
-	static void process_args_step(extra_diagnostics&, size_t, const char* const* const) { }
-
 	template<typename T>
 	[[gnu::cold]]
 	void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, T& t) {
@@ -806,7 +797,7 @@ namespace assert_detail {
 				if constexpr(isa<T, strip<decltype(errno)>>) {
 				// errno will expand to something hideous like (*__errno_location()),
 				// may as well replace it with "errno"
-				entry.entries.push_back({ "errno", stringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
+				entry.entries.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
 				}
 			} else {
 				if(i == 0) {
@@ -819,7 +810,7 @@ namespace assert_detail {
 	}
 
 	template<typename... Args>
-	[[gnu::cold]]
+	[[gnu::cold]] [[nodiscard]]
 	extra_diagnostics process_args(const char* const* const args_strings, Args&... args) {
 		extra_diagnostics entry;
 		size_t i = 0;
@@ -863,20 +854,20 @@ namespace assert_detail {
 		const auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
 		std::string output;
 		if(message != "") {
-			output += stringf("%s failed at %s:%d: %s: %s\n",
+			output += bstringf("%s failed at %s:%d: %s: %s\n",
 			                   assert_type_name(type), location.file, location.line,
 			                   highlight(location.function).c_str(), message.c_str());
 		} else {
-			output += stringf("%s failed at %s:%d: %s:\n", assert_type_name(type),
+			output += bstringf("%s failed at %s:%d: %s:\n", assert_type_name(type),
 			                   location.file, location.line, highlight(location.function).c_str());
 		}
-		output += stringf("    %s\n", highlight(stringf("%s(%s%s);", name, expr_str,
+		output += bstringf("    %s\n", highlight(bstringf("%s(%s%s);", name, expr_str,
 		                                         sizeof...(args) > 0 ? ", ..." : "")).c_str());
 		if constexpr(is_nothing<C>) {
 			static_assert(is_nothing<B> && !is_nothing<A>);
 		} else {
 			auto [a_str, b_str] = decompose_expression(expr_str, C::op_string);
-			print_binary_diagnostic(decomposer.a, decomposer.b, a_str.c_str(), b_str.c_str(), C::op_string);
+			output += print_binary_diagnostic(decomposer.a, decomposer.b, a_str.c_str(), b_str.c_str(), C::op_string);
 		}
 		if(!extra_diagnostics.empty()) {
 			output += "    Extra diagnostics:\n";
@@ -894,7 +885,7 @@ namespace assert_detail {
 						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, highlight_blocks(entry.second) }
 					});
 				} else {
-					output += stringf("        %s%*s => %s\n",
+					output += bstringf("        %s%*s => %s\n",
 					                   highlight(entry.first).c_str(), int(lw - entry.first.length()), "",
 					                   indent(highlight(entry.second), 8 + lw + 4, ' ', true).c_str());
 				}
@@ -910,7 +901,7 @@ namespace assert_detail {
 	}
 
 	template<typename A, typename B, typename C, typename... Args>
-	[[gnu::cold]] [[gnu::noinline]]
+	[[gnu::cold]] [[gnu::noinline]] [[nodiscard]]
 	expression_decomposer<A, B, C> assert_fail_m(expression_decomposer<A, B, C> decomposer,
 	                                             const assert_static_parameters* params, Args&&... args) {
 		assert_fail(decomposer, params, std::forward<Args>(args)...);
