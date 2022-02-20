@@ -2,13 +2,14 @@
 #define _CRT_SECURE_NO_WARNINGS // done only for strerror
 #include "assert.hpp"
 
-// Jeremy Rifkin 2021
+// Jeremy Rifkin 2021, 2022
 // https://github.com/jeremy-rifkin/asserts
 
 #include <iostream>
 #include <mutex>
 #include <optional>
 #include <regex>
+#include <set>
 #include <stdarg.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -1432,6 +1433,46 @@ namespace assert_detail {
 		return sig.substr(i, sig.rfind(r) - i);
 	}
 
+	template<typename T>
+	[[gnu::cold]]
+	std::string stringify_int(T t, literal_format fmt, size_t size) {
+		std::ostringstream oss;
+		switch(fmt) {
+			case literal_format::dec:
+				oss<<t;
+				break;
+			case literal_format::hex:
+				oss<<std::showbase<<std::hex<<t;
+				break;
+			case literal_format::octal:
+				oss<<std::showbase<<std::oct<<t;
+				break;
+			case literal_format::binary:
+				{
+					const unsigned long long v = t;
+					unsigned long long mask = 1ull << ((size * 8) - 1);
+					oss<<"0b";
+					while(mask) {
+						oss<<!!(mask & v);
+						mask >>= 1;
+					}
+				}
+				break;
+			default:
+				primitive_assert(false, "unexpected literal format requested for printing");
+		}
+		return std::move(oss).str();
+	}
+
+	[[gnu::cold]]
+	std::string stringify_int(unsigned long long t, literal_format fmt, bool is_unsigned, size_t size) {
+		if(is_unsigned) {
+			return stringify_int(t, fmt, size);
+		} else {
+			return stringify_int((long long)t, fmt, size);
+		}
+	}
+
 	/*
 	 * stack trace printing
 	 */
@@ -1813,9 +1854,9 @@ namespace assert_detail {
 	}
 
 	[[gnu::cold]]
-	std::string print_binary_diagnostic_defferred(std::set<literal_format>& formats, std::vector<std::string>& lstrings,
-	                                              std::vector<std::string>& rstrings, const char* a_str,
-	                                              const char* b_str) {
+	std::string print_binary_diagnostic_deferred(const literal_format (&formats)[4], std::vector<std::string>& lstrings,
+	                                             std::vector<std::string>& rstrings, const char* a_str,
+	                                             const char* b_str) {
 		primitive_assert(lstrings.size() > 0);
 		primitive_assert(rstrings.size() > 0);
 		// pad all columns where there is overlap
@@ -1828,10 +1869,11 @@ namespace assert_detail {
 				which[i].insert(which[i].end(), difference, ' ');
 			}
 		}
+		bool multiple_formats = formats[1] != literal_format::none;
 		// determine whether we actually gain anything from printing a where clause (e.g. exclude "1 => 1")
 		struct { bool left, right; } has_useful_where_clause = {
-			formats.size() > 1 || lstrings.size() > 1 || (a_str != lstrings[0] && trim_suffix(a_str) != lstrings[0]),
-			formats.size() > 1 || rstrings.size() > 1 || (b_str != rstrings[0] && trim_suffix(b_str) != rstrings[0])
+			multiple_formats || lstrings.size() > 1 || (a_str != lstrings[0] && trim_suffix(a_str) != lstrings[0]),
+			multiple_formats || rstrings.size() > 1 || (b_str != rstrings[0] && trim_suffix(b_str) != rstrings[0])
 		};
 		// print where clause
 		std::string where;
@@ -1853,8 +1895,8 @@ namespace assert_detail {
 						{ term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(expr_strs) }
 					});
 				} else {
-					where += bstringf("        %s%*s => ",
-							          highlight(expr_str).c_str(), int(lw - strlen(expr_str)), "");
+					where += stringf("        %s%*s => ",
+							         highlight(expr_str).c_str(), int(lw - strlen(expr_str)), "");
 					where += print_values(expr_strs, lw);
 				}
 			};
@@ -1866,6 +1908,20 @@ namespace assert_detail {
 			}
 		}
 		return where;
+	}
+
+	[[gnu::cold]]
+	void sort_and_dedup(literal_format (&formats)[4]) {
+		std::sort(std::begin(formats), std::end(formats));
+		size_t write_index = 1, read_index = 1;
+		for(; read_index < std::size(formats); read_index++) {
+			if(formats[read_index] != formats[~-write_index]) {
+				formats[write_index++] = formats[read_index];
+			}
+		}
+		while(write_index < std::size(formats)) {
+			formats[write_index++] = literal_format::none;
+		}
 	}
 
 	[[gnu::cold]]
@@ -1885,9 +1941,9 @@ namespace assert_detail {
 					{ term_width - lw - 8 /* indent */ - 4 /* arrow */, highlight_blocks(entry.second) }
 				});
 			} else {
-				output += bstringf("        %s%*s => %s\n",
-								   highlight(entry.first).c_str(), int(lw - entry.first.length()), "",
-								   indent(highlight(entry.second), 8 + lw + 4, ' ', true).c_str());
+				output += stringf("        %s%*s => %s\n",
+				                  highlight(entry.first).c_str(), int(lw - entry.first.length()), "",
+				                  indent(highlight(entry.second), 8 + lw + 4, ' ', true).c_str());
 			}
 		}
 		return output;

@@ -4,7 +4,7 @@
 
 ```cpp
 void zoog(std::vector<int>& vec) {
-	assert(vec.size() > 10, "vector doesn't have enough items");
+    assert(vec.size() > min_items(), "vector doesn't have enough items");
 }
 ```
 ![](screenshots/a.png)
@@ -30,7 +30,7 @@ float f = *assert(get_param());
 	- [Parameters](#parameters)
 	- [Return value](#return-value)
 	- [Failure](#failure)
-	- [Configuration options:](#configuration-options)
+	- [Configuration](#configuration)
 - [How To Use This Library](#how-to-use-this-library)
 - [Comparison With Other Languages](#comparison-with-other-languages)
 
@@ -274,22 +274,22 @@ printed. Set these macros to the name of the failure action function, signature 
 assertion is fatal. A typical implementation looks like:
 ```cpp
 void custom_fail(std::string message, assert_detail::assert_type type, assert_detail::ASSERT fatal) {
-	using assert_detail::ASSERT;
-	using assert_detail::assert_type;
-	assert_detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-	std::cerr<<message<<std::endl;
-	if(fatal == ASSERT::FATAL) {
-		switch(type) {
-			case assert_type::assertion:
-				abort();
-			case assert_type::verify:
-				throw assert_detail::verification_failure();
-			case assert_type::check:
-				throw assert_detail::check_failure();
-			default:
-				assert(false);
-		}
-	}
+    using assert_detail::ASSERT;
+    using assert_detail::assert_type;
+    assert_detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
+    std::cerr<<message<<std::endl;
+    if(fatal == ASSERT::FATAL) {
+        switch(type) {
+            case assert_type::assertion:
+                abort();
+            case assert_type::verify:
+                throw assert_detail::verification_failure();
+            case assert_type::check:
+                throw assert_detail::check_failure();
+            default:
+                assert(false);
+        }
+    }
 }
 ```
 

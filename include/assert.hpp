@@ -1,13 +1,11 @@
 #ifndef ASSERT_HPP
 #define ASSERT_HPP
 
-// Jeremy Rifkin 2021
+// Jeremy Rifkin 2021, 2022
 // https://github.com/jeremy-rifkin/asserts
 
-#include <bitset>
 #include <iomanip>
 #include <limits>
-#include <set>
 #include <sstream>
 #include <stdio.h>
 #include <string_view>
@@ -36,6 +34,11 @@
  #error "no"
 #endif
 
+#if defined(__clang__) && __clang_major__ >= 11 || __GNUC__ >= 9
+ #define strong_expect(expr, value) __builtin_expect_with_probability((expr), (value), 1)
+#else
+ #define strong_expect(expr, value) __builtin_expect((expr), (value))
+#endif
 
 // if defined by a previous #include...
 #ifdef assert
@@ -116,11 +119,9 @@ namespace assert_detail {
 	/*
 	 * string utilities
 	 */
-	[[nodiscard]]
-	std::string bstringf(const char* format, ...);
+	[[nodiscard]] std::string bstringf(const char* format, ...);
 
-	[[nodiscard]]
-	std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
+	[[nodiscard]] std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
 
 	/*
 	 * system wrappers
@@ -132,20 +133,16 @@ namespace assert_detail {
 	typedef int pid_t;
 	#endif
 
-	[[nodiscard]]
-	pid_t getpid();
+	[[nodiscard]] pid_t getpid();
 
 	void wait_for_keypress();
 
-	[[nodiscard]]
-	bool isatty(int fd);
+	[[nodiscard]] bool isatty(int fd);
 
 	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-	[[nodiscard]]
-	int terminal_width();
+	[[nodiscard]] int terminal_width();
 
-	[[nodiscard]]
-	std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
+	[[nodiscard]] std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
 
 	/*
 	 * Stacktrace implementation
@@ -475,36 +472,28 @@ namespace assert_detail {
 		highlight_block& operator=(highlight_block&&);
 	};
 
-	[[nodiscard]]
-	std::string prettify_type(std::string type);
+	[[nodiscard]] std::string prettify_type(std::string type);
 
-	[[nodiscard]]
-	std::string highlight(const std::string& expression);
+	[[nodiscard]] std::string highlight(const std::string& expression);
 
-	[[nodiscard]]
-	std::vector<highlight_block> highlight_blocks(const std::string& expression);
+	[[nodiscard]] std::vector<highlight_block> highlight_blocks(const std::string& expression);
 
-	[[nodiscard]]
-	literal_format get_literal_format(const std::string& expression);
+	[[nodiscard]] literal_format get_literal_format(const std::string& expression);
 
-	[[nodiscard]]
-	std::string trim_suffix(const std::string& expression);
+	[[nodiscard]] std::string trim_suffix(const std::string& expression);
 
-	[[nodiscard]]
-	bool is_bitwise(std::string_view op);
+	[[nodiscard]] bool is_bitwise(std::string_view op);
 
-	[[nodiscard]]
-	std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op);
+	[[nodiscard]] std::pair<std::string, std::string> decompose_expression(const std::string& expression,
+	                                                                       const std::string_view target_op);
 
 	/*
 	 * stringification
 	 */
 
-	[[nodiscard]]
-	std::string escape_string(const std::string_view str, char quote);
+	[[nodiscard]] std::string escape_string(const std::string_view str, char quote);
 
-	[[nodiscard]]
-	std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r);
+	[[nodiscard]] std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r);
 
 	template<typename T>
 	[[gnu::cold]] [[nodiscard]]
@@ -552,6 +541,10 @@ namespace assert_detail {
 	static_assert(is_string_type<std::string>);
 	static_assert(is_string_type<std::string_view>);
 
+	[[nodiscard]] std::string stringify_int(unsigned long long, literal_format, bool, size_t);
+
+	[[nodiscard]] std::string stringify_float(unsigned long long, literal_format, bool, size_t);
+
 	template<typename T>
 	[[gnu::cold]] [[nodiscard]]
 	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
@@ -574,32 +567,13 @@ namespace assert_detail {
 			if(t == nullptr) { // weird nullptr shenanigans, only prints "nullptr" for nullptr_t
 				return "nullptr";
 			} else {
-				std::ostringstream oss;
 				// Manually format the pointer - ostream::operator<<(void*) falls back to %p which
 				// is implementation-defined. MSVC prints pointers without the leading "0x" which
 				// messes up the highlighter.
-				oss<<std::showbase<<std::hex<<uintptr_t(t);
-				return std::move(oss).str();
+				return stringify_int(uintptr_t(t), literal_format::hex, true, sizeof(uintptr_t));
 			}
 		} else if constexpr(std::is_integral_v<T>) {
-			std::ostringstream oss;
-			switch(fmt) {
-				case literal_format::dec:
-					break;
-				case literal_format::hex:
-					oss<<std::showbase<<std::hex;
-					break;
-				case literal_format::octal:
-					oss<<std::showbase<<std::oct;
-					break;
-				case literal_format::binary:
-					oss<<"0b"<<std::bitset<sizeof(t) * 8>(t);
-					goto r;
-				default:
-					primitive_assert(false, "unexpected literal format requested for printing");
-			}
-			oss<<t;
-			r: return std::move(oss).str();
+			return stringify_int(t, fmt, std::is_unsigned<T>::value, sizeof(t));
 		} else if constexpr(std::is_floating_point_v<T>) {
 			std::ostringstream oss;
 			switch(fmt) {
@@ -647,20 +621,19 @@ namespace assert_detail {
 		column_t& operator=(column_t&&);
 	};
 
-	[[nodiscard]]
-	std::string wrapped_print(const std::vector<column_t>& columns);
+	[[nodiscard]] std::string wrapped_print(const std::vector<column_t>& columns);
 
-	[[nodiscard]]
-	std::string print_stacktrace();
+	[[nodiscard]] std::string print_stacktrace();
 
 	template<typename T>
 	[[gnu::cold]] [[nodiscard]]
-	std::vector<std::string> generate_stringifications(const T& v, const std::set<literal_format>& formats) {
+	std::vector<std::string> generate_stringifications(const T& v, const literal_format (&formats)[4]) {
 		if constexpr(std::is_arithmetic<strip<T>>::value
 				 && !isa<T, bool>
 				 && !isa<T, char>) {
 			std::vector<std::string> vec;
 			for(literal_format fmt : formats) {
+				if(fmt == literal_format::none) break;
 				// TODO: consider pushing empty fillers to keep columns aligned later on? Does not
 				// matter at the moment because floats only have decimal and hex literals but could
 				// if more formats are added.
@@ -673,16 +646,16 @@ namespace assert_detail {
 		}
 	}
 
-	[[nodiscard]]
-	std::string print_values(const std::vector<std::string>& vec, size_t lw);
+	[[nodiscard]] std::string print_values(const std::vector<std::string>& vec, size_t lw);
+
+	[[nodiscard]] std::vector<highlight_block> get_values(const std::vector<std::string>& vec);
 
 	[[nodiscard]]
-	std::vector<highlight_block> get_values(const std::vector<std::string>& vec);
+	std::string print_binary_diagnostic_deferred(const literal_format (&formats)[4], std::vector<std::string>& lstrings,
+	                                             std::vector<std::string>& rstrings, const char* a_str,
+	                                             const char* b_str);
 
-	[[nodiscard]]
-	std::string print_binary_diagnostic_defferred(std::set<literal_format>& formats, std::vector<std::string>& lstrings,
-	                                              std::vector<std::string>& rstrings, const char* a_str,
-	                                              const char* b_str);
+	void sort_and_dedup(literal_format(&)[4]);
 
 	template<typename A, typename B>
 	[[gnu::cold]] [[nodiscard]]
@@ -692,16 +665,15 @@ namespace assert_detail {
 		// find all literal formats involved (literal_format::dec included for everything)
 		auto lformat = get_literal_format(a_str);
 		auto rformat = get_literal_format(b_str);
-		// std::set used so formats are printed in a specific order
-		std::set<literal_format> formats = { literal_format::dec, lformat, rformat };
-		formats.erase(literal_format::none); // none is just for when the expression isn't a literal
-		if(is_bitwise(op)) formats.insert(literal_format::binary); // always display binary for bitwise
-		primitive_assert(formats.size() > 0);
+		// formerly used std::set here, now using array + sorting, `none` entries will be at the end and ignored
+		literal_format formats[4] = { literal_format::dec, lformat, rformat, // ↓ always display binary for bitwise
+		                              is_bitwise(op) ? literal_format::binary : literal_format::none };
+		sort_and_dedup(formats); // print in specific order, avoid duplicates
 		// generate raw strings for given formats, without highlighting
 		std::vector<std::string> lstrings = generate_stringifications(a, formats);
 		std::vector<std::string> rstrings = generate_stringifications(b, formats);
 		// defer bulk of the logic to the .cpp
-		return print_binary_diagnostic_defferred(formats, lstrings, rstrings, a_str, b_str);
+		return print_binary_diagnostic_deferred(formats, lstrings, rstrings, a_str, b_str);
 	}
 
 	/*
@@ -736,8 +708,7 @@ namespace assert_detail {
 		extra_diagnostics& operator=(extra_diagnostics&&) = delete;
 	};
 
-	[[nodiscard]]
-	std::string print_extra_diagnostics(const decltype(extra_diagnostics::entries)& extra_diagnostics);
+	[[nodiscard]] std::string print_extra_diagnostics(const decltype(extra_diagnostics::entries)& extra_diagnostics);
 
 	template<typename T>
 	[[gnu::cold]]
@@ -803,7 +774,7 @@ namespace assert_detail {
 	void assert_fail(expression_decomposer<A, B, C>& decomposer,
 	                 const assert_static_parameters* params, Args&&... args) {
 		lock l;
-		const auto [ name, type, expr_str, location, args_strings ] = *params;
+		const auto& [ name, type, expr_str, location, args_strings ] = *params;
 		size_t args_strings_count = count_args_strings(args_strings);
 		primitive_assert((sizeof...(args) == 0 && args_strings_count == 2)
 		                 || args_strings_count == sizeof...(args) + 1);
@@ -853,7 +824,7 @@ namespace assert_detail {
 	                      const assert_static_parameters* params, Args&&... args) {
 		decltype(auto) value = decomposer.get_value();
 		constexpr bool ret_lhs = decomposer.ret_lhs();
-		if(__builtin_expect_with_probability(!static_cast<bool>(value), 0, 1)) {
+		if(strong_expect(!static_cast<bool>(value), 0)) {
 			#ifdef NDEBUG
 			 if(params->type == assert_type::assertion) { // will be constant propagated
 				__builtin_unreachable();
@@ -890,31 +861,15 @@ namespace assert_detail {
 				// https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3
 				return std::launder(&decomposer)->take_lhs();
 			} else {
-				return (value);
+				if constexpr(std::is_lvalue_reference<decltype(value)>::value) {
+					return (value);
+				} else {
+					return value;
+				}
 			}
 		}
 	}
-
-	#ifndef _0_ASSERT_CPP // keep macros for the .cpp
-	 #undef primitive_assert
-	 #undef internal_verify
-	#endif
 }
-
-#ifndef _0_ASSERT_CPP // keep macros for the .cpp
- #ifndef NCOLOR
-  #undef ESC
-  #undef ANSIRGB
- #endif
- #undef RED
- #undef ORANGE
- #undef YELLOW
- #undef GREEN
- #undef BLUE
- #undef CYAN
- #undef PURPL
- #undef RESET
-#endif
 
 using assert_detail::ASSERTION;
 
@@ -970,7 +925,6 @@ using assert_detail::ASSERTION;
  #define ASSERT_DETAIL_VA_ARGS(...) , ##__VA_ARGS__
 #endif
 
-// Note: assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
 // Note about statement expressions: These are needed for two reasons. The first is putting the arg string array and
 // source location structure in .rodata rather than on the stack, the second is a _Pragma for warnings which isn't
 // allowed in the middle of an expression by GCC. The semantics are similar to a function return:
@@ -981,6 +935,7 @@ using assert_detail::ASSERTION;
 // statement expression but the lifetime of the returned object is extend to the end of the full foo() expression.
 // Note: There is a current issue with tarnaries: auto x = assert(b ? y : y); must copy y. This can be fixed with
 // lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
+// Note: assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
 #define ASSERT_INVOKE(expr, name, ...) \
                           assert_detail::assert<true>( \
                             __extension__ ({ \
@@ -998,7 +953,6 @@ using assert_detail::ASSERTION;
  #define assert(expr, ...) ASSERT_INVOKE(expr, "assert", __VA_ARGS__)
 #endif
 
-// assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
 #define VERIFY(expr, ...) assert_detail::assert<true>( \
                             __extension__ ({ \
                               _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
@@ -1010,7 +964,6 @@ using assert_detail::ASSERTION;
                           )
 
 #ifndef NDEBUG
- // assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
  #define CHECK(expr, ...) assert_detail::assert<false>( \
                             __extension__ ({ \
                               _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
@@ -1023,6 +976,31 @@ using assert_detail::ASSERTION;
  // omitting the expression could cause unused variable warnings, surpressing for now
  // TODO: Is this the right design decision? Re-evaluated whether PHONY_USE should be used here or internally at all
  #define CHECK(expr, ...) PHONY_USE(expr)
+#endif
+
+#ifndef _0_ASSERT_CPP // keep macros for the .cpp
+ #undef IS_CLANG
+ #undef IS_GCC
+ #undef IS_WINDOWS
+ #undef IS_LINUX
+ #undef STDIN_FILENO
+ #undef STDOUT_FILENO
+ #undef STDERR_FILENO
+ #undef strong_expect
+ #ifndef NCOLOR
+  #undef ESC
+  #undef ANSIRGB
+ #endif
+ #undef RED
+ #undef ORANGE
+ #undef YELLOW
+ #undef GREEN
+ #undef BLUE
+ #undef CYAN
+ #undef PURPL
+ #undef RESET
+ #undef primitive_assert
+ #undef internal_verify
 #endif
 
 #endif

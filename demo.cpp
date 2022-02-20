@@ -211,6 +211,9 @@ public:
 			assert(e == f);
 		}
 
+		long long x = -9'223'372'036'854'775'807;
+		assert(x & 0x4);
+
 		// Numeric
 		/*assert(1 == 1.5);
 		assert(0.1 + 0.2 == 0.3);
