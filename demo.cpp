@@ -1,12 +1,14 @@
+#define _CRT_SECURE_NO_WARNINGS // for fopen
+
 #include "assert.hpp"
 
-#include <map>
-#include <string>
 #include <fstream>
+#include <iostream>
+#include <map>
+#include <optional>
 #include <streambuf>
-#include <iostream>
 #include <string_view>
-#include <iostream>
+#include <string>
 
 #include "tests/demo.cpp" // trust me I'm an engineer
 
@@ -111,11 +113,10 @@ void zoog(std::vector<int>& vec) {
 	assert(vec.size() > 7);
 }
 
-#include <unistd.h>
-#include <fcntl.h>
-#ifndef O_RDONLY // quick hack
 #define O_RDONLY 0
-#endif
+int open(const char*, int) {
+	return -1;
+}
 
 std::optional<float> get_param() {
 	return {};
@@ -142,14 +143,14 @@ public:
 		{
 			int fd = open(path, O_RDONLY);
 			assert(fd >= 0, "Internal error with foobars", errno, path);
-			PHONY_USE(fd);
+			ASSERT_DETAIL_PHONY_USE(fd);
 		}
 		{
 			assert(open(path, O_RDONLY) >= 0, "Internal error with foobars", errno, path);
 		}
 		{
 			FILE* f = VERIFY(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
-			PHONY_USE(f);
+			ASSERT_DETAIL_PHONY_USE(f);
 		}
 		assert(false, "Error while doing XYZ");
 		assert(false);
