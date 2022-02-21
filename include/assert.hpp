@@ -14,60 +14,22 @@
 #include <vector>
 
 #if defined(__clang__)
- #define IS_CLANG 1
+ #define ASSERT_DETAIL_IS_CLANG 1
 #elif defined(__GNUC__) || defined(__GNUG__)
- #define IS_GCC 1
-#else
- #error "no"
-#endif
-#if defined(_WIN32)
- #define IS_WINDOWS 1
- #ifndef STDIN_FILENO
-  #define STDIN_FILENO _fileno(stdin)
-  #define STDOUT_FILENO _fileno(stdout)
-  #define STDERR_FILENO _fileno(stderr)
- #endif
-#elif defined(__linux)
- #define IS_LINUX 1
- #include <unistd.h>
+ #define ASSERT_DETAIL_IS_GCC 1
 #else
  #error "no"
 #endif
 
 #if defined(__clang__) && __clang_major__ >= 11 || __GNUC__ >= 9
- #define strong_expect(expr, value) __builtin_expect_with_probability((expr), (value), 1)
+ #define assert_detail_strong_expect(expr, value) __builtin_expect_with_probability((expr), (value), 1)
 #else
- #define strong_expect(expr, value) __builtin_expect((expr), (value))
+ #define assert_detail_strong_expect(expr, value) __builtin_expect((expr), (value))
 #endif
 
 // if defined by a previous #include...
 #ifdef assert
  #undef assert
-#endif
-
-#ifndef NCOLOR
- #define ESC "\033["
- #define ANSIRGB(r, g, b) ESC "38;2;" #r ";" #g ";" #b "m"
- #define RESET ESC "0m"
- // Slightly modified one dark pro colors
- // Original: https://coolors.co/e06b74-d19a66-e5c07a-98c379-62aeef-55b6c2-c678dd
- // Modified: https://coolors.co/e06b74-d19a66-e5c07a-90cc66-62aeef-56c2c0-c678dd
- #define RED ANSIRGB(224, 107, 116)
- #define ORANGE ANSIRGB(209, 154, 102)
- #define YELLOW ANSIRGB(229, 192, 122)
- #define GREEN ANSIRGB(150, 205, 112) // modified
- #define BLUE ANSIRGB(98, 174, 239)
- #define CYAN ANSIRGB(86, 194, 192) // modified
- #define PURPL ANSIRGB(198, 120, 221)
-#else
- #define RED ""
- #define ORANGE ""
- #define YELLOW ""
- #define GREEN ""
- #define BLUE ""
- #define CYAN ""
- #define PURPL ""
- #define RESET ""
 #endif
 
 namespace assert_detail {
@@ -86,7 +48,7 @@ namespace assert_detail {
  void ASSERT_FAIL(std::string message, assert_detail::assert_type type, assert_detail::ASSERTION fatal);
 #endif
 
-#define PHONY_USE(E) do { using x [[maybe_unused]] = decltype(E); } while(0)
+#define ASSERT_DETAIL_PHONY_USE(E) do { using x [[maybe_unused]] = decltype(E); } while(0)
 
 namespace assert_detail {
 	// Lightweight helper, eventually may use C++20 std::source_location if this library no longer
@@ -108,13 +70,11 @@ namespace assert_detail {
 	                           source_location location, const char* message = nullptr);
 
 	#ifndef NDEBUG
-	 #define primitive_assert(c, ...) primitive_assert_impl(c, false, #c, __extension__ __PRETTY_FUNCTION__, ##__VA_ARGS__)
+	 #define assert_detail_primitive_assert(c, ...) primitive_assert_impl(c, false, #c, \
+	                                                                   __extension__ __PRETTY_FUNCTION__, ##__VA_ARGS__)
 	#else
-	 #define primitive_assert(c, ...) PHONY_USE(c)
+	 #define assert_detail_primitive_assert(c, ...) ASSERT_DETAIL_PHONY_USE(c)
 	#endif
-
-	// Still present in release mode, nonfatal
-	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, __extension__ __PRETTY_FUNCTION__, ##__VA_ARGS__)
 
 	/*
 	 * string utilities
@@ -230,7 +190,7 @@ namespace assert_detail {
 	// std:: implementations don't allow two separate types for lhs/rhs
 	// Note: is this macro potentially bad when it comes to debugging(?)
 	namespace ops {
-		#define gen_op_boilerplate(name, op) struct name { \
+		#define assert_detail_gen_op_boilerplate(name, op) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
 			[[gnu::cold]] [[nodiscard]] \
@@ -238,7 +198,7 @@ namespace assert_detail {
 				return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
 		}
-		#define gen_op_boilerplate_special(name, op, cmp) struct name { \
+		#define assert_detail_gen_op_boilerplate_special(name, op, cmp) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
 			[[gnu::cold]] [[nodiscard]] \
@@ -247,31 +207,32 @@ namespace assert_detail {
 				else return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
 		}
-		gen_op_boilerplate(shl, <<);
-		gen_op_boilerplate(shr, >>);
-		gen_op_boilerplate_special(eq,   ==, cmp_equal);
-		gen_op_boilerplate_special(neq,  !=, cmp_not_equal);
-		gen_op_boilerplate_special(gt,    >, cmp_greater);
-		gen_op_boilerplate_special(lt,    <, cmp_less);
-		gen_op_boilerplate_special(gteq, >=, cmp_greater_equal);
-		gen_op_boilerplate_special(lteq, <=, cmp_less_equal);
-		gen_op_boilerplate(band,   &);
-		gen_op_boilerplate(bxor,   ^);
-		gen_op_boilerplate(bor,    |);
-		gen_op_boilerplate(land,   &&);
-		gen_op_boilerplate(lor,    ||);
-		gen_op_boilerplate(assign, =);
-		gen_op_boilerplate(add_assign,  +=);
-		gen_op_boilerplate(sub_assign,  -=);
-		gen_op_boilerplate(mul_assign,  *=);
-		gen_op_boilerplate(div_assign,  /=);
-		gen_op_boilerplate(mod_assign,  %=);
-		gen_op_boilerplate(shl_assign,  <<=);
-		gen_op_boilerplate(shr_assign,  >>=);
-		gen_op_boilerplate(band_assign, &=);
-		gen_op_boilerplate(bxor_assign, ^=);
-		gen_op_boilerplate(bor_assign,  |=);
-		#undef gen_op_boilerplate
+		assert_detail_gen_op_boilerplate(shl, <<);
+		assert_detail_gen_op_boilerplate(shr, >>);
+		assert_detail_gen_op_boilerplate_special(eq,   ==, cmp_equal);
+		assert_detail_gen_op_boilerplate_special(neq,  !=, cmp_not_equal);
+		assert_detail_gen_op_boilerplate_special(gt,    >, cmp_greater);
+		assert_detail_gen_op_boilerplate_special(lt,    <, cmp_less);
+		assert_detail_gen_op_boilerplate_special(gteq, >=, cmp_greater_equal);
+		assert_detail_gen_op_boilerplate_special(lteq, <=, cmp_less_equal);
+		assert_detail_gen_op_boilerplate(band,   &);
+		assert_detail_gen_op_boilerplate(bxor,   ^);
+		assert_detail_gen_op_boilerplate(bor,    |);
+		assert_detail_gen_op_boilerplate(land,   &&);
+		assert_detail_gen_op_boilerplate(lor,    ||);
+		assert_detail_gen_op_boilerplate(assign, =);
+		assert_detail_gen_op_boilerplate(add_assign,  +=);
+		assert_detail_gen_op_boilerplate(sub_assign,  -=);
+		assert_detail_gen_op_boilerplate(mul_assign,  *=);
+		assert_detail_gen_op_boilerplate(div_assign,  /=);
+		assert_detail_gen_op_boilerplate(mod_assign,  %=);
+		assert_detail_gen_op_boilerplate(shl_assign,  <<=);
+		assert_detail_gen_op_boilerplate(shr_assign,  >>=);
+		assert_detail_gen_op_boilerplate(band_assign, &=);
+		assert_detail_gen_op_boilerplate(bxor_assign, ^=);
+		assert_detail_gen_op_boilerplate(bor_assign,  |=);
+		#undef assert_detail_gen_op_boilerplate
+		#undef assert_detail_gen_op_boilerplate_special
 	}
 
 	// I learned this automatic expression decomposition trick from lest:
@@ -399,7 +360,8 @@ namespace assert_detail {
 				return expression_decomposer<decltype(get_value()), O, ops::shl>(std::forward<A>(get_value()), std::forward<O>(operand));
 			}
 		}
-		#define gen_op_boilerplate(functor, op) template<typename O> [[nodiscard]] auto operator op(O&& operand) && { \
+		#define assert_detail_gen_op_boilerplate(functor, op) \
+		template<typename O> [[nodiscard]] auto operator op(O&& operand) && { \
 			static_assert(!is_nothing<A>); \
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
 			if constexpr(is_nothing<B>) { \
@@ -410,30 +372,30 @@ namespace assert_detail {
 				return expression_decomposer<decltype(get_value()), Q, functor>(std::forward<A>(get_value()), std::forward<O>(operand)); \
 			} \
 		}
-		gen_op_boilerplate(ops::shr, >>)
-		gen_op_boilerplate(ops::eq, ==)
-		gen_op_boilerplate(ops::neq, !=)
-		gen_op_boilerplate(ops::gt, >)
-		gen_op_boilerplate(ops::lt, <)
-		gen_op_boilerplate(ops::gteq, >=)
-		gen_op_boilerplate(ops::lteq, <=)
-		gen_op_boilerplate(ops::band, &)
-		gen_op_boilerplate(ops::bxor, ^)
-		gen_op_boilerplate(ops::bor, |)
-		gen_op_boilerplate(ops::land, &&)
-		gen_op_boilerplate(ops::lor, ||)
-		gen_op_boilerplate(ops::assign, =)
-		gen_op_boilerplate(ops::add_assign, +=)
-		gen_op_boilerplate(ops::sub_assign, -=)
-		gen_op_boilerplate(ops::mul_assign, *=)
-		gen_op_boilerplate(ops::div_assign, /=)
-		gen_op_boilerplate(ops::mod_assign, %=)
-		gen_op_boilerplate(ops::shl_assign, <<=)
-		gen_op_boilerplate(ops::shr_assign, >>=)
-		gen_op_boilerplate(ops::band_assign, &=)
-		gen_op_boilerplate(ops::bxor_assign, ^=)
-		gen_op_boilerplate(ops::bor_assign, |=)
-		#undef gen_op_boilerplate
+		assert_detail_gen_op_boilerplate(ops::shr, >>)
+		assert_detail_gen_op_boilerplate(ops::eq, ==)
+		assert_detail_gen_op_boilerplate(ops::neq, !=)
+		assert_detail_gen_op_boilerplate(ops::gt, >)
+		assert_detail_gen_op_boilerplate(ops::lt, <)
+		assert_detail_gen_op_boilerplate(ops::gteq, >=)
+		assert_detail_gen_op_boilerplate(ops::lteq, <=)
+		assert_detail_gen_op_boilerplate(ops::band, &)
+		assert_detail_gen_op_boilerplate(ops::bxor, ^)
+		assert_detail_gen_op_boilerplate(ops::bor, |)
+		assert_detail_gen_op_boilerplate(ops::land, &&)
+		assert_detail_gen_op_boilerplate(ops::lor, ||)
+		assert_detail_gen_op_boilerplate(ops::assign, =)
+		assert_detail_gen_op_boilerplate(ops::add_assign, +=)
+		assert_detail_gen_op_boilerplate(ops::sub_assign, -=)
+		assert_detail_gen_op_boilerplate(ops::mul_assign, *=)
+		assert_detail_gen_op_boilerplate(ops::div_assign, /=)
+		assert_detail_gen_op_boilerplate(ops::mod_assign, %=)
+		assert_detail_gen_op_boilerplate(ops::shl_assign, <<=)
+		assert_detail_gen_op_boilerplate(ops::shr_assign, >>=)
+		assert_detail_gen_op_boilerplate(ops::band_assign, &=)
+		assert_detail_gen_op_boilerplate(ops::bxor_assign, ^=)
+		assert_detail_gen_op_boilerplate(ops::bor_assign, |=)
+		#undef assert_detail_gen_op_boilerplate
 	};
 
 	#ifndef NDEBUG
@@ -501,9 +463,9 @@ namespace assert_detail {
 		// Cases to handle:
 		// gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
 		// clang: std::string_view ns::type_name() [T = int]
-		#if IS_CLANG
+		#if ASSERT_DETAIL_IS_CLANG
 		 return substring_bounded_by(__extension__ __PRETTY_FUNCTION__, "[T = ", "]");
-		#elif IS_GCC
+		#elif ASSERT_DETAIL_IS_GCC
 		 return substring_bounded_by(__extension__ __PRETTY_FUNCTION__, "[with T = ", "; std::string_view = ");
 		#else
 		 static_assert(false, "unsupported compiler")
@@ -587,7 +549,7 @@ namespace assert_detail {
 				case literal_format::binary:
 					return "";
 				default:
-					primitive_assert(false, "unexpected literal format requested for printing");
+					assert_detail_primitive_assert(false, "unexpected literal format requested for printing");
 			}
 			oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<t;
 			std::string s = std::move(oss).str();
@@ -690,11 +652,11 @@ namespace assert_detail {
 
 	void default_fail_action(std::string, assert_detail::assert_type, assert_detail::ASSERTION);
 
-	#define X(x) #x
-	#define Y(x) X(x)
-	constexpr const std::string_view errno_expansion = Y(errno);
-	#undef Y
-	#undef X
+	#define ASSERT_DETAIL_X(x) #x
+	#define ASSERT_DETAIL_Y(x) ASSERT_DETAIL_X(x)
+	constexpr const std::string_view errno_expansion = ASSERT_DETAIL_Y(errno);
+	#undef ASSERT_DETAIL_Y
+	#undef ASSERT_DETAIL_X
 
 	struct extra_diagnostics {
 		ASSERTION fatality = ASSERTION::FATAL;
@@ -776,8 +738,8 @@ namespace assert_detail {
 		lock l;
 		const auto& [ name, type, expr_str, location, args_strings ] = *params;
 		size_t args_strings_count = count_args_strings(args_strings);
-		primitive_assert((sizeof...(args) == 0 && args_strings_count == 2)
-		                 || args_strings_count == sizeof...(args) + 1);
+		assert_detail_primitive_assert((sizeof...(args) == 0 && args_strings_count == 2)
+		                               || args_strings_count == sizeof...(args) + 1);
 		// process_args needs to be called as soon as possible in case errno needs to be read
 		const auto [fatal, message, extra_diagnostics] = process_args(args_strings, args...);
 		std::string output;
@@ -823,8 +785,8 @@ namespace assert_detail {
 	decltype(auto) assert(expression_decomposer<A, B, C> decomposer,
 	                      const assert_static_parameters* params, Args&&... args) {
 		decltype(auto) value = decomposer.get_value();
-		constexpr bool ret_lhs = decomposer.ret_lhs();
-		if(strong_expect(!static_cast<bool>(value), 0)) {
+		[[maybe_unused]] constexpr bool ret_lhs = decomposer.ret_lhs();
+		if(assert_detail_strong_expect(!static_cast<bool>(value), 0)) {
 			#ifdef NDEBUG
 			 if(params->type == assert_type::assertion) { // will be constant propagated
 				__builtin_unreachable();
@@ -850,9 +812,9 @@ namespace assert_detail {
 				decomposer.compl expression_decomposer();
 				new (&decomposer) expression_decomposer(std::move(r));
 			}
-		#ifdef _0_ASSERT_DEMO
+		#ifdef ASSERT_DETAIL_IS_DEMO
 		} else {
-			primitive_assert(false);
+			assert_detail_primitive_assert(false);
 		#endif
 		}
 		if constexpr(R) { // return lhs or value for assert and verify
@@ -874,28 +836,30 @@ namespace assert_detail {
 using assert_detail::ASSERTION;
 
 // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
-#define EVAL0(...) __VA_ARGS__
-#define EVAL1(...) EVAL0(EVAL0(EVAL0(__VA_ARGS__)))
-#define EVAL2(...) EVAL1(EVAL1(EVAL1(__VA_ARGS__)))
-#define EVAL3(...) EVAL2(EVAL2(EVAL2(__VA_ARGS__)))
-#define EVAL4(...) EVAL3(EVAL3(EVAL3(__VA_ARGS__)))
-#define EVAL(...)  EVAL4(EVAL4(EVAL4(__VA_ARGS__)))
-#define MAP_END(...)
-#define MAP_OUT
-#define MAP_COMMA ,
-#define MAP_GET_END2() 0, MAP_END
-#define MAP_GET_END1(...) MAP_GET_END2
-#define MAP_GET_END(...) MAP_GET_END1
-#define MAP_NEXT0(test, next, ...) next MAP_OUT
-#define MAP_NEXT1(test, next) MAP_NEXT0(test, next, 0)
-#define MAP_NEXT(test, next)  MAP_NEXT1(MAP_GET_END test, next)
-#define MAP0(f, x, peek, ...) f(x) MAP_NEXT(peek, MAP1)(f, peek, __VA_ARGS__)
-#define MAP1(f, x, peek, ...) f(x) MAP_NEXT(peek, MAP0)(f, peek, __VA_ARGS__)
-#define MAP_LIST_NEXT1(test, next) MAP_NEXT0(test, MAP_COMMA next, 0)
-#define MAP_LIST_NEXT(test, next)  MAP_LIST_NEXT1(MAP_GET_END test, next)
-#define MAP_LIST0(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST1)(f, peek, __VA_ARGS__)
-#define MAP_LIST1(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST0)(f, peek, __VA_ARGS__)
-#define MAP(f, ...) EVAL(MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
+#define ASSERT_DETAIL_EVAL0(...) __VA_ARGS__
+#define ASSERT_DETAIL_EVAL1(...) ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(__VA_ARGS__)))
+#define ASSERT_DETAIL_EVAL2(...) ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(__VA_ARGS__)))
+#define ASSERT_DETAIL_EVAL3(...) ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(__VA_ARGS__)))
+#define ASSERT_DETAIL_EVAL4(...) ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(__VA_ARGS__)))
+#define ASSERT_DETAIL_EVAL(...)  ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(__VA_ARGS__)))
+#define ASSERT_DETAIL_MAP_END(...)
+#define ASSERT_DETAIL_MAP_OUT
+#define ASSERT_DETAIL_MAP_COMMA ,
+#define ASSERT_DETAIL_MAP_GET_END2() 0, ASSERT_DETAIL_MAP_END
+#define ASSERT_DETAIL_MAP_GET_END1(...) ASSERT_DETAIL_MAP_GET_END2
+#define ASSERT_DETAIL_MAP_GET_END(...) ASSERT_DETAIL_MAP_GET_END1
+#define ASSERT_DETAIL_MAP_NEXT0(test, next, ...) next ASSERT_DETAIL_MAP_OUT
+#define ASSERT_DETAIL_MAP_NEXT1(test, next) ASSERT_DETAIL_MAP_NEXT0(test, next, 0)
+#define ASSERT_DETAIL_MAP_NEXT(test, next)  ASSERT_DETAIL_MAP_NEXT1(ASSERT_DETAIL_MAP_GET_END test, next)
+#define ASSERT_DETAIL_MAP0(f, x, peek, ...) f(x) ASSERT_DETAIL_MAP_NEXT(peek, ASSERT_DETAIL_MAP1)(f, peek, __VA_ARGS__)
+#define ASSERT_DETAIL_MAP1(f, x, peek, ...) f(x) ASSERT_DETAIL_MAP_NEXT(peek, ASSERT_DETAIL_MAP0)(f, peek, __VA_ARGS__)
+#define ASSERT_DETAIL_MAP_LIST_NEXT1(test, next) ASSERT_DETAIL_MAP_NEXT0(test, ASSERT_DETAIL_MAP_COMMA next, 0)
+#define ASSERT_DETAIL_MAP_LIST_NEXT(test, next)  ASSERT_DETAIL_MAP_LIST_NEXT1(ASSERT_DETAIL_MAP_GET_END test, next)
+#define ASSERT_DETAIL_MAP_LIST0(f, x, peek, ...) \
+                                   f(x) ASSERT_DETAIL_MAP_LIST_NEXT(peek, ASSERT_DETAIL_MAP_LIST1)(f, peek, __VA_ARGS__)
+#define ASSERT_DETAIL_MAP_LIST1(f, x, peek, ...) \
+                                   f(x) ASSERT_DETAIL_MAP_LIST_NEXT(peek, ASSERT_DETAIL_MAP_LIST0)(f, peek, __VA_ARGS__)
+#define ASSERT_DETAIL_MAP(f, ...) ASSERT_DETAIL_EVAL(ASSERT_DETAIL_MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
 
 #define ASSERT_DETAIL_STRINGIFY(x) #x,
 
@@ -905,7 +869,7 @@ using assert_detail::ASSERTION;
                                   __extension__ ({ \
                                     /* extra string here because of extra comma from map and also serves as terminator */ \
                                     static constexpr const char* const arg_strings[] = { \
-                                      MAP(ASSERT_DETAIL_STRINGIFY, __VA_ARGS__) "" \
+                                      ASSERT_DETAIL_MAP(ASSERT_DETAIL_STRINGIFY, __VA_ARGS__) "" \
                                     }; \
                                     static constexpr assert_detail::assert_static_parameters params = { \
                                       name, \
@@ -917,7 +881,7 @@ using assert_detail::ASSERTION;
                                     &params; \
                                   })
 
-#if IS_GCC
+#if ASSERT_DETAIL_IS_GCC
  // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
  #define ASSERT_DETAIL_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
 #else
@@ -975,32 +939,14 @@ using assert_detail::ASSERTION;
 #else
  // omitting the expression could cause unused variable warnings, surpressing for now
  // TODO: Is this the right design decision? Re-evaluated whether PHONY_USE should be used here or internally at all
- #define CHECK(expr, ...) PHONY_USE(expr)
+ #define CHECK(expr, ...) ASSERT_DETAIL_PHONY_USE(expr)
 #endif
 
-#ifndef _0_ASSERT_CPP // keep macros for the .cpp
- #undef IS_CLANG
- #undef IS_GCC
- #undef IS_WINDOWS
- #undef IS_LINUX
- #undef STDIN_FILENO
- #undef STDOUT_FILENO
- #undef STDERR_FILENO
- #undef strong_expect
- #ifndef NCOLOR
-  #undef ESC
-  #undef ANSIRGB
- #endif
- #undef RED
- #undef ORANGE
- #undef YELLOW
- #undef GREEN
- #undef BLUE
- #undef CYAN
- #undef PURPL
- #undef RESET
- #undef primitive_assert
- #undef internal_verify
+#ifndef ASSERT_DETAIL_IS_CPP // keep macros for the .cpp
+ #undef ASSERT_DETAIL_IS_CLANG
+ #undef ASSERT_DETAIL_IS_GCC
+ #undef assert_detail_strong_expect
+ #undef assert_detail_primitive_assert
 #endif
 
 #endif

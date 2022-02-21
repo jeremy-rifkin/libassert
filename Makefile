@@ -2,7 +2,7 @@ C = clang++
 #C = g++
 
 WFLAGS = -Wall -Wextra -Werror=return-type
-FLAGS = -std=c++17 -g -Iinclude -DASSERT_FAIL=custom_fail #-fsanitize=address #-D_0_ASSERT_DEMO #-ftime-trace
+FLAGS = -std=c++17 -g -Og -Iinclude -DASSERT_FAIL=custom_fail #-fsanitize=address #-DASSERT_DETAIL_IS_DEMO #-ftime-trace
 LIBFLAGS = $(FLAGS) -O2
 PIC =
 ifeq ($(OS),Windows_NT)

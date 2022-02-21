@@ -1,4 +1,4 @@
-#define _0_ASSERT_CPP
+#define ASSERT_DETAIL_IS_CPP
 #define _CRT_SECURE_NO_WARNINGS // done only for strerror
 #include "assert.hpp"
 
@@ -14,22 +14,23 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#if IS_WINDOWS
- #include <windows.h>
- #include <conio.h>
- #include <dbghelp.h>
- #include <io.h>
- #include <process.h>
+#if defined(_WIN32)
+ #define IS_WINDOWS 1
  #ifndef STDIN_FILENO
   #define STDIN_FILENO _fileno(stdin)
   #define STDOUT_FILENO _fileno(stdout)
   #define STDERR_FILENO _fileno(stderr)
  #endif
- #undef min // fucking windows headers man
+ #include <windows.h>
+ #include <conio.h>
+ #include <dbghelp.h>
+ #include <io.h>
+ #include <process.h>
+ #undef min // fucking windows headers, man
  #undef max
  #define USE_DBG_HELP_H
-#else
- #include <dlfcn.h>
+#elif defined(__linux)
+ #define IS_LINUX 1
  #include <execinfo.h>
  #include <limits.h>
  #include <sys/ioctl.h>
@@ -38,7 +39,35 @@
  #include <sys/wait.h>
  #include <termios.h>
  #include <unistd.h>
+ #include <dlfcn.h>
  #define USE_EXECINFO_H
+#else
+ #error "no"
+#endif
+
+#ifndef NCOLOR
+ #define ESC "\033["
+ #define ANSIRGB(r, g, b) ESC "38;2;" #r ";" #g ";" #b "m"
+ #define RESET ESC "0m"
+ // Slightly modified one dark pro colors
+ // Original: https://coolors.co/e06b74-d19a66-e5c07a-98c379-62aeef-55b6c2-c678dd
+ // Modified: https://coolors.co/e06b74-d19a66-e5c07a-90cc66-62aeef-56c2c0-c678dd
+ #define RED ANSIRGB(224, 107, 116)
+ #define ORANGE ANSIRGB(209, 154, 102)
+ #define YELLOW ANSIRGB(229, 192, 122)
+ #define GREEN ANSIRGB(150, 205, 112) // modified
+ #define BLUE ANSIRGB(98, 174, 239)
+ #define CYAN ANSIRGB(86, 194, 192) // modified
+ #define PURPL ANSIRGB(198, 120, 221)
+#else
+ #define RED ""
+ #define ORANGE ""
+ #define YELLOW ""
+ #define GREEN ""
+ #define BLUE ""
+ #define CYAN ""
+ #define PURPL ""
+ #define RESET ""
 #endif
 
 namespace assert_detail {
@@ -60,6 +89,9 @@ namespace assert_detail {
 		}
 	}
 
+	// Still present in release mode, nonfatal
+	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, __extension__ __PRETTY_FUNCTION__, ##__VA_ARGS__)
+
 	/*
 	 * string utilities
 	 */
@@ -68,7 +100,7 @@ namespace assert_detail {
 	[[gnu::cold]]
 	std::string stringf(T... args) {
 		int length = snprintf(0, 0, args...);
-		if(length < 0) primitive_assert(false, "Invalid arguments to stringf");
+		if(length < 0) assert_detail_primitive_assert(false, "Invalid arguments to stringf");
 		std::string str(length, 0);
 		snprintf(str.data(), length + 1, args...);
 		return str;
@@ -82,7 +114,7 @@ namespace assert_detail {
 		va_start(args1, format);
 		va_start(args2, format);
 		int length = vsnprintf(0, 0, format, args1);
-		if(length < 0) primitive_assert(false, "Invalid arguments to stringf");
+		if(length < 0) assert_detail_primitive_assert(false, "Invalid arguments to stringf");
 		std::string str(length, 0);
 		vsnprintf(str.data(), length + 1, format, args2);
 		va_end(args1);
@@ -243,12 +275,12 @@ namespace assert_detail {
 		#ifdef _WIN32
 		 char buffer[MAX_PATH + 1];
 		 int s = GetModuleFileNameA(NULL, buffer, sizeof(buffer));
-		 primitive_assert(s != 0);
+		 assert_detail_primitive_assert(s != 0);
 		 return buffer;
 		#else
 		 char buffer[PATH_MAX + 1];
 		 ssize_t s = readlink("/proc/self/exe", buffer, PATH_MAX);
-		 primitive_assert(s != -1);
+		 assert_detail_primitive_assert(s != -1);
 		 buffer[s] = 0;
 		 return buffer;
 		#endif
@@ -290,7 +322,7 @@ namespace assert_detail {
 	constexpr size_t n_skip   = 0;
 
 	#ifdef USE_DBG_HELP_H
-	#if IS_GCC
+	#if ASSERT_DETAIL_IS_GCC
 	[[gnu::cold]]
 	static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
 		// TODO: Popen is a hack. Implement properly with CreateProcess and pipes later.
@@ -352,7 +384,7 @@ namespace assert_detail {
 		T info;
 		if(!SymGetTypeInfo(proc, modbase, type_index, static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(SymType), &info)) {
 			using namespace std::string_literals;
-			primitive_assert(false, ("SymGetTypeInfo failed: "s +
+			assert_detail_primitive_assert(false, ("SymGetTypeInfo failed: "s +
 					std::system_error(GetLastError(), std::system_category()).what()).c_str());
 		}
 		if constexpr(std::is_same_v<T, WCHAR*>) {
@@ -525,7 +557,7 @@ namespace assert_detail {
 		std::string addresses = "";
 		for(auto& [address, _] : deferred) addresses += stringf("%#tx ", address);
 		auto output = split(trim(resolve_addresses(addresses, executable)), "\n");
-		primitive_assert(output.size() == 2 * deferred.size());
+		assert_detail_primitive_assert(output.size() == 2 * deferred.size());
 		for(size_t i = 0; i < deferred.size(); i++) {
 			// line info is one of the following:
 			// path:line (descriminator number)
@@ -535,7 +567,7 @@ namespace assert_detail {
 			// Regex modified from the linux version to eat the C:\\ at the beginning
 			static std::regex location_re(R"(^((?:\w:[\\/])?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
 			auto m = match<2>(output[i * 2 + 1], location_re);
-			primitive_assert(m.has_value());
+			assert_detail_primitive_assert(m.has_value());
 			auto [path, line] = *m;
 			if(path != "??") {
 				trace[deferred[i].second].source_path = path;
@@ -596,11 +628,11 @@ namespace assert_detail {
 
 	[[gnu::cold]] static uint16_t get_executable_e_type(const std::string& path) {
 		FILE* f = fopen(path.c_str(), "rb");
-		primitive_assert(f != NULL);
+		assert_detail_primitive_assert(f != NULL);
 		partial_elf_file_header h;
 		internal_verify(fread(&h, sizeof(partial_elf_file_header), 1, f) == 1, "error while reading file");
 		char magic[] = {0x7F, 'E', 'L', 'F'};
-		primitive_assert(memcmp(h.magic, magic, 4) == 0);
+		assert_detail_primitive_assert(memcmp(h.magic, magic, 4) == 0);
 		if(h.e_data != endianness()) {
 			h.e_type = (h.e_type & 0x00ff) << 8 | (h.e_type & 0xff00) >> 8;
 		}
@@ -636,7 +668,7 @@ namespace assert_detail {
 			frame frame;
 			frame.raw_address = array[i];
 			if(dladdr(array[i], &info)) {
-				primitive_assert(info.dli_fname != nullptr);
+				assert_detail_primitive_assert(info.dli_fname != nullptr);
 				// dli_sname and dli_saddr are only present with -rdynamic, sname will be included
 				// but we don't really need dli_saddr
 				frame.obj_path = info.dli_fname;
@@ -645,7 +677,7 @@ namespace assert_detail {
 			}
 			frames.push_back(frame);
 		}
-		primitive_assert(frames.size() == size - skip);
+		assert_detail_primitive_assert(frames.size() == size - skip);
 		return frames;
 	}
 
@@ -710,7 +742,7 @@ namespace assert_detail {
 			std::optional<std::string> dladdr_name_of_executable;
 			for(size_t i = 0; i < frames.size(); i++) {
 				auto& entry = frames[i];
-				primitive_assert(entry.raw_address >= entry.obj_base);
+				assert_detail_primitive_assert(entry.raw_address >= entry.obj_base);
 				// There is a bug with dladdr for non-PIE objects
 				if(!dladdr_name_of_executable.has_value()) {
 					if(paths_refer_to_same(entry.obj_path, binary_path)) {
@@ -742,7 +774,7 @@ namespace assert_detail {
 				auto output = split(trim(resolve_addresses(join(addresses, "\n"), file)), "\n");
 				// Cannot wait until we can write ^ that as:
 				// join(addresses, "\n") |> resolve_addresses(file) |> trim() |> split("\n");
-				primitive_assert(output.size() == 2 * target.size());
+				assert_detail_primitive_assert(output.size() == 2 * target.size());
 				for(size_t i = 0; i < target.size(); i++) {
 					// line info is one of the following:
 					// path:line (descriminator number)
@@ -751,7 +783,7 @@ namespace assert_detail {
 					// ??:?
 					static std::regex location_re(R"(^([^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
 					auto m = match<2>(output[i * 2 + 1], location_re);
-					primitive_assert(m.has_value());
+					assert_detail_primitive_assert(m.has_value());
 					auto [path, line] = *m;
 					if(path != "??") {
 						target[i]->source_path = path;
@@ -1065,7 +1097,7 @@ namespace assert_detail {
 							}
 						}
 					}
-					primitive_assert(j != 0);
+					assert_detail_primitive_assert(j != 0);
 					return token_t { token_e::whitespace, "" };
 				};
 				switch(token.token_type) {
@@ -1181,7 +1213,7 @@ namespace assert_detail {
 							empty = false;
 						}
 					}
-					if(i == tokens.size() && count != -1) primitive_assert(false, "ill-formed expression input");
+					if(i == tokens.size() && count != -1) assert_detail_primitive_assert(false, "ill-formed expression input");
 					return empty;
 				};
 				switch(token.token_type) {
@@ -1203,7 +1235,7 @@ namespace assert_detail {
 								} else if(token.str == "<" && normalize_brace(find_last_non_ws(tokens, i).str) == "]") {
 									// this must be a template parameter list, part of a generic lambda
 									bool empty = scan_forward("<", ">");
-									primitive_assert(!empty);
+									assert_detail_primitive_assert(!empty);
 									state = expecting_operator;
 									continue;
 								}
@@ -1254,7 +1286,7 @@ namespace assert_detail {
 							}
 							state = expecting_operator;
 						} else {
-							primitive_assert(false, "unhandled punctuation?");
+							assert_detail_primitive_assert(false, "unhandled punctuation?");
 						}
 						break;
 					case token_e::keyword:
@@ -1426,9 +1458,9 @@ namespace assert_detail {
 
 	[[gnu::cold]]
 	std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r) {
-		primitive_assert(sig.find(l) != std::string_view::npos);
-		primitive_assert(sig.rfind(r) != std::string_view::npos);
-		primitive_assert(sig.find(l) < sig.rfind(r));
+		assert_detail_primitive_assert(sig.find(l) != std::string_view::npos);
+		assert_detail_primitive_assert(sig.rfind(r) != std::string_view::npos);
+		assert_detail_primitive_assert(sig.find(l) < sig.rfind(r));
 		auto i = sig.find(l) + l.length();
 		return sig.substr(i, sig.rfind(r) - i);
 	}
@@ -1459,7 +1491,7 @@ namespace assert_detail {
 				}
 				break;
 			default:
-				primitive_assert(false, "unexpected literal format requested for printing");
+				assert_detail_primitive_assert(false, "unexpected literal format requested for printing");
 		}
 		return std::move(oss).str();
 	}
@@ -1546,8 +1578,8 @@ namespace assert_detail {
 				}
 			}
 		}
-		primitive_assert(!parts.empty());
-		primitive_assert(parts.back() != "." && parts.back() != "..");
+		assert_detail_primitive_assert(!parts.empty());
+		assert_detail_primitive_assert(parts.back() != "." && parts.back() != "..");
 		return parts;
 	}
 
@@ -1586,20 +1618,20 @@ namespace assert_detail {
 		path_trie& operator=(path_trie&&) = delete;
 		[[gnu::cold]]
 		void insert(const path_components& path) {
-			primitive_assert(path.back() == root);
+			assert_detail_primitive_assert(path.back() == root);
 			insert(path, (int)path.size() - 2);
 		}
 		[[gnu::cold]]
 		path_components disambiguate(const path_components& path) {
 			path_components result;
 			path_trie* current = this;
-			primitive_assert(path.back() == root);
+			assert_detail_primitive_assert(path.back() == root);
 			result.push_back(current->root);
 			for(size_t i = path.size() - 2; i >= 1; i--) {
-				primitive_assert(current->downstream_branches >= 1);
+				assert_detail_primitive_assert(current->downstream_branches >= 1);
 				if(current->downstream_branches == 1) break;
 				const std::string& component = path[i];
-				primitive_assert(current->edges.count(component));
+				assert_detail_primitive_assert(current->edges.count(component));
 				current = current->edges.at(component);
 				result.push_back(current->root);
 			}
@@ -1640,7 +1672,7 @@ namespace assert_detail {
 					if(lines.size() == current_line) lines.emplace_back(columns.size());
 					// number of characters we can extract from the block
 					size_t extract = std::min(width - lines[current_line][i].length, block.content.size() - block_i);
-					primitive_assert(block_i + extract <= block.content.size());
+					assert_detail_primitive_assert(block_i + extract <= block.content.size());
 					auto substr = std::string_view(block.content).substr(block_i, extract);
 					// handle newlines
 					if(auto x = substr.find('\n'); x != std::string_view::npos) {
@@ -1780,7 +1812,7 @@ namespace assert_detail {
 					size_t left = 2 + max_frame_width;
 					size_t middle = std::max((int)line_number.size(), max_line_number_width); // todo: is this looking right...?
 					size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
-					primitive_assert(remaining_width >= 2);
+					assert_detail_primitive_assert(remaining_width >= 2);
 					size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
 					size_t sig_width = remaining_width - file_width;
 					stacktrace += wrapped_print({
@@ -1817,7 +1849,7 @@ namespace assert_detail {
 
 	[[gnu::cold]]
 	std::string print_values(const std::vector<std::string>& vec, size_t lw) {
-		primitive_assert(vec.size() > 0);
+		assert_detail_primitive_assert(vec.size() > 0);
 		std::string values;
 		if(vec.size() == 1) {
 			values += stringf("%s\n", indent(highlight(vec[0]), 8 + lw + 4, ' ', true).c_str());
@@ -1836,7 +1868,7 @@ namespace assert_detail {
 
 	[[gnu::cold]]
 	std::vector<highlight_block> get_values(const std::vector<std::string>& vec) {
-		primitive_assert(vec.size() > 0);
+		assert_detail_primitive_assert(vec.size() > 0);
 		if(vec.size() == 1) {
 			return highlight_blocks(vec[0]);
 		} else {
@@ -1857,8 +1889,8 @@ namespace assert_detail {
 	std::string print_binary_diagnostic_deferred(const literal_format (&formats)[4], std::vector<std::string>& lstrings,
 	                                             std::vector<std::string>& rstrings, const char* a_str,
 	                                             const char* b_str) {
-		primitive_assert(lstrings.size() > 0);
-		primitive_assert(rstrings.size() > 0);
+		assert_detail_primitive_assert(lstrings.size() > 0);
+		assert_detail_primitive_assert(rstrings.size() > 0);
 		// pad all columns where there is overlap
 		// TODO: Use column printer instead of manual padding.
 		for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()); i++) {
@@ -1969,7 +2001,7 @@ namespace assert_detail {
 				case assert_type::check:
 					throw assert_detail::check_failure();
 				default:
-					assert(false);
+					assert_detail_primitive_assert(false);
 			}
 		}
 	}
@@ -1978,7 +2010,7 @@ namespace assert_detail {
 	[[gnu::cold]] extra_diagnostics::~extra_diagnostics() = default;
 	[[gnu::cold]] extra_diagnostics::extra_diagnostics(extra_diagnostics&&) = default;
 
-	#if IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
+	#if ASSERT_DETAIL_IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
 	 CRITICAL_SECTION CriticalSection;
 	 [[gnu::constructor]] static void initialize_critical_section() {
 	 	InitializeCriticalSectionAndSpinCount(&CriticalSection, 10);
@@ -2006,7 +2038,7 @@ namespace assert_detail {
 			case assert_type::verify: return "Verification";
 			case assert_type::check: return "Check";
 			default:
-				primitive_assert(false);
+				assert_detail_primitive_assert(false);
 				return "";
 		}
 	}
