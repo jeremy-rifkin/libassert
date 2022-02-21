@@ -144,9 +144,9 @@ namespace assert_detail {
 		if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
 			return t == u;
 		else if constexpr(std::is_signed_v<T>)
-			return t < 0 ? false : UT(t) == u;
+			return t >= 0 && UT(t) == u;
 		else
-			return u < 0 ? false : t == UU(u);
+			return u >= 0 && t == UU(u);
 	}
 
 	template<typename T, typename U>
@@ -163,9 +163,9 @@ namespace assert_detail {
 		if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
 			return t < u;
 		else if constexpr(std::is_signed_v<T>)
-			return t < 0 ? true : UT(t) < u;
+			return t < 0  || UT(t) < u;
 		else
-			return u < 0 ? false : t < UU(u);
+			return u >= 0 && t < UU(u);
 	}
 
 	template<typename T, typename U>
@@ -177,7 +177,7 @@ namespace assert_detail {
 	template<typename T, typename U>
 	[[gnu::cold]] [[nodiscard]]
 	constexpr bool cmp_less_equal(T t, U u) {
-		return !cmp_greater(t, u);
+		return !cmp_less(u, t);
 	}
 
 	template<typename T, typename U>
