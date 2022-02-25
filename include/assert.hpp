@@ -17,11 +17,26 @@
  #define ASSERT_DETAIL_IS_CLANG 1
 #elif defined(__GNUC__) || defined(__GNUG__)
  #define ASSERT_DETAIL_IS_GCC 1
+#elif defined(_MSC_VER)
+ #define ASSERT_DETAIL_IS_MSVC 1
+ #include <iso646.h> // alternative operator tokens are standard but msvc requires the include or /permissive- or /Za
 #else
- #error "no"
+ #error "Unsupported compiler"
 #endif
 
-#if defined(__clang__) && __clang_major__ >= 11 || __GNUC__ >= 9
+#if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC
+ #define ASSERT_DETAIL_PFUNC __extension__ __PRETTY_FUNCTION__
+ #define ASSERT_DETAIL_ATTR_COLD     [[gnu::cold]]
+ #define ASSERT_DETAIL_ATTR_NOINLINE [[gnu::noinline]]
+#else
+ #define ASSERT_DETAIL_PFUNC __FUNCSIG__
+ #define ASSERT_DETAIL_ATTR_COLD
+ #define ASSERT_DETAIL_ATTR_NOINLINE __declspec(noinline)
+#endif
+
+#if ASSERT_DETAIL_IS_MSVC
+ #define assert_detail_strong_expect(expr, value) (expr)
+#elif defined(__clang__) && __clang_major__ >= 11 || __GNUC__ >= 9
  #define assert_detail_strong_expect(expr, value) __builtin_expect_with_probability((expr), (value), 1)
 #else
  #define assert_detail_strong_expect(expr, value) __builtin_expect((expr), (value))
@@ -71,7 +86,7 @@ namespace assert_detail {
 
 	#ifndef NDEBUG
 	 #define assert_detail_primitive_assert(c, ...) primitive_assert_impl(c, false, #c, \
-	                                                                   __extension__ __PRETTY_FUNCTION__, ##__VA_ARGS__)
+	                                                                      ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
 	#else
 	 #define assert_detail_primitive_assert(c, ...) ASSERT_DETAIL_PHONY_USE(c)
 	#endif
@@ -137,7 +152,7 @@ namespace assert_detail {
 	// Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
 	// Not using std:: versions because library is targetting C++17
 	template<typename T, typename U>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	constexpr bool cmp_equal(T t, U u) {
 		using UT = std::make_unsigned_t<T>;
 		using UU = std::make_unsigned_t<U>;
@@ -150,13 +165,13 @@ namespace assert_detail {
 	}
 
 	template<typename T, typename U>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	constexpr bool cmp_not_equal(T t, U u) {
 		return !cmp_equal(t, u);
 	}
 
 	template<typename T, typename U>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	constexpr bool cmp_less(T t, U u) {
 		using UT = std::make_unsigned_t<T>;
 		using UU = std::make_unsigned_t<U>;
@@ -169,19 +184,19 @@ namespace assert_detail {
 	}
 
 	template<typename T, typename U>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	constexpr bool cmp_greater(T t, U u) {
 		return cmp_less(u, t);
 	}
 
 	template<typename T, typename U>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	constexpr bool cmp_less_equal(T t, U u) {
 		return !cmp_less(u, t);
 	}
 
 	template<typename T, typename U>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	constexpr bool cmp_greater_equal(T t, U u) {
 		return !cmp_less(t, u);
 	}
@@ -193,7 +208,7 @@ namespace assert_detail {
 		#define assert_detail_gen_op_boilerplate(name, op) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
-			[[gnu::cold]] [[nodiscard]] \
+			ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
 			constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
 				return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
@@ -201,7 +216,7 @@ namespace assert_detail {
 		#define assert_detail_gen_op_boilerplate_special(name, op, cmp) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
-			[[gnu::cold]] [[nodiscard]] \
+			ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
 			constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
 				if constexpr(is_integral_and_not_bool<A> && is_integral_and_not_bool<B>) return cmp(lhs, rhs); \
 				else return std::forward<A>(lhs) op std::forward<B>(rhs); \
@@ -458,15 +473,18 @@ namespace assert_detail {
 	[[nodiscard]] std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r);
 
 	template<typename T>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	constexpr std::string_view type_name() {
 		// Cases to handle:
 		// gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
 		// clang: std::string_view ns::type_name() [T = int]
+		// msvc:  class std::basic_string_view<char,struct std::char_traits<char> > __cdecl ns::type_name<int>(void)
 		#if ASSERT_DETAIL_IS_CLANG
-		 return substring_bounded_by(__extension__ __PRETTY_FUNCTION__, "[T = ", "]");
+		 return substring_bounded_by(ASSERT_DETAIL_PFUNC, "[T = ", "]");
 		#elif ASSERT_DETAIL_IS_GCC
-		 return substring_bounded_by(__extension__ __PRETTY_FUNCTION__, "[with T = ", "; std::string_view = ");
+		 return substring_bounded_by(ASSERT_DETAIL_PFUNC, "[with T = ", "; std::string_view = ");
+		#elif ASSERT_DETAIL_IS_MSVC
+		 return substring_bounded_by(ASSERT_DETAIL_PFUNC, "type_name<", ">(void)");
 		#else
 		 static_assert(false, "unsupported compiler")
 		#endif
@@ -508,7 +526,7 @@ namespace assert_detail {
 	[[nodiscard]] std::string stringify_float(unsigned long long, literal_format, bool, size_t);
 
 	template<typename T>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
 		// bool and char need to be before std::is_integral
 		if constexpr(is_string_type<T>) {
@@ -588,7 +606,7 @@ namespace assert_detail {
 	[[nodiscard]] std::string print_stacktrace();
 
 	template<typename T>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	std::vector<std::string> generate_stringifications(const T& v, const literal_format (&formats)[4]) {
 		if constexpr(std::is_arithmetic<strip<T>>::value
 				 && !isa<T, bool>
@@ -620,7 +638,7 @@ namespace assert_detail {
 	void sort_and_dedup(literal_format(&)[4]);
 
 	template<typename A, typename B>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	std::string print_binary_diagnostic(const A& a, const B& b, const char* a_str, const char* b_str, std::string_view op) {
 		// Note: op
 		// figure out what information we need to print in the where clause
@@ -673,7 +691,7 @@ namespace assert_detail {
 	[[nodiscard]] std::string print_extra_diagnostics(const decltype(extra_diagnostics::entries)& extra_diagnostics);
 
 	template<typename T>
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, T& t) {
 		if constexpr(isa<T, ASSERTION>) {
 			entry.fatality = t;
@@ -698,7 +716,7 @@ namespace assert_detail {
 	}
 
 	template<typename... Args>
-	[[gnu::cold]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	extra_diagnostics process_args(const char* const* const args_strings, Args&... args) {
 		extra_diagnostics entry;
 		size_t i = 0;
@@ -732,7 +750,7 @@ namespace assert_detail {
 	constexpr int min_term_width = 50;
 
 	template<typename A, typename B, typename C, typename... Args>
-	[[gnu::cold]] [[gnu::noinline]]
+	ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE
 	void assert_fail(expression_decomposer<A, B, C>& decomposer,
 	                 const assert_static_parameters* params, Args&&... args) {
 		lock l;
@@ -772,7 +790,7 @@ namespace assert_detail {
 	}
 
 	template<typename A, typename B, typename C, typename... Args>
-	[[gnu::cold]] [[gnu::noinline]] [[nodiscard]]
+	ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE [[nodiscard]]
 	expression_decomposer<A, B, C> assert_fail_m(expression_decomposer<A, B, C> decomposer,
 	                                             const assert_static_parameters* params, Args&&... args) {
 		assert_fail(decomposer, params, std::forward<Args>(args)...);
@@ -835,51 +853,84 @@ namespace assert_detail {
 
 using assert_detail::ASSERTION;
 
-// Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
-#define ASSERT_DETAIL_EVAL0(...) __VA_ARGS__
-#define ASSERT_DETAIL_EVAL1(...) ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(__VA_ARGS__)))
-#define ASSERT_DETAIL_EVAL2(...) ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(__VA_ARGS__)))
-#define ASSERT_DETAIL_EVAL3(...) ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(__VA_ARGS__)))
-#define ASSERT_DETAIL_EVAL4(...) ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(__VA_ARGS__)))
-#define ASSERT_DETAIL_EVAL(...)  ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(__VA_ARGS__)))
-#define ASSERT_DETAIL_MAP_END(...)
-#define ASSERT_DETAIL_MAP_OUT
-#define ASSERT_DETAIL_MAP_COMMA ,
-#define ASSERT_DETAIL_MAP_GET_END2() 0, ASSERT_DETAIL_MAP_END
-#define ASSERT_DETAIL_MAP_GET_END1(...) ASSERT_DETAIL_MAP_GET_END2
-#define ASSERT_DETAIL_MAP_GET_END(...) ASSERT_DETAIL_MAP_GET_END1
-#define ASSERT_DETAIL_MAP_NEXT0(test, next, ...) next ASSERT_DETAIL_MAP_OUT
-#define ASSERT_DETAIL_MAP_NEXT1(test, next) ASSERT_DETAIL_MAP_NEXT0(test, next, 0)
-#define ASSERT_DETAIL_MAP_NEXT(test, next)  ASSERT_DETAIL_MAP_NEXT1(ASSERT_DETAIL_MAP_GET_END test, next)
-#define ASSERT_DETAIL_MAP0(f, x, peek, ...) f(x) ASSERT_DETAIL_MAP_NEXT(peek, ASSERT_DETAIL_MAP1)(f, peek, __VA_ARGS__)
-#define ASSERT_DETAIL_MAP1(f, x, peek, ...) f(x) ASSERT_DETAIL_MAP_NEXT(peek, ASSERT_DETAIL_MAP0)(f, peek, __VA_ARGS__)
-#define ASSERT_DETAIL_MAP_LIST_NEXT1(test, next) ASSERT_DETAIL_MAP_NEXT0(test, ASSERT_DETAIL_MAP_COMMA next, 0)
-#define ASSERT_DETAIL_MAP_LIST_NEXT(test, next)  ASSERT_DETAIL_MAP_LIST_NEXT1(ASSERT_DETAIL_MAP_GET_END test, next)
-#define ASSERT_DETAIL_MAP_LIST0(f, x, peek, ...) \
+#if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC
+ // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
+ #define ASSERT_DETAIL_EVAL0(...) __VA_ARGS__
+ #define ASSERT_DETAIL_EVAL1(...) ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(__VA_ARGS__)))
+ #define ASSERT_DETAIL_EVAL2(...) ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(__VA_ARGS__)))
+ #define ASSERT_DETAIL_EVAL3(...) ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(__VA_ARGS__)))
+ #define ASSERT_DETAIL_EVAL4(...) ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(__VA_ARGS__)))
+ #define ASSERT_DETAIL_EVAL(...)  ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(__VA_ARGS__)))
+ #define ASSERT_DETAIL_MAP_END(...)
+ #define ASSERT_DETAIL_MAP_OUT
+ #define ASSERT_DETAIL_MAP_COMMA ,
+ #define ASSERT_DETAIL_MAP_GET_END2() 0, ASSERT_DETAIL_MAP_END
+ #define ASSERT_DETAIL_MAP_GET_END1(...) ASSERT_DETAIL_MAP_GET_END2
+ #define ASSERT_DETAIL_MAP_GET_END(...) ASSERT_DETAIL_MAP_GET_END1
+ #define ASSERT_DETAIL_MAP_NEXT0(test, next, ...) next ASSERT_DETAIL_MAP_OUT
+ #define ASSERT_DETAIL_MAP_NEXT1(test, next) ASSERT_DETAIL_MAP_NEXT0(test, next, 0)
+ #define ASSERT_DETAIL_MAP_NEXT(test, next)  ASSERT_DETAIL_MAP_NEXT1(ASSERT_DETAIL_MAP_GET_END test, next)
+ #define ASSERT_DETAIL_MAP0(f, x, peek, ...) f(x) ASSERT_DETAIL_MAP_NEXT(peek, ASSERT_DETAIL_MAP1)(f, peek, __VA_ARGS__)
+ #define ASSERT_DETAIL_MAP1(f, x, peek, ...) f(x) ASSERT_DETAIL_MAP_NEXT(peek, ASSERT_DETAIL_MAP0)(f, peek, __VA_ARGS__)
+ #define ASSERT_DETAIL_MAP_LIST_NEXT1(test, next) ASSERT_DETAIL_MAP_NEXT0(test, ASSERT_DETAIL_MAP_COMMA next, 0)
+ #define ASSERT_DETAIL_MAP_LIST_NEXT(test, next)  ASSERT_DETAIL_MAP_LIST_NEXT1(ASSERT_DETAIL_MAP_GET_END test, next)
+ #define ASSERT_DETAIL_MAP_LIST0(f, x, peek, ...) \
                                    f(x) ASSERT_DETAIL_MAP_LIST_NEXT(peek, ASSERT_DETAIL_MAP_LIST1)(f, peek, __VA_ARGS__)
-#define ASSERT_DETAIL_MAP_LIST1(f, x, peek, ...) \
+ #define ASSERT_DETAIL_MAP_LIST1(f, x, peek, ...) \
                                    f(x) ASSERT_DETAIL_MAP_LIST_NEXT(peek, ASSERT_DETAIL_MAP_LIST0)(f, peek, __VA_ARGS__)
-#define ASSERT_DETAIL_MAP(f, ...) ASSERT_DETAIL_EVAL(ASSERT_DETAIL_MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
+ #define ASSERT_DETAIL_MAP(f, ...) ASSERT_DETAIL_EVAL(ASSERT_DETAIL_MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
+#else
+ // https://stackoverflow.com/a/29474124/15675011
+ #define ASSERT_DETAIL_PLUS_TEXT_(x,y) x ## y
+ #define ASSERT_DETAIL_PLUS_TEXT(x, y) ASSERT_DETAIL_PLUS_TEXT_(x, y)
+ #define ASSERT_DETAIL_ARG_1(_1, ...) _1
+ #define ASSERT_DETAIL_ARG_2(_1, _2, ...) _2
+ #define ASSERT_DETAIL_ARG_3(_1, _2, _3, ...) _3
+ #define ASSERT_DETAIL_ARG_40( _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, \
+                 _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, \
+                 _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, \
+                 _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, \
+                 ...) _39
+ #define ASSERT_DETAIL_OTHER_1(_1, ...) __VA_ARGS__
+ #define ASSERT_DETAIL_OTHER_3(_1, _2, _3, ...) __VA_ARGS__
+ #define ASSERT_DETAIL_EVAL0(...) __VA_ARGS__
+ #define ASSERT_DETAIL_EVAL1(...) ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(__VA_ARGS__)))
+ #define ASSERT_DETAIL_EVAL2(...) ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(__VA_ARGS__)))
+ #define ASSERT_DETAIL_EVAL3(...) ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(__VA_ARGS__)))
+ #define ASSERT_DETAIL_EVAL4(...) ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(__VA_ARGS__)))
+ #define ASSERT_DETAIL_EVAL(...) ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(__VA_ARGS__)))
+ #define ASSERT_DETAIL_EXPAND(x) x
+ #define ASSERT_DETAIL_MAP_SWITCH(...)\
+     ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_ARG_40(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
+             2, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
+             2, 2, 2, 2, 2, 2, 2, 2, 2,\
+             2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0))
+ #define ASSERT_DETAIL_MAP_A(...) ASSERT_DETAIL_PLUS_TEXT(ASSERT_DETAIL_MAP_NEXT_, \
+                                            ASSERT_DETAIL_MAP_SWITCH(0, __VA_ARGS__)) (ASSERT_DETAIL_MAP_B, __VA_ARGS__)
+ #define ASSERT_DETAIL_MAP_B(...) ASSERT_DETAIL_PLUS_TEXT(ASSERT_DETAIL_MAP_NEXT_, \
+                                            ASSERT_DETAIL_MAP_SWITCH(0, __VA_ARGS__)) (ASSERT_DETAIL_MAP_A, __VA_ARGS__)
+ #define ASSERT_DETAIL_MAP_CALL(fn, Value) ASSERT_DETAIL_EXPAND(fn(Value))
+ #define ASSERT_DETAIL_MAP_OUT
+ #define ASSERT_DETAIL_MAP_NEXT_2(...)\
+     ASSERT_DETAIL_MAP_CALL(ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_ARG_2(__VA_ARGS__)), \
+     ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_ARG_3(__VA_ARGS__))) \
+     ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_ARG_1(__VA_ARGS__)) \
+     ASSERT_DETAIL_MAP_OUT \
+     (ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_ARG_2(__VA_ARGS__)), ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_OTHER_3(__VA_ARGS__)))
+ #define ASSERT_DETAIL_MAP_NEXT_0(...)
+ #define ASSERT_DETAIL_MAP(...)    ASSERT_DETAIL_EVAL(ASSERT_DETAIL_MAP_A(__VA_ARGS__))
+#endif
 
 #define ASSERT_DETAIL_STRINGIFY(x) #x,
+#define ASSERT_DETAIL_COMMA ,
 
-// __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
-// name, not signature
-#define ASSERT_DETAIL_STATIC_DATA(name, type, expr_str, ...) \
-                                  __extension__ ({ \
-                                    /* extra string here because of extra comma from map and also serves as terminator */ \
-                                    static constexpr const char* const arg_strings[] = { \
-                                      ASSERT_DETAIL_MAP(ASSERT_DETAIL_STRINGIFY, __VA_ARGS__) "" \
-                                    }; \
-                                    static constexpr assert_detail::assert_static_parameters params = { \
-                                      name, \
-                                      type, \
-                                      expr_str, \
-                                      __extension__ __PRETTY_FUNCTION__, \
-                                      arg_strings, \
-                                    }; \
-                                    &params; \
-                                  })
+#if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC
+ #define ASSERT_DETAIL_STMTEXPR(B, R) __extension__ ({ B; R; })
+ #define ASSERT_DETAIL_WARNING_PRAGMA _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
+#else
+ #define ASSERT_DETAIL_STMTEXPR(B, R) [&] () { B; return R; } ()
+ #define ASSERT_DETAIL_WARNING_PRAGMA
+#endif
 
 #if ASSERT_DETAIL_IS_GCC
  // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
@@ -888,6 +939,25 @@ using assert_detail::ASSERTION;
  // clang properly eats the comma with ##__VA_ARGS__
  #define ASSERT_DETAIL_VA_ARGS(...) , ##__VA_ARGS__
 #endif
+
+// __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
+// name, not signature
+#define ASSERT_DETAIL_STATIC_DATA(name, type, expr_str, ...) \
+                                  ASSERT_DETAIL_STMTEXPR( \
+                                    /* extra string here because of extra comma from map, also serves as terminator */ \
+                                    /* ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS because msvc */ \
+                                    static constexpr const char* const arg_strings[] = { \
+                                      ASSERT_DETAIL_MAP(ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS(__VA_ARGS__)) "" \
+                                    }; \
+                                    static constexpr assert_detail::assert_static_parameters params = { \
+                                      name ASSERT_DETAIL_COMMA \
+                                      type ASSERT_DETAIL_COMMA \
+                                      expr_str ASSERT_DETAIL_COMMA \
+                                      ASSERT_DETAIL_PFUNC ASSERT_DETAIL_COMMA \
+                                      arg_strings ASSERT_DETAIL_COMMA \
+                                    }, \
+                                    &params \
+                                  )
 
 // Note about statement expressions: These are needed for two reasons. The first is putting the arg string array and
 // source location structure in .rodata rather than on the stack, the second is a _Pragma for warnings which isn't
@@ -902,10 +972,10 @@ using assert_detail::ASSERTION;
 // Note: assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
 #define ASSERT_INVOKE(expr, name, ...) \
                           assert_detail::assert<true>( \
-                            __extension__ ({ \
-                              _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
-                            }), \
+                            ASSERT_DETAIL_STMTEXPR(, \
+                              ASSERT_DETAIL_WARNING_PRAGMA \
+                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) \
+                            ), \
                             ASSERT_DETAIL_STATIC_DATA(name, assert_detail::assert_type::assertion, #expr, __VA_ARGS__) \
                             ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
                           )
@@ -918,10 +988,10 @@ using assert_detail::ASSERTION;
 #endif
 
 #define VERIFY(expr, ...) assert_detail::assert<true>( \
-                            __extension__ ({ \
-                              _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
-                            }), \
+                            ASSERT_DETAIL_STMTEXPR(, \
+                              ASSERT_DETAIL_WARNING_PRAGMA \
+                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) \
+                            ), \
                             ASSERT_DETAIL_STATIC_DATA("VERIFY", assert_detail::assert_type::verify, \
                                                       #expr, __VA_ARGS__) \
                             ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
@@ -929,10 +999,10 @@ using assert_detail::ASSERTION;
 
 #ifndef NDEBUG
  #define CHECK(expr, ...) assert_detail::assert<false>( \
-                            __extension__ ({ \
-                              _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr); \
-                            }), \
+                            ASSERT_DETAIL_STMTEXPR(, \
+                              ASSERT_DETAIL_WARNING_PRAGMA \
+                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) \
+                            ), \
                             ASSERT_DETAIL_STATIC_DATA("CHECK", assert_detail::assert_type::check, #expr, __VA_ARGS__) \
                             ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
                           )
@@ -945,6 +1015,9 @@ using assert_detail::ASSERTION;
 #ifndef ASSERT_DETAIL_IS_CPP // keep macros for the .cpp
  #undef ASSERT_DETAIL_IS_CLANG
  #undef ASSERT_DETAIL_IS_GCC
+ #undef ASSERT_DETAIL_IS_MSVC
+ #undef ASSERT_DETAIL_ATTR_COLD
+ #undef ASSERT_DETAIL_ATTR_NOINLINE
  #undef assert_detail_strong_expect
  #undef assert_detail_primitive_assert
 #endif

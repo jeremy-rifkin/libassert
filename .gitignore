@@ -1,11 +1,13 @@
+.vs
 .vscode
 *.exe
 *.o
 *.ilk
 *.pdb
-demo
 *.json
 *.so
 *.dll
 *.lib
 *.a
+demo
+out

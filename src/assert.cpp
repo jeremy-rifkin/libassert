@@ -71,7 +71,7 @@
 #endif
 
 namespace assert_detail {
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	void primitive_assert_impl(bool condition, bool verification, const char* expression,
 	                           source_location location, const char* message) {
 		if(!condition) {
@@ -90,14 +90,14 @@ namespace assert_detail {
 	}
 
 	// Still present in release mode, nonfatal
-	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, __extension__ __PRETTY_FUNCTION__, ##__VA_ARGS__)
+	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
 
 	/*
 	 * string utilities
 	 */
 
 	template<typename... T>
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string stringf(T... args) {
 		int length = snprintf(0, 0, args...);
 		if(length < 0) assert_detail_primitive_assert(false, "Invalid arguments to stringf");
@@ -107,7 +107,7 @@ namespace assert_detail {
 	}
 
 	// to save template instantiation work in TUs a variadic stringf is used
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string bstringf(const char* format, ...) {
 		va_list args1;
 		va_list args2;
@@ -122,7 +122,7 @@ namespace assert_detail {
 		return str;
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static std::vector<std::string> split(std::string_view s, std::string_view delims) {
 		std::vector<std::string> vec;
 		size_t old_pos = 0;
@@ -138,7 +138,7 @@ namespace assert_detail {
 	}
 
 	template<typename C>
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static std::string join(const C& container, const std::string_view delim) {
 		auto iter = std::begin(container);
 		auto end = std::end(container);
@@ -155,14 +155,14 @@ namespace assert_detail {
 
 	constexpr const char * const ws = " \t\n\r\f\v";
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static std::string_view trim(const std::string_view s) {
 		size_t l = s.find_first_not_of(ws);
 		size_t r = s.find_last_not_of(ws) + 1;
 		return s.substr(l, r - l);
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static void replace_all_dynamic(std::string& str, std::string_view text, std::string_view replacement) {
 		std::string::size_type pos = 0;
 		while((pos = str.find(text.data(), pos, text.length())) != std::string::npos) {
@@ -173,7 +173,7 @@ namespace assert_detail {
 		}
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string indent(const std::string_view str, size_t depth, char c, bool ignore_first) {
 		size_t i = 0, j;
 		std::string output;
@@ -188,7 +188,7 @@ namespace assert_detail {
 	}
 
 	template<size_t N>
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::optional<std::array<std::string, N>> match(const std::string s, const std::regex& r) {
 		std::smatch match;
 		if(std::regex_match(s, match, r)) {
@@ -206,8 +206,7 @@ namespace assert_detail {
 	 * system wrappers
 	 */
 
-	[[gnu::cold]]
-	void enable_virtual_terminal_processing_if_needed() {
+	ASSERT_DETAIL_ATTR_COLD void enable_virtual_terminal_processing_if_needed() {
 		// enable colors / ansi processing if necessary
 		#ifdef _WIN32
 		 // https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing
@@ -223,7 +222,7 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]] pid_t getpid() {
+	ASSERT_DETAIL_ATTR_COLD pid_t getpid() {
 		#ifdef _WIN32
 		 return _getpid();
 		#else
@@ -231,9 +230,9 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]] void wait_for_keypress() {
+	ASSERT_DETAIL_ATTR_COLD void wait_for_keypress() {
 		#ifdef _WIN32
-		 _getch();
+		 (void) _getch();
 		#else
 		 struct termios tty_attr;
 		 tcgetattr(0, &tty_attr);
@@ -248,7 +247,7 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]] bool isatty(int fd) {
+	ASSERT_DETAIL_ATTR_COLD bool isatty(int fd) {
 		#ifdef _WIN32
 		 return _isatty(fd);
 		#else
@@ -257,7 +256,7 @@ namespace assert_detail {
 	}
 
 	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-	[[gnu::cold]] int terminal_width() {
+	ASSERT_DETAIL_ATTR_COLD int terminal_width() {
 		#ifdef _WIN32
 		 CONSOLE_SCREEN_BUFFER_INFO csbi;
 		 HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
@@ -271,7 +270,7 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]] std::string get_executable_path() {
+	ASSERT_DETAIL_ATTR_COLD std::string get_executable_path() {
 		#ifdef _WIN32
 		 char buffer[MAX_PATH + 1];
 		 int s = GetModuleFileNameA(NULL, buffer, sizeof(buffer));
@@ -286,7 +285,7 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]] std::string strerror_wrapper(int e) {
+	ASSERT_DETAIL_ATTR_COLD std::string strerror_wrapper(int e) {
 		return strerror(e);
 	}
 
@@ -308,10 +307,10 @@ namespace assert_detail {
 		std::string source_path;
 		std::string signature;
 		int line = 0;
-		[[gnu::cold]] bool operator==(const stacktrace_entry& other) const {
+		ASSERT_DETAIL_ATTR_COLD bool operator==(const stacktrace_entry& other) const {
 			return line == other.line && signature == other.signature && source_path == other.source_path;
 		}
-		[[gnu::cold]] bool operator!=(const stacktrace_entry& other) const {
+		ASSERT_DETAIL_ATTR_COLD bool operator!=(const stacktrace_entry& other) const {
 			return !operator==(other);
 		}
 	};
@@ -323,7 +322,7 @@ namespace assert_detail {
 
 	#ifdef USE_DBG_HELP_H
 	#if ASSERT_DETAIL_IS_GCC
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
 		// TODO: Popen is a hack. Implement properly with CreateProcess and pipes later.
 		FILE* p = popen(("addr2line -e " + executable + " -fC " + addresses).c_str(), "r");
@@ -379,7 +378,7 @@ namespace assert_detail {
 
 	// SymGetTypeInfo utility
 	template<typename T, IMAGEHLP_SYMBOL_TYPE_INFO SymType>
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	auto get_info(ULONG type_index, HANDLE proc, ULONG64 modbase) {
 		T info;
 		if(!SymGetTypeInfo(proc, modbase, type_index, static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(SymType), &info)) {
@@ -399,7 +398,7 @@ namespace assert_detail {
 	}
 
 	// Translate basic types to string
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static std::string_view get_basic_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
 		auto basic_type = get_info<BasicType, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_BASETYPE>(type_index, proc, modbase);
 		//auto length = get_info<ULONG64, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_LENGTH>(type_index, proc, modbase);
@@ -432,7 +431,7 @@ namespace assert_detail {
 	static std::string_view get_type(ULONG, HANDLE, ULONG64);
 
 	// Resolve more complex types
-	[[gnu::cold]] static std::string lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+	ASSERT_DETAIL_ATTR_COLD static std::string lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
 		auto tag = get_info<SymTagEnum, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMTAG>(type_index, proc, modbase);
 		switch(tag) {
 			case SymTagEnum::SymTagBaseType:
@@ -456,7 +455,7 @@ namespace assert_detail {
 	static std::unordered_map<ULONG, std::string> type_cache; // memoize, though it hardly matters
 
 	// top-level type resolution function
-	[[gnu::cold]] static std::string_view get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+	ASSERT_DETAIL_ATTR_COLD static std::string_view get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
 		if(type_cache.count(type_index)) {
 			return type_cache.at(type_index);
 		} else {
@@ -474,7 +473,7 @@ namespace assert_detail {
 		std::string str;
 	};
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static BOOL enumerator_callback(PSYMBOL_INFO symbol_info, [[maybe_unused]] ULONG symbol_size, PVOID data) {
 		function_info* ctx = (function_info*)data;
 		if (ctx->counter++ >= ctx->n_children) {
@@ -582,7 +581,7 @@ namespace assert_detail {
 	}
 	#endif
 	#ifdef USE_EXECINFO_H
-	[[gnu::cold]] static bool has_addr2line() {
+	ASSERT_DETAIL_ATTR_COLD static bool has_addr2line() {
 		// Detects if addr2line exists by trying to invoke addr2line --help
 		constexpr int magic = 42;
 		pid_t pid = fork();
@@ -598,7 +597,7 @@ namespace assert_detail {
 	}
 
 	// returns 1 for little endian, 2 for big endien, matches elf
-	[[gnu::cold]] static int endianness() {
+	ASSERT_DETAIL_ATTR_COLD static int endianness() {
 		int n = 1;
 		if(*(char*)&n == 1) {
 			return 1; // little
@@ -626,7 +625,7 @@ namespace assert_detail {
 		ET_DYN = 0x03
 	};
 
-	[[gnu::cold]] static uint16_t get_executable_e_type(const std::string& path) {
+	ASSERT_DETAIL_ATTR_COLD static uint16_t get_executable_e_type(const std::string& path) {
 		FILE* f = fopen(path.c_str(), "rb");
 		assert_detail_primitive_assert(f != NULL);
 		partial_elf_file_header h;
@@ -639,7 +638,7 @@ namespace assert_detail {
 		return h.e_type;
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static bool paths_refer_to_same(const std::string& path_a, const std::string& path_b) {
 		struct stat a, b;
 		stat(path_a.c_str(), &a);
@@ -658,7 +657,7 @@ namespace assert_detail {
 
 	// This is a custom replacement for backtrace_symbols, which makes getting the information we
 	// need impossible in some situations.
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static std::vector<frame> backtrace_frames(void * const * array, size_t size, size_t skip) {
 		// reference: https://github.com/bminor/glibc/blob/master/debug/backtracesyms.c
 		std::vector<frame> frames;
@@ -692,7 +691,7 @@ namespace assert_detail {
 	};
 	static_assert(sizeof(pipe_t) == 2 * sizeof(int));
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
 		pipe_t output_pipe;
 		pipe_t input_pipe;
@@ -726,7 +725,7 @@ namespace assert_detail {
 		return output;
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
 		void* bt[n_frames];
 		int bt_size = backtrace(bt, n_frames);
@@ -803,15 +802,15 @@ namespace assert_detail {
 	 * C++ syntax analysis logic
 	 */
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	highlight_block::highlight_block(std::string_view color, std::string content) : color(color), content(content) { }
-	[[gnu::cold]] highlight_block::highlight_block(const highlight_block& other) = default;
-	[[gnu::cold]] highlight_block::highlight_block(highlight_block&& other) = default;
-	[[gnu::cold]] highlight_block::~highlight_block() = default;
-	[[gnu::cold]] highlight_block& highlight_block::operator=(const highlight_block&) = default;
-	[[gnu::cold]] highlight_block& highlight_block::operator=(highlight_block&&) = default;
+	ASSERT_DETAIL_ATTR_COLD highlight_block::highlight_block(const highlight_block& other) = default;
+	ASSERT_DETAIL_ATTR_COLD highlight_block::highlight_block(highlight_block&& other) = default;
+	ASSERT_DETAIL_ATTR_COLD highlight_block::~highlight_block() = default;
+	ASSERT_DETAIL_ATTR_COLD highlight_block& highlight_block::operator=(const highlight_block&) = default;
+	ASSERT_DETAIL_ATTR_COLD highlight_block& highlight_block::operator=(highlight_block&&) = default;
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string union_regexes(std::initializer_list<std::string_view> regexes) {
 		std::string composite;
 		for(const std::string_view str : regexes) {
@@ -821,7 +820,7 @@ namespace assert_detail {
 		return composite;
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string prettify_type(std::string type) {
 		// for now just doing basic > > -> >> replacement
 		// could put in analysis:: but the replacement is basic and this is more convenient for
@@ -893,7 +892,7 @@ namespace assert_detail {
 		std::vector<std::pair<std::regex, literal_format>> literal_formats;
 
 	private:
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		analysis() {
 			// https://eel.is/c++draft/gram.lex
 			// generate regular expressions
@@ -1033,7 +1032,7 @@ namespace assert_detail {
 		}
 
 	public:
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		std::string_view normalize_op(const std::string_view op) {
 			// Operators need to be normalized to support alternative operators like and and bitand
 			// Normalization instead of just adding to the precedence table because target operators
@@ -1042,7 +1041,7 @@ namespace assert_detail {
 			else return op;
 		}
 
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		std::string_view normalize_brace(const std::string_view brace) {
 			// Operators need to be normalized to support alternative operators like and and bitand
 			// Normalization instead of just adding to the precedence table because target operators
@@ -1051,7 +1050,7 @@ namespace assert_detail {
 			else return brace;
 		}
 
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		std::vector<token_t> _tokenize(const std::string& expression, bool decompose_shr = false) {
 			std::vector<token_t> tokens;
 			size_t i = 0;
@@ -1082,7 +1081,7 @@ namespace assert_detail {
 			return tokens;
 		}
 
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		std::vector<highlight_block> _highlight(const std::string& expression) try {
 			const auto tokens = _tokenize(expression);
 			std::vector<highlight_block> output;
@@ -1139,7 +1138,7 @@ namespace assert_detail {
 			return {{"", expression}};
 		}
 
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		literal_format _get_literal_format(const std::string& expression) {
 			for(auto& [ re, type ] : literal_formats) {
 				if(std::regex_match(expression, re)) {
@@ -1149,7 +1148,7 @@ namespace assert_detail {
 			return literal_format::none; // not a literal
 		}
 
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		token_t find_last_non_ws(const std::vector<token_t>& tokens, size_t i) {
 			// returns empty token_e::whitespace on failure
 			while(i--) {
@@ -1160,7 +1159,7 @@ namespace assert_detail {
 			return {token_e::whitespace, ""};
 		}
 
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		static std::string_view get_real_op(const std::vector<token_t>& tokens, const size_t i) {
 			// re-coalesce >> if necessary
 			bool is_shr = tokens[i].str == ">" && i < tokens.size() - 1 && tokens[i + 1].str == ">";
@@ -1173,7 +1172,7 @@ namespace assert_detail {
 		// always be small.
 		// Returns true if parse tree traversal was a success, false if depth was exceeded
 		static constexpr int max_depth = 10;
-		[[gnu::cold]] bool pseudoparse(
+		ASSERT_DETAIL_ATTR_COLD bool pseudoparse(
 			const std::vector<token_t>& tokens,
 			const std::string_view target_op,
 			size_t i,
@@ -1310,7 +1309,7 @@ namespace assert_detail {
 			return true;
 		}
 
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		std::pair<std::string, std::string> _decompose_expression(const std::string& expression,
 				const std::string_view target_op) {
 			// While automatic decomposition allows something like `assert(foo(n) == bar<n> + n);`
@@ -1390,7 +1389,7 @@ namespace assert_detail {
 	analysis* analysis::analysis_singleton;
 
 	// public static wrappers
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string highlight(const std::string& expression) {
 		#ifdef NCOLOR
 		return expression;
@@ -1406,7 +1405,7 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::vector<highlight_block> highlight_blocks(const std::string& expression) {
 		#ifdef NCOLOR
 		return expression;
@@ -1415,19 +1414,19 @@ namespace assert_detail {
 		#endif
 	}
 
-	[[gnu::cold]] literal_format get_literal_format(const std::string& expression) {
+	ASSERT_DETAIL_ATTR_COLD literal_format get_literal_format(const std::string& expression) {
 		return analysis::get()._get_literal_format(expression);
 	}
 
-	[[gnu::cold]] std::string trim_suffix(const std::string& expression) {
+	ASSERT_DETAIL_ATTR_COLD std::string trim_suffix(const std::string& expression) {
 		return expression.substr(0, expression.find_last_not_of("FfUuLlZz") + 1);
 	}
 
-	[[gnu::cold]] bool is_bitwise(std::string_view op) {
+	ASSERT_DETAIL_ATTR_COLD bool is_bitwise(std::string_view op) {
 		return analysis::get().bitwise_operators.count(op);
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op) {
 		return analysis::get()._decompose_expression(expression, target_op);
 	}
@@ -1436,7 +1435,7 @@ namespace assert_detail {
 	 * stringification
 	 */
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string escape_string(const std::string_view str, char quote) {
 		std::string escaped;
 		escaped += quote;
@@ -1456,7 +1455,7 @@ namespace assert_detail {
 		return escaped;
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r) {
 		assert_detail_primitive_assert(sig.find(l) != std::string_view::npos);
 		assert_detail_primitive_assert(sig.rfind(r) != std::string_view::npos);
@@ -1466,7 +1465,7 @@ namespace assert_detail {
 	}
 
 	template<typename T>
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string stringify_int(T t, literal_format fmt, size_t size) {
 		std::ostringstream oss;
 		switch(fmt) {
@@ -1496,7 +1495,7 @@ namespace assert_detail {
 		return std::move(oss).str();
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string stringify_int(unsigned long long t, literal_format fmt, bool is_unsigned, size_t size) {
 		if(is_unsigned) {
 			return stringify_int(t, fmt, size);
@@ -1509,16 +1508,16 @@ namespace assert_detail {
 	 * stack trace printing
 	 */
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	column_t::column_t(size_t width, std::vector<highlight_block> blocks, bool right_align)
 		: width(width), blocks(blocks), right_align(right_align) {}
-	[[gnu::cold]] column_t::column_t(const column_t&) = default;
-	[[gnu::cold]] column_t::column_t(column_t&&) = default;
-	[[gnu::cold]] column_t::~column_t() = default;
-	[[gnu::cold]] column_t& column_t::operator=(const column_t&) = default;
-	[[gnu::cold]] column_t& column_t::operator=(column_t&&) = default;
+	ASSERT_DETAIL_ATTR_COLD column_t::column_t(const column_t&) = default;
+	ASSERT_DETAIL_ATTR_COLD column_t::column_t(column_t&&) = default;
+	ASSERT_DETAIL_ATTR_COLD column_t::~column_t() = default;
+	ASSERT_DETAIL_ATTR_COLD column_t& column_t::operator=(const column_t&) = default;
+	ASSERT_DETAIL_ATTR_COLD column_t& column_t::operator=(column_t&&) = default;
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static constexpr int log10(int n) {
 		if(n <= 1) return 1;
 		int t = 1;
@@ -1541,7 +1540,7 @@ namespace assert_detail {
 
 	using path_components = std::vector<std::string>;
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	static path_components parse_path(const std::string_view path) {
 		#ifdef _WIN32
 		 constexpr std::string_view path_delim = "/\\";
@@ -1597,9 +1596,9 @@ namespace assert_detail {
 		std::string root;
 		std::unordered_map<std::string, path_trie*> edges;
 	public:
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		path_trie(std::string root) : root(root) {};
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		compl path_trie() {
 			for(auto& [k, trie] : edges) {
 				delete trie;
@@ -1616,12 +1615,12 @@ namespace assert_detail {
 		}
 		path_trie& operator=(const path_trie&) = delete;
 		path_trie& operator=(path_trie&&) = delete;
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		void insert(const path_components& path) {
 			assert_detail_primitive_assert(path.back() == root);
 			insert(path, (int)path.size() - 2);
 		}
-		[[gnu::cold]]
+		ASSERT_DETAIL_ATTR_COLD
 		path_components disambiguate(const path_components& path) {
 			path_components result;
 			path_trie* current = this;
@@ -1639,7 +1638,7 @@ namespace assert_detail {
 			return result;
 		}
 	private:
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 		void insert(const path_components& path, int i) {
 			if(i < 0) return;
 			if(!edges.count(path[i])) {
@@ -1652,7 +1651,7 @@ namespace assert_detail {
 		}
 	};
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string wrapped_print(const std::vector<column_t>& columns) {
 		// 2d array rows/columns
 		struct line_content {
@@ -1721,7 +1720,7 @@ namespace assert_detail {
 		return output;
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	auto get_trace_window(const std::vector<stacktrace_entry>& trace) {
 		// Two boundaries: assert_detail and main
 		// Both are found here, nothing is filtered currently at stack trace generation
@@ -1739,7 +1738,7 @@ namespace assert_detail {
 		return std::pair(start, end);
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	auto process_paths(const std::vector<stacktrace_entry>& trace, size_t start, size_t end) {
 		// raw full path -> components
 		std::unordered_map<std::string, path_components> parsed_paths;
@@ -1768,7 +1767,7 @@ namespace assert_detail {
 		return std::pair(files, std::min(longest_file_width, size_t(50)));
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string print_stacktrace() {
 		std::string stacktrace;
 		if(auto _trace = get_stacktrace()) {
@@ -1847,7 +1846,7 @@ namespace assert_detail {
 		return stacktrace;
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string print_values(const std::vector<std::string>& vec, size_t lw) {
 		assert_detail_primitive_assert(vec.size() > 0);
 		std::string values;
@@ -1866,7 +1865,7 @@ namespace assert_detail {
 		return values;
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::vector<highlight_block> get_values(const std::vector<std::string>& vec) {
 		assert_detail_primitive_assert(vec.size() > 0);
 		if(vec.size() == 1) {
@@ -1885,7 +1884,7 @@ namespace assert_detail {
 		}
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string print_binary_diagnostic_deferred(const literal_format (&formats)[4], std::vector<std::string>& lstrings,
 	                                             std::vector<std::string>& rstrings, const char* a_str,
 	                                             const char* b_str) {
@@ -1942,7 +1941,7 @@ namespace assert_detail {
 		return where;
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	void sort_and_dedup(literal_format (&formats)[4]) {
 		std::sort(std::begin(formats), std::end(formats));
 		size_t write_index = 1, read_index = 1;
@@ -1956,7 +1955,7 @@ namespace assert_detail {
 		}
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	std::string print_extra_diagnostics(const decltype(extra_diagnostics::entries)& extra_diagnostics) {
 		std::string output = "    Extra diagnostics:\n";
 		size_t term_width = terminal_width(); // will be 0 on error
@@ -2006,9 +2005,9 @@ namespace assert_detail {
 		}
 	}
 
-	[[gnu::cold]] extra_diagnostics::extra_diagnostics() = default;
-	[[gnu::cold]] extra_diagnostics::~extra_diagnostics() = default;
-	[[gnu::cold]] extra_diagnostics::extra_diagnostics(extra_diagnostics&&) = default;
+	ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics() = default;
+	ASSERT_DETAIL_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
+	ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) = default;
 
 	#if ASSERT_DETAIL_IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
 	 CRITICAL_SECTION CriticalSection;
@@ -2031,7 +2030,7 @@ namespace assert_detail {
 	 }
 	#endif
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	const char* assert_type_name(assert_type t) {
 		switch(t) {
 			case assert_type::assertion: return "Assertion";
@@ -2043,7 +2042,7 @@ namespace assert_detail {
 		}
 	}
 
-	[[gnu::cold]]
+	ASSERT_DETAIL_ATTR_COLD
 	size_t count_args_strings(const char* const* const arr) {
 		size_t c = 0;
 		for(size_t i = 0; *arr[i]; i++) {
