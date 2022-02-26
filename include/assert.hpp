@@ -94,28 +94,14 @@ namespace assert_detail {
 	/*
 	 * string utilities
 	 */
+
 	[[nodiscard]] std::string bstringf(const char* format, ...);
 
-	[[nodiscard]] std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
+	[[nodiscard]] std::string strip_colors(const std::string& str);
 
 	/*
 	 * system wrappers
 	 */
-
-	void enable_virtual_terminal_processing_if_needed();
-
-	#ifdef _WIN32
-	typedef int pid_t;
-	#endif
-
-	[[nodiscard]] pid_t getpid();
-
-	void wait_for_keypress();
-
-	[[nodiscard]] bool isatty(int fd);
-
-	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-	[[nodiscard]] int terminal_width();
 
 	[[nodiscard]] std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
 
@@ -601,8 +587,6 @@ namespace assert_detail {
 		column_t& operator=(column_t&&);
 	};
 
-	[[nodiscard]] std::string wrapped_print(const std::vector<column_t>& columns);
-
 	[[nodiscard]] std::string print_stacktrace();
 
 	template<typename T>
@@ -625,10 +609,6 @@ namespace assert_detail {
 			return { stringify(v) };
 		}
 	}
-
-	[[nodiscard]] std::string print_values(const std::vector<std::string>& vec, size_t lw);
-
-	[[nodiscard]] std::vector<highlight_block> get_values(const std::vector<std::string>& vec);
 
 	[[nodiscard]]
 	std::string print_binary_diagnostic_deferred(const literal_format (&formats)[4], std::vector<std::string>& lstrings,
@@ -697,7 +677,14 @@ namespace assert_detail {
 			entry.fatality = t;
 		} else {
 			// three cases to handle: assert message, errno, and regular diagnostics
+			#if ASSERT_DETAIL_IS_MSVC
+			 #pragma warning(push)
+			 #pragma warning(disable: 4127) // MSVC thinks constexpr should be used here. It should not.
+			#endif
 			if(isa<T, strip<decltype(errno)>> && args_strings[i] == errno_expansion) {
+			#if ASSERT_DETAIL_IS_MSVC
+			 #pragma warning(pop)
+			#endif
 				// this is redundant and useless but the body for errno handling needs to be in an
 				// if constexpr wrapper
 				if constexpr(isa<T, strip<decltype(errno)>>) {
@@ -706,11 +693,13 @@ namespace assert_detail {
 				entry.entries.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
 				}
 			} else {
-				if(i == 0) {
-					entry.message = t;
-				} else {
-					entry.entries.push_back({ args_strings[i], stringify(t, literal_format::dec) });
+				if constexpr(is_string_type<T>) {
+					if(i == 0) {
+						entry.message = t;
+						return;
+					}
 				}
+				entry.entries.push_back({ args_strings[i], stringify(t, literal_format::dec) });
 			}
 		}
 	}
@@ -773,6 +762,7 @@ namespace assert_detail {
 		                                         sizeof...(args) > 0 ? ", ..." : "")).c_str());
 		if constexpr(is_nothing<C>) {
 			static_assert(is_nothing<B> && !is_nothing<A>);
+			(void)decomposer; // suppress warning in msvc
 		} else {
 			auto [a_str, b_str] = decompose_expression(expr_str, C::op_string);
 			output += print_binary_diagnostic(decomposer.a, decomposer.b, a_str.c_str(), b_str.c_str(), C::op_string);
@@ -928,7 +918,7 @@ using assert_detail::ASSERTION;
  #define ASSERT_DETAIL_STMTEXPR(B, R) __extension__ ({ B; R; })
  #define ASSERT_DETAIL_WARNING_PRAGMA _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
 #else
- #define ASSERT_DETAIL_STMTEXPR(B, R) [&] () { B; return R; } ()
+ #define ASSERT_DETAIL_STMTEXPR(B, R) [&] { B; return R; } ()
  #define ASSERT_DETAIL_WARNING_PRAGMA
 #endif
 

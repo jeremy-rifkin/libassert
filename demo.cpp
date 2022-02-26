@@ -2,6 +2,7 @@
 
 #include "assert.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -25,6 +26,19 @@ void custom_fail(std::string message, assert_detail::assert_type, assert_detail:
 	std::cerr<<message<<std::endl<<std::endl;
 }
 
+static std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false) {
+	size_t i = 0, j;
+	std::string output;
+	while((j = str.find('\n', i)) != std::string::npos) {
+		if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
+		output.insert(output.end(), str.begin() + i, str.begin() + j + 1);
+		i = j + 1;
+	}
+	if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
+	output.insert(output.end(), str.begin() + i, str.end());
+	return output;
+}
+
 template<class T> struct S {
 	T x;
 	S() = default;
@@ -39,7 +53,7 @@ template<class T> struct S {
 		o<<"I'm S<"<<assert_detail::type_name<T>()<<"> and I contain:"<<std::endl;
 		std::ostringstream oss;
 		oss<<s.x;
-		o<<assert_detail::indent(std::move(oss).str(), 4);
+		o<<indent(std::move(oss).str(), 4);
 		return o;
 	}
 };
@@ -164,10 +178,15 @@ public:
 		assert(0, 2 == garple());
 		{
 			std::optional<float> parameter;
-			if(auto i = *VERIFY(parameter)) {
-				static_assert(std::is_same<decltype(i), float>::value);
-			}
-			float f = *assert(get_param());
+			#ifndef _MSC_VER
+			 if(auto i = *VERIFY(parameter)) {
+			 	static_assert(std::is_same<decltype(i), float>::value);
+			 }
+			 float f = *assert(get_param());
+			#else
+			 VERIFY(parameter);
+			 assert(get_param());
+			#endif
 			auto x = [&] () -> decltype(auto) { return VERIFY(parameter); };
 			static_assert(std::is_same<decltype(x()), std::optional<float>&>::value);
 		}

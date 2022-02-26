@@ -10,7 +10,7 @@ void zoog(std::vector<int>& vec) {
 ![](screenshots/a.png)
 
 ```cpp
-const char* path = "/home/foobar";
+const char* path = "/home/foobar/baz";
 FILE* f = VERIFY(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
 ```
 ![](screenshots/b.png)
@@ -276,8 +276,11 @@ assertion is fatal. A typical implementation looks like:
 void custom_fail(std::string message, assert_detail::assert_type type, assert_detail::ASSERT fatal) {
     using assert_detail::ASSERT;
     using assert_detail::assert_type;
-    assert_detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-    std::cerr<<message<<std::endl;
+    if(isatty(STDERR_FILENO)) {
+        std::cerr<<message<<std::endl;
+    } else {
+        std::cerr<<assert_detail::strip_colors(message)<<std::endl;
+    }
     if(fatal == ASSERT::FATAL) {
         switch(type) {
             case assert_type::assertion:

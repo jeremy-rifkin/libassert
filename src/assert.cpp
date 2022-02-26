@@ -45,6 +45,11 @@
  #error "no"
 #endif
 
+#if ASSERT_DETAIL_IS_MSVC
+ // wchar -> char string warning
+ #pragma warning(disable : 4244)
+#endif
+
 #ifndef NCOLOR
  #define ESC "\033["
  #define ANSIRGB(r, g, b) ESC "38;2;" #r ";" #g ";" #b "m"
@@ -167,14 +172,20 @@ namespace assert_detail {
 		std::string::size_type pos = 0;
 		while((pos = str.find(text.data(), pos, text.length())) != std::string::npos) {
 			str.replace(pos, text.length(), replacement.data(), replacement.length());
-			// advancing by one rather than replacement.length() in case replacement leads to another
-			// replacement opportunity, e.g. folding > > > to >> > then >>>
+			// advancing by one rather than replacement.length() in case replacement leads to
+			// another replacement opportunity, e.g. folding > > > to >> > then >>>
 			pos++;
 		}
 	}
 
 	ASSERT_DETAIL_ATTR_COLD
-	std::string indent(const std::string_view str, size_t depth, char c, bool ignore_first) {
+	std::string strip_colors(const std::string& str) {
+		static std::regex ansi_escape_re("\033\\[[^m]+m");
+		return std::regex_replace(str, ansi_escape_re, "");
+	}
+
+	ASSERT_DETAIL_ATTR_COLD
+	static std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false) {
 		size_t i = 0, j;
 		std::string output;
 		while((j = str.find('\n', i)) != std::string::npos) {
@@ -206,7 +217,7 @@ namespace assert_detail {
 	 * system wrappers
 	 */
 
-	ASSERT_DETAIL_ATTR_COLD void enable_virtual_terminal_processing_if_needed() {
+	ASSERT_DETAIL_ATTR_COLD static void enable_virtual_terminal_processing_if_needed() {
 		// enable colors / ansi processing if necessary
 		#ifdef _WIN32
 		 // https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing
@@ -222,32 +233,7 @@ namespace assert_detail {
 		#endif
 	}
 
-	ASSERT_DETAIL_ATTR_COLD pid_t getpid() {
-		#ifdef _WIN32
-		 return _getpid();
-		#else
-		 return ::getpid();
-		#endif
-	}
-
-	ASSERT_DETAIL_ATTR_COLD void wait_for_keypress() {
-		#ifdef _WIN32
-		 (void) _getch();
-		#else
-		 struct termios tty_attr;
-		 tcgetattr(0, &tty_attr);
-		 struct termios tty_attr_original = tty_attr;
-		 tty_attr.c_lflag &= ~(ICANON | ECHO);
-		 tty_attr.c_cc[VTIME] = 0;
-		 tty_attr.c_cc[VMIN] = 1;
-		 tcsetattr(0, TCSAFLUSH, &tty_attr); // formerly used TCSANOW
-		 char c;
-		 auto x = read(STDIN_FILENO, &c, 1); (void) x;
-		 tcsetattr(0, TCSAFLUSH, &tty_attr_original);
-		#endif
-	}
-
-	ASSERT_DETAIL_ATTR_COLD bool isatty(int fd) {
+	ASSERT_DETAIL_ATTR_COLD static bool isatty(int fd) {
 		#ifdef _WIN32
 		 return _isatty(fd);
 		#else
@@ -256,7 +242,7 @@ namespace assert_detail {
 	}
 
 	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-	ASSERT_DETAIL_ATTR_COLD int terminal_width() {
+	ASSERT_DETAIL_ATTR_COLD static int terminal_width() {
 		#ifdef _WIN32
 		 CONSOLE_SCREEN_BUFFER_INFO csbi;
 		 HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
@@ -1260,7 +1246,7 @@ namespace assert_detail {
 									if(precedence.count(op))
 									if(precedence.at(op) < current_lowest_precedence
 									|| (precedence.at(op) == current_lowest_precedence && precedence.at(op) != -9)) {
-										middle_index = i;
+										middle_index = (int)i;
 										current_lowest_precedence = precedence.at(op);
 									}
 									if(op == ">>") i++;
@@ -1652,7 +1638,7 @@ namespace assert_detail {
 	};
 
 	ASSERT_DETAIL_ATTR_COLD
-	std::string wrapped_print(const std::vector<column_t>& columns) {
+	static std::string wrapped_print(const std::vector<column_t>& columns) {
 		// 2d array rows/columns
 		struct line_content {
 			size_t length;
@@ -1792,7 +1778,7 @@ namespace assert_detail {
 				const auto& [source_path, signature, _line] = trace[i];
 				std::string line_number = _line == 0 ? "?" : std::to_string(_line);
 				// look for repeats, i.e. recursion we can fold
-				int recursion_folded = 0;
+				size_t recursion_folded = 0;
 				if(end - i >= 4) {
 					size_t j = 1;
 					for( ; i + j <= end; j++) {
@@ -1802,7 +1788,7 @@ namespace assert_detail {
 						recursion_folded = j - 2;
 					}
 				}
-				int frame_number = i - start + 1;
+				size_t frame_number = i - start + 1;
 				// pretty print with columns for wide terminals
 				// split printing for small terminals
 				if(term_width >= 50) {
@@ -1826,9 +1812,9 @@ namespace assert_detail {
 					sig = sig.substr(0, sig.rfind("("));
 					stacktrace += stringf(
 						"#%2d %s\n      at %s:%s\n",
-						frame_number,
+						(int)frame_number,
 						sig.c_str(),
-						source_path.c_str(),
+						files.at(source_path).c_str(),
 						(CYAN + line_number + RESET).c_str() // yes this is excessive; intentionally coloring "?"
 					);
 				}
@@ -1847,7 +1833,7 @@ namespace assert_detail {
 	}
 
 	ASSERT_DETAIL_ATTR_COLD
-	std::string print_values(const std::vector<std::string>& vec, size_t lw) {
+	static std::string print_values(const std::vector<std::string>& vec, size_t lw) {
 		assert_detail_primitive_assert(vec.size() > 0);
 		std::string values;
 		if(vec.size() == 1) {
@@ -1866,7 +1852,7 @@ namespace assert_detail {
 	}
 
 	ASSERT_DETAIL_ATTR_COLD
-	std::vector<highlight_block> get_values(const std::vector<std::string>& vec) {
+	static std::vector<highlight_block> get_values(const std::vector<std::string>& vec) {
 		assert_detail_primitive_assert(vec.size() > 0);
 		if(vec.size() == 1) {
 			return highlight_blocks(vec[0]);
@@ -1946,7 +1932,7 @@ namespace assert_detail {
 		std::sort(std::begin(formats), std::end(formats));
 		size_t write_index = 1, read_index = 1;
 		for(; read_index < std::size(formats); read_index++) {
-			if(formats[read_index] != formats[~-write_index]) {
+			if(formats[read_index] != formats[write_index - 1]) {
 				formats[write_index++] = formats[read_index];
 			}
 		}
@@ -1990,7 +1976,7 @@ namespace assert_detail {
 
 	void default_fail_action(std::string message, assert_type type, assert_detail::ASSERTION fatal) {
 		assert_detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-		std::cerr<<message<<std::endl;
+		std::cerr << (isatty(STDERR_FILENO) ? message : strip_colors(message)) << std::endl;
 		if(fatal == ASSERTION::FATAL) {
 			switch(type) {
 				case assert_type::assertion:
