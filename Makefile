@@ -1,54 +1,75 @@
-C = clang++
-#C = g++
+# Defaults, can be overriden with invocation
+COMPILER = g++
+TARGET = release # release or debug
 
-WFLAGS = -Wall -Wextra -Werror=return-type
-FLAGS = -std=c++17 -g -Og -Iinclude -DASSERT_FAIL=custom_fail #-fsanitize=address #-DASSERT_DETAIL_IS_DEMO #-ftime-trace
-LIBFLAGS = $(FLAGS) -O2
-PIC =
-ifeq ($(OS),Windows_NT)
-	DEMO = demo.exe
-	STATIC_LIB = assert.lib
-	SHARED_LIB = assert.dll
-	LDFLAGS = -ldbghelp
+BIN = bin
+
+MKDIR_P ?= mkdir -p
+
+.PHONY: _all clean
+
+ifneq ($(COMPILER),msvc)
+    # GCC / Clang
+    WFLAGS = -Wall -Wextra -Werror=return-type
+    FLAGS = -std=c++17 -g -Iinclude
+    ifneq ($(TARGET), debug)
+        FLAGS += -O2
+    endif
+    LDFLAGS = -Wl,--whole-archive -Wl,--no-whole-archive
+    CPP = $(COMPILER)
+    LD = $(COMPILER)
+    ifeq ($(OS),Windows_NT)
+        STATIC_LIB = $(BIN)/assert.lib
+        SHARED_LIB = $(BIN)/assert.dll
+        LDFLAGS += -ldbghelp
+    else
+        STATIC_LIB = $(BIN)/libassert.a
+        SHARED_LIB = $(BIN)/libassert.so
+        LDFLAGS += -ldl
+        PIC = -fPIC
+        ifeq ($(TARGET), debug)
+            FLAGS += -fsanitize=address
+            LDFLAGS += -fsanitize=address
+        endif
+    endif
+
+    _all: $(STATIC_LIB) $(SHARED_LIB)
+
+    $(BIN)/src/assert.o: src/assert.cpp include/assert.hpp
+		$(MKDIR_P) $(BIN)/src
+		$(CPP) $< -c -o $@ $(WFLAGS) $(FLAGS) $(PIC)
+    $(STATIC_LIB): $(BIN)/src/assert.o
+		$(MKDIR_P) bin
+		ar rcs $@ $^
+    $(SHARED_LIB): $(BIN)/src/assert.o
+		$(MKDIR_P) bin
+		$(CPP) -shared $^ -o $@ $(WFLAGS) $(FLAGS) $(LDFLAGS)
 else
-	DEMO = demo
-	STATIC_LIB = libassert.a
-	SHARED_LIB = libassert.so
-	LDFLAGS = -ldl #-fsanitize=address
-	PIC = -fPIC
+    # MSVC
+    # Note: Will need to manually run vcvarsall.bat x86_amd64
+    CPP = cl
+    LD = link
+    WFLAGS = /W3
+    FLAGS = /std:c++17 /EHsc
+    ifneq ($(TARGET), debug)
+        FLAGS += /O1
+    endif
+    LDFLAGS = /WHOLEARCHIVE # /PDB /OPT:ICF /OPT:REF
+    STATIC_LIB = $(BIN)/assert.lib
+    SHARED_LIB = $(BIN)/assert.dll
+
+    _all: $(STATIC_LIB) $(SHARED_LIB)
+
+    $(BIN)/src/assert.obj: src/assert.cpp include/assert.hpp
+		$(MKDIR_P) $(BIN)/src
+		cmd /c "$(CPP) /c /I include /Fo$@ $(WFLAGS) $(FLAGS) $<"
+    $(STATIC_LIB): $(BIN)/src/assert.obj
+		$(MKDIR_P) bin
+		cmd /c "lib $^ /OUT:$@"
+    $(SHARED_LIB): $(BIN)/src/assert.obj
+		$(MKDIR_P) bin
+		cmd /c "$(LD) /DLL $^ dbghelp.lib /OUT:$@ $(LDFLAGS)"
 endif
 
-.PHONY: _all
-
-_all: $(STATIC_LIB) $(SHARED_LIB)
-
-$(DEMO): demo.o foo.o bar.o $(SHARED_LIB) # $(STATIC_LIB)
-	$(C) demo.o foo.o bar.o -L. -lassert -o $(DEMO) $(WFLAGS) $(FLAGS)
-	#$(C) demo.o foo.o bar.o $(STATIC_LIB) -o $(DEMO) $(WFLAGS) $(FLAGS) $(LDFLAGS)
-demo.o: demo.cpp include/assert.hpp
-	$(C) demo.cpp -c -o demo.o $(WFLAGS) $(FLAGS)
-foo.o: foo.cpp include/assert.hpp
-	$(C) foo.cpp  -c -o foo.o  $(WFLAGS) $(FLAGS)
-bar.o: bar.cpp include/assert.hpp
-	$(C) bar.cpp  -c -o bar.o  $(WFLAGS) $(FLAGS)
-src/assert.o: src/assert.cpp include/assert.hpp
-	# optimizing here improves link substantially, and this only needs to be built once
-	$(C) src/assert.cpp -c -o src/assert.o $(WFLAGS) $(LIBFLAGS)
-$(STATIC_LIB): src/assert.o
-	ar rcs $(STATIC_LIB) src/assert.o
-$(SHARED_LIB): src/assert.cpp
-	$(C) -shared src/assert.cpp -o $(SHARED_LIB) $(WFLAGS) $(LIBFLAGS) $(PIC) -Wl,--whole-archive -Wl,--no-whole-archive $(LDFLAGS)
-
-tests/disambiguation: tests/disambiguation.cpp $(SHARED_LIB)
-	$(C) -Itests tests/disambiguation.cpp -o tests/disambiguation.exe $(FLAGS) $(WFLAGS) -D_0_DEBUG_ASSERT_DISAMBIGUATION
-tests/literals: tests/literals.cpp $(SHARED_LIB)
-	$(C) -Itests tests/literals.cpp -o tests/literals.exe -Iinclude -g -std=c++17 -L. -lassert $(WFLAGS) -D_0_DEBUG_ASSERT_DISAMBIGUATION
-tests/tokens_and_highlighting: tests/tokens_and_highlighting.cpp $(SHARED_LIB)
-	$(C) -Itests tests/tokens_and_highlighting.cpp -o tests/tokens_and_highlighting.exe -Iinclude -g -std=c++17 -L. -lassert $(WFLAGS) -D_0_DEBUG_ASSERT_DISAMBIGUATION
-
-.PHONY: tests clean
-
-tests: tests/disambiguation tests/literals tests/tokens_and_highlighting
-
 clean:
-	rm $(DEMO) *.so *.dll *.lib *.a demo.o foo.o bar.o src/assert.o tests/disambiguation tests/literals tests/tokens_and_highlighting tests/*.pdb tests/*.ilk demo.pdb demo.ilk
+	rm -rf $(BIN)

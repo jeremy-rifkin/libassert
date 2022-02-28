@@ -11,3 +11,5 @@
 *.a
 demo
 out
+bin
+scratch
