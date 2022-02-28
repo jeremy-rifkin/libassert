@@ -9,7 +9,6 @@
 *.dll
 *.lib
 *.a
-demo
 out
 bin
 scratch

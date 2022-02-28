@@ -28,11 +28,11 @@ int main() {
 	};
 	using namespace assert_detail;
 	for(auto [expression, target_op, should_disambiguate] : tests) {
-		std::cout<<analysis::highlight(expression)<<" target: "<<target_op<<std::endl;
-		auto [l, r] = analysis::decompose_expression(expression, target_op);
+		std::cout<<highlight(expression)<<" target: "<<target_op<<std::endl;
+		auto [l, r] = decompose_expression(expression, target_op);
 		std::cout<<"Final:"<<std::endl
-		         <<"left:  "<<analysis::highlight(l)<<std::endl
-		         <<"right: "<<analysis::highlight(r)<<std::endl<<std::endl;
+		         <<"left:  "<<highlight(l)<<std::endl
+		         <<"right: "<<highlight(r)<<std::endl<<std::endl;
 		bool disambiguated = !(l == "left" && r == "right");
 		if(should_disambiguate == disambiguated) {
 			std::cout<<GREEN "Passed" RESET<<std::endl;

@@ -217,7 +217,7 @@ namespace assert_detail {
 	 * system wrappers
 	 */
 
-	ASSERT_DETAIL_ATTR_COLD static void enable_virtual_terminal_processing_if_needed() {
+	ASSERT_DETAIL_ATTR_COLD void enable_virtual_terminal_processing_if_needed() {
 		// enable colors / ansi processing if necessary
 		#ifdef _WIN32
 		 // https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing

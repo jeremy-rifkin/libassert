@@ -11,7 +11,8 @@
 #include <string_view>
 #include <string>
 
-#include "tests/demo.cpp" // trust me I'm an engineer
+void qux();
+void wubble();
 
 #define ESC "\033["
 #define RED ESC "1;31m"
@@ -94,8 +95,6 @@ struct M {
 		return false;
 	}
 };
-
-void qux();
 
 int garple() {
 	return 2;
@@ -233,6 +232,17 @@ public:
 
 		long long x = -9'223'372'036'854'775'807;
 		assert(x & 0x4);
+
+		assert(!x and true == 2);
+		assert((puts("A"), false) && (puts("B"), false));
+
+		{
+			std::string s = "h1eLlo";
+			assert(std::find_if(s.begin(), s.end(), [](char c) {
+				assert(not isdigit(c), c);
+				return c >= 'A' and c <= 'Z';
+			}) == s.end());
+		}
 
 		// Numeric
 		/*assert(1 == 1.5);
@@ -380,6 +390,10 @@ public:
 		assert(true); // this should lead to another assert(false) because we're in demo mode*/
 	}
 };
+
+namespace assert_detail {
+	void enable_virtual_terminal_processing_if_needed();
+}
 
 int main() {
 	assert_detail::enable_virtual_terminal_processing_if_needed();
