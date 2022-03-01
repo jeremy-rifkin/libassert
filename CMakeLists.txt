@@ -1,9 +1,12 @@
-# Since CMake 2.8 will be deprecated, maybe we should set this version to at leat 3.1?
 cmake_minimum_required(VERSION 3.1)
 
 # This is all hastily thrown together, will improve
 
 project(asserts)
+
+add_library(asserts_library_warnings INTERFACE)
+target_compile_options(asserts_library_warnings
+    INTERFACE -Wall -Wextra -Werror=return-type)
 
 # there should be an option to build either shared or static library
 # and the client should choose one of the options at the beginning
@@ -16,19 +19,21 @@ set_target_properties(assert
     PROPERTIES
         CXX_STANDARD 17
         CXX_STANDARD_REQUIRED TRUE
-        CXX_EXTENSIONS OFF
-)
+        CXX_EXTENSIONS OFF)
+
+target_link_libraries(assert PRIVATE asserts_library_warnings)
 
 if (MSVC)
     target_link_libraries(assert PRIVATE dbghelp)
 endif ()
 
-# Let's put it aside for a moment :) We will deal with it later
-# I had a problem with compilation of this part
+add_executable(demo demo.cpp foo.cpp bar.cpp)
+target_link_libraries(demo PRIVATE assert)
 
-#project(demo)
-#set(CMAKE_CXX_STANDARD 17)
-#include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-#add_executable(demo demo.cpp foo.cpp bar.cpp)
-#target_link_libraries(demo assert_static)
-#target_compile_options(demo PRIVATE "/DASSERT_FAIL=custom_fail" "/W4")
+set_target_properties(demo
+    PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED TRUE
+        CXX_EXTENSIONS OFF)
+
+target_link_libraries(demo PRIVATE asserts_library_warnings)
