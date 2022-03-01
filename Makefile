@@ -1,6 +1,7 @@
 # Defaults, can be overriden with invocation
 COMPILER = g++
-TARGET = release # release or debug
+# release or debug
+TARGET = release
 
 BIN = bin
 
@@ -12,10 +13,12 @@ ifneq ($(COMPILER),msvc)
     # GCC / Clang
     WFLAGS = -Wall -Wextra -Werror=return-type
     FLAGS = -std=c++17 -g -Iinclude
-    ifneq ($(TARGET), debug)
+    LDFLAGS = -Wl,--whole-archive -Wl,--no-whole-archive
+    ifeq ($(TARGET), debug)
+        FLAGS += -g
+    else
         FLAGS += -O2
     endif
-    LDFLAGS = -Wl,--whole-archive -Wl,--no-whole-archive
     CPP = $(COMPILER)
     LD = $(COMPILER)
     ifeq ($(OS),Windows_NT)
@@ -51,10 +54,13 @@ else
     LD = link
     WFLAGS = /W3
     FLAGS = /std:c++17 /EHsc
-    ifneq ($(TARGET), debug)
+    LDFLAGS = /WHOLEARCHIVE # /PDB /OPT:ICF /OPT:REF
+    ifeq ($(TARGET), debug)
+        FLAGS += /Z7
+		LDFLAGS += /DEBUG
+    else
         FLAGS += /O1
     endif
-    LDFLAGS = /WHOLEARCHIVE # /PDB /OPT:ICF /OPT:REF
     STATIC_LIB = $(BIN)/assert.lib
     SHARED_LIB = $(BIN)/assert.dll
 

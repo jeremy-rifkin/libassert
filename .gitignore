@@ -9,6 +9,5 @@
 *.dll
 *.lib
 *.a
-out
 bin
 scratch
