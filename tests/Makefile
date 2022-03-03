@@ -17,20 +17,20 @@ MKDIR_P ?= mkdir -p
 ifeq ($(OS),Windows_NT)
     STATIC_LIB = ../$(BIN)/assert.lib
     SHARED_LIB = ../$(BIN)/assert.dll
-    DEMO = demo.exe
+    E = .exe
 else
     STATIC_LIB = ../$(BIN)/libassert.a
     SHARED_LIB = ../$(BIN)/libassert.so
-    DEMO = demo
+    E =
 endif
 
 HPP = ../include/assert.hpp
 
 _all: tests demo
 
-demo: $(BIN)/$(DEMO)
+demo: $(BIN)/demo$(E)
 
-tests: $(BIN)/disambiguation $(BIN)/literals $(BIN)/tokens_and_highlighting $(BIN)/integration
+tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/integration$(E)
 
 ifneq ($(COMPILER),msvc)
     CPP = $(COMPILER)
@@ -51,19 +51,19 @@ ifneq ($(COMPILER),msvc)
     endif
     CPPFLAGS += $(WFLAGS) $(DFLAGS)
 
-    $(BIN)/$(DEMO): $(BIN)/o/demo/demo.cpp.o $(BIN)/o/demo/bar.cpp.o $(BIN)/o/demo/foo.cpp.o $(BIN)/o/demo/baz/demo.cpp.o
+    $(BIN)/demo$(E): $(BIN)/o/demo/demo.cpp.o $(BIN)/o/demo/bar.cpp.o $(BIN)/o/demo/foo.cpp.o $(BIN)/o/demo/baz/demo.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
-    $(BIN)/disambiguation: $(BIN)/o/unit/disambiguation.cpp.o
+    $(BIN)/disambiguation$(E): $(BIN)/o/unit/disambiguation.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
-    $(BIN)/literals: $(BIN)/o/unit/literals.cpp.o
+    $(BIN)/literals$(E): $(BIN)/o/unit/literals.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
-    $(BIN)/tokens_and_highlighting: $(BIN)/o/unit/tokens_and_highlighting.cpp.o
+    $(BIN)/tokens_and_highlighting$(E): $(BIN)/o/unit/tokens_and_highlighting.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
-    $(BIN)/integration: $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o
+    $(BIN)/integration$(E): $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
     $(BIN)/o/%.cpp.o: %.cpp $(HPP)
@@ -84,19 +84,19 @@ else
     endif
     CPPFLAGS += $(WFLAGS) $(DFLAGS)
 
-    $(BIN)/$(DEMO): $(BIN)/o/demo/demo.cpp.o $(BIN)/o/demo/bar.cpp.o $(BIN)/o/demo/foo.cpp.o $(BIN)/o/demo/baz/demo.cpp.o
+    $(BIN)/demo$(E): $(BIN)/o/demo/demo.cpp.o $(BIN)/o/demo/bar.cpp.o $(BIN)/o/demo/foo.cpp.o $(BIN)/o/demo/baz/demo.cpp.o
 		cmd /c "$(LD) $^ /OUT:$@ $(LDFLAGS)"
 
-    $(BIN)/disambiguation: $(BIN)/o/unit/disambiguation.cpp.o
+    $(BIN)/disambiguation$(E): $(BIN)/o/unit/disambiguation.cpp.o
 		cmd /c "$(LD) $^ /OUT:$@ $(LDFLAGS)"
 
-    $(BIN)/literals: $(BIN)/o/unit/literals.cpp.o
+    $(BIN)/literals$(E): $(BIN)/o/unit/literals.cpp.o
 		cmd /c "$(LD) $^ /OUT:$@ $(LDFLAGS)"
 
-    $(BIN)/tokens_and_highlighting: $(BIN)/o/unit/tokens_and_highlighting.cpp.o
+    $(BIN)/tokens_and_highlighting$(E): $(BIN)/o/unit/tokens_and_highlighting.cpp.o
 		cmd /c "$(LD) $^ /OUT:$@ $(LDFLAGS)"
 
-    $(BIN)/integration: $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o
+    $(BIN)/integration$(E): $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o
 		cmd /c "$(LD) $^ /OUT:$@ $(LDFLAGS)"
 
     $(BIN)/o/%.cpp.o: %.cpp $(HPP)

@@ -245,37 +245,7 @@ public:
 		}
 
 		// Numeric
-		/*assert(1 == 1.5);
-		assert(0.1 + 0.2 == 0.3);
-		VERIFY(.1 + .2 == .3);
-
-		//ASSERT(1 = (1 bitand 2)); // <- TODO: Not evaluated correctly
-		ASSERT(1 == (1 bitand 2));
-		assert(18446744073709551606ULL == -10);
-		const uint16_t flags = 0b000101010;
-		const uint16_t mask = 0b110010101;
-		assert(mask bitand flags);
-		assert(0xf == 16);
-		void* foo = (void*)0xdeadbeef;
-		//ASSERT_EQ(foo, nullptr);
-	
-		// Strings
-		std::string s = "test";
-		assert(s == "test2");
-		int i = 0;
-		assert(s[i] == 'c', "", s, i);
-		assert(BLUE "test" RESET == "test");
-		char* buffer = nullptr;
-		char thing[] = "foo";
-		//ASSERT_EQ(buffer, thing);
-		//ASSERT_EQ(buffer, +thing);
-		
-		assert(S<S<int>>(2) == S<S<int>>(4));
-		{
-			S<void> e, f;
-			assert(e == f);
-		}
-
+		/*
 		// Tests useful during development
 		/*assert(.1f == .1);
 		assert(1.0 == 1.0 + std::numeric_limits<double>::epsilon());
@@ -311,15 +281,7 @@ public:
 
 		assert(0 == (2  ==  garple()));
 		//assert(0 == 2 == garple());
-		float ff = .1f;
-		assert(ff == .1);
-		const float&& gg = .1f;
-		assert(gg == .1);
-		assert(1 < 1 < 0);
-		assert(0 + 0 + 0);
-		assert(false == false == false);
-		assert(1 << 1 == 200);
-		assert(1 << 1 << 31);
+		
 		assert(true ? false : true, "pffft");
 		{
 			std::string x = "aa";
