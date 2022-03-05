@@ -4,26 +4,28 @@ import sys
 
 ok = True
 
+env = os.environ.copy()
+lp = "{}/../bin".format(os.path.dirname(os.path.realpath(__file__)))
+if "LD_LIBRARY_PATH" in env:
+	env["LD_LIBRARY_PATH"] += ":" + lp
+else:
+	env["LD_LIBRARY_PATH"] = lp
+
 def run_unit_tests(tests):
 	for test in tests:
-		print("[Running test bin/{}]".format(test))
-		p = subprocess.Popen(["bin/" + test + (".exe" if sys.platform == "win32" else "")])
+		binary = "bin/" + test + (".exe" if sys.platform == "win32" else "")
+		print("[Running test {}]".format(binary))
+		p = subprocess.Popen([binary], env=env)
 		p.wait(timeout=10)
 		if p.returncode != 0:
 			global ok
 			ok = False
-		print("[{}]".format("Passed" if p.returncode == 0 else "Failed"))
+		print("[{}, code {}]".format("Passed" if p.returncode == 0 else "Failed", p.returncode))
 
 def run_integration(expected_output_path):
 	print("[Running integration test against {}]".format(expected_output_path))
 	with open(expected_output_path) as f:
 		content = f.read().strip()
-	env = os.environ.copy()
-	lp = "{}/../bin".format(os.path.dirname(os.path.realpath(__file__)))
-	if "LD_LIBRARY_PATH" in env:
-		env["LD_LIBRARY_PATH"] += ":" + lp
-	else:
-		env["LD_LIBRARY_PATH"] = lp
 	p = subprocess.Popen(
 		["bin/integration" + (".exe" if sys.platform == "win32" else "")],
 		stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)

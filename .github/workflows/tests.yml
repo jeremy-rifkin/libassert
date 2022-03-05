@@ -1,0 +1,25 @@
+name: tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test-gcc:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: |
+           python3 -m pip install --upgrade pip
+           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+    - name: build library
+      run: make
+    - name: build tests
+      working-directory: tests
+      run: make tests
+    - name: run tests
+      working-directory: tests
+      run: python3 run-tests.py gcc
