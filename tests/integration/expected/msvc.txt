@@ -1,0 +1,976 @@
+===================== [value printing: strings] =====================
+Assertion failed at integration/integration.cpp:131: auto __cdecl test_class<int>::something_else::<lambda_6ce8831ca5e4376bdfc50d8bef4201bc>::operator ()(void) const:
+    assert(s == "test");
+    Where:
+        s => "test\n"
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:132
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:132: auto __cdecl test_class<int>::something_else::<lambda_7dd797e2e8cb0ea9780c40a2c307fd84>::operator ()(void) const:
+    assert(s[i] == 'c', ...);
+    Where:
+        s[i] => 't'
+    Extra diagnostics:
+        s => "test\n"
+        i => 0
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:133
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:135: auto __cdecl test_class<int>::something_else::<lambda_49633656a352869acf2563cf64a3b7f4>::operator ()(void) const:
+    assert(buffer == thing);
+    Where:
+        buffer => nullptr
+        thing  => "foo"
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:136
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:136: auto __cdecl test_class<int>::something_else::<lambda_9870ae29c2d66bf956c86ccf005affd7>::operator ()(void) const:
+    assert(buffer == +thing);
+    Where:
+        buffer => nullptr
+        +thing => "foo"
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:137
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:138: auto __cdecl test_class<int>::something_else::<lambda_9d4505a95f2a2cd0e2273759cb7a6708>::operator ()(void) const:
+    assert(s == sv);
+    Where:
+        s  => "test\n"
+        sv => "foo"
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:138
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [value printing: pointers] =====================
+Assertion failed at integration/integration.cpp:143: auto __cdecl test_class<int>::something_else::<lambda_f256d43abcb7af12954d8bd6c2434083>::operator ()(void) const:
+    assert((uintptr_t)-1 == 0xff);
+    Where:
+        (uintptr_t)-1 =>  18446744073709551615  0xffffffffffffffff
+        0xff          =>  255                   0xff
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:144
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:144: auto __cdecl test_class<int>::something_else::<lambda_e68cfc678b2bb6820d3b8e26a94d72da>::operator ()(void) const:
+    assert((uintptr_t)-1 == (uintptr_t)0xff);
+    Where:
+        (uintptr_t)-1   => 18446744073709551615
+        (uintptr_t)0xff => 255
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:145
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:146: auto __cdecl test_class<int>::something_else::<lambda_a5ea618a29ad881963c37027212a4869>::operator ()(void) const:
+    assert(foo == nullptr);
+    Where:
+        foo => 0xdeadbeef
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:149
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [value printing: number formats] =====================
+Assertion failed at integration/integration.cpp:153: auto __cdecl test_class<int>::something_else::<lambda_81424a2479d5698ab89920d4945c8cdd>::operator ()(void) const:
+    assert(mask & flags);
+    Where:
+        mask  =>  405  0b0000000110010101
+        flags =>  42   0b0000000000101010
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:154
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:154: auto __cdecl test_class<int>::something_else::<lambda_6a35b81227f6901a96bf812b31956e58>::operator ()(void) const:
+    assert(0xf == 16);
+    Where:
+        0xf =>  15  0xf
+        16  =>  16  0x10
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:157
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [value printing: floating point] =====================
+Assertion failed at integration/integration.cpp:159: auto __cdecl test_class<int>::something_else::<lambda_dd460fbc6bc8c9d134d8e7b8966df3d8>::operator ()(void) const:
+    assert(1 == 1.5);
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:160
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:160: auto __cdecl test_class<int>::something_else::<lambda_b64d3de6b4ed91eb29d50e2babe5c2ad>::operator ()(void) const:
+    assert(0.5 != .5);
+    Where:
+        .5 => 0.5
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:161
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:161: auto __cdecl test_class<int>::something_else::<lambda_e33618203ee18917f65c9f91a08ea527>::operator ()(void) const:
+    assert(0.1 + 0.2 == 0.3);
+    Where:
+        0.1 + 0.2 => 0.30000000000000004
+        0.3       => 0.29999999999999999
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:162
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Verification failed at integration/integration.cpp:162: auto __cdecl test_class<int>::something_else::<lambda_f89922eeb63f5b30b6d3bcc8341b47e2>::operator ()(void) const:
+    VERIFY(.1 + .2 == .3);
+    Where:
+        .1 + .2 => 0.30000000000000004
+        .3      => 0.29999999999999999
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:163
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:165: auto __cdecl test_class<int>::something_else::<lambda_d569b438c21c6b75da72110b2b682b81>::operator ()(void) const:
+    assert(ff == .1);
+    Where:
+        ff => 0.100000001
+        .1 => 0.10000000000000001
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:166
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:166: auto __cdecl test_class<int>::something_else::<lambda_73158f3acc218bb7ef0ad046a1044d90>::operator ()(void) const:
+    assert(.1f == .1);
+    Where:
+        .1f => 0.100000001
+        .1  => 0.10000000000000001
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:169
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [value printing: ostream overloads] =====================
+Assertion failed at integration/integration.cpp:172: auto __cdecl test_class<int>::something_else::<lambda_c33929e74ade20576bfaaf12384c392d>::operator ()(void) const:
+    assert(p == printable{2.55});
+    Where:
+        p               => (printable = 1.42)
+        printable{2.55} => (printable = 2.55)
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:175
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [value printing: no ostream overload] =====================
+Assertion failed at integration/integration.cpp:178: auto __cdecl test_class<int>::something_else::<lambda_dc9abd4d8b3e5210a41e3bfa9274b3b1>::operator ()(void) const:
+    assert(p == not_printable{2.55});
+    Where:
+        p                   => <instance of struct not_printable<double>>
+        not_printable{2.55} => <instance of struct not_printable<double>>
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:179
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:179: auto __cdecl test_class<int>::something_else::<lambda_f89f7043635a52b15935bb4cb8bc321b>::operator ()(void) const:
+    assert(p.f == not_printable{2.55}.f);
+    Where:
+        p.f                   => <instance of class std::optional<double>>
+        not_printable{2.55}.f => <instance of class std::optional<double>>
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:183
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [optional messages] =====================
+Assertion failed at integration/integration.cpp:185: auto __cdecl test_class<int>::something_else::<lambda_9e6737f325900f3d9fa8f8d6218e90d1>::operator ()(void) const:
+    assert(false, ...);
+    Extra diagnostics:
+        2 => 2
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>*)
+      at integration.cpp:186
+# 2 test_class<int>::something<N>(std::pair<N, int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:186: auto __cdecl test_class<int>::something_else::<lambda_b68636111e476954bace9287883212f7>::operator ()(void) const: foo
+    assert(false, ...);
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>*)
+      at integration.cpp:187
+# 2 test_class<int>::something<N>(std::pair<N, int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:187: auto __cdecl test_class<int>::something_else::<lambda_4afb245bc3a3ca26354fa00289891095>::operator ()(void) const: foo
+    assert(false, ...);
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>*)
+      at integration.cpp:187
+# 2 test_class<int>::something<N>(std::pair<N, int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:188: auto __cdecl test_class<int>::something_else::<lambda_5546d91a0a9f50251389654741fbd611>::operator ()(void) const: foo
+    assert(false, ...);
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>*)
+      at integration.cpp:189
+# 2 test_class<int>::something<N>(std::pair<N, int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:189: auto __cdecl test_class<int>::something_else::<lambda_73aa93f65bd5c9a840e13400edcf40a8>::operator ()(void) const: foo
+    assert(false, ...);
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>*)
+      at integration.cpp:190
+# 2 test_class<int>::something<N>(std::pair<N, int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:190: auto __cdecl test_class<int>::something_else::<lambda_84f7ee749797cc529a3b971ad92df3b7>::operator ()(void) const: foo
+    assert(false, ...);
+    Extra diagnostics:
+        2 => 2
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>)
+      at integration.cpp:191
+# 2 test_class<int>::something<N>(std::pair<N, int>, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:191: auto __cdecl test_class<int>::something_else::<lambda_72ef6c3130b7e5f17df6c97776fa5942>::operator ()(void) const: foo
+    assert(false, ...);
+    Extra diagnostics:
+        2 => 2
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>)
+      at integration.cpp:191
+# 2 test_class<int>::something<N>(std::pair<N, int>, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:192: auto __cdecl test_class<int>::something_else::<lambda_89790f07db9661ed27c2b03775bf6d0d>::operator ()(void) const: foo
+    assert(false, ...);
+    Extra diagnostics:
+        2 => 2
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>)
+      at integration.cpp:193
+# 2 test_class<int>::something<N>(std::pair<N, int>, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:193: auto __cdecl test_class<int>::something_else::<lambda_678917612e6cd848cffb1948a9a82375>::operator ()(void) const: foo
+    assert(false, ...);
+    Extra diagnostics:
+        2 => 2
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>)
+      at integration.cpp:196
+# 2 test_class<int>::something<N>(std::pair<N, int>, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [errno] =====================
+Assertion failed at integration/integration.cpp:199: auto __cdecl test_class<int>::something_else::<lambda_475846c0701435ac10622514f58f0100>::operator ()(void) const:
+    assert(false, ...);
+    Extra diagnostics:
+        errno =>  2 "No such file or directory"
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>*)
+      at integration.cpp:200
+# 2 test_class<int>::something<N>(std::pair<N, int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:201: auto __cdecl test_class<int>::something_else::<lambda_890ce5eb7ced6db60ce487bb1cc78703>::operator ()(void) const: foo
+    assert(false, ...);
+    Extra diagnostics:
+        errno =>  2 "No such file or directory"
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>)
+      at integration.cpp:204
+# 2 test_class<int>::something<N>(std::pair<N, int>, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [general] =====================
+bar() called
+foo() called
+Assertion failed at integration/integration.cpp:206: auto __cdecl test_class<int>::something_else::<lambda_5b31d620b1a6d7ef86fd74a41ea4433e>::operator ()(void) const: foo
+    assert(false, ...);
+    Extra diagnostics:
+        false           => false
+        2 * foo()       => 4
+        "foobar"sv      => "foobar"
+        bar()           => -2
+        printable{2.55} => (printable = 2.55)
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:209
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [safe comparisons] =====================
+Assertion failed at integration/integration.cpp:211: auto __cdecl test_class<int>::something_else::<lambda_e68cc105380e39dc5a4d344bfd6100e2>::operator ()(void) const:
+    assert(18446744073709551606ULL == -10);
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:212
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:212: auto __cdecl test_class<int>::something_else::<lambda_33a5899b96737fc2b99f5dd65931849c>::operator ()(void) const:
+    assert(-1 > 1U);
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:216
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [expression decomposition] =====================
+Assertion failed at integration/integration.cpp:219: auto __cdecl test_class<int>::something_else::<lambda_6df7cc969f4020a0ea3f8e5a34bcb971>::operator ()(void) const:
+    assert(1 == (1 & 2));
+    Where:
+        (1 & 2) => 0
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:220
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:220: auto __cdecl test_class<int>::something_else::<lambda_eec5a1d927364da456a349f813e4d752>::operator ()(void) const:
+    assert(1 < 1 < 0);
+    Where:
+        1 < 1 => false
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:221
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:221: auto __cdecl test_class<int>::something_else::<lambda_9d3f24f5100d4464a5ba31b939137df9>::operator ()(void) const:
+    assert(0 + 0 + 0);
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:222
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:222: auto __cdecl test_class<int>::something_else::<lambda_6c426739d8d417608623e285c8dec592>::operator ()(void) const:
+    assert(false == false == false);
+    Where:
+        false == false => true
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:223
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:223: auto __cdecl test_class<int>::something_else::<lambda_d639a6fee36cb7fe35a723d5b871c6d3>::operator ()(void) const:
+    assert(1 << 1 == 200);
+    Where:
+        1 << 1 => 2
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:224
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:224: auto __cdecl test_class<int>::something_else::<lambda_7c3af601f0d3a450d21bb565fc2c725d>::operator ()(void) const:
+    assert(1 << 1 << 31);
+    Where:
+        1 << 1 => 2
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:225
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:226: auto __cdecl test_class<int>::something_else::<lambda_864f705166648185bcbd03dda9f6a030>::operator ()(void) const:
+    assert(x -= 2);
+    Where:
+        x => 0
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:227
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:228: auto __cdecl test_class<int>::something_else::<lambda_58210ef0aef6a3eed14aebf07687a432>::operator ()(void) const:
+    assert(x -= x -= 1);
+    Where:
+        x      => 0
+        x -= 1 => 0
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:229
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:230: auto __cdecl test_class<int>::something_else::<lambda_b6a0fae1162a18ae31a103e840528616>::operator ()(void) const:
+    assert(x -= x -= x -= 1);
+    Where:
+        x           => 0
+        x -= x -= 1 => 0
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:231
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Assertion failed at integration/integration.cpp:231: auto __cdecl test_class<int>::something_else::<lambda_3982c4357d2398a88da4667f18bca310>::operator ()(void) const: pffft
+    assert(true ? false : true, ...);
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>*)
+      at integration.cpp:234
+# 2 test_class<int>::something<N>(std::pair<N, int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [ensure values are only computed once] =====================
+foo() called
+bar() called
+Assertion failed at integration/integration.cpp:236: auto __cdecl test_class<int>::something_else::<lambda_734044a4348ec3bd129f99916585a7fe>::operator ()(void) const:
+    assert(foo() < bar());
+    Where:
+        foo() => 2
+        bar() => -2
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:239
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [value forwarding: copy / moves] =====================
+logger_type::logger_type() [n=1]
+logger_type::logger_type() [n=2]
+logger_type::operator==(const logger_type&) [n=1, other=2]
+Assertion failed at integration/integration.cpp:244: auto __cdecl test_class<int>::something_else::<lambda_799d093708e4422a40dffcdd692ddc08>::operator ()(void) const:
+    assert(lt1 == lt2);
+    Where:
+        lt1 => logger_type [n = 1]
+        lt2 => logger_type [n = 2]
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:244
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+logger_type::compl logger_type() [n=2]
+logger_type::compl logger_type() [n=1]
+--------------------------------------------
+
+logger_type::logger_type() [n=2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::operator==(int, const logger_type&) [b=1, n=2]
+logger_type::logger_type(logger_type&&) [n=2]
+Assertion failed at integration/integration.cpp:248: auto __cdecl test_class<int>::something_else::<lambda_4cef7efbb8fab0353752c0b1f8a367ac>::operator ()(void) const:
+    assert(1 == logger_type(2));
+    Where:
+        logger_type(2) => logger_type [n = 2]
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:250
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=2]
+--------------------------------------------
+
+logger_type::logger_type() [n=1]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::operator==(const logger_type&, int) [n=1, b=2]
+logger_type::logger_type(logger_type&&) [n=1]
+Assertion failed at integration/integration.cpp:252: auto __cdecl test_class<int>::something_else::<lambda_6c89c2428bf1d15afcf1214741506637>::operator ()(void) const:
+    assert(logger_type(1) == 2);
+    Where:
+        logger_type(1) => logger_type [n = 1]
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:252
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=1]
+--------------------------------------------
+
+logger_type::logger_type() [n=1]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::logger_type() [n=2]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::operator==(const logger_type&) [n=1, other=2]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::logger_type(logger_type&&) [n=2]
+Assertion failed at integration/integration.cpp:256: auto __cdecl test_class<int>::something_else::<lambda_b67a191c39c649a4ace23815955aeacc>::operator ()(void) const:
+    assert(logger_type(1) == logger_type(2));
+    Where:
+        logger_type(1) => logger_type [n = 1]
+        logger_type(2) => logger_type [n = 2]
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:256
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::compl logger_type() [n=2]
+logger_type::compl logger_type() [n=-2]
+Verification failed at integration/integration.cpp:257: auto __cdecl test_class<int>::something_else::<lambda_c2e30a142e2b0e153db59b76c5cfc854>::operator ()(void) const:
+    VERIFY(!(std::is_same<decltype(r), logger_type>::value));
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:258
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+Verification failed at integration/integration.cpp:258: auto __cdecl test_class<int>::something_else::<lambda_314050e732871e9baf13ffff796c5520>::operator ()(void) const:
+    VERIFY(r.n != 1);
+    Where:
+        r.n => 1
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:258
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+logger_type::compl logger_type() [n=1]
+--------------------------------------------
+
+===================== [value forwarding: lvalue references] =====================
+logger_type::logger_type() [n=2]
+logger_type::operator==(const logger_type&, int) [n=2, b=2]
+Assertion failed at integration/integration.cpp:306: auto __cdecl test_class<int>::get_lt_a::<lambda_bc31aa4fad8716c56c0a9aa5a737cd9f>::operator ()(void) const:
+    assert(l == 2);
+    Where:
+        l => logger_type [n = 2]
+
+Stack trace:
+# 1 test_class<int>::get_lt_a(test_class<int>*, test_class<int>*)
+      at integration.cpp:307
+# 2 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:269
+# 3 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 4 main()
+      at integration.cpp:319
+
+
+logger_type::operator==(const logger_type&, int) [n=3, b=1]
+Assertion failed at integration/integration.cpp:271: auto __cdecl test_class<int>::something_else::<lambda_781d2988b77e3ecf5de9fb47130a932c>::operator ()(void) const:
+    assert(lt == 1);
+    Where:
+        lt => logger_type [n = 3]
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:272
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+logger_type::operator==(const logger_type&, int) [n=3, b=1]
+Assertion failed at integration/integration.cpp:272: auto __cdecl test_class<int>::something_else::<lambda_6387781040d4e01e9d2300df5ff72a56>::operator ()(void) const:
+    assert(x == 1);
+    Where:
+        x => logger_type [n = 3]
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:272
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+logger_type::compl logger_type() [n=3]
+--------------------------------------------
+
+Assertion failed at integration/integration.cpp:277: auto __cdecl test_class<int>::something_else::<lambda_db1275f4f2d4a2c7c3f4541637585eed>::operator ()(void) const:
+    assert(x ^= 1);
+    Where:
+        x =>  0  0b00000000000000000000000000000000
+        1 =>  1  0b00000000000000000000000000000001
+
+Stack trace:
+# 1 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:283
+# 2 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+===================== [value forwarding: rvalues] =====================
+logger_type::logger_type() [n=2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::operator==(const logger_type&, int) [n=2, b=2]
+logger_type::logger_type(logger_type&&) [n=2]
+Assertion failed at integration/integration.cpp:310: auto __cdecl test_class<int>::get_lt_b::<lambda_781a0e5127819082d394c1eae94b6f28>::operator ()(void) const:
+    assert(logger_type(2) == 2);
+    Where:
+        logger_type(2) => logger_type [n = 2]
+
+Stack trace:
+# 1 test_class<int>::get_lt_b(test_class<int>*)
+      at integration.cpp:310
+# 2 test_class<int>::something_else(test_class<int>*)
+      at integration.cpp:286
+# 3 test_class<int>::something<N>(test_class<int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 4 main()
+      at integration.cpp:319
+
+
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+Assertion failed at integration/integration.cpp:287: auto __cdecl test_class<int>::something_else::<lambda_39bc5bbd1c27c7b795754e47c870b331>::operator ()(void) const:
+    assert(false, ...);
+    Extra diagnostics:
+        x => logger_type [n = 2]
+
+Stack trace:
+# 1 test_class<int>::something_else(std::pair<N, int>*)
+      at integration.cpp:287
+# 2 test_class<int>::something<N>(std::pair<N, int>*, std::pair<N, int>)
+      at integration.cpp:122
+# 3 main()
+      at integration.cpp:319
+
+
+logger_type::compl logger_type() [n=2]
+--------------------------------------------
+
+===================== [simple recursion] =====================
+Assertion failed at integration/integration.cpp:22: auto __cdecl rec::<lambda_e57fd9080003be6eccdd0af9bffa33fd>::operator ()(void) const:
+    assert(false);
+
+Stack trace:
+# 1 rec(test_class<int>*)
+      at integration.cpp:22
+# 2 rec(test_class<int>*)
+      at integration.cpp:24
+|                                   |
+| 8 layers of recursion were folded |
+|                                   |
+#11 rec(test_class<int>*)
+      at integration.cpp:24
+#12 test_class<int>::something_else(std::pair<N, int>*)
+      at integration.cpp:297
+#13 test_class<int>::something<N>(std::pair<N, int>*, std::pair<N, int>)
+      at integration.cpp:122
+#14 main()
+      at integration.cpp:319
+
+
+===================== [other recursion] =====================
+Assertion failed at integration/integration.cpp:29: auto __cdecl recursive_a::<lambda_84a3a9b93679fc21a0b4a172da90f893>::operator ()(void) const:
+    assert(false);
+
+Stack trace:
+# 1 recursive_a(test_class<int>*)
+      at integration.cpp:29
+# 2 recursive_b(test_class<int>*)
+      at integration.cpp:36
+# 3 recursive_a(test_class<int>*)
+      at integration.cpp:31
+# 4 recursive_b(test_class<int>*)
+      at integration.cpp:36
+# 5 recursive_a(test_class<int>*)
+      at integration.cpp:31
+# 6 recursive_b(test_class<int>*)
+      at integration.cpp:36
+# 7 recursive_a(test_class<int>*)
+      at integration.cpp:31
+# 8 recursive_b(test_class<int>*)
+      at integration.cpp:36
+# 9 recursive_a(test_class<int>*)
+      at integration.cpp:31
+#10 recursive_b(test_class<int>*)
+      at integration.cpp:36
+#11 recursive_a(test_class<int>*)
+      at integration.cpp:31
+#12 test_class<int>::something_else(std::pair<N, int>)
+      at integration.cpp:301
+#13 test_class<int>::something<N>(std::pair<N, int>, std::pair<N, int>)
+      at integration.cpp:122
+#14 main()
+      at integration.cpp:319
+
+
+===================== [Path differentiation] =====================
+Assertion failed at integration/x/a.cpp:5: auto __cdecl test_path_differentiation_2::<lambda_9e25010e23ef8ea751baae6bfd060548>::operator ()(void) const:
+    assert(false);
+
+Stack trace:
+# 1 test_path_differentiation_2()
+      at x/a.cpp:6
+# 2 test_path_differentiation()
+      at integration/a.cpp:8
+# 3 test_class<int>::something_else(std::pair<N, int>)
+      at integration.cpp:303
+# 4 test_class<int>::something<N>(std::pair<N, int>, std::pair<N, int>)
+      at integration.cpp:122
+# 5 main()
+      at integration.cpp:319
+
+
