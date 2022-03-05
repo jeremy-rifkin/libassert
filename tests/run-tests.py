@@ -26,15 +26,15 @@ def run_integration(expected_output_path):
 	global ok
 	print("[Running integration test against {}]".format(expected_output_path))
 	with open(expected_output_path) as f:
-		content = f.read().strip()
+		expected_content = f.read().strip()
 	p = subprocess.Popen(
 		["bin/integration" + (".exe" if sys.platform == "win32" else "")],
 		stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
 	out, err = p.communicate()
-	out = out.decode("utf-8").strip()
-	if out != content:
+	out = out.decode("utf-8").replace("\r", "").strip()
+	if out != expected_content:
 		ok = False
-		with open("output.txt", "w") as f:
+		with open("output.txt", "w", newline="\n") as f:
 			f.write(out)
 		dp = subprocess.Popen([
 			"icdiff",
