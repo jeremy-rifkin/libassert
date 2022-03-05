@@ -52,6 +52,7 @@ else
     # Note: Will need to manually run vcvarsall.bat x86_amd64
     CPP = cl
     LD = link
+    SHELL = powershell
     WFLAGS = /W3
     FLAGS = /std:c++17 /EHsc
     LDFLAGS = /WHOLEARCHIVE # /PDB /OPT:ICF /OPT:REF
@@ -67,14 +68,14 @@ else
     _all: $(STATIC_LIB) $(SHARED_LIB)
 
     $(BIN)/src/assert.obj: src/assert.cpp include/assert.hpp
-		$(MKDIR_P) $(BIN)/src
-		cmd /c "$(CPP) /c /I include /Fo$@ $(WFLAGS) $(FLAGS) $<"
+		-$(MKDIR_P) $(BIN)/src
+		$(CPP) /c /I include /Fo$@ $(WFLAGS) $(FLAGS) $<
     $(STATIC_LIB): $(BIN)/src/assert.obj
-		$(MKDIR_P) bin
-		cmd /c "lib $^ /OUT:$@"
+		-$(MKDIR_P) bin
+		lib $^ /OUT:$@
     $(SHARED_LIB): $(BIN)/src/assert.obj
-		$(MKDIR_P) bin
-		cmd /c "$(LD) /DLL $^ dbghelp.lib /OUT:$@ $(LDFLAGS)"
+		-$(MKDIR_P) bin
+		$(LD) /DLL $^ dbghelp.lib /OUT:$@ $(LDFLAGS)
 endif
 
 clean:

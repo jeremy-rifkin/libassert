@@ -73,6 +73,7 @@ ifneq ($(COMPILER),msvc)
 else
     CPP = cl
     LD = link
+    SHELL = powershell
     WFLAGS := /W4
     CPPFLAGS := /std:c++17 /EHsc /I ../include /DASSERT_FAIL=custom_fail /Z7
     LDFLAGS := /LIBPATH:../bin assert.lib dbghelp.lib /DEBUG
@@ -85,23 +86,23 @@ else
     CPPFLAGS += $(WFLAGS) $(DFLAGS)
 
     $(BIN)/demo$(E): $(BIN)/o/demo/demo.cpp.o $(BIN)/o/demo/bar.cpp.o $(BIN)/o/demo/foo.cpp.o $(BIN)/o/demo/baz/demo.cpp.o
-		cmd /c "$(LD) $^ /OUT:$@ $(LDFLAGS)"
+		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/disambiguation$(E): $(BIN)/o/unit/disambiguation.cpp.o
-		cmd /c "$(LD) $^ /OUT:$@ $(LDFLAGS)"
+		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/literals$(E): $(BIN)/o/unit/literals.cpp.o
-		cmd /c "$(LD) $^ /OUT:$@ $(LDFLAGS)"
+		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/tokens_and_highlighting$(E): $(BIN)/o/unit/tokens_and_highlighting.cpp.o
-		cmd /c "$(LD) $^ /OUT:$@ $(LDFLAGS)"
+		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/integration$(E): $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o
-		cmd /c "$(LD) $^ /OUT:$@ $(LDFLAGS)"
+		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/o/%.cpp.o: %.cpp $(HPP)
-		$(MKDIR_P) $(dir $@)
-		cmd /c "$(CPP) $(CPPFLAGS) $(CXXFLAGS) /c $< /Fo$@"
+		-$(MKDIR_P) $(dir $@)
+		$(CPP) $(CPPFLAGS) $(CXXFLAGS) /c $< /Fo$@
 endif
 
 clean:
