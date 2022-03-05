@@ -1,5 +1,8 @@
 # Asserts <!-- omit in toc -->
 
+![build status](https://github.com/jeremy-rifkin/asserts/workflows/build/badge.svg)
+![tests status](https://github.com/jeremy-rifkin/asserts/workflows/tests/badge.svg)
+
 <p align="center">The most over-engineered assertion library</p>
 
 ```cpp
