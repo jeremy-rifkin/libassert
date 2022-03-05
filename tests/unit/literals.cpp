@@ -164,15 +164,19 @@ int main() {
 			|| matches(str, float_decimal)
 			|| matches(str, float_hex);
 	};
+	bool ok = true;
 	for(let const& item : match_cases) {
 		if(!matches_any(item)) {
 			printf("test case failed, valid literal not matched: %s\n", item.c_str());
+			ok = false;
 		}
 	}
 	for(let const& item : dont_match_cases) {
 		if(matches_any(item)) {
 			printf("test case failed, invalid literal matched: %s\n", item.c_str());
+			ok = false;
 		}
 	}
-	printf("done");
+	printf("Done\n");
+	return !ok;
 }

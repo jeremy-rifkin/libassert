@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS // for fopen
-
 #include "assert.hpp"
 
 #include <algorithm>
@@ -16,8 +14,8 @@ using namespace std::literals;
 void test_path_differentiation();
 
 void custom_fail(std::string message, assert_detail::assert_type, assert_detail::ASSERTION) {
-	std::cerr<<message<<std::endl;
-	//std::cerr<<assert_detail::strip_colors(message)<<std::endl<<std::endl;
+	//std::cout<<message<<std::endl;
+	std::cout<<assert_detail::strip_colors(message)<<std::endl<<std::endl;
 }
 
 void rec(int n) {
@@ -59,58 +57,59 @@ std::ostream& operator<<(std::ostream& stream, const printable<T>& p) {
 }
 
 int foo() {
-	std::cerr<<"foo() called"<<std::endl;
+	std::cout<<"foo() called"<<std::endl;
 	return 2;
 }
 int bar() {
-	std::cerr<<"bar() called"<<std::endl;
+	std::cout<<"bar() called"<<std::endl;
 	return -2;
 }
 
 struct logger_type {
 	int n;
 	logger_type(int n): n(n) {
-		std::cerr<<"logger_type::logger_type() [n="<<n<<"]"<<std::endl;
+		std::cout<<"logger_type::logger_type() [n="<<n<<"]"<<std::endl;
 	}
 	compl logger_type() {
-		std::cerr<<"logger_type::compl logger_type() [n="<<n<<"]"<<std::endl;
+		std::cout<<"logger_type::compl logger_type() [n="<<n<<"]"<<std::endl;
+		n = -1;
 	}
 	logger_type(const logger_type& other): n(other.n) {
-		std::cerr<<"logger_type::logger_type(const logger_type&) [n="<<n<<"]"<<std::endl;
+		std::cout<<"logger_type::logger_type(const logger_type&) [n="<<n<<"]"<<std::endl;
 	}
 	logger_type(logger_type&& other): n(other.n) {
 		other.n = -2;
-		std::cerr<<"logger_type::logger_type(logger_type&&) [n="<<n<<"]"<<std::endl;
+		std::cout<<"logger_type::logger_type(logger_type&&) [n="<<n<<"]"<<std::endl;
 	}
 	logger_type& operator=(const logger_type& other) {
 		n = other.n;
-		std::cerr<<"logger_type::operator=(const logger_type&) [n="<<n<<"]"<<std::endl;
+		std::cout<<"logger_type::operator=(const logger_type&) [n="<<n<<"]"<<std::endl;
 		return *this;
 	}
 	logger_type& operator=(logger_type&& other) {
 		n = other.n;
 		other.n = -2;
-		std::cerr<<"logger_type::operator=(logger_type&&) [n="<<n<<"]"<<std::endl;
+		std::cout<<"logger_type::operator=(logger_type&&) [n="<<n<<"]"<<std::endl;
 		return *this;
 	}
 	bool operator==(const logger_type& other) const {
-		std::cerr<<"logger_type::operator==(const logger_type&) [n="<<n<<", other="<<other.n<<"]"<<std::endl;
+		std::cout<<"logger_type::operator==(const logger_type&) [n="<<n<<", other="<<other.n<<"]"<<std::endl;
 		return false;
 	}
 };
 bool operator==(const logger_type& a, int b) {
-	std::cerr<<"logger_type::operator==(const logger_type&, int) [n="<<a.n<<", b="<<b<<"]"<<std::endl;
+	std::cout<<"logger_type::operator==(const logger_type&, int) [n="<<a.n<<", b="<<b<<"]"<<std::endl;
 	return false;
 }
 bool operator==(int a, const logger_type& b) {
-	std::cerr<<"logger_type::operator==(int, const logger_type&) [b="<<a<<", n="<<b.n<<"]"<<std::endl;
+	std::cout<<"logger_type::operator==(int, const logger_type&) [b="<<a<<", n="<<b.n<<"]"<<std::endl;
 	return false;
 }
 std::ostream& operator<<(std::ostream& stream, const logger_type& lt) {
 	return stream<<"logger_type [n = "<<lt.n<<"]";
 }
 
-#define SECTION(s) fprintf(stderr, "===================== [%s] =====================\n", s)
+#define SECTION(s) std::cout<<"===================== ["<<s<<"] ====================="<<std::endl;
 
 // TODO: need to check assert, verify, and check...?
 // Opt/DNDEBUG
@@ -123,6 +122,7 @@ public:
 	}
 
 	void something_else() {
+		// FIXME: Check all stack traces on msvc... Bug with __PRETTY_FUNCTION__ in lambdas.
 		// value printing: strings
 		SECTION("value printing: strings");
 		{
@@ -146,16 +146,18 @@ public:
 			assert(foo == nullptr);
 		}
 		// value printing: number formats
+		SECTION("value printing: number formats");
 		{
-			assert(18446744073709551606ULL == -10);
 			const uint16_t flags = 0b000101010;
 			const uint16_t mask = 0b110010101;
 			assert(mask bitand flags);
 			assert(0xf == 16);
 		}
 		// value printing: floating point
+		SECTION("value printing: floating point");
 		{
 			assert(1 == 1.5);
+			assert(0.5 != .5); // FIXME
 			assert(0.1 + 0.2 == 0.3);
 			VERIFY(.1 + .2 == .3);
 			assert(0.1f + 0.2f == 0.3f);
@@ -164,11 +166,13 @@ public:
 			assert(.1f == .1);
 		}
 		// value printing: ostream overloads
+		SECTION("value printing: ostream overloads");
 		{
 			printable p{1.42};
 			assert(p == printable{2.55});
 		}
 		// value printing: no ostream overload
+		SECTION("value printing: no ostream overload");
 		{
 			const not_printable p{1.42};
 			assert(p == not_printable{2.55});
@@ -197,6 +201,7 @@ public:
 			assert(false, "foo", errno);
 		}
 		// general
+		SECTION("general");
 		{
 			assert(false, "foo", false, 2 * foo(), "foobar"sv, bar(), printable{2.55});
 		}
@@ -210,13 +215,20 @@ public:
 		// expression decomposition
 		SECTION("expression decomposition");
 		{
-			//ASSERT(1 = (1 bitand 2)); // <- TODO: Not evaluated correctly
+			//ASSERT(1 = (1 bitand 2)); // <- FIXME: Not evaluated correctly
 			assert(1 == (1 bitand 2));
 			assert(1 < 1 < 0);
 			assert(0 + 0 + 0);
 			assert(false == false == false);
 			assert(1 << 1 == 200);
 			assert(1 << 1 << 31);
+			int x = 2;
+			assert(x -= 2);
+			x = 2;
+			assert(x -= x -= 1); // TODO: double check....
+			x = 2;
+			assert(x -= x -= x -= 1); // TODO: double check....
+			assert(true ? false : true, "pffft");
 		}
 		// ensure values are only computed once
 		SECTION("ensure values are only computed once");
@@ -231,28 +243,26 @@ public:
 				logger_type lt2(2);
 				assert(lt1 == lt2);
 			}
-			fprintf(stderr, "--------------------------------------------\n\n");
+			std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
 			{
 				assert(1 == logger_type(2));
 			}
-			fprintf(stderr, "--------------------------------------------\n\n");
+			std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
 			{
 				assert(logger_type(1) == 2);
 			}
-			fprintf(stderr, "--------------------------------------------\n\n");
+			std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
 			{
 				auto r = assert(logger_type(1) == logger_type(2));
 				VERIFY(!(std::is_same<decltype(r), logger_type>::value));
 				VERIFY(r.n != 1);
 			}
-			fprintf(stderr, "--------------------------------------------\n\n");
+			std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
 		}
 		// value forwarding: lifetimes
-		SECTION("ensure values are only computed once");
-		{
-			assert(foo() < bar());
-		}
+		// TODO
 		// value forwarding: lvalue references
+		SECTION("value forwarding: lvalue references");
 		{
 			{
 				logger_type lt(2);
@@ -261,24 +271,31 @@ public:
 				assert(lt == 1);
 				assert(x == 1);
 			}
-			fprintf(stderr, "--------------------------------------------\n\n");
+			std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
+			{
+				int x = 1;
+				assert(x ^= 1);
+				//assert(x ^= 1) |= 0xf0; // FIXME
+				//assert(x == 0);
+			}
 		}
 		// value forwarding: rvalues
+		SECTION("value forwarding: rvalues");
 		{
 			{
 				auto x = get_lt_b();
 				assert(false, x);
 			}
-			fprintf(stderr, "--------------------------------------------\n\n");
+			std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
 		}
 		
 		// general stack traces are tested throughout
 		// simple recursion
 		SECTION("simple recursion");
-		rec(10);
+		rec(10); // FIXME: Check stacktrace in clang
 		// other recursion
 		SECTION("other recursion");
-		recursive_a(10);
+		recursive_a(10); // FIXME: Check stacktrace in clang
 
 		// path differentiation
 		SECTION("Path differentiation");

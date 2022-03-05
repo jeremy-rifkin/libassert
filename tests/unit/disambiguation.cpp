@@ -27,6 +27,7 @@ int main() {
 		{"18446744073709551606ULL == -10", "==", true}
 	};
 	using namespace assert_detail;
+	bool ok = true;
 	for(auto [expression, target_op, should_disambiguate] : tests) {
 		std::cout<<highlight(expression)<<" target: "<<target_op<<std::endl;
 		auto [l, r] = decompose_expression(expression, target_op);
@@ -38,6 +39,8 @@ int main() {
 			std::cout<<GREEN "Passed" RESET<<std::endl;
 		} else {
 			std::cout<<RED "Failed" RESET<<std::endl;
+			ok = false;
 		}
 	}
+	return !ok;
 }

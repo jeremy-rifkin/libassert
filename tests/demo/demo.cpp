@@ -301,19 +301,6 @@ public:
 			const P x {"aa"};
 			assert(x == P {"bb"});
 		}
-		assert(false);
-		int v = 1, p = 2;
-		ASSERT_EQ(v, p);
-		int x = 2;
-		assert(x -= 2);
-		x = 2;
-		assert(x -= x -= 1);
-		x = 2;
-		assert(x -= x -= x -= 1);
-		assert(assert_detail::always_false<void> == true);
-		assert(mask bitand flags, std::string("foobar"));
-		x = 1;
-		assert(x ^= 1);
 		assert((42 & 3U) == 1UL);
 		
 		assert([](int a, int b) {
@@ -328,13 +315,6 @@ public:
 		assert(<:](){return 42;%>() not_eq 42);
 
 		assert(&a == nullptr);
-
-		assert((uintptr_t)-1 == 0xff);
-		assert((uintptr_t)-1 == (uintptr_t)0xff);
-
-		rec(10);
-
-		recursive_a(10);
 		
 		{
 			std::string s = "h1ello";
