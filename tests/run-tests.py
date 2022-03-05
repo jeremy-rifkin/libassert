@@ -4,6 +4,8 @@ import sys
 
 ok = True
 
+MAX_LINE_DIFF = 2
+
 env = os.environ.copy()
 lp = "{}/../bin".format(os.path.dirname(os.path.realpath(__file__)))
 if "LD_LIBRARY_PATH" in env:
@@ -22,26 +24,66 @@ def run_unit_tests(tests):
 			ok = False
 		print("[{}, code {}]".format("Passed" if p.returncode == 0 else "Failed", p.returncode))
 
+# This function scans two outputs and ignores close mismatches in line numbers
+def critical_difference(output, expected_output):
+	output_lines = [l.strip() for l in "\n".split(output)]
+	expected_lines = [l.strip() for l in "\n".split(expected_output)]
+	# state machine
+	in_trace = False
+	last_was_frame_line = False
+	for i in range(min(len(output_lines), len(expected_lines))):
+		if output_lines[i] == "Stack trace:" and expected_lines[i] == "Stack trace:":
+			if in_trace:
+				# this is an error
+				return True
+			else:
+				in_trace = True
+				last_was_frame_line = False
+		elif in_trace:
+			if output_lines[i].strip() == "" and expected_lines[i].strip() == "":
+				in_trace = False
+			elif output_lines[i].startswith("# ") and expected_lines[i].startswith("# "):
+				if last_was_frame_line:
+					# this is an error
+					return True
+				else:
+					last_was_frame_line = True
+			else:
+				assert(last_was_frame_line)
+				n1 = ":".split(output_lines[i])[-1]
+				n2 = ":".split(output_lines[i])[-1]
+				if n1 == "?" and n2 == "?":
+					pass
+				else:
+					n1 = int(n1)
+					n2 = int(n2)
+					if abs(n1 - n2) > MAX_LINE_DIFF:
+						return True
+	return False
+
 def run_integration(expected_output_path):
 	global ok
 	print("[Running integration test against {}]".format(expected_output_path))
 	with open(expected_output_path) as f:
-		expected_content = f.read().strip()
+		expected_output = f.read().strip()
 	p = subprocess.Popen(
 		["bin/integration" + (".exe" if sys.platform == "win32" else "")],
 		stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
-	out, err = p.communicate()
-	out = out.decode("utf-8").replace("\r", "").strip()
-	if out != expected_content:
-		ok = False
+	output, err = p.communicate()
+	output = output.decode("utf-8").replace("\r", "").strip()
+	if output != expected_output:
+		if critical_difference(output, expected_output):
+			ok = False
+		else:
+			print("WARNING: Difference in output but deemed non-critical")
 		with open("output.txt", "w", newline="\n") as f:
-			f.write(out)
+			f.write(output)
 		dp = subprocess.Popen([
 			"icdiff",
 			expected_output_path,
 			"output.txt",
 			"--cols",
-			"100"
+			"150"
 		])
 		dp.wait()
 	elif p.returncode != 0 or len(err) != 0:
