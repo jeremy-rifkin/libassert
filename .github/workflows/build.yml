@@ -1,0 +1,37 @@
+name: build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-gcc:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: install compiler
+      run: |
+           sudo apt update
+           sudo apt install g++-10
+    - name: make
+      run: make
+  build-clang:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: install compiler
+      run: |
+           sudo apt update
+           sudo apt install clang-12
+    - name: make
+      run: make COMPILER=clang++
+  build-msvc:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: Enable Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: make
+      run: make COMPILER=msvc
