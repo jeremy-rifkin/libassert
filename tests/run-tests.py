@@ -16,13 +16,13 @@ else:
 def run_unit_tests(tests):
 	for test in tests:
 		binary = "bin/" + test + (".exe" if sys.platform == "win32" else "")
-		print("[Running test {}]".format(binary))
+		print("[Running test {}]".format(binary), flush=True)
 		p = subprocess.Popen([binary], env=env)
 		p.wait(timeout=10)
 		if p.returncode != 0:
 			global ok
 			ok = False
-		print("[{}, code {}]".format("Passed" if p.returncode == 0 else "Failed", p.returncode))
+		print("[{}, code {}]".format("Passed" if p.returncode == 0 else "Failed", p.returncode), flush=True)
 
 # This function scans two outputs and ignores close mismatches in line numbers
 def critical_difference(output, expected_output):
@@ -63,7 +63,7 @@ def critical_difference(output, expected_output):
 
 def run_integration(expected_output_path):
 	global ok
-	print("[Running integration test against {}]".format(expected_output_path))
+	print("[Running integration test against {}]".format(expected_output_path), flush=True)
 	with open(expected_output_path) as f:
 		expected_output = f.read().strip()
 	p = subprocess.Popen(
@@ -75,7 +75,7 @@ def run_integration(expected_output_path):
 		if critical_difference(output, expected_output):
 			ok = False
 		else:
-			print("WARNING: Difference in output but deemed non-critical")
+			print("WARNING: Difference in output but deemed non-critical", flush=True)
 		with open("output.txt", "w", newline="\n") as f:
 			f.write(output)
 		dp = subprocess.Popen([
@@ -88,14 +88,14 @@ def run_integration(expected_output_path):
 		dp.wait()
 	elif p.returncode != 0 or len(err) != 0:
 		ok = False
-	print("[{}]".format("Passed" if p.returncode == 0 else "Failed"))
+	print("[{}]".format("Passed" if p.returncode == 0 else "Failed"), flush=True)
 
 def main():
 	assert(len(sys.argv) == 2)
 	run_unit_tests(["disambiguation", "literals"])
 	run_integration("integration/expected/{}.txt".format(sys.argv[1]))
 	global ok
-	print("tests " + ("passed" if ok else "failed"))
+	print("tests " + ("passed" if ok else "failed"), flush=True)
 	sys.exit(not ok)
 
 main()
