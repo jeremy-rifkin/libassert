@@ -23,6 +23,7 @@ def run_unit_tests(tests):
 		print("[{}, code {}]".format("Passed" if p.returncode == 0 else "Failed", p.returncode))
 
 def run_integration(expected_output_path):
+	global ok
 	print("[Running integration test against {}]".format(expected_output_path))
 	with open(expected_output_path) as f:
 		content = f.read().strip()
@@ -32,6 +33,7 @@ def run_integration(expected_output_path):
 	out, err = p.communicate()
 	out = out.decode("utf-8").strip()
 	if out != content:
+		ok = False
 		with open("output.txt", "w") as f:
 			f.write(out)
 		dp = subprocess.Popen([
@@ -43,7 +45,6 @@ def run_integration(expected_output_path):
 		])
 		dp.wait()
 	elif p.returncode != 0 or len(err) != 0:
-		global ok
 		ok = False
 	print("[{}]".format("Passed" if p.returncode == 0 else "Failed"))
 

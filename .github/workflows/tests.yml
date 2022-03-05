@@ -23,3 +23,39 @@ jobs:
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py gcc
+  test-clang:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: |
+           python3 -m pip install --upgrade pip
+           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+    - name: build library
+      run: make COMPILER=clang++
+    - name: build tests
+      working-directory: tests
+      run: make tests COMPILER=clang++
+    - name: run tests
+      working-directory: tests
+      run: python3 run-tests.py clang
+  test-msvc:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: Enable Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: dependencies
+      run: |
+           python3 -m pip install --upgrade pip
+           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+    - name: build library
+      run: make COMPILER=msvc
+    - name: build tests
+      working-directory: tests
+      run: make tests COMPILER=msvc
+    - name: run tests
+      working-directory: tests
+      run: python3 run-tests.py msvc
+
+ # TODO gcc/clang on windows
