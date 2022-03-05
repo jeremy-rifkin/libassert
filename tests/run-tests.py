@@ -25,52 +25,67 @@ def run_unit_tests(tests):
 		print("[{}, code {}]".format("Passed" if p.returncode == 0 else "Failed", p.returncode), flush=True)
 
 # This function scans two outputs and ignores close mismatches in line numbers
-def critical_difference(output, expected_output):
-	output_lines = [l.strip() for l in "\n".split(output)]
-	expected_lines = [l.strip() for l in "\n".split(expected_output)]
-	# state machine
-	in_trace = False
-	last_was_frame_line = False
-	for i in range(min(len(output_lines), len(expected_lines))):
-		if output_lines[i] == "Stack trace:" and expected_lines[i] == "Stack trace:":
+def critical_difference(output: str, expected_output: str):
+	try:
+		output_lines = [l.strip() for l in output.split("\n")]
+		expected_lines = [l.strip() for l in expected_output.split("\n")]
+		# state machine
+		in_trace = False
+		last_was_frame_line = False
+		if len(output_lines) != len(expected_lines):
+			print("(Note: critical_difference true due to lines mismatch, {} vs {})"
+				.format(len(expected_lines), len(output_lines)), flush=True)
+			return True
+		for i in range(len(output_lines)):
 			if in_trace:
-				# this is an error
+				if last_was_frame_line:
+					last_was_frame_line = False
+					l1 = output_lines[i].split(":")
+					l2 = expected_lines[i].split(":")
+					if l1[:-1] != l2[:-1]:
+						print("(Note: critical_difference true due to trace file mismatch, {} vs {})"
+							.format(repr(l2[:-1]), repr(l1[:-1])), flush=True)
+						return True
+					n1 = l1[-1]
+					n2 = l2[-1]
+					if n1 == "?" and n2 == "?":
+						pass
+					else:
+						n1 = int(n1)
+						n2 = int(n2)
+						if abs(n1 - n2) > MAX_LINE_DIFF:
+							print("(Note: critical_difference true due to line number mismatch, {} vs {})".format(n2, n1))
+							return True
+				elif output_lines[i] != expected_lines[i]:
+					print("(Note: critical_difference true due to line mismatch in trace, {} vs {})"
+						.format(repr(expected_lines[i]), repr(output_lines[i])), flush=True)
+					return True
+				elif output_lines[i] == "": # and expected_lines[i].strip() == "":
+					in_trace = False
+				elif output_lines[i].startswith("# "): # and expected_lines[i].startswith("# "):
+					last_was_frame_line = True
+			elif output_lines[i] != expected_lines[i]:
+				print("(Note: critical_difference true due to line mismatch, {} vs {})"
+					.format(repr(expected_lines[i]), repr(output_lines[i])), flush=True)
 				return True
-			else:
+			elif output_lines[i] == "Stack trace:": # and expected_lines[i] == "Stack trace:":
 				in_trace = True
 				last_was_frame_line = False
-		elif in_trace:
-			if output_lines[i].strip() == "" and expected_lines[i].strip() == "":
-				in_trace = False
-			elif output_lines[i].startswith("# ") and expected_lines[i].startswith("# "):
-				if last_was_frame_line:
-					# this is an error
-					return True
-				else:
-					last_was_frame_line = True
-			else:
-				assert(last_was_frame_line)
-				n1 = ":".split(output_lines[i])[-1]
-				n2 = ":".split(output_lines[i])[-1]
-				if n1 == "?" and n2 == "?":
-					pass
-				else:
-					n1 = int(n1)
-					n2 = int(n2)
-					if abs(n1 - n2) > MAX_LINE_DIFF:
-						return True
-	return False
+		return False
+	except Exception as e:
+		print("Exception in critical_difference:", e)
+		return False
 
-def run_integration(expected_output_path):
+def run_integration(expected_output_path: str):
 	global ok
 	print("[Running integration test against {}]".format(expected_output_path), flush=True)
 	with open(expected_output_path) as f:
-		expected_output = f.read().strip()
+		expected_output = f.read()
 	p = subprocess.Popen(
 		["bin/integration" + (".exe" if sys.platform == "win32" else "")],
 		stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
 	output, err = p.communicate()
-	output = output.decode("utf-8").replace("\r", "").strip()
+	output = output.decode("utf-8").replace("\r", "")
 	if output != expected_output:
 		if critical_difference(output, expected_output):
 			ok = False
