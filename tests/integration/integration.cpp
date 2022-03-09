@@ -114,6 +114,7 @@ std::ostream& operator<<(std::ostream& stream, const logger_type& lt) {
 // TODO: need to check assert, verify, and check...?
 // Opt/DNDEBUG
 
+#line 1000
 template<typename T>
 class test_class {
 public:
@@ -125,6 +126,7 @@ public:
 		// FIXME: Check all stack traces on msvc... Bug with __PRETTY_FUNCTION__ in lambdas.
 		// value printing: strings
 		SECTION("value printing: strings");
+		#line 1100
 		{
 			std::string s = "test\n";
 			int i = 0;
@@ -139,6 +141,7 @@ public:
 		}
 		// value printing: pointers
 		SECTION("value printing: pointers");
+		#line 1200
 		{
 			assert((uintptr_t)-1 == 0xff);
 			assert((uintptr_t)-1 == (uintptr_t)0xff);
@@ -147,6 +150,7 @@ public:
 		}
 		// value printing: number formats
 		SECTION("value printing: number formats");
+		#line 1300
 		{
 			const uint16_t flags = 0b000101010;
 			const uint16_t mask = 0b110010101;
@@ -155,6 +159,7 @@ public:
 		}
 		// value printing: floating point
 		SECTION("value printing: floating point");
+		#line 1400
 		{
 			assert(1 == 1.5);
 			assert(0.5 != .5); // FIXME
@@ -167,12 +172,14 @@ public:
 		}
 		// value printing: ostream overloads
 		SECTION("value printing: ostream overloads");
+		#line 1500
 		{
 			printable p{1.42};
 			assert(p == printable{2.55});
 		}
 		// value printing: no ostream overload
 		SECTION("value printing: no ostream overload");
+		#line 1600
 		{
 			const not_printable p{1.42};
 			assert(p == not_printable{2.55});
@@ -181,6 +188,7 @@ public:
 
 		// optional messages
 		SECTION("optional messages");
+		#line 1700
 		{
 			assert(false, 2);
 			assert(false, "foo");
@@ -194,6 +202,7 @@ public:
 		}
 		// extra diagnostics
 		SECTION("errno");
+		#line 1800
 		{
 			errno = 2;
 			assert(false, errno);
@@ -202,11 +211,13 @@ public:
 		}
 		// general
 		SECTION("general");
+		#line 1900
 		{
 			assert(false, "foo", false, 2 * foo(), "foobar"sv, bar(), printable{2.55});
 		}
 		// safe comparisons
 		SECTION("safe comparisons");
+		#line 2000
 		{
 			assert(18446744073709551606ULL == -10);
 			assert(-1 > 1U);
@@ -214,6 +225,7 @@ public:
 
 		// expression decomposition
 		SECTION("expression decomposition");
+		#line 2100
 		{
 			//ASSERT(1 = (1 bitand 2)); // <- FIXME: Not evaluated correctly
 			assert(1 == (1 bitand 2));
@@ -232,11 +244,13 @@ public:
 		}
 		// ensure values are only computed once
 		SECTION("ensure values are only computed once");
+		#line 2200
 		{
 			assert(foo() < bar());
 		}
 		// value forwarding: copy / moves
 		SECTION("value forwarding: copy / moves");
+		#line 2300
 		{
 			{
 				logger_type lt1(1);
@@ -263,6 +277,7 @@ public:
 		// TODO
 		// value forwarding: lvalue references
 		SECTION("value forwarding: lvalue references");
+		#line 2400
 		{
 			{
 				logger_type lt(2);
@@ -281,6 +296,7 @@ public:
 		}
 		// value forwarding: rvalues
 		SECTION("value forwarding: rvalues");
+		#line 2500
 		{
 			{
 				auto x = get_lt_b();
@@ -292,13 +308,16 @@ public:
 		// general stack traces are tested throughout
 		// simple recursion
 		SECTION("simple recursion");
+		#line 2600
 		rec(10); // FIXME: Check stacktrace in clang
 		// other recursion
 		SECTION("other recursion");
+		#line 2700
 		recursive_a(10); // FIXME: Check stacktrace in clang
 
 		// path differentiation
 		SECTION("Path differentiation");
+		#line 2800
 		test_path_differentiation();
 	}
 
@@ -313,6 +332,7 @@ public:
 
 struct N { };
 
+#line 400
 int main() {
 	test_class<int> t;
 	t.something(std::pair {N(), 1});

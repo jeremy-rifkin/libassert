@@ -11,3 +11,4 @@
 *.a
 bin
 scratch
+__pycache__
