@@ -1,6 +1,8 @@
-import subprocess
 import os
+import subprocess
 import sys
+
+from pyutils.utils import parse_output, icdiff
 
 ok = True
 
@@ -25,7 +27,7 @@ def run_unit_tests(tests):
 		print("[{}, code {}]".format("Passed" if p.returncode == 0 else "Failed", p.returncode), flush=True)
 
 # This function scans two outputs and ignores close mismatches in line numbers
-def critical_difference(output: str, expected_output: str):
+def critical_difference(output: str, expected_output: str): # TODO: Make use of utils.parse_output
 	try:
 		output_lines = [l.strip() for l in output.split("\n")]
 		expected_lines = [l.strip() for l in expected_output.split("\n")]
@@ -91,16 +93,11 @@ def run_integration(expected_output_path: str):
 			ok = False
 		else:
 			print("WARNING: Difference in output but deemed non-critical", flush=True)
-		with open("output.txt", "w", newline="\n") as f:
-			f.write(output)
-		dp = subprocess.Popen([
-			"icdiff",
-			expected_output_path,
-			"output.txt",
-			"--cols",
-			"150"
-		])
-		dp.wait()
+		print(os.path.basename(expected_output_path))
+		icdiff(
+			(output, "output.txt"),
+			expected_output_path
+		)
 	elif p.returncode != 0 or len(err) != 0:
 		ok = False
 	print("[{}]".format("Passed" if p.returncode == 0 else "Failed"), flush=True)

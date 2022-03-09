@@ -1,9 +1,10 @@
 #!/bin/python3
-import os
-import sys
-from pyutils.utils import parse_output, icdiff
 import itertools
+import os
 import pprint
+import sys
+
+from pyutils.utils import parse_output, icdiff
 
 def extract_lines(blocks, type_filter):
 	return sum(list(map(lambda block: block["lines"], filter(lambda block: type_filter(block["type"]), blocks))), [])

@@ -55,12 +55,12 @@ def icdiff(a: Union[str, tuple], b: Union[str, tuple]):
 	if type(a) is tuple:
 		a_path = a[1]
 		to_delete.append(a_path)
-		with open(a_path, "w") as f:
+		with open(a_path, "w", newline="\n") as f:
 			f.write(a[0])
 	if type(b) is tuple:
 		b_path = b[1]
 		to_delete.append(b_path)
-		with open(b_path, "w") as f:
+		with open(b_path, "w", newline="\n") as f:
 			f.write(b[0])
 	# TODO: Some issues with icdiff's edit distance......
 	"""dp = subprocess.Popen([
