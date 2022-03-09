@@ -501,7 +501,9 @@ namespace assert_detail {
 		return true;
 	}
 
-	[[maybe_unused]] static std::optional<trace_t> get_stacktrace() {
+	[[maybe_unused]]
+	ASSERT_DETAIL_ATTR_COLD
+	static std::optional<trace_t> get_stacktrace() {
 		SymSetOptions(
 			  SYMOPT_DEFERRED_LOADS
 			| SYMOPT_INCLUDE_32BIT_MODULES
@@ -813,6 +815,7 @@ namespace assert_detail {
 	}
 	#endif
 
+	ASSERT_DETAIL_ATTR_COLD
 	void* get_stacktrace_opaque() {
 		auto trace = get_stacktrace();
 		if(trace) {
@@ -1629,6 +1632,7 @@ namespace assert_detail {
 			}
 		}
 		path_trie(const path_trie&) = delete;
+		ASSERT_DETAIL_ATTR_COLD
 		path_trie(path_trie&& other) { // needed for std::vector
 			downstream_branches = other.downstream_branches;
 			root = other.root;
@@ -1662,7 +1666,7 @@ namespace assert_detail {
 			return result;
 		}
 	private:
-	ASSERT_DETAIL_ATTR_COLD
+		ASSERT_DETAIL_ATTR_COLD
 		void insert(const path_components& path, int i) {
 			if(i < 0) return;
 			if(!edges.count(path[i])) {
@@ -1869,14 +1873,16 @@ namespace assert_detail {
 		return stacktrace;
 	}
 
-	binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
-	binary_diagnostics_descriptor::binary_diagnostics_descriptor(
-		std::vector<std::string>& lstrings, std::vector<std::string>& rstrings,
-		std::string a_str, std::string b_str, bool multiple_formats):
-		lstrings(lstrings), rstrings(rstrings), a_str(a_str), b_str(b_str),
-		multiple_formats(multiple_formats), present(true) {}
-	binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
+	ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
+	ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
+	                                std::vector<std::string>& lstrings, std::vector<std::string>& rstrings,
+	                                std::string a_str, std::string b_str, bool multiple_formats):
+	                                lstrings(lstrings), rstrings(rstrings), a_str(a_str), b_str(b_str),
+	                                multiple_formats(multiple_formats), present(true) {}
+	ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
+	ASSERT_DETAIL_ATTR_COLD
 	binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) = default;
+	ASSERT_DETAIL_ATTR_COLD
 	binary_diagnostics_descriptor& binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) = default;
 
 	ASSERT_DETAIL_ATTR_COLD
@@ -2025,21 +2031,21 @@ namespace assert_detail {
 
 	#if ASSERT_DETAIL_IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
 	 CRITICAL_SECTION CriticalSection;
-	 [[gnu::constructor]] static void initialize_critical_section() {
+	 [[gnu::constructor]] ASSERT_DETAIL_ATTR_COLD static void initialize_critical_section() {
 	 	InitializeCriticalSectionAndSpinCount(&CriticalSection, 10);
 	 }
-	 lock::lock() {
+	 ASSERT_DETAIL_ATTR_COLD lock::lock() {
 	 	EnterCriticalSection(&CriticalSection);
 	 }
-	 lock::~lock() {
+	 ASSERT_DETAIL_ATTR_COLD lock::~lock() {
 	 	EnterCriticalSection(&CriticalSection);
 	 }
 	#else
 	 std::mutex global_thread_lock;
-	 lock::lock() {
+	 ASSERT_DETAIL_ATTR_COLD lock::lock() {
 	 	global_thread_lock.lock();
 	 }
-	 lock::~lock() {
+	 ASSERT_DETAIL_ATTR_COLD lock::~lock() {
 	 	global_thread_lock.unlock();
 	 }
 	#endif
@@ -2065,16 +2071,16 @@ namespace assert_detail {
 		return c + 1; // plus one, count the empty string
 	}
 
-	assertion_printer::assertion_printer(
-		const assert_static_parameters* params, const extra_diagnostics& processed_args,
-		binary_diagnostics_descriptor& binary_diagnostics, void* raw_trace, size_t sizeof_args):
-	    params(params), processed_args(processed_args), binary_diagnostics(binary_diagnostics),
-		raw_trace(raw_trace), sizeof_args(sizeof_args) {}
-	assertion_printer::~assertion_printer() {
+	ASSERT_DETAIL_ATTR_COLD assertion_printer::assertion_printer(
+	                            const assert_static_parameters* params, const extra_diagnostics& processed_args,
+	                            binary_diagnostics_descriptor& binary_diagnostics, void* raw_trace, size_t sizeof_args):
+	                            params(params), processed_args(processed_args), binary_diagnostics(binary_diagnostics),
+	                            raw_trace(raw_trace), sizeof_args(sizeof_args) {}
+	ASSERT_DETAIL_ATTR_COLD assertion_printer::~assertion_printer() {
 		auto trace = (trace_t*) raw_trace;
 		delete trace;
 	}
-	std::string assertion_printer::operator()(int width) {
+	ASSERT_DETAIL_ATTR_COLD std::string assertion_printer::operator()(int width) {
 		const auto& [ name, type, expr_str, location, args_strings ] = *params;
 		const auto& [ fatal, message, extra_diagnostics ] = processed_args;
 		std::string output;
@@ -2105,19 +2111,20 @@ namespace assert_detail {
 }
 
 using namespace assert_detail;
-void assert_detail_default_fail_action(assert_detail::assertion_printer& printer, assert_type type,
-                                       assert_detail::ASSERTION fatal) {
+ASSERT_DETAIL_ATTR_COLD
+void assert_detail_default_fail_action(assertion_printer& printer, assert_type type,
+                                       ASSERTION fatal) {
 	enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-	std::string message = printer(assert_detail::terminal_width(STDERR_FILENO));
+	std::string message = printer(terminal_width(STDERR_FILENO));
 	std::cerr << (assert_detail::isatty(STDERR_FILENO) ? message : strip_colors(message)) << std::endl;
 	if(fatal == ASSERTION::FATAL) {
 		switch(type) {
 			case assert_type::assertion:
 				abort();
 			case assert_type::verify:
-				throw assert_detail::verification_failure();
+				throw verification_failure();
 			case assert_type::check:
-				throw assert_detail::check_failure();
+				throw check_failure();
 			default:
 				assert_detail_primitive_assert(false);
 		}

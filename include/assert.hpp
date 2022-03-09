@@ -33,7 +33,7 @@
  #define ASSERT_DETAIL_PFUNC __FUNCSIG__
  #define ASSERT_DETAIL_ATTR_COLD
  #define ASSERT_DETAIL_ATTR_NOINLINE __declspec(noinline)
- #define ASSERT_DETAIL_UNREACHABLE __assume(0)
+ #define ASSERT_DETAIL_UNREACHABLE __assume(false)
 #endif
 
 #if ASSERT_DETAIL_IS_MSVC
@@ -150,8 +150,7 @@ namespace assert_detail {
 	// Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
 	// Not using std:: versions because library is targetting C++17
 	template<typename T, typename U>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	constexpr bool cmp_equal(T t, U u) {
+	[[nodiscard]] constexpr bool cmp_equal(T t, U u) {
 		using UT = std::make_unsigned_t<T>;
 		using UU = std::make_unsigned_t<U>;
 		if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
@@ -163,14 +162,12 @@ namespace assert_detail {
 	}
 
 	template<typename T, typename U>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	constexpr bool cmp_not_equal(T t, U u) {
+	[[nodiscard]] constexpr bool cmp_not_equal(T t, U u) {
 		return !cmp_equal(t, u);
 	}
 
 	template<typename T, typename U>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	constexpr bool cmp_less(T t, U u) {
+	[[nodiscard]] constexpr bool cmp_less(T t, U u) {
 		using UT = std::make_unsigned_t<T>;
 		using UU = std::make_unsigned_t<U>;
 		if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
@@ -182,20 +179,17 @@ namespace assert_detail {
 	}
 
 	template<typename T, typename U>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	constexpr bool cmp_greater(T t, U u) {
+	[[nodiscard]] constexpr bool cmp_greater(T t, U u) {
 		return cmp_less(u, t);
 	}
 
 	template<typename T, typename U>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	constexpr bool cmp_less_equal(T t, U u) {
+	[[nodiscard]] constexpr bool cmp_less_equal(T t, U u) {
 		return !cmp_less(u, t);
 	}
 
 	template<typename T, typename U>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	constexpr bool cmp_greater_equal(T t, U u) {
+	[[nodiscard]] constexpr bool cmp_greater_equal(T t, U u) {
 		return !cmp_less(t, u);
 	}
 
