@@ -75,24 +75,6 @@
  #define RESET ""
 #endif
 
-template<typename N> class small_static_map {
-	const N& needle;
-public:
-	small_static_map(const N& n) : needle(n) {}
-	template<typename K, typename V, typename... Rest>
-	constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
-		if(needle == option) return result;
-		if constexpr (sizeof...(Rest) > 0) return lookup(rest...);
-		else assert_detail_primitive_assert(false);
-	}
-	constexpr bool is_in() { return false; }
-	template<typename T, typename... Rest>
-	constexpr bool is_in(const T& option, const Rest&... rest) {
-		if(needle == option) return true;
-		return is_in(rest...);
-	}
-};
-
 namespace assert_detail {
 	ASSERT_DETAIL_ATTR_COLD
 	void primitive_assert_impl(bool condition, bool verification, const char* expression,
@@ -114,6 +96,25 @@ namespace assert_detail {
 
 	// Still present in release mode, nonfatal
 	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
+
+	// Container utility
+	template<typename N> class small_static_map {
+		const N& needle;
+	public:
+		small_static_map(const N& n) : needle(n) {}
+		template<typename K, typename V, typename... Rest>
+		constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
+			if(needle == option) return result;
+			if constexpr (sizeof...(Rest) > 0) return lookup(rest...);
+			else { assert_detail_primitive_assert(false); ASSERT_DETAIL_UNREACHABLE; }
+		}
+		constexpr bool is_in() { return false; }
+		template<typename T, typename... Rest>
+		constexpr bool is_in(const T& option, const Rest&... rest) {
+			if(needle == option) return true;
+			return is_in(rest...);
+		}
+	};
 
 	/*
 	 * string utilities

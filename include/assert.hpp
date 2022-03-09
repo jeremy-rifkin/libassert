@@ -28,10 +28,12 @@
  #define ASSERT_DETAIL_PFUNC __extension__ __PRETTY_FUNCTION__
  #define ASSERT_DETAIL_ATTR_COLD     [[gnu::cold]]
  #define ASSERT_DETAIL_ATTR_NOINLINE [[gnu::noinline]]
+ #define ASSERT_DETAIL_UNREACHABLE __builtin_unreachable()
 #else
  #define ASSERT_DETAIL_PFUNC __FUNCSIG__
  #define ASSERT_DETAIL_ATTR_COLD
  #define ASSERT_DETAIL_ATTR_NOINLINE __declspec(noinline)
+ #define ASSERT_DETAIL_UNREACHABLE __assume(0)
 #endif
 
 #if ASSERT_DETAIL_IS_MSVC
@@ -58,7 +60,7 @@ namespace assert_detail {
 		check
 	};
 
-	struct assertion_printer;
+	class assertion_printer;
 }
 
 #ifndef ASSERT_FAIL
@@ -836,7 +838,7 @@ namespace assert_detail {
 		if(assert_detail_strong_expect(!static_cast<bool>(value), 0)) {
 			#ifdef NDEBUG
 			 if(params->type == assert_type::assertion) { // will be constant propagated
-				__builtin_unreachable();
+				ASSERT_DETAIL_UNREACHABLE;
 			 }
 			 // If an assert fails under -DNDEBUG this whole branch will be marked unreachable but
 			 // without optimizations control flow can fallthrough the above statement. It's of
