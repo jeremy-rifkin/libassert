@@ -12,3 +12,4 @@
 bin
 scratch
 build/
+__pycache__

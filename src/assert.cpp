@@ -97,6 +97,25 @@ namespace assert_detail {
 	// Still present in release mode, nonfatal
 	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
 
+	// Container utility
+	template<typename N> class small_static_map {
+		const N& needle;
+	public:
+		small_static_map(const N& n) : needle(n) {}
+		template<typename K, typename V, typename... Rest>
+		constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
+			if(needle == option) return result;
+			if constexpr (sizeof...(Rest) > 0) return lookup(rest...);
+			else { assert_detail_primitive_assert(false); ASSERT_DETAIL_UNREACHABLE; }
+		}
+		constexpr bool is_in() { return false; }
+		template<typename T, typename... Rest>
+		constexpr bool is_in(const T& option, const Rest&... rest) {
+			if(needle == option) return true;
+			return is_in(rest...);
+		}
+	};
+
 	/*
 	 * string utilities
 	 */
@@ -242,16 +261,24 @@ namespace assert_detail {
 	}
 
 	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-	ASSERT_DETAIL_ATTR_COLD static int terminal_width() {
+	ASSERT_DETAIL_ATTR_COLD int terminal_width(int fd) {
+		if(fd < 0) {
+			return 0;
+		}
 		#ifdef _WIN32
+		 DWORD windows_handle = small_static_map(fd).lookup(
+			 STDIN_FILENO, STD_INPUT_HANDLE,
+			 STDOUT_FILENO, STD_OUTPUT_HANDLE,
+			 STDERR_FILENO, STD_ERROR_HANDLE
+		 );
 		 CONSOLE_SCREEN_BUFFER_INFO csbi;
-		 HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
+		 HANDLE h = GetStdHandle(windows_handle);
 		 if(h == INVALID_HANDLE_VALUE) return 0;
 		 if(!GetConsoleScreenBufferInfo(h, &csbi)) return 0;
 		 return csbi.srWindow.Right - csbi.srWindow.Left + 1;
 		#else
 		 struct winsize w;
-		 if(ioctl(STDERR_FILENO, TIOCGWINSZ, &w) == -1) return 0;
+		 if(ioctl(fd, TIOCGWINSZ, &w) == -1) return 0;
 		 return w.ws_col;
 		#endif
 	}
@@ -300,6 +327,8 @@ namespace assert_detail {
 			return !operator==(other);
 		}
 	};
+
+	using trace_t = std::vector<stacktrace_entry>;
 
 	// ... -> assert -> assert_fail -> assert_fail_generic -> print_stacktrace -> get_stacktrace
 	// get 100, can skip a few but inlining interferes so figure it out later
@@ -472,7 +501,9 @@ namespace assert_detail {
 		return true;
 	}
 
-	[[maybe_unused]] static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
+	[[maybe_unused]]
+	ASSERT_DETAIL_ATTR_COLD
+	static std::optional<trace_t> get_stacktrace() {
 		SymSetOptions(
 			  SYMOPT_DEFERRED_LOADS
 			| SYMOPT_INCLUDE_32BIT_MODULES
@@ -483,7 +514,7 @@ namespace assert_detail {
 		if (!SymInitialize(proc, NULL, TRUE)) return {};
 		PVOID addrs[n_frames] = { 0 };
 		int frames = CaptureStackBackTrace(n_skip, n_frames, addrs, NULL);
-		std::vector<stacktrace_entry> trace;
+		trace_t trace;
 		trace.reserve(frames);
 		#if IS_GCC
 		std::string executable = get_executable_path();
@@ -712,11 +743,11 @@ namespace assert_detail {
 	}
 
 	ASSERT_DETAIL_ATTR_COLD
-	static std::optional<std::vector<stacktrace_entry>> get_stacktrace() {
+	static std::optional<trace_t> get_stacktrace() {
 		void* bt[n_frames];
 		int bt_size = backtrace(bt, n_frames);
 		std::vector<frame> frames = backtrace_frames(bt, bt_size, n_skip);
-		std::vector<stacktrace_entry> trace(frames.size());
+		trace_t trace(frames.size());
 		if(has_addr2line()) {
 			// group addresses to resolve by the module name they're from
 			// obj path -> { addresses, targets }
@@ -784,17 +815,32 @@ namespace assert_detail {
 	}
 	#endif
 
+	ASSERT_DETAIL_ATTR_COLD
+	void* get_stacktrace_opaque() {
+		auto trace = get_stacktrace();
+		if(trace) {
+			return new trace_t(std::move(*trace));
+		} else {
+			return nullptr;
+		}
+	}
+
 	/*
 	 * C++ syntax analysis logic
 	 */
 
-	ASSERT_DETAIL_ATTR_COLD
-	highlight_block::highlight_block(std::string_view color, std::string content) : color(color), content(content) { }
-	ASSERT_DETAIL_ATTR_COLD highlight_block::highlight_block(const highlight_block& other) = default;
-	ASSERT_DETAIL_ATTR_COLD highlight_block::highlight_block(highlight_block&& other) = default;
-	ASSERT_DETAIL_ATTR_COLD highlight_block::~highlight_block() = default;
-	ASSERT_DETAIL_ATTR_COLD highlight_block& highlight_block::operator=(const highlight_block&) = default;
-	ASSERT_DETAIL_ATTR_COLD highlight_block& highlight_block::operator=(highlight_block&&) = default;
+	struct highlight_block {
+		std::string_view color;
+		std::string content;
+		// Get as much code into the .cpp as possible
+		ASSERT_DETAIL_ATTR_COLD highlight_block(std::string_view color, std::string content)
+		                                                 : color(color), content(content) { }
+		ASSERT_DETAIL_ATTR_COLD highlight_block(const highlight_block&) = default;
+		ASSERT_DETAIL_ATTR_COLD highlight_block(highlight_block&&) = default;
+		ASSERT_DETAIL_ATTR_COLD ~highlight_block() = default;
+		ASSERT_DETAIL_ATTR_COLD highlight_block& operator=(const highlight_block&) = default;
+		ASSERT_DETAIL_ATTR_COLD highlight_block& operator=(highlight_block&&) = default;
+	};
 
 	ASSERT_DETAIL_ATTR_COLD
 	std::string union_regexes(std::initializer_list<std::string_view> regexes) {
@@ -1494,14 +1540,18 @@ namespace assert_detail {
 	 * stack trace printing
 	 */
 
-	ASSERT_DETAIL_ATTR_COLD
-	column_t::column_t(size_t width, std::vector<highlight_block> blocks, bool right_align)
-		: width(width), blocks(blocks), right_align(right_align) {}
-	ASSERT_DETAIL_ATTR_COLD column_t::column_t(const column_t&) = default;
-	ASSERT_DETAIL_ATTR_COLD column_t::column_t(column_t&&) = default;
-	ASSERT_DETAIL_ATTR_COLD column_t::~column_t() = default;
-	ASSERT_DETAIL_ATTR_COLD column_t& column_t::operator=(const column_t&) = default;
-	ASSERT_DETAIL_ATTR_COLD column_t& column_t::operator=(column_t&&) = default;
+	struct column_t {
+		size_t width;
+		std::vector<highlight_block> blocks;
+		bool right_align = false;
+		ASSERT_DETAIL_ATTR_COLD column_t(size_t width, std::vector<highlight_block> blocks, bool right_align = false)
+		                                          : width(width), blocks(blocks), right_align(right_align) {}
+		ASSERT_DETAIL_ATTR_COLD column_t(const column_t&) = default;
+		ASSERT_DETAIL_ATTR_COLD column_t(column_t&&) = default;
+		ASSERT_DETAIL_ATTR_COLD ~column_t() = default;
+		ASSERT_DETAIL_ATTR_COLD column_t& operator=(const column_t&) = default;
+		ASSERT_DETAIL_ATTR_COLD column_t& operator=(column_t&&) = default;
+	};
 
 	ASSERT_DETAIL_ATTR_COLD
 	static constexpr int log10(int n) {
@@ -1591,6 +1641,7 @@ namespace assert_detail {
 			}
 		}
 		path_trie(const path_trie&) = delete;
+		ASSERT_DETAIL_ATTR_COLD
 		path_trie(path_trie&& other) { // needed for std::vector
 			downstream_branches = other.downstream_branches;
 			root = other.root;
@@ -1624,7 +1675,7 @@ namespace assert_detail {
 			return result;
 		}
 	private:
-	ASSERT_DETAIL_ATTR_COLD
+		ASSERT_DETAIL_ATTR_COLD
 		void insert(const path_components& path, int i) {
 			if(i < 0) return;
 			if(!edges.count(path[i])) {
@@ -1707,7 +1758,7 @@ namespace assert_detail {
 	}
 
 	ASSERT_DETAIL_ATTR_COLD
-	auto get_trace_window(const std::vector<stacktrace_entry>& trace) {
+	auto get_trace_window(const trace_t& trace) {
 		// Two boundaries: assert_detail and main
 		// Both are found here, nothing is filtered currently at stack trace generation
 		// (inlining and platform idiosyncrasies interfere)
@@ -1725,7 +1776,7 @@ namespace assert_detail {
 	}
 
 	ASSERT_DETAIL_ATTR_COLD
-	auto process_paths(const std::vector<stacktrace_entry>& trace, size_t start, size_t end) {
+	auto process_paths(const trace_t& trace, size_t start, size_t end) {
 		// raw full path -> components
 		std::unordered_map<std::string, path_components> parsed_paths;
 		// base file name -> path trie
@@ -1753,11 +1804,11 @@ namespace assert_detail {
 		return std::pair(files, std::min(longest_file_width, size_t(50)));
 	}
 
-	ASSERT_DETAIL_ATTR_COLD
-	std::string print_stacktrace() {
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+	std::string print_stacktrace(void* raw_trace, int term_width) {
 		std::string stacktrace;
-		if(auto _trace = get_stacktrace()) {
-			auto trace = *_trace;
+		if(raw_trace) {
+			auto& trace = *(trace_t*)raw_trace;
 			// prettify signatures
 			for(auto& frame : trace) {
 				frame.signature = prettify_type(frame.signature);
@@ -1772,7 +1823,6 @@ namespace assert_detail {
 					return std::to_string(a.line).size() < std::to_string(b.line).size();
 				})->line - start + 1 + 1); // +1 for indices starting at 0, +1 again for log
 			int max_frame_width = log10(end - start + 1 + 1); // ^
-			int term_width = terminal_width(); // will be 0 on error
 			// do the actual trace
 			for(size_t i = start; i <= end; i++) {
 				const auto& [source_path, signature, _line] = trace[i];
@@ -1832,6 +1882,18 @@ namespace assert_detail {
 		return stacktrace;
 	}
 
+	ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
+	ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
+	                                std::vector<std::string>& lstrings, std::vector<std::string>& rstrings,
+	                                std::string a_str, std::string b_str, bool multiple_formats):
+	                                lstrings(lstrings), rstrings(rstrings), a_str(a_str), b_str(b_str),
+	                                multiple_formats(multiple_formats), present(true) {}
+	ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
+	ASSERT_DETAIL_ATTR_COLD
+	binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) = default;
+	ASSERT_DETAIL_ATTR_COLD
+	binary_diagnostics_descriptor& binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) = default;
+
 	ASSERT_DETAIL_ATTR_COLD
 	static std::string print_values(const std::vector<std::string>& vec, size_t lw) {
 		assert_detail_primitive_assert(vec.size() > 0);
@@ -1870,10 +1932,10 @@ namespace assert_detail {
 		}
 	}
 
-	ASSERT_DETAIL_ATTR_COLD
-	std::string print_binary_diagnostic_deferred(const literal_format (&formats)[4], std::vector<std::string>& lstrings,
-	                                             std::vector<std::string>& rstrings, const char* a_str,
-	                                             const char* b_str) {
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+	std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
+		auto& [ lstrings, rstrings, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;
+		const char* a_str = a_sstr.c_str(), *b_str = b_sstr.c_str();
 		assert_detail_primitive_assert(lstrings.size() > 0);
 		assert_detail_primitive_assert(rstrings.size() > 0);
 		// pad all columns where there is overlap
@@ -1886,7 +1948,6 @@ namespace assert_detail {
 				which[i].insert(which[i].end(), difference, ' ');
 			}
 		}
-		bool multiple_formats = formats[1] != literal_format::none;
 		// determine whether we actually gain anything from printing a where clause (e.g. exclude "1 => 1")
 		struct { bool left, right; } has_useful_where_clause = {
 			multiple_formats || lstrings.size() > 1 || (a_str != lstrings[0] && trim_suffix(a_str) != lstrings[0]),
@@ -1899,7 +1960,6 @@ namespace assert_detail {
 				has_useful_where_clause.left  ? strlen(a_str) : 0,
 				has_useful_where_clause.right ? strlen(b_str) : 0
 			);
-			size_t term_width = terminal_width(); // will be 0 on error
 			// Limit lw to about half the screen. TODO: Re-evaluate what we want to do here.
 			if(term_width > 0) lw = std::min(lw, term_width / 2 - 8 /* indent */ - 4 /* arrow */);
 			where += "    Where:\n";
@@ -1941,10 +2001,10 @@ namespace assert_detail {
 		}
 	}
 
-	ASSERT_DETAIL_ATTR_COLD
-	std::string print_extra_diagnostics(const decltype(extra_diagnostics::entries)& extra_diagnostics) {
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+	std::string print_extra_diagnostics(size_t term_width,
+	                                    const decltype(extra_diagnostics::entries)& extra_diagnostics) {
 		std::string output = "    Extra diagnostics:\n";
-		size_t term_width = terminal_width(); // will be 0 on error
 		size_t lw = 0;
 		for(auto& entry : extra_diagnostics) {
 			lw = std::max(lw, entry.first.size());
@@ -1974,44 +2034,27 @@ namespace assert_detail {
 		return "Call to CHECK() failed";
 	}
 
-	void default_fail_action(std::string message, assert_type type, assert_detail::ASSERTION fatal) {
-		assert_detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-		std::cerr << (isatty(STDERR_FILENO) ? message : strip_colors(message)) << std::endl;
-		if(fatal == ASSERTION::FATAL) {
-			switch(type) {
-				case assert_type::assertion:
-					abort();
-				case assert_type::verify:
-					throw assert_detail::verification_failure();
-				case assert_type::check:
-					throw assert_detail::check_failure();
-				default:
-					assert_detail_primitive_assert(false);
-			}
-		}
-	}
-
 	ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics() = default;
 	ASSERT_DETAIL_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
 	ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) = default;
 
 	#if ASSERT_DETAIL_IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
 	 CRITICAL_SECTION CriticalSection;
-	 [[gnu::constructor]] static void initialize_critical_section() {
+	 [[gnu::constructor]] ASSERT_DETAIL_ATTR_COLD static void initialize_critical_section() {
 	 	InitializeCriticalSectionAndSpinCount(&CriticalSection, 10);
 	 }
-	 lock::lock() {
+	 ASSERT_DETAIL_ATTR_COLD lock::lock() {
 	 	EnterCriticalSection(&CriticalSection);
 	 }
-	 lock::~lock() {
+	 ASSERT_DETAIL_ATTR_COLD lock::~lock() {
 	 	EnterCriticalSection(&CriticalSection);
 	 }
 	#else
 	 std::mutex global_thread_lock;
-	 lock::lock() {
+	 ASSERT_DETAIL_ATTR_COLD lock::lock() {
 	 	global_thread_lock.lock();
 	 }
-	 lock::~lock() {
+	 ASSERT_DETAIL_ATTR_COLD lock::~lock() {
 	 	global_thread_lock.unlock();
 	 }
 	#endif
@@ -2035,5 +2078,89 @@ namespace assert_detail {
 			c++;
 		}
 		return c + 1; // plus one, count the empty string
+	}
+
+	ASSERT_DETAIL_ATTR_COLD assertion_printer::assertion_printer(
+	                            const assert_static_parameters* params, const extra_diagnostics& processed_args,
+	                            binary_diagnostics_descriptor& binary_diagnostics, void* raw_trace, size_t sizeof_args):
+	                            params(params), processed_args(processed_args), binary_diagnostics(binary_diagnostics),
+	                            raw_trace(raw_trace), sizeof_args(sizeof_args) {}
+	ASSERT_DETAIL_ATTR_COLD assertion_printer::~assertion_printer() {
+		auto trace = (trace_t*) raw_trace;
+		delete trace;
+	}
+	ASSERT_DETAIL_ATTR_COLD std::string assertion_printer::operator()(int width) {
+		const auto& [ name, type, expr_str, location, args_strings ] = *params;
+		const auto& [ fatal, message, extra_diagnostics ] = processed_args;
+		std::string output;
+		// generate header
+		if(message != "") {
+			output += stringf("%s failed at %s:%d: %s: %s\n",
+			                  assert_type_name(type), location.file, location.line,
+			                  highlight(location.function).c_str(), message.c_str());
+		} else {
+			output += stringf("%s failed at %s:%d: %s:\n", assert_type_name(type),
+			                  location.file, location.line, highlight(location.function).c_str());
+		}
+		output += stringf("    %s\n", highlight(stringf("%s(%s%s);", name, expr_str,
+		                                                sizeof_args > 0 ? ", ..." : "")).c_str());
+		// generate binary diagnostics
+		if(binary_diagnostics.present) {
+			output += print_binary_diagnostics(width, binary_diagnostics);
+		}
+		// generate extra diagnostics
+		if(!extra_diagnostics.empty()) {
+			output += print_extra_diagnostics(width, extra_diagnostics);
+		}
+		// generate stack trace
+		output += "\nStack trace:\n";
+		output += print_stacktrace(raw_trace, width);
+		return output;
+	}
+}
+
+// Some test cases for TMP stuff
+
+namespace assert_detail {
+	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, nothing, nothing>>().get_value()), int&>::value);
+	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, nothing, nothing>>().get_value()), int&>::value);
+	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().get_value()), bool>::value);
+	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().take_lhs()), int>::value);
+	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, int, ops::lteq>>().take_lhs()), int&>::value);
+
+	static_assert(is_string_type<char*>);
+	static_assert(is_string_type<const char*>);
+	static_assert(is_string_type<char[5]>);
+	static_assert(is_string_type<const char[5]>);
+	static_assert(!is_string_type<char(*)[5]>);
+	static_assert(is_string_type<char(&)[5]>);
+	static_assert(is_string_type<const char (&)[27]>);
+	static_assert(!is_string_type<std::vector<char>>);
+	static_assert(!is_string_type<int>);
+	static_assert(is_string_type<std::string>);
+	static_assert(is_string_type<std::string_view>);
+}
+
+
+// Default handler
+
+using namespace assert_detail;
+ASSERT_DETAIL_ATTR_COLD
+void assert_detail_default_fail_action(assertion_printer& printer, assert_type type,
+                                       ASSERTION fatal) {
+	enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
+	std::string message = printer(terminal_width(STDERR_FILENO));
+	std::cerr << (assert_detail::isatty(STDERR_FILENO) ? message : strip_colors(message)) << std::endl;
+	if(fatal == ASSERTION::FATAL) {
+		switch(type) {
+			case assert_type::assertion:
+				abort();
+			case assert_type::verify:
+				throw verification_failure();
+			case assert_type::check:
+				throw check_failure();
+			default:
+				assert_detail_primitive_assert(false);
+		}
 	}
 }

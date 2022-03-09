@@ -11,6 +11,10 @@
 #define DARK ESC "1;30m"
 #define RESET ESC "0m"
 
+namespace assert_detail {
+	[[nodiscard]] std::string highlight(const std::string& expression);
+}
+
 int main() {
 	std::tuple<std::string, std::string_view, bool> tests[] = {
 		{"a < 1 == 2 > ( 1 + 3 )", "==", true},

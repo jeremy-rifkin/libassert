@@ -1,19 +1,19 @@
 ===================== [value printing: strings] =====================
-Assertion failed at integration/integration.cpp:131: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1103: void test_class<int>::something_else() [T = int]:
     assert(s == "test");
     Where:
         s => "test\n"
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:131
+      at integration.cpp:1103
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:132: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1104: void test_class<int>::something_else() [T = int]:
     assert(s[i] == 'c', ...);
     Where:
         s[i] => 't'
@@ -23,14 +23,14 @@ Assertion failed at integration/integration.cpp:132: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:132
+      at integration.cpp:1104
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:135: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1107: void test_class<int>::something_else() [T = int]:
     assert(buffer == thing);
     Where:
         buffer => nullptr
@@ -38,14 +38,14 @@ Assertion failed at integration/integration.cpp:135: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:135
+      at integration.cpp:1107
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:136: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1108: void test_class<int>::something_else() [T = int]:
     assert(buffer == +thing);
     Where:
         buffer => nullptr
@@ -53,14 +53,14 @@ Assertion failed at integration/integration.cpp:136: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:136
+      at integration.cpp:1108
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:138: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1110: void test_class<int>::something_else() [T = int]:
     assert(s == sv);
     Where:
         s  => "test\n"
@@ -68,15 +68,15 @@ Assertion failed at integration/integration.cpp:138: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:138
+      at integration.cpp:1110
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [value printing: pointers] =====================
-Assertion failed at integration/integration.cpp:143: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1201: void test_class<int>::something_else() [T = int]:
     assert((uintptr_t)-1 == 0xff);
     Where:
         (uintptr_t)-1 =>  18446744073709551615  0xffffffffffffffff
@@ -84,14 +84,14 @@ Assertion failed at integration/integration.cpp:143: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:143
+      at integration.cpp:1201
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:144: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1202: void test_class<int>::something_else() [T = int]:
     assert((uintptr_t)-1 == (uintptr_t)0xff);
     Where:
         (uintptr_t)-1   => 18446744073709551615
@@ -99,29 +99,29 @@ Assertion failed at integration/integration.cpp:144: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:144
+      at integration.cpp:1202
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:146: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1204: void test_class<int>::something_else() [T = int]:
     assert(foo == nullptr);
     Where:
         foo => 0xdeadbeef
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:146
+      at integration.cpp:1204
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [value printing: number formats] =====================
-Assertion failed at integration/integration.cpp:153: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1303: void test_class<int>::something_else() [T = int]:
     assert(mask bitand flags);
     Where:
         mask  =>  405  0b0000000110010101
@@ -129,14 +129,14 @@ Assertion failed at integration/integration.cpp:153: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:153
+      at integration.cpp:1303
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:154: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1304: void test_class<int>::something_else() [T = int]:
     assert(0xf == 16);
     Where:
         0xf =>  15  0xf
@@ -144,41 +144,41 @@ Assertion failed at integration/integration.cpp:154: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:154
+      at integration.cpp:1304
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [value printing: floating point] =====================
-Assertion failed at integration/integration.cpp:159: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1401: void test_class<int>::something_else() [T = int]:
     assert(1 == 1.5);
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:159
+      at integration.cpp:1401
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:160: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1402: void test_class<int>::something_else() [T = int]:
     assert(0.5 != .5);
     Where:
         .5 => 0.5
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:160
+      at integration.cpp:1402
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:161: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1403: void test_class<int>::something_else() [T = int]:
     assert(0.1 + 0.2 == 0.3);
     Where:
         0.1 + 0.2 => 0.30000000000000004
@@ -186,14 +186,14 @@ Assertion failed at integration/integration.cpp:161: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:161
+      at integration.cpp:1403
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Verification failed at integration/integration.cpp:162: void test_class<int>::something_else() [T = int]:
+Verification failed at integration/integration.cpp:1404: void test_class<int>::something_else() [T = int]:
     VERIFY(.1 + .2 == .3);
     Where:
         .1 + .2 => 0.30000000000000004
@@ -201,14 +201,14 @@ Verification failed at integration/integration.cpp:162: void test_class<int>::so
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:162
+      at integration.cpp:1404
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:165: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1407: void test_class<int>::something_else() [T = int]:
     assert(ff == .1);
     Where:
         ff => 0.100000001
@@ -216,14 +216,14 @@ Assertion failed at integration/integration.cpp:165: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:165
+      at integration.cpp:1407
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:166: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1408: void test_class<int>::something_else() [T = int]:
     assert(.1f == .1);
     Where:
         .1f => 0.100000001
@@ -231,15 +231,15 @@ Assertion failed at integration/integration.cpp:166: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:166
+      at integration.cpp:1408
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [value printing: ostream overloads] =====================
-Assertion failed at integration/integration.cpp:172: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1502: void test_class<int>::something_else() [T = int]:
     assert(p == printable{2.55});
     Where:
         p               => (printable = 1.42)
@@ -247,15 +247,15 @@ Assertion failed at integration/integration.cpp:172: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:172
+      at integration.cpp:1502
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [value printing: no ostream overload] =====================
-Assertion failed at integration/integration.cpp:178: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1602: void test_class<int>::something_else() [T = int]:
     assert(p == not_printable{2.55});
     Where:
         p                   => <instance of not_printable<double>>
@@ -263,14 +263,14 @@ Assertion failed at integration/integration.cpp:178: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:178
+      at integration.cpp:1602
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:179: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1603: void test_class<int>::something_else() [T = int]:
     assert(p.f == not_printable{2.55}.f);
     Where:
         p.f                   => <instance of std::optional<double>>
@@ -278,165 +278,165 @@ Assertion failed at integration/integration.cpp:179: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:179
+      at integration.cpp:1603
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [optional messages] =====================
-Assertion failed at integration/integration.cpp:185: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1701: void test_class<int>::something_else() [T = int]:
     assert(false, ...);
     Extra diagnostics:
         2 => 2
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:185
+      at integration.cpp:1701
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:186: void test_class<int>::something_else() [T = int]: foo
+Assertion failed at integration/integration.cpp:1702: void test_class<int>::something_else() [T = int]: foo
     assert(false, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:186
+      at integration.cpp:1702
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:187: void test_class<int>::something_else() [T = int]: foo
+Assertion failed at integration/integration.cpp:1703: void test_class<int>::something_else() [T = int]: foo
     assert(false, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:187
+      at integration.cpp:1703
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:188: void test_class<int>::something_else() [T = int]: foo
+Assertion failed at integration/integration.cpp:1704: void test_class<int>::something_else() [T = int]: foo
     assert(false, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:188
+      at integration.cpp:1704
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:189: void test_class<int>::something_else() [T = int]: foo
+Assertion failed at integration/integration.cpp:1705: void test_class<int>::something_else() [T = int]: foo
     assert(false, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:189
+      at integration.cpp:1705
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:190: void test_class<int>::something_else() [T = int]: foo
-    assert(false, ...);
-    Extra diagnostics:
-        2 => 2
-
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:190
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
-# 3 main
-      at integration.cpp:318
-
-
-Assertion failed at integration/integration.cpp:191: void test_class<int>::something_else() [T = int]: foo
+Assertion failed at integration/integration.cpp:1706: void test_class<int>::something_else() [T = int]: foo
     assert(false, ...);
     Extra diagnostics:
         2 => 2
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:191
+      at integration.cpp:1706
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:192: void test_class<int>::something_else() [T = int]: foo
+Assertion failed at integration/integration.cpp:1707: void test_class<int>::something_else() [T = int]: foo
     assert(false, ...);
     Extra diagnostics:
         2 => 2
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:192
+      at integration.cpp:1707
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:193: void test_class<int>::something_else() [T = int]: foo
+Assertion failed at integration/integration.cpp:1708: void test_class<int>::something_else() [T = int]: foo
     assert(false, ...);
     Extra diagnostics:
         2 => 2
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:193
+      at integration.cpp:1708
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
+
+
+Assertion failed at integration/integration.cpp:1709: void test_class<int>::something_else() [T = int]: foo
+    assert(false, ...);
+    Extra diagnostics:
+        2 => 2
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:1709
+# 2 void test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1004
+# 3 main
+      at integration.cpp:402
 
 
 ===================== [errno] =====================
-Assertion failed at integration/integration.cpp:199: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:1802: void test_class<int>::something_else() [T = int]:
     assert(false, ...);
     Extra diagnostics:
         errno =>  2 "No such file or directory"
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:200
+      at integration.cpp:1803
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:201: void test_class<int>::something_else() [T = int]: foo
+Assertion failed at integration/integration.cpp:1804: void test_class<int>::something_else() [T = int]: foo
     assert(false, ...);
     Extra diagnostics:
         errno =>  2 "No such file or directory"
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:204
+      at integration.cpp:1807
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [general] =====================
 foo() called
 bar() called
-Assertion failed at integration/integration.cpp:206: void test_class<int>::something_else() [T = int]: foo
+Assertion failed at integration/integration.cpp:1901: void test_class<int>::something_else() [T = int]: foo
     assert(false, ...);
     Extra diagnostics:
         false           => false
@@ -447,136 +447,136 @@ Assertion failed at integration/integration.cpp:206: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:206
+      at integration.cpp:1901
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [safe comparisons] =====================
-Assertion failed at integration/integration.cpp:211: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2001: void test_class<int>::something_else() [T = int]:
     assert(18446744073709551606ULL == -10);
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:211
+      at integration.cpp:2001
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:212: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2002: void test_class<int>::something_else() [T = int]:
     assert(-1 > 1U);
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:216
+      at integration.cpp:2006
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [expression decomposition] =====================
-Assertion failed at integration/integration.cpp:219: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2102: void test_class<int>::something_else() [T = int]:
     assert(1 == (1 bitand 2));
     Where:
         (1 bitand 2) => 0
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:219
+      at integration.cpp:2102
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:220: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2103: void test_class<int>::something_else() [T = int]:
     assert(1 < 1 < 0);
     Where:
         1 < 1 => false
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:220
+      at integration.cpp:2103
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:221: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2104: void test_class<int>::something_else() [T = int]:
     assert(0 + 0 + 0);
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:221
+      at integration.cpp:2104
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:222: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2105: void test_class<int>::something_else() [T = int]:
     assert(false == false == false);
     Where:
         false == false => true
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:222
+      at integration.cpp:2105
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:223: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2106: void test_class<int>::something_else() [T = int]:
     assert(1 << 1 == 200);
     Where:
         1 << 1 => 2
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:223
+      at integration.cpp:2106
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:224: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2107: void test_class<int>::something_else() [T = int]:
     assert(1 << 1 << 31);
     Where:
         1 << 1 => 2
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:224
+      at integration.cpp:2107
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:226: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2109: void test_class<int>::something_else() [T = int]:
     assert(x -= 2);
     Where:
         x => 0
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:226
+      at integration.cpp:2109
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:228: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2111: void test_class<int>::something_else() [T = int]:
     assert(x -= x -= 1);
     Where:
         x      => 0
@@ -584,14 +584,14 @@ Assertion failed at integration/integration.cpp:228: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:228
+      at integration.cpp:2111
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:230: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2113: void test_class<int>::something_else() [T = int]:
     assert(x -= x -= x -= 1);
     Where:
         x           => 0
@@ -599,29 +599,29 @@ Assertion failed at integration/integration.cpp:230: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:230
+      at integration.cpp:2113
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Assertion failed at integration/integration.cpp:231: void test_class<int>::something_else() [T = int]: pffft
+Assertion failed at integration/integration.cpp:2114: void test_class<int>::something_else() [T = int]: pffft
     assert(true ? false : true, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:231
+      at integration.cpp:2114
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [ensure values are only computed once] =====================
 foo() called
 bar() called
-Assertion failed at integration/integration.cpp:236: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2201: void test_class<int>::something_else() [T = int]:
     assert(foo() < bar());
     Where:
         foo() => 2
@@ -629,18 +629,18 @@ Assertion failed at integration/integration.cpp:236: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:239
+      at integration.cpp:2204
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [value forwarding: copy / moves] =====================
 logger_type::logger_type() [n=1]
 logger_type::logger_type() [n=2]
 logger_type::operator==(const logger_type&) [n=1, other=2]
-Assertion failed at integration/integration.cpp:244: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2304: void test_class<int>::something_else() [T = int]:
     assert(lt1 == lt2);
     Where:
         lt1 => logger_type [n = 1]
@@ -648,11 +648,11 @@ Assertion failed at integration/integration.cpp:244: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:244
+      at integration.cpp:2304
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 logger_type::compl logger_type() [n=2]
@@ -664,18 +664,18 @@ logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
 logger_type::operator==(int, const logger_type&) [b=1, n=2]
 logger_type::logger_type(logger_type&&) [n=2]
-Assertion failed at integration/integration.cpp:248: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2308: void test_class<int>::something_else() [T = int]:
     assert(1 == logger_type(2));
     Where:
         logger_type(2) => logger_type [n = 2]
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:248
+      at integration.cpp:2308
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 logger_type::logger_type(logger_type&&) [n=2]
@@ -693,18 +693,18 @@ logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::operator==(const logger_type&, int) [n=1, b=2]
 logger_type::logger_type(logger_type&&) [n=1]
-Assertion failed at integration/integration.cpp:252: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2312: void test_class<int>::something_else() [T = int]:
     assert(logger_type(1) == 2);
     Where:
         logger_type(1) => logger_type [n = 1]
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:252
+      at integration.cpp:2312
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 logger_type::logger_type(logger_type&&) [n=1]
@@ -728,7 +728,7 @@ logger_type::compl logger_type() [n=-2]
 logger_type::operator==(const logger_type&) [n=1, other=2]
 logger_type::logger_type(logger_type&&) [n=1]
 logger_type::logger_type(logger_type&&) [n=2]
-Assertion failed at integration/integration.cpp:256: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2316: void test_class<int>::something_else() [T = int]:
     assert(logger_type(1) == logger_type(2));
     Where:
         logger_type(1) => logger_type [n = 1]
@@ -736,11 +736,11 @@ Assertion failed at integration/integration.cpp:256: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:256
+      at integration.cpp:2316
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 logger_type::logger_type(logger_type&&) [n=1]
@@ -756,30 +756,30 @@ logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
 logger_type::compl logger_type() [n=2]
 logger_type::compl logger_type() [n=-2]
-Verification failed at integration/integration.cpp:257: void test_class<int>::something_else() [T = int]:
+Verification failed at integration/integration.cpp:2317: void test_class<int>::something_else() [T = int]:
     VERIFY(!(std::is_same<decltype(r), logger_type>::value));
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:257
+      at integration.cpp:2317
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
-Verification failed at integration/integration.cpp:258: void test_class<int>::something_else() [T = int]:
+Verification failed at integration/integration.cpp:2318: void test_class<int>::something_else() [T = int]:
     VERIFY(r.n != 1);
     Where:
         r.n => 1
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:258
+      at integration.cpp:2318
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 logger_type::compl logger_type() [n=1]
@@ -788,56 +788,56 @@ logger_type::compl logger_type() [n=1]
 ===================== [value forwarding: lvalue references] =====================
 logger_type::logger_type() [n=2]
 logger_type::operator==(const logger_type&, int) [n=2, b=2]
-Assertion failed at integration/integration.cpp:306: decltype(auto) test_class<int>::get_lt_a(logger_type &) [T = int]:
+Assertion failed at integration/integration.cpp:2804: decltype(auto) test_class<int>::get_lt_a(logger_type &) [T = int]:
     assert(l == 2);
     Where:
         l => logger_type [n = 2]
 
 Stack trace:
 # 1 test_class<int>::get_lt_a(logger_type&)
-      at integration.cpp:306
+      at integration.cpp:2804
 # 2 test_class<int>::something_else()
-      at integration.cpp:269
+      at integration.cpp:2403
 # 3 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 4 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 logger_type::operator==(const logger_type&, int) [n=3, b=1]
-Assertion failed at integration/integration.cpp:271: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2405: void test_class<int>::something_else() [T = int]:
     assert(lt == 1);
     Where:
         lt => logger_type [n = 3]
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:271
+      at integration.cpp:2405
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 logger_type::operator==(const logger_type&, int) [n=3, b=1]
-Assertion failed at integration/integration.cpp:272: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2406: void test_class<int>::something_else() [T = int]:
     assert(x == 1);
     Where:
         x => logger_type [n = 3]
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:272
+      at integration.cpp:2406
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 logger_type::compl logger_type() [n=3]
 --------------------------------------------
 
-Assertion failed at integration/integration.cpp:277: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2411: void test_class<int>::something_else() [T = int]:
     assert(x ^= 1);
     Where:
         x =>  0  0b00000000000000000000000000000000
@@ -845,11 +845,11 @@ Assertion failed at integration/integration.cpp:277: void test_class<int>::somet
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:277
+      at integration.cpp:2411
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [value forwarding: rvalues] =====================
@@ -860,20 +860,20 @@ logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::operator==(const logger_type&, int) [n=2, b=2]
 logger_type::logger_type(logger_type&&) [n=2]
-Assertion failed at integration/integration.cpp:310: decltype(auto) test_class<int>::get_lt_b() [T = int]:
+Assertion failed at integration/integration.cpp:2808: decltype(auto) test_class<int>::get_lt_b() [T = int]:
     assert(logger_type(2) == 2);
     Where:
         logger_type(2) => logger_type [n = 2]
 
 Stack trace:
 # 1 test_class<int>::get_lt_b()
-      at integration.cpp:310
+      at integration.cpp:2808
 # 2 test_class<int>::something_else()
-      at integration.cpp:286
+      at integration.cpp:2502
 # 3 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 4 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 logger_type::logger_type(logger_type&&) [n=2]
@@ -883,30 +883,30 @@ logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
-Assertion failed at integration/integration.cpp:287: void test_class<int>::something_else() [T = int]:
+Assertion failed at integration/integration.cpp:2503: void test_class<int>::something_else() [T = int]:
     assert(false, ...);
     Extra diagnostics:
         x => logger_type [n = 2]
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:287
+      at integration.cpp:2503
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 3 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 logger_type::compl logger_type() [n=2]
 --------------------------------------------
 
 ===================== [simple recursion] =====================
-Assertion failed at integration/integration.cpp:22: void rec(int):
+Assertion failed at integration/integration.cpp:501: void rec(int):
     assert(false);
 
 Stack trace:
 # 1 rec(int)
-      at integration.cpp:22
+      at integration.cpp:501
 # 2 rec(int)
       at integration.cpp:?
 |                                   |
@@ -915,20 +915,20 @@ Stack trace:
 #11 rec(int)
       at integration.cpp:?
 #12 test_class<int>::something_else()
-      at integration.cpp:297
+      at integration.cpp:2602
 #13 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 #14 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [other recursion] =====================
-Assertion failed at integration/integration.cpp:29: void recursive_a(int):
+Assertion failed at integration/integration.cpp:508: void recursive_a(int):
     assert(false);
 
 Stack trace:
 # 1 recursive_a(int)
-      at integration.cpp:29
+      at integration.cpp:508
 # 2 recursive_b(int)
       at integration.cpp:?
 # 3 recursive_a(int)
@@ -950,11 +950,11 @@ Stack trace:
 #11 recursive_a(int)
       at integration.cpp:?
 #12 test_class<int>::something_else()
-      at integration.cpp:301
+      at integration.cpp:2703
 #13 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 #14 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
 ===================== [Path differentiation] =====================
@@ -967,10 +967,10 @@ Stack trace:
 # 2 test_path_differentiation()
       at integration/a.cpp:8
 # 3 test_class<int>::something_else()
-      at integration.cpp:302
+      at integration.cpp:2800
 # 4 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:121
+      at integration.cpp:1004
 # 5 main
-      at integration.cpp:318
+      at integration.cpp:402
 
 
