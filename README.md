@@ -272,13 +272,18 @@ behaviors are:
 
 Custom failure actions: These are called when an assertion fails after diagnostic messages are
 printed. Set these macros to the name of the failure action function, signature is expected to be
-`void custom_fail(std::string message, assert_detail::assert_type type, assert_detail::ASSERT fatal)`.
-`assertion_failure_message` is the processed assertion failure output. `fatal` indicates whether an
+`void custom_fail(assert_detail::assertion_printer&, assert_detail::assert_type,
+assert_detail::ASSERTION)`.
+The `printer` is used to allow the failure handler to format to a desired width. It accepts zero and
+negative widths to indicate the message should be printed to work on any width (i.e., no pretty
+columns in the output). `type` is the type of the assertion and `fatal` indicates whether an
 assertion is fatal. A typical implementation looks like:
 ```cpp
-void custom_fail(std::string message, assert_detail::assert_type type, assert_detail::ASSERT fatal) {
+void custom_fail(assert_detail::assertion_printer& printer, assert_detail::assert_type type,
+                 assert_detail::ASSERTION fatal) {
     using assert_detail::ASSERT;
     using assert_detail::assert_type;
+	std::string message = printer(assert_detail::terminal_width(STDERR_FILENO));
     if(isatty(STDERR_FILENO)) {
         std::cerr<<message<<std::endl;
     } else {

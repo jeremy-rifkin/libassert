@@ -11,9 +11,6 @@
 #include <string_view>
 #include <string>
 
-void qux();
-void wubble();
-
 #define ESC "\033["
 #define RED ESC "1;31m"
 #define GREEN ESC "1;32m"
@@ -23,8 +20,15 @@ void wubble();
 #define DARK ESC "1;30m"
 #define RESET ESC "0m"
 
-void custom_fail(std::string message, assert_detail::assert_type, assert_detail::ASSERTION) {
-	std::cerr<<message<<std::endl<<std::endl;
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+
+void qux();
+void wubble();
+
+void custom_fail(assert_detail::assertion_printer& printer, assert_detail::assert_type, assert_detail::ASSERTION) {
+	std::cerr<<printer(assert_detail::terminal_width(STDERR_FILENO))<<std::endl<<std::endl;
 }
 
 static std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false) {
