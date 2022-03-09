@@ -1,18 +1,24 @@
-cmake_minimum_required(VERSION 2.8)
-
-# This is all hastily thrown together, will improve
+cmake_minimum_required(VERSION 3.1)
 
 project(asserts)
-set(CMAKE_CXX_STANDARD 17)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-add_library(assert SHARED src/assert.cpp)
-target_link_libraries(assert dbghelp)
-add_library(assert_static STATIC src/assert.cpp)
-target_link_libraries(assert_static dbghelp)
 
-#project(demo)
-#set(CMAKE_CXX_STANDARD 17)
-#include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-#add_executable(demo demo.cpp foo.cpp bar.cpp)
-#target_link_libraries(demo assert_static)
-#target_compile_options(demo PRIVATE "/DASSERT_FAIL=custom_fail" "/W4")
+add_library(asserts_library_warnings INTERFACE)
+target_compile_options(asserts_library_warnings
+    INTERFACE -Wall -Wextra -Werror=return-type -Wshadow)
+
+add_library(assert src/assert.cpp)
+target_include_directories(assert PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>)
+
+set_target_properties(assert
+    PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED TRUE
+        CXX_EXTENSIONS OFF)
+
+target_link_libraries(assert PRIVATE asserts_library_warnings)
+
+if (MSVC)
+    target_link_libraries(assert PRIVATE dbghelp)
+endif ()
+

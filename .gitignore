@@ -11,4 +11,5 @@
 *.a
 bin
 scratch
+build/
 __pycache__
