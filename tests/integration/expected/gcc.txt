@@ -901,17 +901,17 @@ logger_type::compl logger_type() [n=2]
 --------------------------------------------
 
 ===================== [simple recursion] =====================
-Assertion failed at integration/integration.cpp:22: void rec(int):
+Assertion failed at integration/integration.cpp:501: void rec(int):
     assert(false);
 
 Stack trace:
 # 1 rec(int)
-      at integration.cpp:24
+      at integration.cpp:503
 |                                   |
 | 9 layers of recursion were folded |
 |                                   |
 #11 rec(int)
-      at integration.cpp:24
+      at integration.cpp:503
 #12 test_class<int>::something_else()
       at integration.cpp:2602
 #13 void test_class<int>::something<N>(std::pair<N, int>)
@@ -921,32 +921,32 @@ Stack trace:
 
 
 ===================== [other recursion] =====================
-Assertion failed at integration/integration.cpp:29: void recursive_a(int):
+Assertion failed at integration/integration.cpp:508: void recursive_a(int):
     assert(false);
 
 Stack trace:
 # 1 recursive_a(int)
-      at integration.cpp:31
+      at integration.cpp:510
 # 2 recursive_b(int)
-      at integration.cpp:36
+      at integration.cpp:515
 # 3 recursive_a(int)
-      at integration.cpp:31
+      at integration.cpp:510
 # 4 recursive_b(int)
-      at integration.cpp:36
+      at integration.cpp:515
 # 5 recursive_a(int)
-      at integration.cpp:31
+      at integration.cpp:510
 # 6 recursive_b(int)
-      at integration.cpp:36
+      at integration.cpp:515
 # 7 recursive_a(int)
-      at integration.cpp:31
+      at integration.cpp:510
 # 8 recursive_b(int)
-      at integration.cpp:36
+      at integration.cpp:515
 # 9 recursive_a(int)
-      at integration.cpp:31
+      at integration.cpp:510
 #10 recursive_b(int)
-      at integration.cpp:36
+      at integration.cpp:515
 #11 recursive_a(int)
-      at integration.cpp:31
+      at integration.cpp:510
 #12 test_class<int>::something_else()
       at integration.cpp:2703
 #13 void test_class<int>::something<N>(std::pair<N, int>)

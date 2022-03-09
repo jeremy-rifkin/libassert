@@ -17,23 +17,6 @@ void custom_fail(assert_detail::assertion_printer& printer, assert_detail::asser
 	std::cout<<assert_detail::strip_colors(printer(0))<<std::endl<<std::endl;
 }
 
-void rec(int n) {
-	if(n == 0) assert(false);
-	else rec(n - 1);
-}
-
-void recursive_a(int), recursive_b(int);
-
-void recursive_a(int n) {
-	if(n == 0) assert(false);
-	else recursive_b(n - 1);
-}
-
-void recursive_b(int n) {
-	if(n == 0) assert(false);
-	else recursive_a(n - 1);
-}
-
 template<typename T>
 struct printable {
 	std::optional<T> f;
@@ -106,6 +89,24 @@ bool operator==(int a, const logger_type& b) {
 }
 std::ostream& operator<<(std::ostream& stream, const logger_type& lt) {
 	return stream<<"logger_type [n = "<<lt.n<<"]";
+}
+
+#line 500
+void rec(int n) {
+	if(n == 0) assert(false);
+	else rec(n - 1);
+}
+
+void recursive_a(int), recursive_b(int);
+
+void recursive_a(int n) {
+	if(n == 0) assert(false);
+	else recursive_b(n - 1);
+}
+
+void recursive_b(int n) {
+	if(n == 0) assert(false);
+	else recursive_a(n - 1);
 }
 
 #define SECTION(s) std::cout<<"===================== ["<<s<<"] ====================="<<std::endl;

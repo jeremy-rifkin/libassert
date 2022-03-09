@@ -901,19 +901,19 @@ logger_type::compl logger_type() [n=2]
 --------------------------------------------
 
 ===================== [simple recursion] =====================
-Assertion failed at integration/integration.cpp:22: auto __cdecl rec::<lambda_e57fd9080003be6eccdd0af9bffa33fd>::operator ()(void) const:
+Assertion failed at integration/integration.cpp:501: auto __cdecl rec::<lambda_e57fd9080003be6eccdd0af9bffa33fd>::operator ()(void) const:
     assert(false);
 
 Stack trace:
 # 1 rec(test_class<int>*)
-      at integration.cpp:22
+      at integration.cpp:501
 # 2 rec(test_class<int>*)
-      at integration.cpp:24
+      at integration.cpp:503
 |                                   |
 | 8 layers of recursion were folded |
 |                                   |
 #11 rec(test_class<int>*)
-      at integration.cpp:24
+      at integration.cpp:503
 #12 test_class<int>::something_else(std::pair<N, int>*)
       at integration.cpp:2602
 #13 test_class<int>::something<N>(std::pair<N, int>*, std::pair<N, int>)
@@ -923,32 +923,32 @@ Stack trace:
 
 
 ===================== [other recursion] =====================
-Assertion failed at integration/integration.cpp:29: auto __cdecl recursive_a::<lambda_84a3a9b93679fc21a0b4a172da90f893>::operator ()(void) const:
+Assertion failed at integration/integration.cpp:508: auto __cdecl recursive_a::<lambda_84a3a9b93679fc21a0b4a172da90f893>::operator ()(void) const:
     assert(false);
 
 Stack trace:
 # 1 recursive_a(test_class<int>*)
-      at integration.cpp:29
+      at integration.cpp:508
 # 2 recursive_b(test_class<int>*)
-      at integration.cpp:36
+      at integration.cpp:515
 # 3 recursive_a(test_class<int>*)
-      at integration.cpp:31
+      at integration.cpp:510
 # 4 recursive_b(test_class<int>*)
-      at integration.cpp:36
+      at integration.cpp:515
 # 5 recursive_a(test_class<int>*)
-      at integration.cpp:31
+      at integration.cpp:510
 # 6 recursive_b(test_class<int>*)
-      at integration.cpp:36
+      at integration.cpp:515
 # 7 recursive_a(test_class<int>*)
-      at integration.cpp:31
+      at integration.cpp:510
 # 8 recursive_b(test_class<int>*)
-      at integration.cpp:36
+      at integration.cpp:515
 # 9 recursive_a(test_class<int>*)
-      at integration.cpp:31
+      at integration.cpp:510
 #10 recursive_b(test_class<int>*)
-      at integration.cpp:36
+      at integration.cpp:515
 #11 recursive_a(test_class<int>*)
-      at integration.cpp:31
+      at integration.cpp:510
 #12 test_class<int>::something_else(std::pair<N, int>)
       at integration.cpp:2703
 #13 test_class<int>::something<N>(std::pair<N, int>, std::pair<N, int>)
