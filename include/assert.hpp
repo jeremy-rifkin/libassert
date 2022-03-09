@@ -405,14 +405,6 @@ namespace assert_detail {
 		#undef assert_detail_gen_op_boilerplate
 	};
 
-	#ifndef NDEBUG
-	 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, nothing, nothing>>().get_value()), int&>::value);
-	 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, nothing, nothing>>().get_value()), int&>::value);
-	 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().get_value()), bool>::value);
-	 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().take_lhs()), int>::value);
-	 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, int, ops::lteq>>().take_lhs()), int&>::value);
-	#endif
-
 	// for ternary support
 	template<typename U> expression_decomposer(U&&)
 	         -> expression_decomposer<std::conditional_t<std::is_rvalue_reference_v<U>, std::remove_reference_t<U>, U>>;
@@ -429,27 +421,9 @@ namespace assert_detail {
 		none
 	};
 
-	struct highlight_block {
-		std::string_view color;
-		std::string content;
-		// Get as much code into the .cpp as possible
-		highlight_block(std::string_view, std::string);
-		highlight_block(const highlight_block&);
-		highlight_block(highlight_block&&);
-		~highlight_block();
-		highlight_block& operator=(const highlight_block&);
-		highlight_block& operator=(highlight_block&&);
-	};
-
 	[[nodiscard]] std::string prettify_type(std::string type);
 
-	[[nodiscard]] std::string highlight(const std::string& expression);
-
-	[[nodiscard]] std::vector<highlight_block> highlight_blocks(const std::string& expression);
-
 	[[nodiscard]] literal_format get_literal_format(const std::string& expression);
-
-	[[nodiscard]] std::string trim_suffix(const std::string& expression);
 
 	[[nodiscard]] bool is_bitwise(std::string_view op);
 
@@ -499,19 +473,6 @@ namespace assert_detail {
 	    || isa<T, std::string_view>
 	    || isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
 	    || isa<std::decay_t<strip<T>>, const char*>;
-
-	// test cases
-	static_assert(is_string_type<char*>);
-	static_assert(is_string_type<const char*>);
-	static_assert(is_string_type<char[5]>);
-	static_assert(is_string_type<const char[5]>);
-	static_assert(!is_string_type<char(*)[5]>);
-	static_assert(is_string_type<char(&)[5]>);
-	static_assert(is_string_type<const char (&)[27]>);
-	static_assert(!is_string_type<std::vector<char>>);
-	static_assert(!is_string_type<int>);
-	static_assert(is_string_type<std::string>);
-	static_assert(is_string_type<std::string_view>);
 
 	[[nodiscard]] std::string stringify_int(unsigned long long, literal_format, bool, size_t);
 
@@ -578,22 +539,8 @@ namespace assert_detail {
 	}
 
 	/*
-	 * stack trace printing
+	 * assert diagnostics generation
 	 */
-
-	struct column_t {
-		size_t width;
-		std::vector<highlight_block> blocks;
-		bool right_align = false;
-		column_t(size_t, std::vector<highlight_block>, bool = false);
-		column_t(const column_t&);
-		column_t(column_t&&);
-		~column_t();
-		column_t& operator=(const column_t&);
-		column_t& operator=(column_t&&);
-	};
-
-	[[nodiscard]] std::string print_stacktrace(void* raw_trace, int term_width);
 
 	template<typename T>
 	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
@@ -633,15 +580,13 @@ namespace assert_detail {
 		binary_diagnostics_descriptor& operator=(binary_diagnostics_descriptor&&); // = default; in the .cpp
 	};
 
-	[[nodiscard]]
-	std::string print_binary_diagnostic_deferred(size_t term_width, binary_diagnostics_descriptor& diagnostics);
-
 	void sort_and_dedup(literal_format(&)[4]);
 
 	template<typename A, typename B>
 	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	binary_diagnostics_descriptor print_binary_diagnostic(const A& a, const B& b, const char* a_str, const char* b_str,
-	                                                      std::string_view op) {
+	binary_diagnostics_descriptor generate_binary_diagnostic(const A& a, const B& b,
+	                                                         const char* a_str, const char* b_str,
+	                                                         std::string_view op) {
 		using lf = literal_format;
 		// Note: op
 		// figure out what information we need to print in the where clause
@@ -655,21 +600,8 @@ namespace assert_detail {
 		// generate raw strings for given formats, without highlighting
 		std::vector<std::string> lstrings = generate_stringifications(a, formats);
 		std::vector<std::string> rstrings = generate_stringifications(b, formats);
-		// defer bulk of the logic to print_binary_diagnostic_deferred
 		return binary_diagnostics_descriptor { lstrings, rstrings, a_str, b_str, formats[1] != lf::none };
 	}
-
-	/*
-	 * actual assertion handling, finally
-	 */
-
-	struct verification_failure : std::exception {
-		virtual const char* what() const noexcept final override;
-	};
-
-	struct check_failure : std::exception {
-		virtual const char* what() const noexcept final override;
-	};
 
 	#define ASSERT_DETAIL_X(x) #x
 	#define ASSERT_DETAIL_Y(x) ASSERT_DETAIL_X(x)
@@ -688,9 +620,6 @@ namespace assert_detail {
 		extra_diagnostics& operator=(const extra_diagnostics&) = delete;
 		extra_diagnostics& operator=(extra_diagnostics&&) = delete;
 	};
-
-	[[nodiscard]] std::string print_extra_diagnostics(size_t term_width,
-	                                                  const decltype(extra_diagnostics::entries)& extra_diagnostics);
 
 	template<typename T>
 	ASSERT_DETAIL_ATTR_COLD
@@ -736,6 +665,18 @@ namespace assert_detail {
 		return entry;
 	}
 
+	/*
+	 * actual assertion handling, finally
+	 */
+
+	struct verification_failure : std::exception {
+		virtual const char* what() const noexcept final override;
+	};
+
+	struct check_failure : std::exception {
+		virtual const char* what() const noexcept final override;
+	};
+
 	struct lock {
 		lock();
 		~lock();
@@ -744,8 +685,6 @@ namespace assert_detail {
 		lock& operator=(const lock&) = delete;
 		lock& operator=(lock&&) = delete;
 	};
-
-	const char* assert_type_name(assert_type t);
 
 	// collection of assertion data that can be put in static storage and all passed by a single pointer
 	struct assert_static_parameters {
@@ -764,7 +703,7 @@ namespace assert_detail {
 		const assert_static_parameters* params;
 		const extra_diagnostics& processed_args;
 		binary_diagnostics_descriptor& binary_diagnostics;
-		void* raw_trace; // TODO
+		void* raw_trace;
 		size_t sizeof_args;
 	public:
 		assertion_printer() = delete;
@@ -775,7 +714,7 @@ namespace assert_detail {
 		assertion_printer(assertion_printer&&) = delete;
 		assertion_printer& operator=(const assertion_printer&) = delete;
 		assertion_printer& operator=(assertion_printer&&) = delete;
-		std::string operator()(int width);
+		[[nodiscard]] std::string operator()(int width);
 	};
 
 	template<typename A, typename B, typename C, typename... Args>
@@ -800,8 +739,8 @@ namespace assert_detail {
 			(void)decomposer; // suppress warning in msvc
 		} else {
 			auto [a_str, b_str] = decompose_expression(params->expr_str, C::op_string);
-			binary_diagnostics = print_binary_diagnostic(decomposer.a, decomposer.b,
-			                                             a_str.c_str(), b_str.c_str(), C::op_string);
+			binary_diagnostics = generate_binary_diagnostic(decomposer.a, decomposer.b,
+			                                                a_str.c_str(), b_str.c_str(), C::op_string);
 		}
 		// send off
 		assertion_printer printer {

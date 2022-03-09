@@ -829,13 +829,18 @@ namespace assert_detail {
 	 * C++ syntax analysis logic
 	 */
 
-	ASSERT_DETAIL_ATTR_COLD
-	highlight_block::highlight_block(std::string_view color, std::string content) : color(color), content(content) { }
-	ASSERT_DETAIL_ATTR_COLD highlight_block::highlight_block(const highlight_block& other) = default;
-	ASSERT_DETAIL_ATTR_COLD highlight_block::highlight_block(highlight_block&& other) = default;
-	ASSERT_DETAIL_ATTR_COLD highlight_block::~highlight_block() = default;
-	ASSERT_DETAIL_ATTR_COLD highlight_block& highlight_block::operator=(const highlight_block&) = default;
-	ASSERT_DETAIL_ATTR_COLD highlight_block& highlight_block::operator=(highlight_block&&) = default;
+	struct highlight_block {
+		std::string_view color;
+		std::string content;
+		// Get as much code into the .cpp as possible
+		ASSERT_DETAIL_ATTR_COLD highlight_block(std::string_view color, std::string content)
+		                                                 : color(color), content(content) { }
+		ASSERT_DETAIL_ATTR_COLD highlight_block(const highlight_block&) = default;
+		ASSERT_DETAIL_ATTR_COLD highlight_block(highlight_block&&) = default;
+		ASSERT_DETAIL_ATTR_COLD ~highlight_block() = default;
+		ASSERT_DETAIL_ATTR_COLD highlight_block& operator=(const highlight_block&) = default;
+		ASSERT_DETAIL_ATTR_COLD highlight_block& operator=(highlight_block&&) = default;
+	};
 
 	ASSERT_DETAIL_ATTR_COLD
 	std::string union_regexes(std::initializer_list<std::string_view> regexes) {
@@ -1535,14 +1540,18 @@ namespace assert_detail {
 	 * stack trace printing
 	 */
 
-	ASSERT_DETAIL_ATTR_COLD
-	column_t::column_t(size_t width, std::vector<highlight_block> blocks, bool right_align)
-		: width(width), blocks(blocks), right_align(right_align) {}
-	ASSERT_DETAIL_ATTR_COLD column_t::column_t(const column_t&) = default;
-	ASSERT_DETAIL_ATTR_COLD column_t::column_t(column_t&&) = default;
-	ASSERT_DETAIL_ATTR_COLD column_t::~column_t() = default;
-	ASSERT_DETAIL_ATTR_COLD column_t& column_t::operator=(const column_t&) = default;
-	ASSERT_DETAIL_ATTR_COLD column_t& column_t::operator=(column_t&&) = default;
+	struct column_t {
+		size_t width;
+		std::vector<highlight_block> blocks;
+		bool right_align = false;
+		ASSERT_DETAIL_ATTR_COLD column_t(size_t width, std::vector<highlight_block> blocks, bool right_align = false)
+		                                          : width(width), blocks(blocks), right_align(right_align) {}
+		ASSERT_DETAIL_ATTR_COLD column_t(const column_t&) = default;
+		ASSERT_DETAIL_ATTR_COLD column_t(column_t&&) = default;
+		ASSERT_DETAIL_ATTR_COLD ~column_t() = default;
+		ASSERT_DETAIL_ATTR_COLD column_t& operator=(const column_t&) = default;
+		ASSERT_DETAIL_ATTR_COLD column_t& operator=(column_t&&) = default;
+	};
 
 	ASSERT_DETAIL_ATTR_COLD
 	static constexpr int log10(int n) {
@@ -1795,7 +1804,7 @@ namespace assert_detail {
 		return std::pair(files, std::min(longest_file_width, size_t(50)));
 	}
 
-	ASSERT_DETAIL_ATTR_COLD
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	std::string print_stacktrace(void* raw_trace, int term_width) {
 		std::string stacktrace;
 		if(raw_trace) {
@@ -1923,8 +1932,8 @@ namespace assert_detail {
 		}
 	}
 
-	ASSERT_DETAIL_ATTR_COLD
-	std::string print_binary_diagnostic_deferred(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+	std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
 		auto& [ lstrings, rstrings, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;
 		const char* a_str = a_sstr.c_str(), *b_str = b_sstr.c_str();
 		assert_detail_primitive_assert(lstrings.size() > 0);
@@ -1992,7 +2001,7 @@ namespace assert_detail {
 		}
 	}
 
-	ASSERT_DETAIL_ATTR_COLD
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	std::string print_extra_diagnostics(size_t term_width,
 	                                    const decltype(extra_diagnostics::entries)& extra_diagnostics) {
 		std::string output = "    Extra diagnostics:\n";
@@ -2097,7 +2106,7 @@ namespace assert_detail {
 		                                                sizeof_args > 0 ? ", ..." : "")).c_str());
 		// generate binary diagnostics
 		if(binary_diagnostics.present) {
-			output += print_binary_diagnostic_deferred(width, binary_diagnostics);
+			output += print_binary_diagnostics(width, binary_diagnostics);
 		}
 		// generate extra diagnostics
 		if(!extra_diagnostics.empty()) {
@@ -2109,6 +2118,31 @@ namespace assert_detail {
 		return output;
 	}
 }
+
+// Some test cases for TMP stuff
+
+namespace assert_detail {
+	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, nothing, nothing>>().get_value()), int&>::value);
+	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, nothing, nothing>>().get_value()), int&>::value);
+	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().get_value()), bool>::value);
+	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().take_lhs()), int>::value);
+	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, int, ops::lteq>>().take_lhs()), int&>::value);
+
+	static_assert(is_string_type<char*>);
+	static_assert(is_string_type<const char*>);
+	static_assert(is_string_type<char[5]>);
+	static_assert(is_string_type<const char[5]>);
+	static_assert(!is_string_type<char(*)[5]>);
+	static_assert(is_string_type<char(&)[5]>);
+	static_assert(is_string_type<const char (&)[27]>);
+	static_assert(!is_string_type<std::vector<char>>);
+	static_assert(!is_string_type<int>);
+	static_assert(is_string_type<std::string>);
+	static_assert(is_string_type<std::string_view>);
+}
+
+
+// Default handler
 
 using namespace assert_detail;
 ASSERT_DETAIL_ATTR_COLD
