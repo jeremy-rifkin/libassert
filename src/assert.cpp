@@ -392,14 +392,18 @@ namespace assert_detail {
 	};
 
 	// SymGetTypeInfo utility
-	template<typename T, IMAGEHLP_SYMBOL_TYPE_INFO SymType>
+	template<typename T, IMAGEHLP_SYMBOL_TYPE_INFO SymType, bool FAILABLE = false>
 	ASSERT_DETAIL_ATTR_COLD
 	auto get_info(ULONG type_index, HANDLE proc, ULONG64 modbase) {
 		T info;
 		if(!SymGetTypeInfo(proc, modbase, type_index, static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(SymType), &info)) {
-			using namespace std::string_literals;
-			assert_detail_primitive_assert(false, ("SymGetTypeInfo failed: "s +
-					std::system_error(GetLastError(), std::system_category()).what()).c_str());
+			if constexpr(FAILABLE) {
+				return (T)-1;
+			} else {
+				using namespace std::string_literals;
+				assert_detail_primitive_assert(false, ("SymGetTypeInfo failed: "s +
+				                           std::system_error(GetLastError(), std::system_category()).what()).c_str());
+			}
 		}
 		if constexpr(std::is_same_v<T, WCHAR*>) {
 			// special case to properly free a buffer and convert string to narrow chars, only used for TI_GET_SYMNAME
@@ -443,7 +447,7 @@ namespace assert_detail {
 		}
 	}
 
-	static std::string_view get_type(ULONG, HANDLE, ULONG64);
+	static std::string get_type(ULONG, HANDLE, ULONG64);
 
 	// Resolve more complex types
 	ASSERT_DETAIL_ATTR_COLD static std::string lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
@@ -467,17 +471,18 @@ namespace assert_detail {
 		};
 	}
 
-	static std::unordered_map<ULONG, std::string> type_cache; // memoize, though it hardly matters
+	//static std::unordered_map<ULONG, std::string> type_cache; // memoize, though it hardly matters
 
 	// top-level type resolution function
-	ASSERT_DETAIL_ATTR_COLD static std::string_view get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
-		if(type_cache.count(type_index)) {
+	ASSERT_DETAIL_ATTR_COLD static std::string get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+		/*if(type_cache.count(type_index)) {
 			return type_cache.at(type_index);
 		} else {
 			auto type = lookup_type(type_index, proc, modbase);
 			auto p = type_cache.insert({type_index, type});
 			return p.first->second;
-		}
+		}*/
+		return lookup_type(type_index, proc, modbase);
 	}
 
 	struct function_info {
@@ -491,7 +496,7 @@ namespace assert_detail {
 	ASSERT_DETAIL_ATTR_COLD
 	static BOOL enumerator_callback(PSYMBOL_INFO symbol_info, [[maybe_unused]] ULONG symbol_size, PVOID data) {
 		function_info* ctx = (function_info*)data;
-		if (ctx->counter++ >= ctx->n_children) {
+		if(ctx->counter++ >= ctx->n_children) {
 			return false;
 		}
 		ctx->str += get_type(symbol_info->TypeIndex, ctx->proc, ctx->modbase);
@@ -504,14 +509,9 @@ namespace assert_detail {
 	[[maybe_unused]]
 	ASSERT_DETAIL_ATTR_COLD
 	static std::optional<trace_t> get_stacktrace() {
-		SymSetOptions(
-			  SYMOPT_DEFERRED_LOADS
-			| SYMOPT_INCLUDE_32BIT_MODULES
-		    | SYMOPT_AUTO_PUBLICS
-			| SYMOPT_LOAD_LINES
-			);
+		SymSetOptions(SYMOPT_ALLOW_ABSOLUTE_SYMBOLS);
 		HANDLE proc = GetCurrentProcess();
-		if (!SymInitialize(proc, NULL, TRUE)) return {};
+		if(!SymInitialize(proc, NULL, TRUE)) return {};
 		PVOID addrs[n_frames] = { 0 };
 		int frames = CaptureStackBackTrace(n_skip, n_frames, addrs, NULL);
 		trace_t trace;
@@ -537,12 +537,13 @@ namespace assert_detail {
 					// "If you call SymSetContext to set the context to its current value, the
 					// function fails but GetLastError returns ERROR_SUCCESS."
 					// This is the stupidest fucking api I've ever worked with.
-					if (SymSetContext(proc, &frame, nullptr) == FALSE && GetLastError() != ERROR_SUCCESS) {
+					if(SymSetContext(proc, &frame, nullptr) == FALSE && GetLastError() != ERROR_SUCCESS) {
 						fprintf(stderr, "Stack trace: Internal error while calling SymSetContext\n");
 						trace.push_back({line.FileName, symbol->Name, (int)line.LineNumber});
 						continue;
 					}
-					DWORD n_children = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT>(symbol->TypeIndex, proc, symbol->ModBase);
+					DWORD n_children = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT, true>
+						(symbol->TypeIndex, proc, symbol->ModBase);
 					function_info fi { proc, symbol->ModBase, 0, int(n_children), "" };
 					SymEnumSymbols(proc, 0, nullptr, enumerator_callback, &fi);
 					std::string signature = symbol->Name + "("s + fi.str + ")";
