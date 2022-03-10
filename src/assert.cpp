@@ -471,18 +471,16 @@ namespace assert_detail {
 		};
 	}
 
-	//static std::unordered_map<ULONG, std::string> type_cache; // memoize, though it hardly matters
+	static std::unordered_map<ULONG, std::string> type_cache; // memoize, though it hardly matters
 
 	// top-level type resolution function
 	ASSERT_DETAIL_ATTR_COLD static std::string get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
-		/*if(type_cache.count(type_index)) {
-			return type_cache.at(type_index);
+		if(auto it = type_cache.find(type_index); it != type_cache.end()) {
+			return it->second;
 		} else {
-			auto type = lookup_type(type_index, proc, modbase);
-			auto p = type_cache.insert({type_index, type});
+			auto p = type_cache.insert({ type_index, lookup_type(type_index, proc, modbase) });
 			return p.first->second;
-		}*/
-		return lookup_type(type_index, proc, modbase);
+		}
 	}
 
 	struct function_info {
