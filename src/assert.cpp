@@ -490,6 +490,7 @@ namespace assert_detail {
 		ULONG64 modbase;
 		int counter;
 		int n_children;
+		int n_ignore;
 		std::string str;
 	};
 
@@ -498,6 +499,9 @@ namespace assert_detail {
 		function_info* ctx = (function_info*)data;
 		if(ctx->counter++ >= ctx->n_children) {
 			return false;
+		}
+		if(ctx->n_ignore-- > 0) {
+			return true; // just skip
 		}
 		ctx->str += get_type(symbol_info->TypeIndex, ctx->proc, ctx->modbase);
 		if(ctx->counter < ctx->n_children) {
@@ -544,7 +548,9 @@ namespace assert_detail {
 					}
 					DWORD n_children = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT, true>
 						(symbol->TypeIndex, proc, symbol->ModBase);
-					function_info fi { proc, symbol->ModBase, 0, int(n_children), "" };
+					DWORD class_parent_id = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_CLASSPARENTID, true>
+						(symbol->TypeIndex, proc, symbol->ModBase);
+					function_info fi { proc, symbol->ModBase, 0, int(n_children), class_parent_id != (DWORD)-1, "" };
 					SymEnumSymbols(proc, 0, nullptr, enumerator_callback, &fi);
 					std::string signature = symbol->Name + "("s + fi.str + ")";
 					// There's a phenomina with DIA not inserting commas after template parameters. Fix them here.
