@@ -516,9 +516,9 @@ namespace assert_detail {
 		int frames = CaptureStackBackTrace(n_skip, n_frames, addrs, NULL);
 		trace_t trace;
 		trace.reserve(frames);
-		#if IS_GCC
-		std::string executable = get_executable_path();
-		std::vector<std::pair<PVOID, size_t>> deferred;
+		#if ASSERT_DETAIL_IS_GCC
+		 std::string executable = get_executable_path();
+		 std::vector<std::pair<PVOID, size_t>> deferred;
 		#endif
 		for(int i = 0; i < frames; i++) {
 			char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
@@ -555,44 +555,44 @@ namespace assert_detail {
 				}
 			} else {
 				trace.push_back({"", "", 0});
-				#if IS_GCC
-				deferred.push_back({addrs[i], trace.size() - 1});
+				#if ASSERT_DETAIL_IS_GCC
+				 deferred.push_back({addrs[i], trace.size() - 1});
 				#endif
 			}
 		}
 		internal_verify(SymCleanup(proc));
-		#if IS_GCC
-		// If we're compiling with gcc on windows, the debug symbols will be embedded in the
-		// executable and retrievable with addr2line (this is provided by mingw).
-		// The executable will not be PIE. TODO: I don't know if PIE gcc on windows is a
-		// case that we need to worry about, can cross that bridge later.
-		// Currently not doing any file grouping like done in the linux version. Assuming
-		// the only unresolvable symbols are from this binary.
-		// Always two lines per entry?
-		// https://kernel.googlesource.com/pub/scm/linux/kernel/git/hjl/binutils/+/hjl/secondary/binutils/addr2line.c
-		std::string addresses = "";
-		for(auto& [address, _] : deferred) addresses += stringf("%#tx ", address);
-		auto output = split(trim(resolve_addresses(addresses, executable)), "\n");
-		assert_detail_primitive_assert(output.size() == 2 * deferred.size());
-		for(size_t i = 0; i < deferred.size(); i++) {
-			// line info is one of the following:
-			// path:line (descriminator number)
-			// path:line
-			// path:?
-			// ??:?
-			// Regex modified from the linux version to eat the C:\\ at the beginning
-			static std::regex location_re(R"(^((?:\w:[\\/])?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
-			auto m = match<2>(output[i * 2 + 1], location_re);
-			assert_detail_primitive_assert(m.has_value());
-			auto [path, line] = *m;
-			if(path != "??") {
-				trace[deferred[i].second].source_path = path;
-			}
-			trace[deferred[i].second].line = line == "?" ? 0 : std::stoi(line);
-			// signature shouldn't require processing
-			// signature done after path so path can take signature, if needed
-			trace[deferred[i].second].signature = output[i * 2];
-		}
+		 #if ASSERT_DETAIL_IS_GCC
+		 // If we're compiling with gcc on windows, the debug symbols will be embedded in the
+		 // executable and retrievable with addr2line (this is provided by mingw).
+		 // The executable will not be PIE. TODO: I don't know if PIE gcc on windows is a
+		 // case that we need to worry about, can cross that bridge later.
+		 // Currently not doing any file grouping like done in the linux version. Assuming
+		 // the only unresolvable symbols are from this binary.
+		 // Always two lines per entry?
+		 // https://kernel.googlesource.com/pub/scm/linux/kernel/git/hjl/binutils/+/hjl/secondary/binutils/addr2line.c
+		 std::string addresses = "";
+		 for(auto& [address, _] : deferred) addresses += stringf("%#tx ", address);
+		 auto output = split(trim(resolve_addresses(addresses, executable)), "\n");
+		 assert_detail_primitive_assert(output.size() == 2 * deferred.size());
+		 for(size_t i = 0; i < deferred.size(); i++) {
+			 // line info is one of the following:
+			 // path:line (descriminator number)
+			 // path:line
+			 // path:?
+			 // ??:?
+			 // Regex modified from the linux version to eat the C:\\ at the beginning
+			 static std::regex location_re(R"(^((?:\w:[\\/])?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
+			 auto m = match<2>(output[i * 2 + 1], location_re);
+			 assert_detail_primitive_assert(m.has_value());
+			 auto [path, line] = *m;
+			 if(path != "??") {
+				 trace[deferred[i].second].source_path = path;
+			 }
+			 trace[deferred[i].second].line = line == "?" ? 0 : std::stoi(line);
+			 // signature shouldn't require processing
+			 // signature done after path so path can take signature, if needed
+			 trace[deferred[i].second].signature = output[i * 2];
+		 }
 		#endif
 		return trace;
 	}
@@ -2091,16 +2091,25 @@ namespace assert_detail {
 	}
 	ASSERT_DETAIL_ATTR_COLD std::string assertion_printer::operator()(int width) {
 		const auto& [ name, type, expr_str, location, args_strings ] = *params;
-		const auto& [ fatal, message, extra_diagnostics ] = processed_args;
+		const auto& [ fatal, message, extra_diagnostics
+		 #if ASSERT_DETAIL_IS_MSVC
+		  , msvc_pretty_function
+		 #endif
+		] = processed_args;
 		std::string output;
 		// generate header
+		auto function = location.function
+		 #if ASSERT_DETAIL_IS_MSVC
+		  ? location.function : msvc_pretty_function
+		 #endif
+		;
 		if(message != "") {
 			output += stringf("%s failed at %s:%d: %s: %s\n",
 			                  assert_type_name(type), location.file, location.line,
-			                  highlight(location.function).c_str(), message.c_str());
+			                  highlight(function).c_str(), message.c_str());
 		} else {
 			output += stringf("%s failed at %s:%d: %s:\n", assert_type_name(type),
-			                  location.file, location.line, highlight(location.function).c_str());
+			                  location.file, location.line, highlight(function).c_str());
 		}
 		output += stringf("    %s\n", highlight(stringf("%s(%s%s);", name, expr_str,
 		                                                sizeof_args > 0 ? ", ..." : "")).c_str());

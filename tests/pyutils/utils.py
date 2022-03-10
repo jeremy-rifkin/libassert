@@ -74,6 +74,8 @@ def icdiff(a: Union[str, tuple], b: Union[str, tuple]):
 		"diff",
 		"-y",
 		"--suppress-common-lines",
+		"--width",
+		"200",
 		a_path,
 		b_path,
 	])

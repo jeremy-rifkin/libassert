@@ -9,7 +9,6 @@
 #include <sstream>
 #include <stdio.h>
 #include <string_view>
-#include <string.h>
 #include <string>
 #include <vector>
 
@@ -613,6 +612,9 @@ namespace assert_detail {
 		ASSERTION fatality = ASSERTION::FATAL;
 		std::string message;
 		std::vector<std::pair<std::string, std::string>> entries;
+		#if ASSERT_DETAIL_IS_MSVC
+		 const char* pretty_function = "<error>";
+		#endif
 		extra_diagnostics();
 		~extra_diagnostics();
 		extra_diagnostics(const extra_diagnostics&) = delete;
@@ -621,12 +623,24 @@ namespace assert_detail {
 		extra_diagnostics& operator=(extra_diagnostics&&) = delete;
 	};
 
+	#if ASSERT_DETAIL_IS_MSVC
+	 struct msvc_pretty_function_wrapper {
+		 const char* pretty_function;
+	 };
+	#endif
+
 	template<typename T>
 	ASSERT_DETAIL_ATTR_COLD
 	void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, T& t) {
 		if constexpr(isa<T, ASSERTION>) {
 			entry.fatality = t;
-		} else {
+		}
+		#if ASSERT_DETAIL_IS_MSVC
+		 if constexpr(isa<T, msvc_pretty_function_wrapper>) {
+		 	 entry.pretty_function = t.pretty_function;
+		 }
+		#endif
+		else {
 			// three cases to handle: assert message, errno, and regular diagnostics
 			#if ASSERT_DETAIL_IS_MSVC
 			 #pragma warning(push)
@@ -724,8 +738,13 @@ namespace assert_detail {
 		lock l;
 		const auto args_strings = params->args_strings;
 		size_t args_strings_count = count_args_strings(args_strings);
+		size_t sizeof_extra_diagnostics = sizeof...(args)
+		#ifdef ASSERT_DETAIL_IS_MSVC
+		- 1
+		#endif
+		;
 		assert_detail_primitive_assert((sizeof...(args) == 0 && args_strings_count == 2)
-		                               || args_strings_count == sizeof...(args) + 1);
+		                               || args_strings_count == sizeof_extra_diagnostics + 1);
 		// process_args needs to be called as soon as possible in case errno needs to be read
 		const auto processed_args = process_args(args_strings, args...);
 		const auto fatal = processed_args.fatality;
@@ -748,7 +767,7 @@ namespace assert_detail {
 			processed_args,
 			binary_diagnostics,
 			raw_trace,
-			sizeof...(args)
+			sizeof_extra_diagnostics
 		};
 		::ASSERT_FAIL(printer, params->type, fatal);
 	}
@@ -891,9 +910,11 @@ using assert_detail::ASSERTION;
 #if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC
  #define ASSERT_DETAIL_STMTEXPR(B, R) __extension__ ({ B; R; })
  #define ASSERT_DETAIL_WARNING_PRAGMA _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
+ #define ASSERT_DETAIL_PFUNC_INVOKER_V ASSERT_DETAIL_PFUNC
 #else
  #define ASSERT_DETAIL_STMTEXPR(B, R) [&] { B; return R; } ()
  #define ASSERT_DETAIL_WARNING_PRAGMA
+ #define ASSERT_DETAIL_PFUNC_INVOKER_V nullptr
 #endif
 
 #if ASSERT_DETAIL_IS_GCC
@@ -917,7 +938,7 @@ using assert_detail::ASSERTION;
                                       name ASSERT_DETAIL_COMMA \
                                       type ASSERT_DETAIL_COMMA \
                                       expr_str ASSERT_DETAIL_COMMA \
-                                      ASSERT_DETAIL_PFUNC ASSERT_DETAIL_COMMA \
+                                      ASSERT_DETAIL_PFUNC_INVOKER_V ASSERT_DETAIL_COMMA \
                                       arg_strings ASSERT_DETAIL_COMMA \
                                     }, \
                                     &params \
@@ -934,42 +955,33 @@ using assert_detail::ASSERTION;
 // Note: There is a current issue with tarnaries: auto x = assert(b ? y : y); must copy y. This can be fixed with
 // lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
 // Note: assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
-#define ASSERT_INVOKE(expr, name, ...) \
-                          assert_detail::assert<true>( \
+#if ASSERT_DETAIL_IS_MSVC
+ #define ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG , assert_detail::msvc_pretty_function_wrapper{ASSERT_DETAIL_PFUNC}
+#else
+ #define ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG
+#endif
+#define ASSERT_INVOKE(expr, doreturn, name, type, ...) \
+                          assert_detail::assert<doreturn>( \
                             ASSERT_DETAIL_STMTEXPR(, \
                               ASSERT_DETAIL_WARNING_PRAGMA \
                               assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) \
                             ), \
-                            ASSERT_DETAIL_STATIC_DATA(name, assert_detail::assert_type::assertion, #expr, __VA_ARGS__) \
+                            ASSERT_DETAIL_STATIC_DATA(name, assert_detail::assert_type::type, #expr, __VA_ARGS__) \
                             ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
+                            ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG \
                           )
 
-#define ASSERT(expr, ...) ASSERT_INVOKE(expr, "ASSERT", __VA_ARGS__)
+#define ASSERT(expr, ...) ASSERT_INVOKE(expr, true, "ASSERT", assertion, __VA_ARGS__)
 
 #ifndef ASSERT_NO_LOWERCASE
  // provided for <assert.h> compatability
- #define assert(expr, ...) ASSERT_INVOKE(expr, "assert", __VA_ARGS__)
+ #define assert(expr, ...) ASSERT_INVOKE(expr, true, "assert", assertion, __VA_ARGS__)
 #endif
 
-#define VERIFY(expr, ...) assert_detail::assert<true>( \
-                            ASSERT_DETAIL_STMTEXPR(, \
-                              ASSERT_DETAIL_WARNING_PRAGMA \
-                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) \
-                            ), \
-                            ASSERT_DETAIL_STATIC_DATA("VERIFY", assert_detail::assert_type::verify, \
-                                                      #expr, __VA_ARGS__) \
-                            ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
-                          )
+#define VERIFY(expr, ...) ASSERT_INVOKE(expr, true, "VERIFY", verify, __VA_ARGS__)
 
 #ifndef NDEBUG
- #define CHECK(expr, ...) assert_detail::assert<false>( \
-                            ASSERT_DETAIL_STMTEXPR(, \
-                              ASSERT_DETAIL_WARNING_PRAGMA \
-                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) \
-                            ), \
-                            ASSERT_DETAIL_STATIC_DATA("CHECK", assert_detail::assert_type::check, #expr, __VA_ARGS__) \
-                            ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
-                          )
+ #define CHECK(expr, ...) ASSERT_INVOKE(expr, false, "CHECK", check, __VA_ARGS__)
 #else
  // omitting the expression could cause unused variable warnings, surpressing for now
  // TODO: Is this the right design decision? Re-evaluated whether PHONY_USE should be used here or internally at all
