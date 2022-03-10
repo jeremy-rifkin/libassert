@@ -49,7 +49,7 @@ int bar() {
 
 struct logger_type {
 	int n;
-	logger_type(int n): n(n) {
+	logger_type(int _n): n(_n) {
 		std::cout<<"logger_type::logger_type() [n="<<n<<"]"<<std::endl;
 	}
 	compl logger_type() {

@@ -35,7 +35,7 @@ tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlight
 ifneq ($(COMPILER),msvc)
     CPP = $(COMPILER)
     LD = $(COMPILER)
-    WFLAGS := -Wall -Wextra -Wvla
+    WFLAGS := -Wall -Wextra -Wvla -Wshadow -Werror=return-type
     DFLAGS := -MMD -MP
     CPPFLAGS := -std=c++17 -I../include -DASSERT_FAIL=custom_fail
     LDFLAGS := -L../bin -lassert

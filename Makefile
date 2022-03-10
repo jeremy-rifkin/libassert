@@ -11,7 +11,7 @@ MKDIR_P ?= mkdir -p
 
 ifneq ($(COMPILER),msvc)
     # GCC / Clang
-    WFLAGS = -Wall -Wextra -Werror=return-type
+    WFLAGS = -Wall -Wextra -Wvla -Wshadow -Werror=return-type
     FLAGS = -std=c++17 -g -Iinclude
     LDFLAGS = -Wl,--whole-archive -Wl,--no-whole-archive
     ifeq ($(TARGET), debug)

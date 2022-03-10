@@ -153,9 +153,9 @@ int main() {
 	static std::regex float_hex = std::regex(stringf("^0[Xx](?:%s|%s)%s%s?$",
 									hex_frac_const.c_str(), hex_digit_sequence.c_str(), binary_exp.c_str(), suffix.c_str()));
 	let matches_any = [&](std::string str) {
-		let matches = [](std::string str, std::regex re) {
+		let matches = [](std::string value, std::regex re) {
 			std::smatch base_match;
-			return std::regex_match(str, base_match, re);
+			return std::regex_match(value, base_match, re);
 		};
 		return matches(str, int_binary)
 			|| matches(str, int_octal)

@@ -80,10 +80,10 @@ namespace assert_detail {
 		const char* const function;
 		const int line;
 		constexpr source_location(
-			const char* function /*= __builtin_FUNCTION()*/,
-			const char* file     = __builtin_FILE(),
-			int line             = __builtin_LINE()
-		) : file(file), function(function), line(line) {}
+			const char* _function /*= __builtin_FUNCTION()*/,
+			const char* _file     = __builtin_FILE(),
+			int _line             = __builtin_LINE()
+		) : file(_file), function(_function), line(_line) {}
 	};
 
 	// bootstrap with primitive implementations
@@ -285,9 +285,9 @@ namespace assert_detail {
 		expression_decomposer& operator=(expression_decomposer&&) = delete;
 		// value constructors
 		template<typename U>
-		explicit expression_decomposer(U&& a) : a(std::forward<U>(a)) {}
+		explicit expression_decomposer(U&& _a) : a(std::forward<U>(_a)) {}
 		template<typename U, typename V>
-		explicit expression_decomposer(U&& a, V&& b) : a(std::forward<U>(a)), b(std::forward<V>(b)) {}
+		explicit expression_decomposer(U&& _a, V&& _b) : a(std::forward<U>(_a)), b(std::forward<V>(_b)) {}
 		/* Ownership logic:
 		 *  One of two things can happen to this class
 		 *   - Either it is composed with another operation

@@ -833,8 +833,8 @@ namespace assert_detail {
 		std::string_view color;
 		std::string content;
 		// Get as much code into the .cpp as possible
-		ASSERT_DETAIL_ATTR_COLD highlight_block(std::string_view color, std::string content)
-		                                                 : color(color), content(content) { }
+		ASSERT_DETAIL_ATTR_COLD highlight_block(std::string_view _color, std::string _content)
+		                                                 : color(_color), content(_content) { }
 		ASSERT_DETAIL_ATTR_COLD highlight_block(const highlight_block&) = default;
 		ASSERT_DETAIL_ATTR_COLD highlight_block(highlight_block&&) = default;
 		ASSERT_DETAIL_ATTR_COLD ~highlight_block() = default;
@@ -1544,8 +1544,8 @@ namespace assert_detail {
 		size_t width;
 		std::vector<highlight_block> blocks;
 		bool right_align = false;
-		ASSERT_DETAIL_ATTR_COLD column_t(size_t width, std::vector<highlight_block> blocks, bool right_align = false)
-		                                          : width(width), blocks(blocks), right_align(right_align) {}
+		ASSERT_DETAIL_ATTR_COLD column_t(size_t _width, std::vector<highlight_block> _blocks, bool _right_align = false)
+		                                          : width(_width), blocks(_blocks), right_align(_right_align) {}
 		ASSERT_DETAIL_ATTR_COLD column_t(const column_t&) = default;
 		ASSERT_DETAIL_ATTR_COLD column_t(column_t&&) = default;
 		ASSERT_DETAIL_ATTR_COLD ~column_t() = default;
@@ -1559,8 +1559,8 @@ namespace assert_detail {
 		int t = 1;
 		for(int i = 0; i < [] {
 				// was going to reuse `i` but https://bugs.llvm.org/show_bug.cgi?id=51986
-				int j = 0, n = std::numeric_limits<int>::max();
-				while(n /= 10) j++;
+				int j = 0, v = std::numeric_limits<int>::max();
+				while(v /= 10) j++;
 				return j;
 			} () - 1; i++) {
 			if(n <= t) return i;
@@ -1633,7 +1633,7 @@ namespace assert_detail {
 		std::unordered_map<std::string, path_trie*> edges;
 	public:
 		ASSERT_DETAIL_ATTR_COLD
-		path_trie(std::string root) : root(root) {};
+		path_trie(std::string _root) : root(_root) {};
 		ASSERT_DETAIL_ATTR_COLD
 		compl path_trie() {
 			for(auto& [k, trie] : edges) {
@@ -1884,10 +1884,10 @@ namespace assert_detail {
 
 	ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
 	ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
-	                                std::vector<std::string>& lstrings, std::vector<std::string>& rstrings,
-	                                std::string a_str, std::string b_str, bool multiple_formats):
-	                                lstrings(lstrings), rstrings(rstrings), a_str(a_str), b_str(b_str),
-	                                multiple_formats(multiple_formats), present(true) {}
+	                                std::vector<std::string>& _lstrings, std::vector<std::string>& _rstrings,
+	                                std::string _a_str, std::string _b_str, bool _multiple_formats):
+	                                lstrings(_lstrings), rstrings(_rstrings), a_str(_a_str), b_str(_b_str),
+	                                multiple_formats(_multiple_formats), present(true) {}
 	ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
 	ASSERT_DETAIL_ATTR_COLD
 	binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) = default;
@@ -2081,10 +2081,11 @@ namespace assert_detail {
 	}
 
 	ASSERT_DETAIL_ATTR_COLD assertion_printer::assertion_printer(
-	                            const assert_static_parameters* params, const extra_diagnostics& processed_args,
-	                            binary_diagnostics_descriptor& binary_diagnostics, void* raw_trace, size_t sizeof_args):
-	                            params(params), processed_args(processed_args), binary_diagnostics(binary_diagnostics),
-	                            raw_trace(raw_trace), sizeof_args(sizeof_args) {}
+	                            const assert_static_parameters* _params, const extra_diagnostics& _processed_args,
+	                            binary_diagnostics_descriptor& _binary_diagnostics, void* _raw_trace,
+	                            size_t _sizeof_args): params(_params), processed_args(_processed_args),
+	                            binary_diagnostics(_binary_diagnostics), raw_trace(_raw_trace),
+	                            sizeof_args(_sizeof_args) {}
 	ASSERT_DETAIL_ATTR_COLD assertion_printer::~assertion_printer() {
 		auto trace = (trace_t*) raw_trace;
 		delete trace;
