@@ -1,24 +1,56 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
-project(asserts)
+# ---- Project ----
 
-add_library(asserts_library_warnings INTERFACE)
-target_compile_options(asserts_library_warnings
-    INTERFACE -Wall -Wextra -Werror=return-type -Wshadow)
+# Note: update this to your new project's name and version
+project(
+  Asserts
+  VERSION 1.0
+  LANGUAGES CXX)
 
-add_library(assert src/assert.cpp)
-target_include_directories(assert PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>)
+# ---- Include guards ----
 
-set_target_properties(assert
-    PROPERTIES
-        CXX_STANDARD 17
-        CXX_STANDARD_REQUIRED TRUE
-        CXX_EXTENSIONS OFF)
+if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
+  message(
+    FATAL_ERROR
+      "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there."
+  )
+endif()
 
-target_link_libraries(assert PRIVATE asserts_library_warnings)
+include(cmake/CPM.cmake)
 
-if (MSVC)
-    target_link_libraries(assert PRIVATE dbghelp)
-endif ()
+cpmaddpackage("gh:TheLartians/PackageProject.cmake@1.8.0")
 
+add_library(${PROJECT_NAME} include/assert.hpp src/assert.cpp)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
+
+# Link dependencies
+if(MSVC)
+  target_link_libraries(assert PRIVATE dbghelp)
+endif()
+
+target_include_directories(
+  ${PROJECT_NAME}
+  PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>)
+
+string(TOLOWER ${PROJECT_NAME}/version.hpp VERSION_HEADER_LOCATION)
+
+packageproject(
+  NAME
+  ${PROJECT_NAME}
+  VERSION
+  ${PROJECT_VERSION}
+  NAMESPACE
+  ${PROJECT_NAME}
+  BINARY_DIR
+  ${PROJECT_BINARY_DIR}
+  INCLUDE_DIR
+  ${PROJECT_SOURCE_DIR}/include
+  INCLUDE_DESTINATION
+  include/${PROJECT_NAME}-${PROJECT_VERSION}
+  VERSION_HEADER
+  "${VERSION_HEADER_LOCATION}"
+  COMPATIBILITY
+  SameMajorVersion)
