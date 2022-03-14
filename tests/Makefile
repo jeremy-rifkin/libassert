@@ -38,7 +38,7 @@ ifneq ($(COMPILER),msvc)
     WFLAGS := -Wall -Wextra -Wvla -Wshadow -Werror=return-type
     DFLAGS := -MMD -MP
     CPPFLAGS := -std=c++17 -I../include -DASSERT_FAIL=custom_fail
-    LDFLAGS := -L../bin -lassert
+    LDFLAGS := -g -L../bin -lassert
     ifeq ($(TARGET),debug)
         CPPFLAGS += -O0 -g
         ifneq ($(OS),Windows_NT)
@@ -48,6 +48,9 @@ ifneq ($(COMPILER),msvc)
     else
         CPPFLAGS += -O3 -funroll-loops -ffast-math -flto -march=native -DNDEBUG
         LDFLAGS += -flto -s
+    endif
+    ifeq ($(OS),Windows_NT)
+        LDFLAGS += -ldbghelp
     endif
     CPPFLAGS += $(WFLAGS) $(DFLAGS)
 

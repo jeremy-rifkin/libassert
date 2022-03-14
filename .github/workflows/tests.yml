@@ -57,5 +57,35 @@ jobs:
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py msvc
-
- # TODO gcc/clang on windows
+  test-gcc-windows:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: |
+           python3 -m pip install --upgrade pip
+           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+    - name: build library
+      run: make
+    - name: build tests
+      working-directory: tests
+      run: make tests
+    - name: run tests
+      working-directory: tests
+      run: python3 run-tests.py gcc_windows
+  test-clang-windows:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: |
+           python3 -m pip install --upgrade pip
+           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+    - name: build library
+      run: make COMPILER=clang++
+    - name: build tests
+      working-directory: tests
+      run: make tests COMPILER=clang++
+    - name: run tests
+      working-directory: tests
+      run: python3 run-tests.py clang_windows
