@@ -1501,46 +1501,6 @@ namespace assert_detail {
 		return sig.substr(i, sig.rfind(r) - i);
 	}
 
-	template<typename T>
-	ASSERT_DETAIL_ATTR_COLD
-	std::string stringify_int(T t, literal_format fmt, size_t size) {
-		std::ostringstream oss;
-		switch(fmt) {
-			case literal_format::dec:
-				oss<<t;
-				break;
-			case literal_format::hex:
-				oss<<std::showbase<<std::hex<<t;
-				break;
-			case literal_format::octal:
-				oss<<std::showbase<<std::oct<<t;
-				break;
-			case literal_format::binary:
-				{
-					const unsigned long long v = t;
-					unsigned long long mask = 1ull << ((size * 8) - 1);
-					oss<<"0b";
-					while(mask) {
-						oss<<!!(mask & v);
-						mask >>= 1;
-					}
-				}
-				break;
-			default:
-				assert_detail_primitive_assert(false, "unexpected literal format requested for printing");
-		}
-		return std::move(oss).str();
-	}
-
-	ASSERT_DETAIL_ATTR_COLD
-	std::string stringify_int(unsigned long long t, literal_format fmt, bool is_unsigned, size_t size) {
-		if(is_unsigned) {
-			return stringify_int(t, fmt, size);
-		} else {
-			return stringify_int((long long)t, fmt, size);
-		}
-	}
-
 	/*
 	 * stack trace printing
 	 */

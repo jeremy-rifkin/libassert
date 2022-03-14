@@ -4,6 +4,7 @@
 // Jeremy Rifkin 2021, 2022
 // https://github.com/jeremy-rifkin/asserts
 
+#include <bitset> // TODO: Temporary
 #include <iomanip>
 #include <limits>
 #include <sstream>
@@ -473,10 +474,6 @@ namespace assert_detail {
 	    || isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
 	    || isa<std::decay_t<strip<T>>, const char*>;
 
-	[[nodiscard]] std::string stringify_int(unsigned long long, literal_format, bool, size_t);
-
-	[[nodiscard]] std::string stringify_float(unsigned long long, literal_format, bool, size_t);
-
 	template<typename T>
 	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
@@ -499,13 +496,32 @@ namespace assert_detail {
 			if(t == nullptr) { // weird nullptr shenanigans, only prints "nullptr" for nullptr_t
 				return "nullptr";
 			} else {
+				std::ostringstream oss;
 				// Manually format the pointer - ostream::operator<<(void*) falls back to %p which
 				// is implementation-defined. MSVC prints pointers without the leading "0x" which
 				// messes up the highlighter.
-				return stringify_int(uintptr_t(t), literal_format::hex, true, sizeof(uintptr_t));
+				oss<<std::showbase<<std::hex<<uintptr_t(t);
+				return std::move(oss).str();
 			}
 		} else if constexpr(std::is_integral_v<T>) {
-			return stringify_int(t, fmt, std::is_unsigned<T>::value, sizeof(t));
+			std::ostringstream oss;
+			switch(fmt) {
+				case literal_format::dec:
+					break;
+				case literal_format::hex:
+					oss<<std::showbase<<std::hex;
+					break;
+				case literal_format::octal:
+					oss<<std::showbase<<std::oct;
+					break;
+				case literal_format::binary:
+					oss<<"0b"<<std::bitset<sizeof(t) * 8>(t);
+					goto r;
+				default:
+					assert_detail_primitive_assert(false, "unexpected literal format requested for printing");
+			}
+			oss<<t;
+			r: return std::move(oss).str();
 		} else if constexpr(std::is_floating_point_v<T>) {
 			std::ostringstream oss;
 			switch(fmt) {
