@@ -47,7 +47,7 @@ static std::string indent(const std::string_view str, size_t depth, char c = ' '
 template<class T> struct S {
 	T x;
 	S() = default;
-	S(T&& x) : x(std::forward<T>(x)) {}
+	S(T&& _x) : x(std::forward<T>(_x)) {}
 	// moveable, not copyable
 	S(const S&) = delete;
 	S(S&&) = default;
