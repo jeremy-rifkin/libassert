@@ -4,9 +4,6 @@
 // Jeremy Rifkin 2021, 2022
 // https://github.com/jeremy-rifkin/asserts
 
-#include <bitset> // TODO: Temporary
-#include <iomanip>
-#include <limits>
 #include <sstream>
 #include <stdio.h>
 #include <string_view>
@@ -116,7 +113,7 @@ namespace assert_detail {
 	[[nodiscard]] int terminal_width(int fd);
 
 	/*
-	 * Stacktrace implementation
+	 * stacktrace implementation
 	 */
 
 	// All in the .cpp
@@ -124,7 +121,7 @@ namespace assert_detail {
 	void* get_stacktrace_opaque();
 
 	/*
-	 * Expression decomposition
+	 * metaprogramming utilities
 	 */
 
 	struct nothing {};
@@ -141,6 +138,16 @@ namespace assert_detail {
 
 	// Is integral but not boolean
 	template<typename T> constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
+
+	template<typename T> constexpr bool is_string_type =
+	       isa<T, std::string>
+	    || isa<T, std::string_view>
+	    || isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
+	    || isa<std::decay_t<strip<T>>, const char*>;
+
+	/*
+	 * expression decomposition
+	 */
 
 	// Lots of boilerplate
 	// Using int comparison functions here to support proper signed comparisons. Need to make sure
@@ -434,8 +441,6 @@ namespace assert_detail {
 	 * stringification
 	 */
 
-	[[nodiscard]] std::string escape_string(const std::string_view str, char quote);
-
 	[[nodiscard]] std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r);
 
 	template<typename T>
@@ -466,90 +471,42 @@ namespace assert_detail {
 		static constexpr bool value = decltype(test<T>(0))::value;
 	};
 
-	template<typename T> constexpr bool has_stream_overload_v = has_stream_overload<T>::value;
+	std::string stringify(const std::string&, literal_format = literal_format::none);
+	std::string stringify(const std::string_view&, literal_format = literal_format::none);
+	std::string stringify(const char*, literal_format = literal_format::none);
+	std::string stringify(char, literal_format = literal_format::none);
+	std::string stringify(bool, literal_format = literal_format::none);
+	std::string stringify(void*, literal_format = literal_format::none);
+	std::string stringify(short, literal_format = literal_format::none);
+	std::string stringify(int, literal_format = literal_format::none);
+	std::string stringify(long, literal_format = literal_format::none);
+	std::string stringify(long long, literal_format = literal_format::none);
+	std::string stringify(unsigned short, literal_format = literal_format::none);
+	std::string stringify(unsigned int, literal_format = literal_format::none);
+	std::string stringify(unsigned long, literal_format = literal_format::none);
+	std::string stringify(unsigned long long, literal_format = literal_format::none);
+	std::string stringify(float, literal_format = literal_format::none);
+	std::string stringify(double, literal_format = literal_format::none);
+	std::string stringify(long double, literal_format = literal_format::none);
 
-	template<typename T> constexpr bool is_string_type =
-	       isa<T, std::string>
-	    || isa<T, std::string_view>
-	    || isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
-	    || isa<std::decay_t<strip<T>>, const char*>;
+	template<typename T> class can_basic_stringify {
+		template<typename C, typename = decltype(stringify(std::declval<C>()))>
+		static std::true_type test(int);
+		template<typename C>
+		static std::false_type test(...);
+	public:
+		static constexpr bool value = decltype(test<T>(0))::value;
+	};
 
-	template<typename T>
+	template<typename T, typename std::enable_if<!can_basic_stringify<T>::value, int>::type = 0>
 	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
-		// bool and char need to be before std::is_integral
-		if constexpr(is_string_type<T>) {
-			if constexpr(std::is_pointer_v<strip<T>>) {
-				if(t == nullptr) {
-					return "nullptr";
-				}
-			}
-			// TODO: re-evaluate this...? What if just comparing two buffer pointers?
-			return escape_string(t, '"'); // string view may need explicit construction?
-		} else if constexpr(isa<T, char>) {
-			return escape_string({&t, 1}, '\'');
-		} else if constexpr(isa<T, bool>) {
-			return t ? "true" : "false"; // streams/boolalpha not needed for this
-		} else if constexpr(isa<T, std::nullptr_t>) {
-			return "nullptr";
-		} else if constexpr(std::is_pointer_v<strip<T>>) {
-			if(t == nullptr) { // weird nullptr shenanigans, only prints "nullptr" for nullptr_t
-				return "nullptr";
-			} else {
-				std::ostringstream oss;
-				// Manually format the pointer - ostream::operator<<(void*) falls back to %p which
-				// is implementation-defined. MSVC prints pointers without the leading "0x" which
-				// messes up the highlighter.
-				oss<<std::showbase<<std::hex<<uintptr_t(t);
-				return std::move(oss).str();
-			}
-		} else if constexpr(std::is_integral_v<T>) {
+		if constexpr(has_stream_overload<T>::value) {
 			std::ostringstream oss;
-			switch(fmt) {
-				case literal_format::dec:
-					break;
-				case literal_format::hex:
-					oss<<std::showbase<<std::hex;
-					break;
-				case literal_format::octal:
-					oss<<std::showbase<<std::oct;
-					break;
-				case literal_format::binary:
-					oss<<"0b"<<std::bitset<sizeof(t) * 8>(t);
-					goto r;
-				default:
-					assert_detail_primitive_assert(false, "unexpected literal format requested for printing");
-			}
 			oss<<t;
-			r: return std::move(oss).str();
-		} else if constexpr(std::is_floating_point_v<T>) {
-			std::ostringstream oss;
-			switch(fmt) {
-				case literal_format::dec:
-					break;
-				case literal_format::hex:
-					// apparently std::hexfloat automatically prepends "0x" while std::hex does not
-					oss<<std::hexfloat;
-					break;
-				case literal_format::octal:
-				case literal_format::binary:
-					return "";
-				default:
-					assert_detail_primitive_assert(false, "unexpected literal format requested for printing");
-			}
-			oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<t;
-			std::string s = std::move(oss).str();
-			// std::showpoint adds a bunch of unecessary digits, so manually doing it correctly here
-			if(s.find('.') == std::string::npos) s += ".0";
-			return s;
+			return std::move(oss).str();
 		} else {
-			if constexpr(has_stream_overload_v<T>) {
-				std::ostringstream oss;
-				oss<<t;
-				return std::move(oss).str();
-			} else {
-				return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
-			}
+			return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
 		}
 	}
 

@@ -5,7 +5,10 @@
 // Jeremy Rifkin 2021, 2022
 // https://github.com/jeremy-rifkin/asserts
 
+#include <bitset>
+#include <iomanip>
 #include <iostream>
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <regex>
@@ -1473,7 +1476,7 @@ namespace assert_detail {
 	 */
 
 	ASSERT_DETAIL_ATTR_COLD
-	std::string escape_string(const std::string_view str, char quote) {
+	static std::string escape_string(const std::string_view str, char quote) {
 		std::string escaped;
 		escaped += quote;
 		for(unsigned char c : str) {
@@ -1500,6 +1503,133 @@ namespace assert_detail {
 		auto i = sig.find(l) + l.length();
 		return sig.substr(i, sig.rfind(r) - i);
 	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(const std::string& value, literal_format) {
+		return escape_string(value, '"');
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(const std::string_view& value, literal_format) {
+		return escape_string(value, '"');
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(const char* value, literal_format) {
+		if(value == nullptr) {
+			return "nullptr";
+		}
+		return escape_string(value, '"');
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(char value, literal_format) {
+		return escape_string({&value, 1}, '\'');
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(bool value, literal_format) {
+			return value ? "true" : "false";
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(void* value, literal_format) {
+		if(value == nullptr) {
+			return "nullptr";
+		}
+		std::ostringstream oss;
+		// Manually format the pointer - ostream::operator<<(void*) falls back to %p which
+		// is implementation-defined. MSVC prints pointers without the leading "0x" which
+		// messes up the highlighter.
+		oss<<std::showbase<<std::hex<<uintptr_t(value);
+		return std::move(oss).str();
+	}
+
+	template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+	static std::string stringify_integral(T value, literal_format fmt) {
+		std::ostringstream oss;
+		switch(fmt) {
+			case literal_format::dec:
+				break;
+			case literal_format::hex:
+				oss<<std::showbase<<std::hex;
+				break;
+			case literal_format::octal:
+				oss<<std::showbase<<std::oct;
+				break;
+			case literal_format::binary:
+				oss<<"0b"<<std::bitset<sizeof(value) * 8>(value);
+				goto r;
+			default:
+				assert_detail_primitive_assert(false, "unexpected literal format requested for printing");
+		}
+		oss<<value;
+		r: return std::move(oss).str();
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(short value, literal_format fmt) {
+		return stringify_integral(value, fmt);
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(int value, literal_format fmt) {
+		return stringify_integral(value, fmt);
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(long value, literal_format fmt) {
+		return stringify_integral(value, fmt);
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(long long value, literal_format fmt) {
+		return stringify_integral(value, fmt);
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned short value, literal_format fmt) {
+		return stringify_integral(value, fmt);
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned int value, literal_format fmt) {
+		return stringify_integral(value, fmt);
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned long value, literal_format fmt) {
+		return stringify_integral(value, fmt);
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned long long value, literal_format fmt) {
+		return stringify_integral(value, fmt);
+	}
+
+	template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+	static std::string stringify_floating_point(T value, literal_format fmt) {
+		std::ostringstream oss;
+		switch(fmt) {
+			case literal_format::dec:
+				break;
+			case literal_format::hex:
+				// apparently std::hexfloat automatically prepends "0x" while std::hex does not
+				oss<<std::hexfloat;
+				break;
+			case literal_format::octal:
+			case literal_format::binary:
+				return "";
+			default:
+				assert_detail_primitive_assert(false, "unexpected literal format requested for printing");
+		}
+		oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<value;
+		std::string s = std::move(oss).str();
+		// std::showpoint adds a bunch of unecessary digits, so manually doing it correctly here
+		if(s.find('.') == std::string::npos) s += ".0";
+		return s;
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(float value, literal_format fmt) {
+		return stringify_floating_point(value, fmt);
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(double value, literal_format fmt) {
+		return stringify_floating_point(value, fmt);
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(long double value, literal_format fmt) {
+		return stringify_floating_point(value, fmt);
+	}
+
 
 	/*
 	 * stack trace printing
