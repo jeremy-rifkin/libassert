@@ -79,7 +79,6 @@ def critical_difference(output: str, expected_output: str): # TODO: Make use of 
 		return False
 
 def run_integration(expected_output_path: str):
-	global ok
 	print("[Running integration test against {}]".format(expected_output_path), flush=True)
 	with open(expected_output_path) as f:
 		expected_output = f.read()
@@ -88,9 +87,10 @@ def run_integration(expected_output_path: str):
 		stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
 	output, err = p.communicate()
 	output = output.decode("utf-8").replace("\r", "")
+	passed = True
 	if output != expected_output:
 		if critical_difference(output, expected_output):
-			ok = False
+			passed = False
 		else:
 			print("WARNING: Difference in output but deemed non-critical", flush=True)
 		print(os.path.basename(expected_output_path))
@@ -98,9 +98,15 @@ def run_integration(expected_output_path: str):
 			(output, "output.txt"),
 			expected_output_path
 		)
-	elif p.returncode != 0 or len(err) != 0:
+	elif p.returncode != 0:
+		print("p.retruncode = {}".format(p.returncode), flush=True)
+		passed = False
+	elif len(err) != 0:
+		print("Warning: Process stderr not empty:\n{}".format(err.decode("utf-8")), flush=True)
+	print("[{}]".format("Passed" if passed else "Failed"), flush=True)
+	if not passed:
+		global ok
 		ok = False
-	print("[{}]".format("Passed" if p.returncode == 0 else "Failed"), flush=True)
 
 def main():
 	assert(len(sys.argv) == 2)
