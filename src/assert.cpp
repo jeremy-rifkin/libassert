@@ -1519,14 +1519,6 @@ namespace assert_detail {
 		return escape_string(value, '"');
 	}
 
-	ASSERT_DETAIL_ATTR_COLD std::string stringify(char value, literal_format) {
-		return escape_string({&value, 1}, '\'');
-	}
-
-	ASSERT_DETAIL_ATTR_COLD std::string stringify(bool value, literal_format) {
-			return value ? "true" : "false";
-	}
-
 	ASSERT_DETAIL_ATTR_COLD std::string stringify(void* value, literal_format) {
 		if(value == nullptr) {
 			return "nullptr";
@@ -1537,6 +1529,18 @@ namespace assert_detail {
 		// messes up the highlighter.
 		oss<<std::showbase<<std::hex<<uintptr_t(value);
 		return std::move(oss).str();
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(std::nullptr_t, literal_format) {
+		return "nullptr";
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(char value, literal_format) {
+		return escape_string({&value, 1}, '\'');
+	}
+
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(bool value, literal_format) {
+			return value ? "true" : "false";
 	}
 
 	template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>

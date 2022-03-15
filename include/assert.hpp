@@ -475,8 +475,9 @@ namespace assert_detail {
 	std::string stringify(const std::string_view&, literal_format = literal_format::none);
 	std::string stringify(const char*, literal_format = literal_format::none);
 	std::string stringify(char, literal_format = literal_format::none);
-	std::string stringify(bool, literal_format = literal_format::none);
 	std::string stringify(void*, literal_format = literal_format::none);
+	std::string stringify(std::nullptr_t, literal_format = literal_format::none);
+	std::string stringify(bool, literal_format = literal_format::none);
 	std::string stringify(short, literal_format = literal_format::none);
 	std::string stringify(int, literal_format = literal_format::none);
 	std::string stringify(long, literal_format = literal_format::none);
