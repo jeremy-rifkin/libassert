@@ -265,10 +265,17 @@ behaviors are:
 
 ### Configuration
 
-- `-DNCOLOR` Turns off colors / syntax highlighting
+The following can be used to set application-wide settings:
+
+- `assert_detail::set_color_output(bool)` Enables or disables colored assertion messages on TTY
+  outputs. It is thread-safe (not that that should ever matter).
+
+The following configurations can be applied on a per-TU basis:
+
 - `-DNDEBUG` Disables assertion checks for release (assertion conditions are assumed for the
   optimizer's benefit)
 - `-DASSERT_NO_LOWERCASE` Disables `assert` alias for `ASSERT`
+- `-DASSERT_FAIL=fn` Allows a custom failure handler to be provided
 
 Custom failure actions: These are called when an assertion fails after diagnostic messages are
 printed. Set these macros to the name of the failure action function, signature is expected to be
@@ -303,9 +310,6 @@ void custom_fail(assert_detail::assertion_printer& printer, assert_detail::asser
     }
 }
 ```
-
-Custom fail actions for asserts, verifies, and checks can be set on a per-TU basis with
-`-DASSERT_FAIL=fn`.
 
 ## How To Use This Library
 

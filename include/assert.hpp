@@ -113,6 +113,12 @@ namespace assert_detail {
 	[[nodiscard]] int terminal_width(int fd);
 
 	/*
+	 * configuration
+	 */
+
+	void set_color_output(bool);
+
+	/*
 	 * stacktrace implementation
 	 */
 

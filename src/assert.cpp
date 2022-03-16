@@ -5,6 +5,7 @@
 // Jeremy Rifkin 2021, 2022
 // https://github.com/jeremy-rifkin/asserts
 
+#include <atomic>
 #include <bitset>
 #include <iomanip>
 #include <iostream>
@@ -53,30 +54,19 @@
  #pragma warning(disable : 4244)
 #endif
 
-#ifndef NCOLOR
- #define ESC "\033["
- #define ANSIRGB(r, g, b) ESC "38;2;" #r ";" #g ";" #b "m"
- #define RESET ESC "0m"
- // Slightly modified one dark pro colors
- // Original: https://coolors.co/e06b74-d19a66-e5c07a-98c379-62aeef-55b6c2-c678dd
- // Modified: https://coolors.co/e06b74-d19a66-e5c07a-90cc66-62aeef-56c2c0-c678dd
- #define RED ANSIRGB(224, 107, 116)
- #define ORANGE ANSIRGB(209, 154, 102)
- #define YELLOW ANSIRGB(229, 192, 122)
- #define GREEN ANSIRGB(150, 205, 112) // modified
- #define BLUE ANSIRGB(98, 174, 239)
- #define CYAN ANSIRGB(86, 194, 192) // modified
- #define PURPL ANSIRGB(198, 120, 221)
-#else
- #define RED ""
- #define ORANGE ""
- #define YELLOW ""
- #define GREEN ""
- #define BLUE ""
- #define CYAN ""
- #define PURPL ""
- #define RESET ""
-#endif
+#define ESC "\033["
+#define ANSIRGB(r, g, b) ESC "38;2;" #r ";" #g ";" #b "m"
+#define RESET ESC "0m"
+// Slightly modified one dark pro colors
+// Original: https://coolors.co/e06b74-d19a66-e5c07a-98c379-62aeef-55b6c2-c678dd
+// Modified: https://coolors.co/e06b74-d19a66-e5c07a-90cc66-62aeef-56c2c0-c678dd
+#define RED ANSIRGB(224, 107, 116)
+#define ORANGE ANSIRGB(209, 154, 102)
+#define YELLOW ANSIRGB(229, 192, 122)
+#define GREEN ANSIRGB(150, 205, 112) // modified
+#define BLUE ANSIRGB(98, 174, 239)
+#define CYAN ANSIRGB(86, 194, 192) // modified
+#define PURPL ANSIRGB(198, 120, 221)
 
 namespace assert_detail {
 	ASSERT_DETAIL_ATTR_COLD
@@ -303,6 +293,16 @@ namespace assert_detail {
 
 	ASSERT_DETAIL_ATTR_COLD std::string strerror_wrapper(int e) {
 		return strerror(e);
+	}
+
+	/*
+	 * configuration
+	 */
+
+	std::atomic_bool output_colors = true;
+
+	ASSERT_DETAIL_ATTR_COLD void set_color_output(bool enable) {
+		output_colors = enable;
 	}
 
 	/*
@@ -2259,7 +2259,11 @@ void assert_detail_default_fail_action(assertion_printer& printer, assert_type t
                                        ASSERTION fatal) {
 	enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
 	std::string message = printer(terminal_width(STDERR_FILENO));
-	std::cerr << (assert_detail::isatty(STDERR_FILENO) ? message : strip_colors(message)) << std::endl;
+	if(assert_detail::isatty(STDERR_FILENO) && assert_detail::output_colors) {
+		std::cerr << message << std::endl;
+	} else {
+		std::cerr << strip_colors(message) << std::endl;
+	}
 	if(fatal == ASSERTION::FATAL) {
 		switch(type) {
 			case assert_type::assertion:
