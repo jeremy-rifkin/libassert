@@ -210,7 +210,8 @@ evaluated by a functor.
 If the operation is a comparison (`==`, `!=`, `<`, `<=`, `>`, `>=`) and the operands are integers,
 the comparison is automatically done with sign safety.
 
-Note: Short circuiting does not occur for a top level operation of `&&` or `||`.
+Note: Boolean logical operators (`&&` and `||`) are not decomposed by default due to short
+circuiting.
 
 #### `assertion message` <!-- omit in toc -->
 
@@ -274,6 +275,9 @@ The following configurations can be applied on a per-TU basis:
 
 - `-DNDEBUG` Disables assertion checks for release (assertion conditions are assumed for the
   optimizer's benefit)
+- `-DASSERT_DECOMPOSE_BINARY_LOGICAL` Enables expression decomposition of `&&` and `||`. **Note:
+  This disables short-circuiting in assert expressions**. (If you really need short-circuiting in a
+  condition in this mode, an extra set of parentheses can be used: `assert((ptr && ptr->foo));`.)
 - `-DASSERT_NO_LOWERCASE` Disables `assert` alias for `ASSERT`
 - `-DASSERT_FAIL=fn` Allows a custom failure handler to be provided
 

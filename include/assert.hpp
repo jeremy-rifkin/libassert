@@ -238,8 +238,10 @@ namespace assert_detail {
 		assert_detail_gen_op_boilerplate(band,   &);
 		assert_detail_gen_op_boilerplate(bxor,   ^);
 		assert_detail_gen_op_boilerplate(bor,    |);
-		assert_detail_gen_op_boilerplate(land,   &&);
-		assert_detail_gen_op_boilerplate(lor,    ||);
+		#ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
+		 assert_detail_gen_op_boilerplate(land,   &&);
+		 assert_detail_gen_op_boilerplate(lor,    ||);
+		#endif
 		assert_detail_gen_op_boilerplate(assign, =);
 		assert_detail_gen_op_boilerplate(add_assign,  +=);
 		assert_detail_gen_op_boilerplate(sub_assign,  -=);
@@ -402,8 +404,10 @@ namespace assert_detail {
 		assert_detail_gen_op_boilerplate(ops::band, &)
 		assert_detail_gen_op_boilerplate(ops::bxor, ^)
 		assert_detail_gen_op_boilerplate(ops::bor, |)
-		assert_detail_gen_op_boilerplate(ops::land, &&)
-		assert_detail_gen_op_boilerplate(ops::lor, ||)
+		#ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
+		 assert_detail_gen_op_boilerplate(ops::land, &&)
+		 assert_detail_gen_op_boilerplate(ops::lor, ||)
+		#endif
 		assert_detail_gen_op_boilerplate(ops::assign, =)
 		assert_detail_gen_op_boilerplate(ops::add_assign, +=)
 		assert_detail_gen_op_boilerplate(ops::sub_assign, -=)
