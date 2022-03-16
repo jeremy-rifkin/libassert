@@ -35,6 +35,10 @@ float f = *assert(get_param());
 	- [Failure](#failure)
 	- [Configuration](#configuration)
 - [How To Use This Library](#how-to-use-this-library)
+	- [1. Build](#1-build)
+	- [2. Install](#2-install)
+	- [3. Use](#3-use)
+- [Replacing &lt;cassert&gt;](#replacing-cassert)
 - [Comparison With Other Languages](#comparison-with-other-languages)
 
 ## Philosophy
@@ -61,7 +65,7 @@ system:
 
 | Name     | When to Use                 | Effect |
 | -------- | --------------------------- | ------ |
-| `ASSERT` / `assert` | Core assumptions | Checked in debug, assumed in release |
+| `ASSERT` / `assert`* | Core assumptions | Checked in debug, assumed in release |
 | `VERIFY` | Convenient assumptions      | Checked always |
 | `CHECK`  | Sanity checks               | Checked in debug, does nothing in release |
 
@@ -74,6 +78,10 @@ assertion failure in `-DNDEBUG` can lead to UB.
 
 `VERIFY` and `CHECK` calls may specified to be nonfatal. If marked nonfatal `CHECK`/`VERIFY` will
 simply log a failure message but not abort or throw an exception.
+
+\*: `assert` as an alias for `ASSERT` is not enabled by default (see
+[Replacing &lt;cassert&gt;](#replacing-cassert)). Provide `-DASSERT_LOWERCASE` to enable it. I will
+use lowercase `assert` throughout this README.
 
 ## Considerations
 
@@ -194,8 +202,10 @@ void CHECK(<expression>, [optional assertion message],
 ```
 
 The macros are all caps to conform with macro hygiene practice - "check" and "verify" they're likely
-to conflict with other identifiers. `assert` is provided for compatibility with `assert.h` code and
-it is an identifier that will not conflict.
+to conflict with other identifiers.
+
+`-DASSERT_LOWERCASE` can be used to enable the `assert` alias for `ASSERT`. See:
+[Replacing &lt;cassert&gt;](#replacing-cassert).
 
 ### Parameters
 
@@ -278,7 +288,7 @@ The following configurations can be applied on a per-TU basis:
 - `-DASSERT_DECOMPOSE_BINARY_LOGICAL` Enables expression decomposition of `&&` and `||`. **Note:
   This disables short-circuiting in assert expressions**. (If you really need short-circuiting in a
   condition in this mode, an extra set of parentheses can be used: `assert((ptr && ptr->foo));`.)
-- `-DASSERT_NO_LOWERCASE` Disables `assert` alias for `ASSERT`
+- `-DASSERT_LOWERCASE` Enables `assert` alias for `ASSERT`
 - `-DASSERT_FAIL=fn` Allows a custom failure handler to be provided
 
 Custom failure actions: These are called when an assertion fails after diagnostic messages are
@@ -330,6 +340,17 @@ Clang >= 9. The library is no longer single header due to compile times.
    - If static linking, additionally link with dbghelp (`-ldbghelp`) on windows or lib dl (`-ldl`)
      on linux.
 
+## Replacing &lt;cassert&gt;
+
+With `-DASSERT_LOWERCASE` this library can be used as a drop-in replacement for `<cassert>` but it
+is important to be aware of two things:
+
+- `assert(expr);` will still evaluate `expr` under `-DNDEBUG`. Side effects will still be present,
+  though there probably should not be any side effects. If there are no side effects `expr` should
+  be optimized away, at the very least during LTO.
+- Defining `assert` is [technically not allowed][16.4.5.3.3] by the standard but thi should not be
+  an issues on any sane compiler.
+
 ## Comparison With Other Languages
 
 Even when standard libraries provide constructs like `assert_eq` they don't always do a good job of
@@ -375,3 +396,5 @@ Extras:
 | Expression strings and expression values everywhere | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
 | Safe signed-unsigned comparison | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
 | Return values from the assert to allow asserts to be integrated into expressions inline | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
+
+[16.4.5.3.3]: https://eel.is/c++draft/reserved.names#macro.names-1

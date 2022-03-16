@@ -37,7 +37,7 @@ ifneq ($(COMPILER),msvc)
     LD = $(COMPILER)
     WFLAGS := -Wall -Wextra -Wvla -Wshadow -Werror=return-type
     DFLAGS := -MMD -MP
-    CPPFLAGS := -std=c++17 -I../include -DASSERT_FAIL=custom_fail
+    CPPFLAGS := -std=c++17 -I../include -DASSERT_FAIL=custom_fail -DASSERT_LOWERCASE
     LDFLAGS := -g -L../bin -lassert
     ifeq ($(TARGET),debug)
         CPPFLAGS += -O0 -g
@@ -78,7 +78,7 @@ else
     LD = link
     SHELL = powershell
     WFLAGS := /W4
-    CPPFLAGS := /std:c++17 /EHsc /I ../include /DASSERT_FAIL=custom_fail /Z7
+    CPPFLAGS := /std:c++17 /EHsc /I ../include /DASSERT_FAIL=custom_fail /DASSERT_LOWERCASE /Z7
     LDFLAGS := /LIBPATH:../bin assert.lib dbghelp.lib /DEBUG
     ifeq ($(TARGET), debug)
         CPPFLAGS +=

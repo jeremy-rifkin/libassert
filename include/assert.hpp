@@ -957,8 +957,7 @@ using assert_detail::ASSERTION;
 
 #define ASSERT(expr, ...) ASSERT_INVOKE(expr, true, "ASSERT", assertion, __VA_ARGS__)
 
-#ifndef ASSERT_NO_LOWERCASE
- // provided for <assert.h> compatability
+#ifdef ASSERT_LOWERCASE
  #define assert(expr, ...) ASSERT_INVOKE(expr, true, "assert", assertion, __VA_ARGS__)
 #endif
 
