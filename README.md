@@ -256,6 +256,9 @@ expression. The returned value is the following:
 - Otherwise if the top-level binary operation is `&`, `|`, `^`, `<<`, `>>`, or any binary operator
   with precedence above bitshift then value of the whole expression is returned.
 
+I.e., `assert(foo() > 2);` returns the computed result from `foo()` and `assert(x & y);` returns the
+computed result of `x & y`;
+
 If the value from `<expression>` selected to be returned is an lvalue, the type of the
 `ASSERT`/`VERIFY` call will be an lvalue reference. If the value from `<expression>` is an rvalue
 then the type of the call will be an rvalue.
@@ -327,9 +330,10 @@ void custom_fail(assert_detail::assertion_printer& printer, assert_detail::asser
 
 ## How To Use This Library
 
-This library targets >=C++17 and supports gcc and clang on windows and linux. Note: The library does
-rely on some compiler extensions / compiler specific features. It supports at least GCC >= 8 and
-Clang >= 9. The library is no longer single header due to compile times.
+This library targets >=C++17 and supports gcc, clang, and msvc.
+
+Note: The library does rely on some compiler extensions and compiler specific features so it is not
+compatible with `-pedantic`.
 
 1. Run `make` to compile static and shared libraries
 2. Copy the static or shared library where you want it.
@@ -339,6 +343,32 @@ Clang >= 9. The library is no longer single header due to compile times.
      variable.
    - If static linking, additionally link with dbghelp (`-ldbghelp`) on windows or lib dl (`-ldl`)
      on linux.
+
+### 1. Build
+
+Option 1: `make`. Parameters:
+- `TARGET`: `release` (default) or `debug`
+- `COMPILER`: `g++` by default, you can specify any path / binary name or `msvc`.
+
+Option 2: `cmake`
+
+### 2. Install
+
+Put the header (`include/assert.hpp`) and library files (in `bin/`) in a location of your choice.
+
+### 3. Use
+
+- Setup include / library paths appropriately
+- Link appropriately
+- Debug symbols will be needed for good stack traces
+
+Special notes for generating debug symbols:
+
+| Compiler | Linux | Windows |
+|--|--|--|
+| GCC | - | - |
+| Clang | - | .pdb needed, pass -g to the linker |
+| MSVC | N/A| .pdb needed, pass /DEBUG to the linker |
 
 ## Replacing &lt;cassert&gt;
 

@@ -1,14 +1,5 @@
 .vs
 .vscode
-*.exe
-*.o
-*.ilk
-*.pdb
-*.json
-*.so
-*.dll
-*.lib
-*.a
 bin
 scratch
 build/
