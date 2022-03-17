@@ -41,11 +41,6 @@
  #define assert_detail_strong_expect(expr, value) __builtin_expect((expr), (value))
 #endif
 
-// if defined by a previous #include...
-#ifdef assert
- #undef assert
-#endif
-
 namespace asserts {
 	enum class ASSERTION {
 		NONFATAL, FATAL
@@ -788,8 +783,8 @@ namespace asserts::detail {
 	// top-level assert function emplaced by the macros
 	// these are the only non-cold functions
 	template<bool R, typename A, typename B, typename C, typename... Args>
-	decltype(auto) assert(expression_decomposer<A, B, C> decomposer,
-	                      const assert_static_parameters* params, Args&&... args) {
+	decltype(auto) (assert)(expression_decomposer<A, B, C> decomposer,
+	                        const assert_static_parameters* params, Args&&... args) {
 		decltype(auto) value = decomposer.get_value();
 		[[maybe_unused]] constexpr bool ret_lhs = decomposer.ret_lhs();
 		if(assert_detail_strong_expect(!static_cast<bool>(value), 0)) {
@@ -979,6 +974,9 @@ using asserts::ASSERTION;
 #define ASSERT(expr, ...) ASSERT_INVOKE(expr, true, "ASSERT", assertion, __VA_ARGS__)
 
 #ifdef ASSERT_LOWERCASE
+ #ifdef assert
+  #undef assert
+ #endif
  #define assert(expr, ...) ASSERT_INVOKE(expr, true, "assert", assertion, __VA_ARGS__)
 #endif
 
