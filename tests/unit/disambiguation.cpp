@@ -14,7 +14,7 @@
 #define DARK ESC "1;30m"
 #define RESET ESC "0m"
 
-namespace assert_detail {
+namespace asserts::detail {
 	[[nodiscard]] std::string highlight(const std::string& expression);
 }
 
@@ -33,14 +33,13 @@ int main() {
 		{"1 < something<a < b>> - 2", "<", false}, // <- ambiguous
 		{"18446744073709551606ULL == -10", "==", true}
 	};
-	using namespace assert_detail;
 	bool ok = true;
 	for(auto [expression, target_op, should_disambiguate] : tests) {
-		std::cout<<highlight(expression)<<" target: "<<target_op<<std::endl;
-		auto [l, r] = decompose_expression(expression, target_op);
+		std::cout<<asserts::detail::highlight(expression)<<" target: "<<target_op<<std::endl;
+		auto [l, r] = asserts::detail::decompose_expression(expression, target_op);
 		std::cout<<"Final:"<<std::endl
-		         <<"left:  "<<highlight(l)<<std::endl
-		         <<"right: "<<highlight(r)<<std::endl<<std::endl;
+		         <<"left:  "<<asserts::detail::highlight(l)<<std::endl
+		         <<"right: "<<asserts::detail::highlight(r)<<std::endl<<std::endl;
 		bool disambiguated = !(l == "left" && r == "right");
 		if(should_disambiguate == disambiguated) {
 			std::cout<<GREEN "Passed" RESET<<std::endl;

@@ -27,8 +27,8 @@
 void qux();
 void wubble();
 
-void custom_fail(assert_detail::assertion_printer& printer, assert_detail::assert_type, assert_detail::ASSERTION) {
-	std::cerr<<printer(assert_detail::terminal_width(STDERR_FILENO))<<std::endl<<std::endl;
+void custom_fail(asserts::assertion_printer& printer, asserts::assert_type, asserts::ASSERTION) {
+	std::cerr<<printer(asserts::utility::terminal_width(STDERR_FILENO))<<std::endl<<std::endl;
 }
 
 static std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false) {
@@ -55,7 +55,7 @@ template<class T> struct S {
 	S& operator=(S&&) = default;
 	bool operator==(const S& s) const { return x == s.x; }
 	friend std::ostream& operator<<(std::ostream& o, const S& s) {
-		o<<"I'm S<"<<assert_detail::type_name<T>()<<"> and I contain:"<<std::endl;
+		o<<"I'm S<"<<asserts::detail::type_name<T>()<<"> and I contain:"<<std::endl;
 		std::ostringstream oss;
 		oss<<s.x;
 		o<<indent(std::move(oss).str(), 4);
@@ -337,12 +337,12 @@ public:
 	}
 };
 
-namespace assert_detail {
+namespace asserts::detail {
 	void enable_virtual_terminal_processing_if_needed();
 }
 
 int main() {
-	assert_detail::enable_virtual_terminal_processing_if_needed();
+	asserts::detail::enable_virtual_terminal_processing_if_needed();
 	foo f;
 	f.bar<int>({});
 }

@@ -13,8 +13,8 @@ using namespace std::literals;
 
 void test_path_differentiation();
 
-void custom_fail(assert_detail::assertion_printer& printer, assert_detail::assert_type, assert_detail::ASSERTION) {
-	std::cout<<assert_detail::strip_colors(printer(0))<<std::endl<<std::endl;
+void custom_fail(asserts::assertion_printer& printer, asserts::assert_type, asserts::ASSERTION) {
+	std::cout<<asserts::utility::strip_colors(printer(0))<<std::endl<<std::endl;
 }
 
 template<typename T>

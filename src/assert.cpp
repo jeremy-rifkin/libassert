@@ -68,7 +68,65 @@
 #define CYAN ANSIRGB(86, 194, 192) // modified
 #define PURPL ANSIRGB(198, 120, 221)
 
-namespace assert_detail {
+// Container utility
+template<typename N> class small_static_map {
+	const N& needle;
+public:
+	small_static_map(const N& n) : needle(n) {}
+	template<typename K, typename V, typename... Rest>
+	constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
+		if(needle == option) return result;
+		if constexpr (sizeof...(Rest) > 0) return lookup(rest...);
+		else { assert_detail_primitive_assert(false); ASSERT_DETAIL_UNREACHABLE; }
+	}
+	constexpr bool is_in() { return false; }
+	template<typename T, typename... Rest>
+	constexpr bool is_in(const T& option, const Rest&... rest) {
+		if(needle == option) return true;
+		return is_in(rest...);
+	}
+};
+
+namespace asserts::utility {
+	ASSERT_DETAIL_ATTR_COLD
+	std::string strip_colors(const std::string& str) {
+		static std::regex ansi_escape_re("\033\\[[^m]+m");
+		return std::regex_replace(str, ansi_escape_re, "");
+	}
+	
+	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
+	ASSERT_DETAIL_ATTR_COLD int terminal_width(int fd) {
+		if(fd < 0) {
+			return 0;
+		}
+		#ifdef _WIN32
+		 DWORD windows_handle = small_static_map(fd).lookup(
+			 STDIN_FILENO, STD_INPUT_HANDLE,
+			 STDOUT_FILENO, STD_OUTPUT_HANDLE,
+			 STDERR_FILENO, STD_ERROR_HANDLE
+		 );
+		 CONSOLE_SCREEN_BUFFER_INFO csbi;
+		 HANDLE h = GetStdHandle(windows_handle);
+		 if(h == INVALID_HANDLE_VALUE) return 0;
+		 if(!GetConsoleScreenBufferInfo(h, &csbi)) return 0;
+		 return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+		#else
+		 struct winsize w;
+		 if(ioctl(fd, TIOCGWINSZ, &w) == -1) return 0;
+		 return w.ws_col;
+		#endif
+	}
+}
+
+namespace asserts::config {
+	static std::atomic_bool output_colors = true;
+
+	ASSERT_DETAIL_ATTR_COLD void set_color_output(bool enable) {
+		output_colors = enable;
+	}
+}
+
+namespace asserts::detail {
 	ASSERT_DETAIL_ATTR_COLD
 	void primitive_assert_impl(bool condition, bool verification, const char* expression,
 	                           source_location location, const char* message) {
@@ -89,25 +147,6 @@ namespace assert_detail {
 
 	// Still present in release mode, nonfatal
 	#define internal_verify(c, ...) primitive_assert_impl(c, true, #c, ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
-
-	// Container utility
-	template<typename N> class small_static_map {
-		const N& needle;
-	public:
-		small_static_map(const N& n) : needle(n) {}
-		template<typename K, typename V, typename... Rest>
-		constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
-			if(needle == option) return result;
-			if constexpr (sizeof...(Rest) > 0) return lookup(rest...);
-			else { assert_detail_primitive_assert(false); ASSERT_DETAIL_UNREACHABLE; }
-		}
-		constexpr bool is_in() { return false; }
-		template<typename T, typename... Rest>
-		constexpr bool is_in(const T& option, const Rest&... rest) {
-			if(needle == option) return true;
-			return is_in(rest...);
-		}
-	};
 
 	/*
 	 * string utilities
@@ -191,12 +230,6 @@ namespace assert_detail {
 	}
 
 	ASSERT_DETAIL_ATTR_COLD
-	std::string strip_colors(const std::string& str) {
-		static std::regex ansi_escape_re("\033\\[[^m]+m");
-		return std::regex_replace(str, ansi_escape_re, "");
-	}
-
-	ASSERT_DETAIL_ATTR_COLD
 	static std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false) {
 		size_t i = 0, j;
 		std::string output;
@@ -253,29 +286,6 @@ namespace assert_detail {
 		#endif
 	}
 
-	// https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-	ASSERT_DETAIL_ATTR_COLD int terminal_width(int fd) {
-		if(fd < 0) {
-			return 0;
-		}
-		#ifdef _WIN32
-		 DWORD windows_handle = small_static_map(fd).lookup(
-			 STDIN_FILENO, STD_INPUT_HANDLE,
-			 STDOUT_FILENO, STD_OUTPUT_HANDLE,
-			 STDERR_FILENO, STD_ERROR_HANDLE
-		 );
-		 CONSOLE_SCREEN_BUFFER_INFO csbi;
-		 HANDLE h = GetStdHandle(windows_handle);
-		 if(h == INVALID_HANDLE_VALUE) return 0;
-		 if(!GetConsoleScreenBufferInfo(h, &csbi)) return 0;
-		 return csbi.srWindow.Right - csbi.srWindow.Left + 1;
-		#else
-		 struct winsize w;
-		 if(ioctl(fd, TIOCGWINSZ, &w) == -1) return 0;
-		 return w.ws_col;
-		#endif
-	}
-
 	ASSERT_DETAIL_ATTR_COLD std::string get_executable_path() {
 		#ifdef _WIN32
 		 char buffer[MAX_PATH + 1];
@@ -293,16 +303,6 @@ namespace assert_detail {
 
 	ASSERT_DETAIL_ATTR_COLD std::string strerror_wrapper(int e) {
 		return strerror(e);
-	}
-
-	/*
-	 * configuration
-	 */
-
-	std::atomic_bool output_colors = true;
-
-	ASSERT_DETAIL_ATTR_COLD void set_color_output(bool enable) {
-		output_colors = enable;
 	}
 
 	/*
@@ -1864,7 +1864,7 @@ namespace assert_detail {
 		size_t start = 0;
 		size_t end = trace.size() - 1;
 		for(size_t i = 0; i < trace.size(); i++) {
-			if(trace[i].signature.find("assert_detail::") != std::string::npos) {
+			if(trace[i].signature.find(" asserts::detail::") != std::string::npos) {
 				start = i + 1;
 			}
 			if(trace[i].signature == "main" || trace[i].signature.find("main(") == 0) {
@@ -1918,7 +1918,7 @@ namespace assert_detail {
 			constexpr size_t max_file_length = 50;
 			auto [files, longest_file_width] = process_paths(trace, start, end);
 			int max_line_number_width = log10(std::max_element(trace.begin(), trace.begin() + end + 1,
-				[](const assert_detail::stacktrace_entry& a, const assert_detail::stacktrace_entry& b) {
+				[](const asserts::detail::stacktrace_entry& a, const asserts::detail::stacktrace_entry& b) {
 					return std::to_string(a.line).size() < std::to_string(b.line).size();
 				})->line - start + 1 + 1); // +1 for indices starting at 0, +1 again for log
 			int max_frame_width = log10(end - start + 1 + 1); // ^
@@ -2125,14 +2125,6 @@ namespace assert_detail {
 		return output;
 	}
 
-	const char* verification_failure::what() const noexcept {
-		return "Call to VERIFY() failed";
-	}
-
-	const char* check_failure::what() const noexcept {
-		return "Call to CHECK() failed";
-	}
-
 	ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics() = default;
 	ASSERT_DETAIL_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
 	ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) = default;
@@ -2177,6 +2169,18 @@ namespace assert_detail {
 			c++;
 		}
 		return c + 1; // plus one, count the empty string
+	}
+}
+
+namespace asserts {
+	using namespace detail;
+
+	const char* verification_failure::what() const noexcept {
+		return "Call to VERIFY() failed";
+	}
+
+	const char* check_failure::what() const noexcept {
+		return "Call to CHECK() failed";
 	}
 
 	ASSERT_DETAIL_ATTR_COLD assertion_printer::assertion_printer(
@@ -2229,8 +2233,7 @@ namespace assert_detail {
 }
 
 // Some test cases for TMP stuff
-
-namespace assert_detail {
+namespace asserts::detail {
 	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, nothing, nothing>>().get_value()), int&>::value);
 	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, nothing, nothing>>().get_value()), int&>::value);
 	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().get_value()), bool>::value);
@@ -2253,25 +2256,24 @@ namespace assert_detail {
 
 // Default handler
 
-using namespace assert_detail;
 ASSERT_DETAIL_ATTR_COLD
-void assert_detail_default_fail_action(assertion_printer& printer, assert_type type,
+void assert_detail_default_fail_action(asserts::assertion_printer& printer, asserts::assert_type type,
                                        ASSERTION fatal) {
-	enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-	std::string message = printer(terminal_width(STDERR_FILENO));
-	if(assert_detail::isatty(STDERR_FILENO) && assert_detail::output_colors) {
+	asserts::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
+	std::string message = printer(asserts::utility::terminal_width(STDERR_FILENO));
+	if(asserts::detail::isatty(STDERR_FILENO) && asserts::config::output_colors) {
 		std::cerr << message << std::endl;
 	} else {
-		std::cerr << strip_colors(message) << std::endl;
+		std::cerr << asserts::utility::strip_colors(message) << std::endl;
 	}
 	if(fatal == ASSERTION::FATAL) {
 		switch(type) {
-			case assert_type::assertion:
+			case asserts::assert_type::assertion:
 				abort();
-			case assert_type::verify:
-				throw verification_failure();
-			case assert_type::check:
-				throw check_failure();
+			case asserts::assert_type::verify:
+				throw asserts::verification_failure();
+			case asserts::assert_type::check:
+				throw asserts::check_failure();
 			default:
 				assert_detail_primitive_assert(false);
 		}

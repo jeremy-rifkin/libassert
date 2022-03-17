@@ -46,7 +46,7 @@
  #undef assert
 #endif
 
-namespace assert_detail {
+namespace asserts {
 	enum class ASSERTION {
 		NONFATAL, FATAL
 	};
@@ -64,12 +64,38 @@ namespace assert_detail {
  #define ASSERT_FAIL assert_detail_default_fail_action
 #endif
 
-void ASSERT_FAIL(assert_detail::assertion_printer& printer, assert_detail::assert_type type,
-                 assert_detail::ASSERTION fatal);
+void ASSERT_FAIL(asserts::assertion_printer& printer, asserts::assert_type type,
+                 asserts::ASSERTION fatal);
 
 #define ASSERT_DETAIL_PHONY_USE(E) do { using x [[maybe_unused]] = decltype(E); } while(0)
 
-namespace assert_detail {
+/*
+ * Public utilities
+ */
+
+namespace asserts::utility {
+	// strip ansi escape sequences from a string
+	[[nodiscard]] std::string strip_colors(const std::string& str);
+
+	// returns the width of the terminal represented by fd, will be 0 on error
+	[[nodiscard]] int terminal_width(int fd);
+}
+
+/*
+ * Configuration
+ */
+
+namespace asserts::config {
+	void set_color_output(bool);
+}
+
+/*
+ * Internal mechanisms
+ *
+ * Macros exposed: assert_detail_primitive_assert
+ */
+
+namespace asserts::detail {
 	// Lightweight helper, eventually may use C++20 std::source_location if this library no longer
 	// targets C++17. Note: __builtin_FUNCTION only returns the name, so __PRETTY_FUNCTION__ is
 	// still needed.
@@ -89,37 +115,26 @@ namespace assert_detail {
 	                           source_location location, const char* message = nullptr);
 
 	#ifndef NDEBUG
-	 #define assert_detail_primitive_assert(c, ...) primitive_assert_impl(c, false, #c, \
-	                                                                      ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
+	 #define assert_detail_primitive_assert(c, ...) asserts::detail::primitive_assert_impl(c, false, #c, \
+	                                                                                 ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
 	#else
 	 #define assert_detail_primitive_assert(c, ...) ASSERT_DETAIL_PHONY_USE(c)
 	#endif
 
 	/*
-	 * string utilities
+	 * String utilities
 	 */
 
 	[[nodiscard]] std::string bstringf(const char* format, ...);
 
-	[[nodiscard]] std::string strip_colors(const std::string& str);
-
 	/*
-	 * system wrappers
+	 * System wrappers
 	 */
 
 	[[nodiscard]] std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
 
-	// will be 0 on error
-	[[nodiscard]] int terminal_width(int fd);
-
 	/*
-	 * configuration
-	 */
-
-	void set_color_output(bool);
-
-	/*
-	 * stacktrace implementation
+	 * Stacktrace implementation
 	 */
 
 	// All in the .cpp
@@ -667,14 +682,6 @@ namespace assert_detail {
 	 * actual assertion handling, finally
 	 */
 
-	struct verification_failure : std::exception {
-		virtual const char* what() const noexcept final override;
-	};
-
-	struct check_failure : std::exception {
-		virtual const char* what() const noexcept final override;
-	};
-
 	struct lock {
 		lock();
 		~lock();
@@ -696,17 +703,29 @@ namespace assert_detail {
 	size_t count_args_strings(const char* const* const);
 
 	constexpr int min_term_width = 50;
+}
+
+namespace asserts {
+	struct verification_failure : std::exception {
+		virtual const char* what() const noexcept final override;
+	};
+
+	struct check_failure : std::exception {
+		virtual const char* what() const noexcept final override;
+	};
 
 	class assertion_printer {
-		const assert_static_parameters* params;
-		const extra_diagnostics& processed_args;
-		binary_diagnostics_descriptor& binary_diagnostics;
+		const detail::assert_static_parameters* params;
+		const detail::extra_diagnostics& processed_args;
+		detail::binary_diagnostics_descriptor& binary_diagnostics;
 		void* raw_trace;
 		size_t sizeof_args;
 	public:
 		assertion_printer() = delete;
-		assertion_printer(const assert_static_parameters* params, const extra_diagnostics& processed_args,
-		                  binary_diagnostics_descriptor& binary_diagnostics, void* raw_trace, size_t sizeof_args);
+		assertion_printer(const detail::assert_static_parameters* params,
+		                  const detail::extra_diagnostics& processed_args,
+		                  detail::binary_diagnostics_descriptor& binary_diagnostics,
+		                  void* raw_trace, size_t sizeof_args);
 		~assertion_printer();
 		assertion_printer(const assertion_printer&) = delete;
 		assertion_printer(assertion_printer&&) = delete;
@@ -714,7 +733,9 @@ namespace assert_detail {
 		assertion_printer& operator=(assertion_printer&&) = delete;
 		[[nodiscard]] std::string operator()(int width);
 	};
+}
 
+namespace asserts::detail {
 	template<typename A, typename B, typename C, typename... Args>
 	ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE
 	void assert_fail(expression_decomposer<A, B, C>& decomposer,
@@ -764,7 +785,7 @@ namespace assert_detail {
 		return decomposer;
 	}
 
-	// top-level assert functions emplaced by the macros
+	// top-level assert function emplaced by the macros
 	// these are the only non-cold functions
 	template<bool R, typename A, typename B, typename C, typename... Args>
 	decltype(auto) assert(expression_decomposer<A, B, C> decomposer,
@@ -818,7 +839,7 @@ namespace assert_detail {
 	}
 }
 
-using assert_detail::ASSERTION;
+using asserts::ASSERTION;
 
 #if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC
  // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
@@ -918,7 +939,7 @@ using assert_detail::ASSERTION;
                                     static constexpr const char* const arg_strings[] = { \
                                       ASSERT_DETAIL_MAP(ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS(__VA_ARGS__)) "" \
                                     }; \
-                                    static constexpr assert_detail::assert_static_parameters params = { \
+                                    static constexpr asserts::detail::assert_static_parameters params = { \
                                       name ASSERT_DETAIL_COMMA \
                                       type ASSERT_DETAIL_COMMA \
                                       expr_str ASSERT_DETAIL_COMMA \
@@ -938,19 +959,19 @@ using assert_detail::ASSERTION;
 // statement expression but the lifetime of the returned object is extend to the end of the full foo() expression.
 // Note: There is a current issue with tarnaries: auto x = assert(b ? y : y); must copy y. This can be fixed with
 // lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
-// Note: assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) done for ternary support
+// Note: asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr) done for ternary
 #if ASSERT_DETAIL_IS_MSVC
- #define ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG , assert_detail::msvc_pretty_function_wrapper{ASSERT_DETAIL_PFUNC}
+ #define ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG , asserts::detail::msvc_pretty_function_wrapper{ASSERT_DETAIL_PFUNC}
 #else
  #define ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG
 #endif
 #define ASSERT_INVOKE(expr, doreturn, name, type, ...) \
-                          assert_detail::assert<doreturn>( \
+                          asserts::detail::assert<doreturn>( \
                             ASSERT_DETAIL_STMTEXPR(, \
                               ASSERT_DETAIL_WARNING_PRAGMA \
-                              assert_detail::expression_decomposer(assert_detail::expression_decomposer{} << expr) \
+                              asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr) \
                             ), \
-                            ASSERT_DETAIL_STATIC_DATA(name, assert_detail::assert_type::type, #expr, __VA_ARGS__) \
+                            ASSERT_DETAIL_STATIC_DATA(name, asserts::assert_type::type, #expr, __VA_ARGS__) \
                             ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
                             ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG \
                           )

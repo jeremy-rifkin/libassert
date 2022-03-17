@@ -274,14 +274,14 @@ behaviors are:
 | Name     | Failure |
 | -------- | ------- |
 | `ASSERT` / `assert` | `abort()` is called. In `-DNDEBUG`, fail path is marked unreachable. |
-| `VERIFY` | `assert_detail::verification_failure` is thrown |
-| `CHECK`  | `assert_detail::check_failure` is thrown |
+| `VERIFY` | `asserts::verification_failure` is thrown |
+| `CHECK`  | `asserts::check_failure` is thrown |
 
 ### Configuration
 
 The following can be used to set application-wide settings:
 
-- `assert_detail::set_color_output(bool)` Enables or disables colored assertion messages on TTY
+- `asserts::config::set_color_output(bool)` Enables or disables colored assertion messages on TTY
   outputs. It is thread-safe (not that that should ever matter).
 
 The following configurations can be applied on a per-TU basis:
@@ -296,36 +296,70 @@ The following configurations can be applied on a per-TU basis:
 
 Custom failure actions: These are called when an assertion fails after diagnostic messages are
 printed. Set these macros to the name of the failure action function, signature is expected to be
-`void custom_fail(assert_detail::assertion_printer&, assert_detail::assert_type,
-assert_detail::ASSERTION)`.
+`void custom_fail(asserts::assertion_printer&, asserts::assert_type, ASSERTION)`.
 The `printer` is used to allow the failure handler to format to a desired width. It accepts zero and
 negative widths to indicate the message should be printed to work on any width (i.e., no pretty
 columns in the output). `type` is the type of the assertion and `fatal` indicates whether an
 assertion is fatal. A typical implementation looks like:
 ```cpp
-void custom_fail(assert_detail::assertion_printer& printer, assert_detail::assert_type type,
-                 assert_detail::ASSERTION fatal) {
-    using assert_detail::ASSERT;
-    using assert_detail::assert_type;
-	std::string message = printer(assert_detail::terminal_width(STDERR_FILENO));
+void custom_fail(asserts::assertion_printer& printer, asserts::assert_type type, ASSERTION fatal) {
+	std::string message = printer(asserts::utility::terminal_width(STDERR_FILENO));
     if(isatty(STDERR_FILENO)) {
         std::cerr<<message<<std::endl;
     } else {
-        std::cerr<<assert_detail::strip_colors(message)<<std::endl;
+        std::cerr<<asserts::utility::strip_colors(message)<<std::endl;
     }
+    using asserts::assert_type;
     if(fatal == ASSERT::FATAL) {
         switch(type) {
             case assert_type::assertion:
                 abort();
             case assert_type::verify:
-                throw assert_detail::verification_failure();
+                throw asserts::verification_failure();
             case assert_type::check:
-                throw assert_detail::check_failure();
+                throw asserts::check_failure();
             default:
                 assert(false);
         }
     }
 }
+```
+
+### Namespace synopsis
+
+```cpp
+// Macros:
+#define ASSERT(...) ...
+#define VERIFY(...) ...
+#define CHECK(...) ...
+#ifdef ASSERT_LOWERCASE
+ #define assert(...) ...
+#endif
+namespace asserts {
+	// Core functionality:
+	enum class ASSERTION { NONFATAL, FATAL };
+	class assertion_printer {
+		public: [[nodiscard]] std::string operator()(int width);
+	};
+	struct verification_failure : std::exception {
+		virtual const char* what() const noexcept final override;
+	}
+	struct check_failure : std::exception {
+		virtual const char* what() const noexcept final override;
+	}
+	// Other functionality:
+	enum class assert_type { assertion, verify, check };
+	namespace utility {
+		[[nodiscard]] std::string strip_colors(const std::string& str);
+		[[nodiscard]] int terminal_width(int fd);
+	};
+	namespace config {
+		void set_color_output(bool);
+	}
+	namespace detail { /* internals */ }
+}
+using asserts::ASSERTION;
+// All macros of the form ASSERT_DETAIL_* are reserved
 ```
 
 ## How To Use This Library
