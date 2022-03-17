@@ -74,6 +74,9 @@ namespace asserts::utility {
 
 	// returns the width of the terminal represented by fd, will be 0 on error
 	[[nodiscard]] int terminal_width(int fd);
+
+	// generates a stack trace, formats to the given width
+	[[nodiscard]] std::string stacktrace(int width);
 }
 
 /*

@@ -34,6 +34,8 @@ float f = *assert(get_param());
 	- [Return value](#return-value)
 	- [Failure](#failure)
 	- [Configuration](#configuration)
+	- [Utilities](#utilities)
+	- [Namespace synopsis](#namespace-synopsis)
 - [How To Use This Library](#how-to-use-this-library)
 	- [1. Build](#1-build)
 	- [2. Install](#2-install)
@@ -325,6 +327,15 @@ void custom_fail(asserts::assertion_printer& printer, asserts::assert_type type,
 }
 ```
 
+### Utilities
+
+The following utilities are made public in `asserts::utility::`:
+- `std::string strip_colors(const std::string& str)` Strips ansi sequences from a string.
+- `int terminal_width(int fd)` Returns the width of the TTY referenced by the given file descriptor,
+  or 0 on error.
+- `std::string stacktrace(int width)` Generates a stack trace, formatted for the given width (0 for
+  a width-independent formatting).
+
 ### Namespace synopsis
 
 ```cpp
@@ -352,6 +363,7 @@ namespace asserts {
 	namespace utility {
 		[[nodiscard]] std::string strip_colors(const std::string& str);
 		[[nodiscard]] int terminal_width(int fd);
+		[[nodiscard]] std::string stacktrace(int width);
 	};
 	namespace config {
 		void set_color_output(bool);

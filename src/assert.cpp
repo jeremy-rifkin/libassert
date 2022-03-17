@@ -1864,7 +1864,7 @@ namespace asserts::detail {
 		size_t start = 0;
 		size_t end = trace.size() - 1;
 		for(size_t i = 0; i < trace.size(); i++) {
-			if(trace[i].signature.find(" asserts::detail::") != std::string::npos) {
+			if(trace[i].signature.find("asserts::detail::") != std::string::npos) {
 				start = i + 1;
 			}
 			if(trace[i].signature == "main" || trace[i].signature.find("main(") == 0) {
@@ -1904,10 +1904,10 @@ namespace asserts::detail {
 	}
 
 	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	std::string print_stacktrace(void* raw_trace, int term_width) {
+	std::string print_stacktrace(trace_t* raw_trace, int term_width) {
 		std::string stacktrace;
 		if(raw_trace) {
-			auto& trace = *(trace_t*)raw_trace;
+			auto& trace = *raw_trace;
 			// prettify signatures
 			for(auto& frame : trace) {
 				frame.signature = prettify_type(frame.signature);
@@ -2227,7 +2227,7 @@ namespace asserts {
 		}
 		// generate stack trace
 		output += "\nStack trace:\n";
-		output += print_stacktrace(raw_trace, width);
+		output += print_stacktrace((trace_t*) raw_trace, width);
 		return output;
 	}
 }
@@ -2253,6 +2253,16 @@ namespace asserts::detail {
 	static_assert(is_string_type<std::string_view>);
 }
 
+namespace asserts::utility {
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]] std::string stacktrace(int width) {
+		auto trace = get_stacktrace();
+		if(trace) {
+			return print_stacktrace(&*trace, width);
+		} else {
+			return "Error while generating stacktrace";
+		}
+	}
+}
 
 // Default handler
 
