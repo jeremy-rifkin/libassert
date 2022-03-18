@@ -66,6 +66,18 @@ int main() {
 		assert(x == 2).x++;
 		assert(x.x == 3);
 	}
+
+	// above cases test lhs returns, now test the case where the full value is returned
+	{
+		auto v0 = assert(1 | 2);
+		assert(v0 == 3);
+		auto v1 = assert(7 & 4);
+		assert(v1 == 4);
+		auto v2 = assert(1 << 16);
+		assert(v2 == 65536);
+		auto v3 = assert(32 >> 2);
+		assert(v3 == 8);
+	}
 	
 	return 0;
 }
