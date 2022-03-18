@@ -30,7 +30,7 @@ _all: tests demo
 
 demo: $(BIN)/demo$(E)
 
-tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/integration$(E)
+tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/type_handling$(E) $(BIN)/integration$(E)
 
 ifneq ($(COMPILER),msvc)
     CPP = $(COMPILER)
@@ -66,6 +66,9 @@ ifneq ($(COMPILER),msvc)
     $(BIN)/tokens_and_highlighting$(E): $(BIN)/o/unit/tokens_and_highlighting.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
+    $(BIN)/type_handling$(E): $(BIN)/o/unit/type_handling.cpp.o
+		$(LD) $^ -o $@ $(LDFLAGS)
+
     $(BIN)/integration$(E): $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
@@ -98,6 +101,9 @@ else
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/tokens_and_highlighting$(E): $(BIN)/o/unit/tokens_and_highlighting.cpp.o
+		$(LD) $^ /OUT:$@ $(LDFLAGS)
+
+    $(BIN)/type_handling$(E): $(BIN)/o/unit/type_handling.cpp.o
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/integration$(E): $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o

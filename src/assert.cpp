@@ -2232,27 +2232,6 @@ namespace asserts {
 	}
 }
 
-// Some test cases for TMP stuff
-namespace asserts::detail {
-	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, nothing, nothing>>().get_value()), int&>::value);
-	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, nothing, nothing>>().get_value()), int&>::value);
-	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().get_value()), bool>::value);
-	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().take_lhs()), int>::value);
-	static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, int, ops::lteq>>().take_lhs()), int&>::value);
-
-	static_assert(is_string_type<char*>);
-	static_assert(is_string_type<const char*>);
-	static_assert(is_string_type<char[5]>);
-	static_assert(is_string_type<const char[5]>);
-	static_assert(!is_string_type<char(*)[5]>);
-	static_assert(is_string_type<char(&)[5]>);
-	static_assert(is_string_type<const char (&)[27]>);
-	static_assert(!is_string_type<std::vector<char>>);
-	static_assert(!is_string_type<int>);
-	static_assert(is_string_type<std::string>);
-	static_assert(is_string_type<std::string_view>);
-}
-
 namespace asserts::utility {
 	ASSERT_DETAIL_ATTR_COLD [[nodiscard]] std::string stacktrace(int width) {
 		auto trace = get_stacktrace();
