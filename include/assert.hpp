@@ -978,7 +978,7 @@ using asserts::ASSERTION;
           asserts::detail::get_expression_return_value \
             <assert_detail_ret_lhs ASSERT_DETAIL_COMMA std::is_lvalue_reference<decltype(assert_detail_value)>::value> \
               (assert_detail_value, *std::launder(&assert_detail_decomposer)); \
-        )
+        ).value
 
 #define ASSERT(expr, ...) ASSERT_INVOKE(expr, true, "ASSERT", assertion, __VA_ARGS__)
 
