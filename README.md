@@ -136,6 +136,8 @@ FILE* f = VERIFY(fopen(path, "r") != nullptr, "Internal error with foobars", err
 
 Special handling is provided for `errno`, and strerror is automatically called.
 
+Note: Extra diagnostics are only evaluated in the failure path of an assertion.
+
 ![](screenshots/f.png)
 
 #### Stack Traces <!-- omit in toc -->
@@ -203,9 +205,6 @@ void CHECK(<expression>, [optional assertion message],
                          [optional extra diagnostics, ...], fatal?);
 ```
 
-The macros are all caps to conform with macro hygiene practice - "check" and "verify" they're likely
-to conflict with other identifiers.
-
 `-DASSERT_LOWERCASE` can be used to enable the `assert` alias for `ASSERT`. See:
 [Replacing &lt;cassert&gt;](#replacing-cassert).
 
@@ -236,6 +235,8 @@ string, to be an extra diagnostic value instead simply pass an empty string firs
 
 An arbitrary number of extra diagnostic values may be provided. These are displayed below the
 expression diagnostics if a check fails.
+
+Note: Extra diagnostics are only evaluated in the failure path of an assertion.
 
 There is special handling when `errno` is provided: The value of `strerror` is displayed
 automatically.
@@ -371,8 +372,11 @@ namespace asserts {
 	namespace detail { /* internals */ }
 }
 using asserts::ASSERTION;
-// All macros of the form ASSERT_DETAIL_* are reserved
 ```
+
+This library defines macros of the form `ASSERT_DETAIL_*`. In macro expansion variables of the form
+`assert_detail_*` are created. The user shouldn't define variables of this form to prevent shadowing
+issues.
 
 ## How To Use This Library
 

@@ -2031,6 +2031,8 @@ namespace asserts::detail {
 		}
 	}
 
+	constexpr int min_term_width = 50;
+
 	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
 		auto& [ lstrings, rstrings, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;

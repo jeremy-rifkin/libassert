@@ -697,10 +697,6 @@ namespace asserts::detail {
 		source_location location;
 		const char* const* args_strings;
 	};
-
-	size_t count_args_strings(const char* const* const);
-
-	constexpr int min_term_width = 50;
 }
 
 namespace asserts {
@@ -734,10 +730,12 @@ namespace asserts {
 }
 
 namespace asserts::detail {
+	size_t count_args_strings(const char* const* const);
+
 	template<typename A, typename B, typename C, typename... Args>
 	ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE
-	void assert_fail(expression_decomposer<A, B, C>& decomposer,
-	                 const assert_static_parameters* params, Args&&... args) {
+	void process_assert_failure(expression_decomposer<A, B, C>& decomposer,
+	                            const assert_static_parameters* params, Args&&... args) {
 		lock l;
 		const auto args_strings = params->args_strings;
 		size_t args_strings_count = count_args_strings(args_strings);
@@ -775,6 +773,29 @@ namespace asserts::detail {
 		::ASSERT_FAIL(printer, params->type, fatal);
 	}
 
+	// top-level assert function emplaced by the macros
+	// these are the only non-cold functions
+	template<typename A, typename B, typename C, typename... Args>
+	void assert_fail(expression_decomposer<A, B, C>& decomposer,
+	                 const assert_static_parameters* params, Args&&... args) {
+		#ifdef NDEBUG
+		 if(params->type == assert_type::assertion) { // will be constant propagated
+			ASSERT_DETAIL_UNREACHABLE;
+		 }
+		 // If an assert fails under -DNDEBUG this whole branch will be marked unreachable but
+		 // without optimizations control flow can fallthrough the above statement. It's of
+		 // course all UB once an assertion fails in -DNDEBUG but this is an attempt to produce
+		 // better behavior.
+		 if(params->type == assert_type::assertion) {
+			fprintf(stderr, "Catastropic error: Assertion failed in -DNDEBUG\n");
+			abort();
+		 }
+		 // verify calls will procede with fail call
+		 // check is excluded at macro definition, nothing needed here
+		#endif
+		process_assert_failure(decomposer, params, std::forward<Args>(args)...);
+	}
+
 	template<typename A, typename B, typename C, typename... Args>
 	ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE [[nodiscard]]
 	expression_decomposer<A, B, C> assert_fail_m(expression_decomposer<A, B, C> decomposer,
@@ -783,55 +804,24 @@ namespace asserts::detail {
 		return decomposer;
 	}
 
-	// top-level assert function emplaced by the macros
-	// these are the only non-cold functions
-	template<bool R, typename A, typename B, typename C, typename... Args>
-	decltype(auto) (assert)(expression_decomposer<A, B, C> decomposer,
-	                        const assert_static_parameters* params, Args&&... args) {
-		decltype(auto) value = decomposer.get_value();
-		[[maybe_unused]] constexpr bool ret_lhs = decomposer.ret_lhs();
-		if(assert_detail_strong_expect(!static_cast<bool>(value), 0)) {
-			#ifdef NDEBUG
-			 if(params->type == assert_type::assertion) { // will be constant propagated
-				ASSERT_DETAIL_UNREACHABLE;
-			 }
-			 // If an assert fails under -DNDEBUG this whole branch will be marked unreachable but
-			 // without optimizations control flow can fallthrough the above statement. It's of
-			 // course all UB once an assertion fails in -DNDEBUG but this is an attempt to produce
-			 // better behavior.
-			 if(params->type == assert_type::assertion) {
-				fprintf(stderr, "Catastropic error: Assertion failed in -DNDEBUG\n");
-				abort();
-			 }
-			 // verify calls will procede with fail call
-			 // check is excluded at macro definition, nothing needed here
-			#endif
-			// TODO: decide threshold, maybe check trivially movable too?
-			if constexpr(sizeof decomposer > 32) {
-				assert_fail(decomposer, params, std::forward<Args>(args)...);
+	template<typename T>
+	struct assert_value_wrapper {
+		T value;
+	};
+
+	template<bool ret_lhs, bool value_is_lval_ref, typename T, typename A, typename B, typename C>
+	auto get_expression_return_value(T& value, expression_decomposer<A, B, C>& decomposer) {
+		if constexpr(ret_lhs) {
+			if constexpr(std::is_lvalue_reference<A>::value) {
+				return assert_value_wrapper<A>{decomposer.take_lhs()};
 			} else {
-				// std::move it to assert_fail_m, will be moved back to r
-				auto r = assert_fail_m(std::move(decomposer), params, std::forward<Args>(args)...);
-				// can't move-assign back to decomposer if it holds reference members
-				decomposer.compl expression_decomposer();
-				new (&decomposer) expression_decomposer(std::move(r));
+				return assert_value_wrapper<A>{std::move(decomposer.take_lhs())};
 			}
-		#ifdef ASSERT_DETAIL_IS_DEMO
 		} else {
-			assert_detail_primitive_assert(false);
-		#endif
-		}
-		if constexpr(R) { // return lhs or value for assert and verify
-			if constexpr(ret_lhs) {
-				// Note: std::launder needed in 17 in case of placement new / move shenanigans above
-				// https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3
-				return std::launder(&decomposer)->take_lhs();
+			if constexpr(value_is_lval_ref) {
+				return assert_value_wrapper<T&>{value};
 			} else {
-				if constexpr(std::is_lvalue_reference<decltype(value)>::value) {
-					return (value);
-				} else {
-					return value;
-				}
+				return assert_value_wrapper<T>{std::move(value)};
 			}
 		}
 	}
@@ -911,11 +901,11 @@ using asserts::ASSERTION;
 #define ASSERT_DETAIL_COMMA ,
 
 #if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC
- #define ASSERT_DETAIL_STMTEXPR(B, R) __extension__ ({ B; R; })
+ #define ASSERT_DETAIL_STMTEXPR(B, R) __extension__ ({ B R })
  #define ASSERT_DETAIL_WARNING_PRAGMA _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
  #define ASSERT_DETAIL_PFUNC_INVOKER_V ASSERT_DETAIL_PFUNC
 #else
- #define ASSERT_DETAIL_STMTEXPR(B, R) [&] { B; return R; } ()
+ #define ASSERT_DETAIL_STMTEXPR(B, R) [&] { B return R } ()
  #define ASSERT_DETAIL_WARNING_PRAGMA
  #define ASSERT_DETAIL_PFUNC_INVOKER_V nullptr
 #endif
@@ -931,21 +921,18 @@ using asserts::ASSERTION;
 // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
 // name, not signature
 #define ASSERT_DETAIL_STATIC_DATA(name, type, expr_str, ...) \
-                                  ASSERT_DETAIL_STMTEXPR( \
-                                    /* extra string here because of extra comma from map, also serves as terminator */ \
-                                    /* ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS because msvc */ \
-                                    static constexpr const char* const arg_strings[] = { \
-                                      ASSERT_DETAIL_MAP(ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS(__VA_ARGS__)) "" \
-                                    }; \
-                                    static constexpr asserts::detail::assert_static_parameters params = { \
-                                      name ASSERT_DETAIL_COMMA \
-                                      type ASSERT_DETAIL_COMMA \
-                                      expr_str ASSERT_DETAIL_COMMA \
-                                      ASSERT_DETAIL_PFUNC_INVOKER_V ASSERT_DETAIL_COMMA \
-                                      arg_strings ASSERT_DETAIL_COMMA \
-                                    }, \
-                                    &params \
-                                  )
+                                  /* extra string here because of extra comma from map, also serves as terminator */ \
+                                  /* ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS because msvc */ \
+                                  static constexpr const char* const assert_detail_arg_strings[] = { \
+                                    ASSERT_DETAIL_MAP(ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS(__VA_ARGS__)) "" \
+                                  }; \
+                                  static constexpr asserts::detail::assert_static_parameters assert_detail_params = { \
+                                    name ASSERT_DETAIL_COMMA \
+                                    type ASSERT_DETAIL_COMMA \
+                                    expr_str ASSERT_DETAIL_COMMA \
+                                    ASSERT_DETAIL_PFUNC_INVOKER_V ASSERT_DETAIL_COMMA \
+                                    assert_detail_arg_strings ASSERT_DETAIL_COMMA \
+                                  };
 
 // Note about statement expressions: These are needed for two reasons. The first is putting the arg string array and
 // source location structure in .rodata rather than on the stack, the second is a _Pragma for warnings which isn't
@@ -964,15 +951,34 @@ using asserts::ASSERTION;
  #define ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG
 #endif
 #define ASSERT_INVOKE(expr, doreturn, name, type, ...) \
-                          asserts::detail::assert<doreturn>( \
-                            ASSERT_DETAIL_STMTEXPR(, \
-                              ASSERT_DETAIL_WARNING_PRAGMA \
-                              asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr) \
-                            ), \
-                            ASSERT_DETAIL_STATIC_DATA(name, asserts::assert_type::type, #expr, __VA_ARGS__) \
-                            ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) \
-                            ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG \
-                          )
+        ASSERT_DETAIL_STMTEXPR( \
+          ASSERT_DETAIL_WARNING_PRAGMA \
+          auto assert_detail_decomposer = \
+                             asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr); \
+          decltype(auto) assert_detail_value = assert_detail_decomposer.get_value(); \
+          constexpr bool assert_detail_ret_lhs = assert_detail_decomposer.ret_lhs(); \
+          if(assert_detail_strong_expect(!static_cast<bool>(assert_detail_value), 0)) { \
+            ASSERT_DETAIL_STATIC_DATA(name, asserts::assert_type::type, #expr, __VA_ARGS__) \
+            /* Note: Relying on assert_fail call being inlined, __builtin_unreachable() call will be in here */ \
+            if constexpr(sizeof assert_detail_decomposer > 32) { \
+              assert_fail(assert_detail_decomposer, &assert_detail_params \
+                                           ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG); \
+            } else { \
+              /* std::move it to assert_fail_m, will be moved back to r */ \
+              auto assert_detail_r = assert_fail_m(std::move(assert_detail_decomposer), &assert_detail_params \
+                                           ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG); \
+              /* can't move-assign back to decomposer if it holds reference members */ \
+              assert_detail_decomposer.compl expression_decomposer(); \
+              new (&assert_detail_decomposer) asserts::detail::expression_decomposer(std::move(assert_detail_r)); \
+            } \
+          };, \
+          /* Note: std::launder needed in 17 in case of placement new / move shenanigans above */ \
+          /* https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3 */ \
+          /* Note: Somewhat relying on this call being inlined so inefficiency is eliminated */ \
+          asserts::detail::get_expression_return_value \
+            <assert_detail_ret_lhs ASSERT_DETAIL_COMMA std::is_lvalue_reference<decltype(assert_detail_value)>::value> \
+              (assert_detail_value, *std::launder(&assert_detail_decomposer)); \
+        )
 
 #define ASSERT(expr, ...) ASSERT_INVOKE(expr, true, "ASSERT", assertion, __VA_ARGS__)
 
@@ -999,7 +1005,6 @@ using asserts::ASSERTION;
  #undef ASSERT_DETAIL_IS_MSVC
  #undef ASSERT_DETAIL_ATTR_COLD
  #undef ASSERT_DETAIL_ATTR_NOINLINE
- #undef assert_detail_strong_expect
  #undef assert_detail_primitive_assert
 #endif
 
