@@ -412,7 +412,7 @@ Assertion failed at integration/integration.cpp:1802: void test_class<int>::some
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1803
+      at integration.cpp:1802
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
 # 3 main
@@ -426,7 +426,7 @@ Assertion failed at integration/integration.cpp:1804: void test_class<int>::some
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1807
+      at integration.cpp:1804
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
 # 3 main
@@ -472,7 +472,7 @@ Assertion failed at integration/integration.cpp:2002: void test_class<int>::some
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2006
+      at integration.cpp:2002
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
 # 3 main
@@ -629,7 +629,7 @@ Assertion failed at integration/integration.cpp:2201: void test_class<int>::some
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2204
+      at integration.cpp:2201
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
 # 3 main
@@ -713,8 +713,10 @@ logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
-logger_type::compl logger_type() [n=1]
+logger_type::logger_type(logger_type&&) [n=1]
 logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=1]
 --------------------------------------------
 
 logger_type::logger_type() [n=1]
@@ -754,7 +756,11 @@ logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=1]
 logger_type::compl logger_type() [n=-2]
 Verification failed at integration/integration.cpp:2317: void test_class<int>::something_else() [T = int]:
     VERIFY(!(std::is_same<decltype(r), logger_type>::value));
@@ -880,6 +886,10 @@ logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]

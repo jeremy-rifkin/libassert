@@ -6,7 +6,7 @@ Assertion failed at integration/integration.cpp:1103: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1104
+      at integration.cpp:1103
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -23,7 +23,7 @@ Assertion failed at integration/integration.cpp:1104: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1105
+      at integration.cpp:1104
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -38,7 +38,7 @@ Assertion failed at integration/integration.cpp:1107: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1108
+      at integration.cpp:1107
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -53,7 +53,7 @@ Assertion failed at integration/integration.cpp:1108: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1109
+      at integration.cpp:1108
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -68,7 +68,7 @@ Assertion failed at integration/integration.cpp:1110: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1101
+      at integration.cpp:1110
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -84,7 +84,7 @@ Assertion failed at integration/integration.cpp:1201: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1202
+      at integration.cpp:1201
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -99,7 +99,7 @@ Assertion failed at integration/integration.cpp:1202: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1203
+      at integration.cpp:1202
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -129,7 +129,7 @@ Assertion failed at integration/integration.cpp:1303: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1304
+      at integration.cpp:1303
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -157,7 +157,7 @@ Assertion failed at integration/integration.cpp:1401: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1402
+      at integration.cpp:1401
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -171,7 +171,7 @@ Assertion failed at integration/integration.cpp:1402: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1403
+      at integration.cpp:1402
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -186,7 +186,7 @@ Assertion failed at integration/integration.cpp:1403: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1404
+      at integration.cpp:1403
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -201,7 +201,7 @@ Verification failed at integration/integration.cpp:1404: void test_class<T>::som
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1405
+      at integration.cpp:1404
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -216,7 +216,7 @@ Assertion failed at integration/integration.cpp:1407: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1408
+      at integration.cpp:1407
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -305,7 +305,7 @@ Assertion failed at integration/integration.cpp:1702: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1703
+      at integration.cpp:1702
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -412,7 +412,7 @@ Assertion failed at integration/integration.cpp:1802: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1803
+      at integration.cpp:1802
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -426,7 +426,7 @@ Assertion failed at integration/integration.cpp:1804: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1807
+      at integration.cpp:1804
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -460,7 +460,7 @@ Assertion failed at integration/integration.cpp:2001: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2002
+      at integration.cpp:2001
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -472,7 +472,7 @@ Assertion failed at integration/integration.cpp:2002: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2006
+      at integration.cpp:2002
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -487,7 +487,7 @@ Assertion failed at integration/integration.cpp:2102: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2103
+      at integration.cpp:2102
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -501,7 +501,7 @@ Assertion failed at integration/integration.cpp:2103: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2104
+      at integration.cpp:2103
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -513,7 +513,7 @@ Assertion failed at integration/integration.cpp:2104: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2105
+      at integration.cpp:2104
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -527,7 +527,7 @@ Assertion failed at integration/integration.cpp:2105: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2106
+      at integration.cpp:2105
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -541,7 +541,7 @@ Assertion failed at integration/integration.cpp:2106: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2107
+      at integration.cpp:2106
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -555,7 +555,7 @@ Assertion failed at integration/integration.cpp:2107: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2108
+      at integration.cpp:2107
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -569,7 +569,7 @@ Assertion failed at integration/integration.cpp:2109: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2110
+      at integration.cpp:2109
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -584,7 +584,7 @@ Assertion failed at integration/integration.cpp:2111: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2112
+      at integration.cpp:2111
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -599,7 +599,7 @@ Assertion failed at integration/integration.cpp:2113: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2114
+      at integration.cpp:2113
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -629,7 +629,7 @@ Assertion failed at integration/integration.cpp:2201: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2204
+      at integration.cpp:2201
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -648,7 +648,7 @@ Assertion failed at integration/integration.cpp:2304: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2303
+      at integration.cpp:2304
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -713,8 +713,10 @@ logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
-logger_type::compl logger_type() [n=1]
+logger_type::logger_type(logger_type&&) [n=1]
 logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=1]
 --------------------------------------------
 
 logger_type::logger_type() [n=2]
@@ -754,14 +756,18 @@ logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=1]
 logger_type::compl logger_type() [n=-2]
 Verification failed at integration/integration.cpp:2317: void test_class<T>::something_else() [with T = int]:
     VERIFY(!(std::is_same<decltype(r), logger_type>::value));
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2318
+      at integration.cpp:2317
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -775,7 +781,7 @@ Verification failed at integration/integration.cpp:2318: void test_class<T>::som
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2316
+      at integration.cpp:2318
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -812,7 +818,7 @@ Assertion failed at integration/integration.cpp:2405: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2406
+      at integration.cpp:2405
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -827,7 +833,7 @@ Assertion failed at integration/integration.cpp:2406: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2402
+      at integration.cpp:2406
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -882,6 +888,10 @@ logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
 Assertion failed at integration/integration.cpp:2503: void test_class<T>::something_else() [with T = int]:
     assert(false, ...);
@@ -890,7 +900,7 @@ Assertion failed at integration/integration.cpp:2503: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2502
+      at integration.cpp:2503
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
@@ -906,9 +916,11 @@ Assertion failed at integration/integration.cpp:501: void rec(int):
 
 Stack trace:
 # 1 rec(int)
+      at integration.cpp:501
+# 2 rec(int)
       at integration.cpp:503
 |                                   |
-| 9 layers of recursion were folded |
+| 8 layers of recursion were folded |
 |                                   |
 #11 rec(int)
       at integration.cpp:503
@@ -926,7 +938,7 @@ Assertion failed at integration/integration.cpp:508: void recursive_a(int):
 
 Stack trace:
 # 1 recursive_a(int)
-      at integration.cpp:510
+      at integration.cpp:508
 # 2 recursive_b(int)
       at integration.cpp:515
 # 3 recursive_a(int)
@@ -961,7 +973,7 @@ Assertion failed at integration/x/a.cpp:5: void test_path_differentiation_2():
 
 Stack trace:
 # 1 test_path_differentiation_2()
-      at x/a.cpp:6
+      at x/a.cpp:5
 # 2 test_path_differentiation()
       at integration/a.cpp:8
 # 3 test_class<int>::something_else()
