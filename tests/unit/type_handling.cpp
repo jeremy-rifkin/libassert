@@ -50,8 +50,8 @@ struct only_move_constructable {
 };
 
 int main() {
+	// test rvalue
 	{
-		// test rvalue
 		decltype(auto) a = ASSERT(only_move_constructable(2) == 2);
 		static_assert(std::is_same<decltype(a), only_move_constructable>::value);
 		assert(!is_lvalue(ASSERT(only_move_constructable(2) == 2)));
@@ -79,6 +79,14 @@ int main() {
 		ASSERT(v2 == 65536);
 		auto v3 = ASSERT(32 >> 2);
 		ASSERT(v3 == 8);
+	}
+
+	// test CHECK returns nothing
+	{
+		auto f = [] {
+			return CHECK(false);
+		};
+		static_assert(std::is_same<decltype(f()), void>::value);
 	}
 	
 	return 0;
