@@ -713,6 +713,8 @@ logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=1]
 --------------------------------------------
@@ -754,7 +756,11 @@ logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
+logger_type::logger_type(logger_type&&) [n=1]
+logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=1]
 logger_type::compl logger_type() [n=-2]
 Verification failed at integration/integration.cpp:2317: void __cdecl test_class<int>::something_else(void):
     VERIFY(!(std::is_same<decltype(r), logger_type>::value));
@@ -795,7 +801,7 @@ Assertion failed at integration/integration.cpp:2804: decltype(auto) __cdecl tes
 
 Stack trace:
 # 1 test_class<int>::get_lt_a(logger_type&)
-      at integration.cpp:2805
+      at integration.cpp:2804
 # 2 test_class<int>::something_else()
       at integration.cpp:2403
 # 3 test_class<int>::something<N>(std::pair<N, int>)
@@ -880,6 +886,10 @@ logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::logger_type(logger_type&&) [n=2]
+logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
