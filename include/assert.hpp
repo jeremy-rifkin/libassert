@@ -904,10 +904,17 @@ using asserts::ASSERTION;
  #define ASSERT_DETAIL_STMTEXPR(B, R) __extension__ ({ B R })
  #define ASSERT_DETAIL_WARNING_PRAGMA _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
  #define ASSERT_DETAIL_PFUNC_INVOKER_V ASSERT_DETAIL_PFUNC
+ #define ASSERT_DETAIL_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
 #else
  #define ASSERT_DETAIL_STMTEXPR(B, R) [&] { B return R } ()
  #define ASSERT_DETAIL_WARNING_PRAGMA
  #define ASSERT_DETAIL_PFUNC_INVOKER_V nullptr
+ #define ASSERT_DETAIL_STATIC_CAST_TO_BOOL(x) asserts::detail::static_cast_to_bool(x)
+ namespace asserts::detail {
+     template<typename T> bool static_cast_to_bool(T&& t) {
+         return static_cast<bool>(t);
+     }
+ }
 #endif
 
 #if ASSERT_DETAIL_IS_GCC
@@ -942,6 +949,7 @@ using asserts::ASSERTION;
 // ({ M{}; }) does move
 // Of relevance to this: in foo(__extension__ ({ M{1} + M{1}; })); the lifetimes of the M{1} objects end during the
 // statement expression but the lifetime of the returned object is extend to the end of the full foo() expression.
+// A wrapper struct is used here to return an lvalue reference from a gcc statement expression.
 // Note: There is a current issue with tarnaries: auto x = assert(b ? y : y); must copy y. This can be fixed with
 // lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
 // Note: asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr) done for ternary
@@ -957,7 +965,10 @@ using asserts::ASSERTION;
                              asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr); \
           decltype(auto) assert_detail_value = assert_detail_decomposer.get_value(); \
           constexpr bool assert_detail_ret_lhs = assert_detail_decomposer.ret_lhs(); \
-          if(assert_detail_strong_expect(!static_cast<bool>(assert_detail_value), 0)) { \
+          /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
+          /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
+          /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
+          if(assert_detail_strong_expect(!ASSERT_DETAIL_STATIC_CAST_TO_BOOL(assert_detail_value), 0)) { \
             ASSERT_DETAIL_STATIC_DATA(name, asserts::assert_type::type, #expr, __VA_ARGS__) \
             /* Note: Relying on assert_fail call being inlined, __builtin_unreachable() call will be in here */ \
             if constexpr(sizeof assert_detail_decomposer > 32) { \
