@@ -474,16 +474,17 @@ namespace asserts::detail {
 		};
 	}
 
-	static std::unordered_map<ULONG, std::string> type_cache; // memoize, though it hardly matters
+	//static std::unordered_map<ULONG, std::string> type_cache; // memoize, though it hardly matters
 
 	// top-level type resolution function
 	ASSERT_DETAIL_ATTR_COLD static std::string get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
-		if(auto it = type_cache.find(type_index); it != type_cache.end()) {
+		/*if(auto it = type_cache.find(type_index); it != type_cache.end()) {
 			return it->second;
 		} else {
 			auto p = type_cache.insert({ type_index, lookup_type(type_index, proc, modbase) });
 			return p.first->second;
-		}
+		}*/
+		return lookup_type(type_index, proc, modbase);
 	}
 
 	struct function_info {
@@ -1871,7 +1872,12 @@ namespace asserts::detail {
 				end = i;
 			}
 		}
-		return std::pair(start, end);
+		#if !ASSERT_DETAIL_IS_MSVC
+		 int start_offset = 0;
+		#else
+		 int start_offset = 1; // accommodate for lambda being used as statement expression
+		#endif
+		return std::pair(start + start_offset, end);
 	}
 
 	ASSERT_DETAIL_ATTR_COLD
@@ -2030,6 +2036,8 @@ namespace asserts::detail {
 			return blocks;
 		}
 	}
+
+	constexpr int min_term_width = 50;
 
 	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {

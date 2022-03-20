@@ -1,3 +1,5 @@
+#undef ASSERT_LOWERCASE
+#include <cassert>
 #include "assert.hpp"
 
 #include <iostream>
@@ -48,35 +50,43 @@ struct only_move_constructable {
 };
 
 int main() {
+	// test rvalue
 	{
-		// test rvalue
-		decltype(auto) a = assert(only_move_constructable(2) == 2);
+		decltype(auto) a = ASSERT(only_move_constructable(2) == 2);
 		static_assert(std::is_same<decltype(a), only_move_constructable>::value);
-		assert(!is_lvalue(assert(only_move_constructable(2) == 2)));
-		assert(assert(only_move_constructable(2) == 2).x == 2);
+		assert(!is_lvalue(ASSERT(only_move_constructable(2) == 2)));
+		assert(ASSERT(only_move_constructable(2) == 2).x == 2);
 		//assert(assert(only_move_constructable(2) == 2).x++ == 2); // not allowed
 	}
 
 	// test lvalue
 	{
 		only_move_constructable x(2);
-		decltype(auto) b = assert(x == 2);
+		decltype(auto) b = ASSERT(x == 2);
 		static_assert(std::is_same<decltype(b), only_move_constructable&>::value);
-		assert(is_lvalue(assert(x == 2)));
-		assert(x == 2).x++;
-		assert(x.x == 3);
+		assert(is_lvalue(ASSERT(x == 2)));
+		ASSERT(x == 2).x++;
+		ASSERT(x.x == 3);
 	}
 
 	// above cases test lhs returns, now test the case where the full value is returned
 	{
-		auto v0 = assert(1 | 2);
-		assert(v0 == 3);
-		auto v1 = assert(7 & 4);
-		assert(v1 == 4);
-		auto v2 = assert(1 << 16);
-		assert(v2 == 65536);
-		auto v3 = assert(32 >> 2);
-		assert(v3 == 8);
+		auto v0 = ASSERT(1 | 2);
+		ASSERT(v0 == 3);
+		auto v1 = ASSERT(7 & 4);
+		ASSERT(v1 == 4);
+		auto v2 = ASSERT(1 << 16);
+		ASSERT(v2 == 65536);
+		auto v3 = ASSERT(32 >> 2);
+		ASSERT(v3 == 8);
+	}
+
+	// test CHECK returns nothing
+	{
+		auto f = [] {
+			return CHECK(false);
+		};
+		static_assert(std::is_same<decltype(f()), void>::value);
 	}
 	
 	return 0;
