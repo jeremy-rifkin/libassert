@@ -1872,7 +1872,12 @@ namespace asserts::detail {
 				end = i;
 			}
 		}
-		return std::pair(start, end);
+		#if !ASSERT_DETAIL_IS_MSVC
+		 int start_offset = 0;
+		#else
+		 int start_offset = 1; // accommodate for lambda being used as statement expression
+		#endif
+		return std::pair(start + start_offset, end);
 	}
 
 	ASSERT_DETAIL_ATTR_COLD

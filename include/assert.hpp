@@ -905,12 +905,12 @@ using asserts::ASSERTION;
  // with decltype(auto) in an expression like decltype(auto) x = __extension__ ({...}).y;
  #define ASSERT_DETAIL_STMTEXPR(B, R) (__extension__ ({ B R }))
  #define ASSERT_DETAIL_WARNING_PRAGMA _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
- #define ASSERT_DETAIL_PFUNC_INVOKER_V ASSERT_DETAIL_PFUNC
+ #define ASSERT_DETAIL_PFUNC_INVOKER_VALUE ASSERT_DETAIL_PFUNC
  #define ASSERT_DETAIL_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
 #else
- #define ASSERT_DETAIL_STMTEXPR(B, R) [&] { B return R } ()
+ #define ASSERT_DETAIL_STMTEXPR(B, R) [&] (const char* assert_detail_msvc_pfunc) { B return R } (ASSERT_DETAIL_PFUNC)
  #define ASSERT_DETAIL_WARNING_PRAGMA
- #define ASSERT_DETAIL_PFUNC_INVOKER_V nullptr
+ #define ASSERT_DETAIL_PFUNC_INVOKER_VALUE nullptr
  #define ASSERT_DETAIL_STATIC_CAST_TO_BOOL(x) asserts::detail::static_cast_to_bool(x)
  namespace asserts::detail {
      template<typename T> bool static_cast_to_bool(T&& t) {
@@ -939,7 +939,7 @@ using asserts::ASSERTION;
                                     name ASSERT_DETAIL_COMMA \
                                     type ASSERT_DETAIL_COMMA \
                                     expr_str ASSERT_DETAIL_COMMA \
-                                    ASSERT_DETAIL_PFUNC_INVOKER_V ASSERT_DETAIL_COMMA \
+                                    ASSERT_DETAIL_PFUNC_INVOKER_VALUE ASSERT_DETAIL_COMMA \
                                     assert_detail_arg_strings ASSERT_DETAIL_COMMA \
                                   };
 
@@ -956,7 +956,7 @@ using asserts::ASSERTION;
 // lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
 // Note: asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr) done for ternary
 #if ASSERT_DETAIL_IS_MSVC
- #define ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG , asserts::detail::msvc_pretty_function_wrapper{ASSERT_DETAIL_PFUNC}
+ #define ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG ,asserts::detail::msvc_pretty_function_wrapper{assert_detail_msvc_pfunc}
 #else
  #define ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG
 #endif
