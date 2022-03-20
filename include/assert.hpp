@@ -901,7 +901,9 @@ using asserts::ASSERTION;
 #define ASSERT_DETAIL_COMMA ,
 
 #if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC
- #define ASSERT_DETAIL_STMTEXPR(B, R) __extension__ ({ B R })
+ // Extra set of parentheses here because clang treats __extension__ as a low-precedence unary operator which interferes
+ // with decltype(auto) in an expression like decltype(auto) x = __extension__ ({...}).y;
+ #define ASSERT_DETAIL_STMTEXPR(B, R) (__extension__ ({ B R }))
  #define ASSERT_DETAIL_WARNING_PRAGMA _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
  #define ASSERT_DETAIL_PFUNC_INVOKER_V ASSERT_DETAIL_PFUNC
  #define ASSERT_DETAIL_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
