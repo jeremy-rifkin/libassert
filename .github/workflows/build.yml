@@ -13,12 +13,18 @@ jobs:
     - uses: actions/checkout@v2
     - name: make
       run: make
+    - name: build basic test
+      working-directory: tests
+      run: make basic_test
   build-clang:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - name: make
       run: make COMPILER=clang++
+    - name: build basic test
+      working-directory: tests
+      run: make basic_test COMPILER=clang++
   build-msvc:
     runs-on: windows-2019
     steps:
@@ -27,15 +33,24 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1.10.0
     - name: make
       run: make COMPILER=msvc
+    - name: build basic test
+      working-directory: tests
+      run: make basic_test COMPILER=msvc
   build-gcc-windows:
     runs-on: windows-2019
     steps:
     - uses: actions/checkout@v2
     - name: make
       run: make
+    - name: build basic test
+      working-directory: tests
+      run: make basic_test
   build-clang-windows:
     runs-on: windows-2019
     steps:
     - uses: actions/checkout@v2
     - name: make
       run: make COMPILER=clang++
+    - name: build basic test
+      working-directory: tests
+      run: make basic_test COMPILER=clang++

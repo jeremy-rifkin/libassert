@@ -26,18 +26,21 @@ endif
 
 HPP = ../include/assert.hpp
 
-_all: tests demo
+_all: tests demo basic_test
 
 demo: $(BIN)/demo$(E)
 
-tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/type_handling$(E) $(BIN)/integration$(E)
+basic_test: $(BIN)/basic_test$(E)
+
+tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/type_handling$(E) $(BIN)/basic_test$(E) $(BIN)/integration$(E)
 
 ifneq ($(COMPILER),msvc)
     CPP = $(COMPILER)
     LD = $(COMPILER)
     WFLAGS := -Wall -Wextra -Wvla -Wshadow -Werror=return-type
     DFLAGS := -MMD -MP
-    CPPFLAGS := -std=c++17 -I../include -DASSERT_FAIL=custom_fail -DASSERT_LOWERCASE
+    CPPFLAGS := -std=c++17 -I../include
+    GENERAL_FLAGS := -DASSERT_FAIL=custom_fail -DASSERT_LOWERCASE
     LDFLAGS := -g -L../bin -lassert
     ifeq ($(TARGET),debug)
         CPPFLAGS += -O0 -g
@@ -69,19 +72,28 @@ ifneq ($(COMPILER),msvc)
     $(BIN)/type_handling$(E): $(BIN)/o/unit/type_handling.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
+    $(BIN)/basic_test$(E): $(BIN)/o/unit/basic_test.cpp.o
+		$(LD) $^ -o $@ $(LDFLAGS)
+
     $(BIN)/integration$(E): $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
+
+    $(BIN)/o/unit/basic_test.cpp.o: unit/basic_test.cpp $(HPP)
+		$(MKDIR_P) $(dir $@)
+		echo "$(TARGET)"
+		$(CPP) $(CPPFLAGS) -Werror -c $< -o $@
 
     $(BIN)/o/%.cpp.o: %.cpp $(HPP)
 		$(MKDIR_P) $(dir $@)
 		echo "$(TARGET)"
-		$(CPP) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+		$(CPP) $(CPPFLAGS) $(GENERAL_FLAGS) -c $< -o $@
 else
     CPP = cl
     LD = link
     SHELL = powershell
     WFLAGS := /W4
-    CPPFLAGS := /std:c++17 /EHsc /I ../include /DASSERT_FAIL=custom_fail /DASSERT_LOWERCASE /Z7
+    CPPFLAGS := /std:c++17 /EHsc /I ../include /Z7
+    GENERAL_FLAGS := /DASSERT_FAIL=custom_fail /DASSERT_LOWERCASE
     LDFLAGS := /LIBPATH:../bin assert.lib dbghelp.lib /DEBUG
     ifeq ($(TARGET), debug)
         CPPFLAGS +=
@@ -106,12 +118,19 @@ else
     $(BIN)/type_handling$(E): $(BIN)/o/unit/type_handling.cpp.o
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
+    $(BIN)/basic_test$(E): $(BIN)/o/unit/basic_test.cpp.o
+		$(LD) $^ /OUT:$@ $(LDFLAGS)
+
     $(BIN)/integration$(E): $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
+    $(BIN)/o/unit/basic_test.cpp.o: unit/basic_test.cpp $(HPP)
+		-$(MKDIR_P) $(dir $@)
+		$(CPP) $(CPPFLAGS) /WX /c $< /Fo$@
+
     $(BIN)/o/%.cpp.o: %.cpp $(HPP)
 		-$(MKDIR_P) $(dir $@)
-		$(CPP) $(CPPFLAGS) $(CXXFLAGS) /c $< /Fo$@
+		$(CPP) $(CPPFLAGS) $(GENERAL_FLAGS) /c $< /Fo$@
 endif
 
 clean:

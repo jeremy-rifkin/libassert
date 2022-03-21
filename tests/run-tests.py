@@ -113,7 +113,7 @@ def run_integration(expected_output_path: str):
 
 def main():
 	assert(len(sys.argv) == 2)
-	run_unit_tests(["disambiguation", "literals", "type_handling"])
+	run_unit_tests(["disambiguation", "literals", "type_handling", "basic_test"])
 	run_integration("integration/expected/{}.txt".format(sys.argv[1]))
 	global ok
 	print("Tests " + ("passed 🟢" if ok else "failed 🔴"), flush=True)
