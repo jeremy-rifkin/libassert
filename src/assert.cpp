@@ -77,7 +77,7 @@ public:
 	constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
 		if(needle == option) return result;
 		if constexpr (sizeof...(Rest) > 0) return lookup(rest...);
-		else { assert_detail_primitive_assert(false); ASSERT_DETAIL_UNREACHABLE; }
+		else { ASSERT_DETAIL_PRIMITIVE_ASSERT(false); ASSERT_DETAIL_UNREACHABLE; }
 	}
 	constexpr bool is_in() { return false; }
 	template<typename T, typename... Rest>
@@ -156,7 +156,7 @@ namespace asserts::detail {
 	ASSERT_DETAIL_ATTR_COLD
 	std::string stringf(T... args) {
 		int length = snprintf(0, 0, args...);
-		if(length < 0) assert_detail_primitive_assert(false, "Invalid arguments to stringf");
+		if(length < 0) ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf");
 		std::string str(length, 0);
 		snprintf(str.data(), length + 1, args...);
 		return str;
@@ -170,7 +170,7 @@ namespace asserts::detail {
 		va_start(args1, format);
 		va_start(args2, format);
 		int length = vsnprintf(0, 0, format, args1);
-		if(length < 0) assert_detail_primitive_assert(false, "Invalid arguments to stringf");
+		if(length < 0) ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf");
 		std::string str(length, 0);
 		vsnprintf(str.data(), length + 1, format, args2);
 		va_end(args1);
@@ -290,12 +290,12 @@ namespace asserts::detail {
 		#ifdef _WIN32
 		 char buffer[MAX_PATH + 1];
 		 int s = GetModuleFileNameA(NULL, buffer, sizeof(buffer));
-		 assert_detail_primitive_assert(s != 0);
+		 ASSERT_DETAIL_PRIMITIVE_ASSERT(s != 0);
 		 return buffer;
 		#else
 		 char buffer[PATH_MAX + 1];
 		 ssize_t s = readlink("/proc/self/exe", buffer, PATH_MAX);
-		 assert_detail_primitive_assert(s != -1);
+		 ASSERT_DETAIL_PRIMITIVE_ASSERT(s != -1);
 		 buffer[s] = 0;
 		 return buffer;
 		#endif
@@ -404,7 +404,7 @@ namespace asserts::detail {
 				return (T)-1;
 			} else {
 				using namespace std::string_literals;
-				assert_detail_primitive_assert(false, ("SymGetTypeInfo failed: "s +
+				ASSERT_DETAIL_PRIMITIVE_ASSERT(false, ("SymGetTypeInfo failed: "s +
 				                           std::system_error(GetLastError(), std::system_category()).what()).c_str());
 			}
 		}
@@ -582,7 +582,7 @@ namespace asserts::detail {
 		 std::string addresses = "";
 		 for(auto& [address, _] : deferred) addresses += stringf("%#tx ", address);
 		 auto output = split(trim(resolve_addresses(addresses, executable)), "\n");
-		 assert_detail_primitive_assert(output.size() == 2 * deferred.size());
+		 ASSERT_DETAIL_PRIMITIVE_ASSERT(output.size() == 2 * deferred.size());
 		 for(size_t i = 0; i < deferred.size(); i++) {
 			 // line info is one of the following:
 			 // path:line (descriminator number)
@@ -592,7 +592,7 @@ namespace asserts::detail {
 			 // Regex modified from the linux version to eat the C:\\ at the beginning
 			 static std::regex location_re(R"(^((?:\w:[\\/])?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
 			 auto m = match<2>(output[i * 2 + 1], location_re);
-			 assert_detail_primitive_assert(m.has_value());
+			 ASSERT_DETAIL_PRIMITIVE_ASSERT(m.has_value());
 			 auto [path, line] = *m;
 			 if(path != "??") {
 				 trace[deferred[i].second].source_path = path;
@@ -653,11 +653,11 @@ namespace asserts::detail {
 
 	ASSERT_DETAIL_ATTR_COLD static uint16_t get_executable_e_type(const std::string& path) {
 		FILE* f = fopen(path.c_str(), "rb");
-		assert_detail_primitive_assert(f != NULL);
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(f != NULL);
 		partial_elf_file_header h;
 		internal_verify(fread(&h, sizeof(partial_elf_file_header), 1, f) == 1, "error while reading file");
 		char magic[] = {0x7F, 'E', 'L', 'F'};
-		assert_detail_primitive_assert(memcmp(h.magic, magic, 4) == 0);
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(memcmp(h.magic, magic, 4) == 0);
 		if(h.e_data != endianness()) {
 			h.e_type = (h.e_type & 0x00ff) << 8 | (h.e_type & 0xff00) >> 8;
 		}
@@ -693,7 +693,7 @@ namespace asserts::detail {
 			frame frame;
 			frame.raw_address = array[i];
 			if(dladdr(array[i], &info)) {
-				assert_detail_primitive_assert(info.dli_fname != nullptr);
+				ASSERT_DETAIL_PRIMITIVE_ASSERT(info.dli_fname != nullptr);
 				// dli_sname and dli_saddr are only present with -rdynamic, sname will be included
 				// but we don't really need dli_saddr
 				frame.obj_path = info.dli_fname;
@@ -702,7 +702,7 @@ namespace asserts::detail {
 			}
 			frames.push_back(frame);
 		}
-		assert_detail_primitive_assert(frames.size() == size - skip);
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(frames.size() == size - skip);
 		return frames;
 	}
 
@@ -767,7 +767,7 @@ namespace asserts::detail {
 			std::optional<std::string> dladdr_name_of_executable;
 			for(size_t i = 0; i < frames.size(); i++) {
 				auto& entry = frames[i];
-				assert_detail_primitive_assert(entry.raw_address >= entry.obj_base);
+				ASSERT_DETAIL_PRIMITIVE_ASSERT(entry.raw_address >= entry.obj_base);
 				// There is a bug with dladdr for non-PIE objects
 				if(!dladdr_name_of_executable.has_value()) {
 					if(paths_refer_to_same(entry.obj_path, binary_path)) {
@@ -799,7 +799,7 @@ namespace asserts::detail {
 				auto output = split(trim(resolve_addresses(join(addresses, "\n"), file)), "\n");
 				// Cannot wait until we can write ^ that as:
 				// join(addresses, "\n") |> resolve_addresses(file) |> trim() |> split("\n");
-				assert_detail_primitive_assert(output.size() == 2 * target.size());
+				ASSERT_DETAIL_PRIMITIVE_ASSERT(output.size() == 2 * target.size());
 				for(size_t i = 0; i < target.size(); i++) {
 					// line info is one of the following:
 					// path:line (descriminator number)
@@ -808,7 +808,7 @@ namespace asserts::detail {
 					// ??:?
 					static std::regex location_re(R"(^([^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
 					auto m = match<2>(output[i * 2 + 1], location_re);
-					assert_detail_primitive_assert(m.has_value());
+					ASSERT_DETAIL_PRIMITIVE_ASSERT(m.has_value());
 					auto [path, line] = *m;
 					if(path != "??") {
 						target[i]->source_path = path;
@@ -1137,7 +1137,7 @@ namespace asserts::detail {
 							}
 						}
 					}
-					assert_detail_primitive_assert(j != 0);
+					ASSERT_DETAIL_PRIMITIVE_ASSERT(j != 0);
 					return token_t { token_e::whitespace, "" };
 				};
 				switch(token.token_type) {
@@ -1253,7 +1253,7 @@ namespace asserts::detail {
 							empty = false;
 						}
 					}
-					if(i == tokens.size() && count != -1) assert_detail_primitive_assert(false, "ill-formed expression input");
+					if(i == tokens.size() && count != -1) ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "ill-formed expression input");
 					return empty;
 				};
 				switch(token.token_type) {
@@ -1275,7 +1275,7 @@ namespace asserts::detail {
 								} else if(token.str == "<" && normalize_brace(find_last_non_ws(tokens, i).str) == "]") {
 									// this must be a template parameter list, part of a generic lambda
 									bool empty = scan_forward("<", ">");
-									assert_detail_primitive_assert(!empty);
+									ASSERT_DETAIL_PRIMITIVE_ASSERT(!empty);
 									state = expecting_operator;
 									continue;
 								}
@@ -1326,7 +1326,7 @@ namespace asserts::detail {
 							}
 							state = expecting_operator;
 						} else {
-							assert_detail_primitive_assert(false, "unhandled punctuation?");
+							ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "unhandled punctuation?");
 						}
 						break;
 					case token_e::keyword:
@@ -1498,9 +1498,9 @@ namespace asserts::detail {
 
 	ASSERT_DETAIL_ATTR_COLD
 	std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r) {
-		assert_detail_primitive_assert(sig.find(l) != std::string_view::npos);
-		assert_detail_primitive_assert(sig.rfind(r) != std::string_view::npos);
-		assert_detail_primitive_assert(sig.find(l) < sig.rfind(r));
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(sig.find(l) != std::string_view::npos);
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(sig.rfind(r) != std::string_view::npos);
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(sig.find(l) < sig.rfind(r));
 		auto i = sig.find(l) + l.length();
 		return sig.substr(i, sig.rfind(r) - i);
 	}
@@ -1561,7 +1561,7 @@ namespace asserts::detail {
 				oss<<"0b"<<std::bitset<sizeof(value) * 8>(value);
 				goto r;
 			default:
-				assert_detail_primitive_assert(false, "unexpected literal format requested for printing");
+				ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
 		}
 		oss<<value;
 		r: return std::move(oss).str();
@@ -1614,7 +1614,7 @@ namespace asserts::detail {
 			case literal_format::binary:
 				return "";
 			default:
-				assert_detail_primitive_assert(false, "unexpected literal format requested for printing");
+				ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
 		}
 		oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<value;
 		std::string s = std::move(oss).str();
@@ -1713,8 +1713,8 @@ namespace asserts::detail {
 				}
 			}
 		}
-		assert_detail_primitive_assert(!parts.empty());
-		assert_detail_primitive_assert(parts.back() != "." && parts.back() != "..");
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(!parts.empty());
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(parts.back() != "." && parts.back() != "..");
 		return parts;
 	}
 
@@ -1754,20 +1754,20 @@ namespace asserts::detail {
 		path_trie& operator=(path_trie&&) = delete;
 		ASSERT_DETAIL_ATTR_COLD
 		void insert(const path_components& path) {
-			assert_detail_primitive_assert(path.back() == root);
+			ASSERT_DETAIL_PRIMITIVE_ASSERT(path.back() == root);
 			insert(path, (int)path.size() - 2);
 		}
 		ASSERT_DETAIL_ATTR_COLD
 		path_components disambiguate(const path_components& path) {
 			path_components result;
 			path_trie* current = this;
-			assert_detail_primitive_assert(path.back() == root);
+			ASSERT_DETAIL_PRIMITIVE_ASSERT(path.back() == root);
 			result.push_back(current->root);
 			for(size_t i = path.size() - 2; i >= 1; i--) {
-				assert_detail_primitive_assert(current->downstream_branches >= 1);
+				ASSERT_DETAIL_PRIMITIVE_ASSERT(current->downstream_branches >= 1);
 				if(current->downstream_branches == 1) break;
 				const std::string& component = path[i];
-				assert_detail_primitive_assert(current->edges.count(component));
+				ASSERT_DETAIL_PRIMITIVE_ASSERT(current->edges.count(component));
 				current = current->edges.at(component);
 				result.push_back(current->root);
 			}
@@ -1808,7 +1808,7 @@ namespace asserts::detail {
 					if(lines.size() == current_line) lines.emplace_back(columns.size());
 					// number of characters we can extract from the block
 					size_t extract = std::min(width - lines[current_line][i].length, block.content.size() - block_i);
-					assert_detail_primitive_assert(block_i + extract <= block.content.size());
+					ASSERT_DETAIL_PRIMITIVE_ASSERT(block_i + extract <= block.content.size());
 					auto substr = std::string_view(block.content).substr(block_i, extract);
 					// handle newlines
 					if(auto x = substr.find('\n'); x != std::string_view::npos) {
@@ -1952,7 +1952,7 @@ namespace asserts::detail {
 					size_t left = 2 + max_frame_width;
 					size_t middle = std::max((int)line_number.size(), max_line_number_width); // todo: is this looking right...?
 					size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
-					assert_detail_primitive_assert(remaining_width >= 2);
+					ASSERT_DETAIL_PRIMITIVE_ASSERT(remaining_width >= 2);
 					size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
 					size_t sig_width = remaining_width - file_width;
 					stacktrace += wrapped_print({
@@ -2001,7 +2001,7 @@ namespace asserts::detail {
 
 	ASSERT_DETAIL_ATTR_COLD
 	static std::string print_values(const std::vector<std::string>& vec, size_t lw) {
-		assert_detail_primitive_assert(vec.size() > 0);
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(vec.size() > 0);
 		std::string values;
 		if(vec.size() == 1) {
 			values += stringf("%s\n", indent(highlight(vec[0]), 8 + lw + 4, ' ', true).c_str());
@@ -2020,7 +2020,7 @@ namespace asserts::detail {
 
 	ASSERT_DETAIL_ATTR_COLD
 	static std::vector<highlight_block> get_values(const std::vector<std::string>& vec) {
-		assert_detail_primitive_assert(vec.size() > 0);
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(vec.size() > 0);
 		if(vec.size() == 1) {
 			return highlight_blocks(vec[0]);
 		} else {
@@ -2043,8 +2043,8 @@ namespace asserts::detail {
 	std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
 		auto& [ lstrings, rstrings, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;
 		const char* a_str = a_sstr.c_str(), *b_str = b_sstr.c_str();
-		assert_detail_primitive_assert(lstrings.size() > 0);
-		assert_detail_primitive_assert(rstrings.size() > 0);
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(lstrings.size() > 0);
+		ASSERT_DETAIL_PRIMITIVE_ASSERT(rstrings.size() > 0);
 		// pad all columns where there is overlap
 		// TODO: Use column printer instead of manual padding.
 		for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()); i++) {
@@ -2165,7 +2165,7 @@ namespace asserts::detail {
 			case assert_type::verify: return "Verification";
 			case assert_type::check: return "Check";
 			default:
-				assert_detail_primitive_assert(false);
+				ASSERT_DETAIL_PRIMITIVE_ASSERT(false);
 				return "";
 		}
 	}
@@ -2272,7 +2272,7 @@ void assert_detail_default_fail_action(asserts::assertion_printer& printer, asse
 			case asserts::assert_type::check:
 				throw asserts::check_failure();
 			default:
-				assert_detail_primitive_assert(false);
+				ASSERT_DETAIL_PRIMITIVE_ASSERT(false);
 		}
 	}
 }

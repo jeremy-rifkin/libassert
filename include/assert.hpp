@@ -34,11 +34,11 @@
 #endif
 
 #if ASSERT_DETAIL_IS_MSVC
- #define assert_detail_strong_expect(expr, value) (expr)
+ #define ASSERT_DETAIL_STRONG_EXPECT(expr, value) (expr)
 #elif defined(__clang__) && __clang_major__ >= 11 || __GNUC__ >= 9
- #define assert_detail_strong_expect(expr, value) __builtin_expect_with_probability((expr), (value), 1)
+ #define ASSERT_DETAIL_STRONG_EXPECT(expr, value) __builtin_expect_with_probability((expr), (value), 1)
 #else
- #define assert_detail_strong_expect(expr, value) __builtin_expect((expr), (value))
+ #define ASSERT_DETAIL_STRONG_EXPECT(expr, value) __builtin_expect((expr), (value))
 #endif
 
 namespace asserts {
@@ -90,7 +90,7 @@ namespace asserts::config {
 /*
  * Internal mechanisms
  *
- * Macros exposed: assert_detail_primitive_assert
+ * Macros exposed: ASSERT_DETAIL_PRIMITIVE_ASSERT
  */
 
 namespace asserts::detail {
@@ -113,10 +113,10 @@ namespace asserts::detail {
 	                           source_location location, const char* message = nullptr);
 
 	#ifndef NDEBUG
-	 #define assert_detail_primitive_assert(c, ...) asserts::detail::primitive_assert_impl(c, false, #c, \
+	 #define ASSERT_DETAIL_PRIMITIVE_ASSERT(c, ...) asserts::detail::primitive_assert_impl(c, false, #c, \
 	                                                                                 ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
 	#else
-	 #define assert_detail_primitive_assert(c, ...) ASSERT_DETAIL_PHONY_USE(c)
+	 #define ASSERT_DETAIL_PRIMITIVE_ASSERT(c, ...) ASSERT_DETAIL_PHONY_USE(c)
 	#endif
 
 	/*
@@ -223,7 +223,7 @@ namespace asserts::detail {
 	// std:: implementations don't allow two separate types for lhs/rhs
 	// Note: is this macro potentially bad when it comes to debugging(?)
 	namespace ops {
-		#define assert_detail_gen_op_boilerplate(name, op) struct name { \
+		#define ASSERT_DETAIL_GEN_OP_BOILERPLATE(name, op) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
 			ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
@@ -231,7 +231,7 @@ namespace asserts::detail {
 				return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
 		}
-		#define assert_detail_gen_op_boilerplate_special(name, op, cmp) struct name { \
+		#define ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(name, op, cmp) struct name { \
 			static constexpr std::string_view op_string = #op; \
 			template<typename A, typename B> \
 			ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
@@ -240,34 +240,34 @@ namespace asserts::detail {
 				else return std::forward<A>(lhs) op std::forward<B>(rhs); \
 			} \
 		}
-		assert_detail_gen_op_boilerplate(shl, <<);
-		assert_detail_gen_op_boilerplate(shr, >>);
-		assert_detail_gen_op_boilerplate_special(eq,   ==, cmp_equal);
-		assert_detail_gen_op_boilerplate_special(neq,  !=, cmp_not_equal);
-		assert_detail_gen_op_boilerplate_special(gt,    >, cmp_greater);
-		assert_detail_gen_op_boilerplate_special(lt,    <, cmp_less);
-		assert_detail_gen_op_boilerplate_special(gteq, >=, cmp_greater_equal);
-		assert_detail_gen_op_boilerplate_special(lteq, <=, cmp_less_equal);
-		assert_detail_gen_op_boilerplate(band,   &);
-		assert_detail_gen_op_boilerplate(bxor,   ^);
-		assert_detail_gen_op_boilerplate(bor,    |);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(shl, <<);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(shr, >>);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(eq,   ==, cmp_equal);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(neq,  !=, cmp_not_equal);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(gt,    >, cmp_greater);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(lt,    <, cmp_less);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(gteq, >=, cmp_greater_equal);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(lteq, <=, cmp_less_equal);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(band,   &);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(bxor,   ^);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(bor,    |);
 		#ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
-		 assert_detail_gen_op_boilerplate(land,   &&);
-		 assert_detail_gen_op_boilerplate(lor,    ||);
+		 ASSERT_DETAIL_GEN_OP_BOILERPLATE(land,   &&);
+		 ASSERT_DETAIL_GEN_OP_BOILERPLATE(lor,    ||);
 		#endif
-		assert_detail_gen_op_boilerplate(assign, =);
-		assert_detail_gen_op_boilerplate(add_assign,  +=);
-		assert_detail_gen_op_boilerplate(sub_assign,  -=);
-		assert_detail_gen_op_boilerplate(mul_assign,  *=);
-		assert_detail_gen_op_boilerplate(div_assign,  /=);
-		assert_detail_gen_op_boilerplate(mod_assign,  %=);
-		assert_detail_gen_op_boilerplate(shl_assign,  <<=);
-		assert_detail_gen_op_boilerplate(shr_assign,  >>=);
-		assert_detail_gen_op_boilerplate(band_assign, &=);
-		assert_detail_gen_op_boilerplate(bxor_assign, ^=);
-		assert_detail_gen_op_boilerplate(bor_assign,  |=);
-		#undef assert_detail_gen_op_boilerplate
-		#undef assert_detail_gen_op_boilerplate_special
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(assign, =);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(add_assign,  +=);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(sub_assign,  -=);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(mul_assign,  *=);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(div_assign,  /=);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(mod_assign,  %=);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(shl_assign,  <<=);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(shr_assign,  >>=);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(band_assign, &=);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(bxor_assign, ^=);
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(bor_assign,  |=);
+		#undef ASSERT_DETAIL_GEN_OP_BOILERPLATE
+		#undef ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL
 	}
 
 	// I learned this automatic expression decomposition trick from lest:
@@ -395,7 +395,7 @@ namespace asserts::detail {
 				return expression_decomposer<decltype(get_value()), O, ops::shl>(std::forward<A>(get_value()), std::forward<O>(operand));
 			}
 		}
-		#define assert_detail_gen_op_boilerplate(functor, op) \
+		#define ASSERT_DETAIL_GEN_OP_BOILERPLATE(functor, op) \
 		template<typename O> [[nodiscard]] auto operator op(O&& operand) && { \
 			static_assert(!is_nothing<A>); \
 			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
@@ -407,32 +407,32 @@ namespace asserts::detail {
 				return expression_decomposer<decltype(get_value()), Q, functor>(std::forward<A>(get_value()), std::forward<O>(operand)); \
 			} \
 		}
-		assert_detail_gen_op_boilerplate(ops::shr, >>)
-		assert_detail_gen_op_boilerplate(ops::eq, ==)
-		assert_detail_gen_op_boilerplate(ops::neq, !=)
-		assert_detail_gen_op_boilerplate(ops::gt, >)
-		assert_detail_gen_op_boilerplate(ops::lt, <)
-		assert_detail_gen_op_boilerplate(ops::gteq, >=)
-		assert_detail_gen_op_boilerplate(ops::lteq, <=)
-		assert_detail_gen_op_boilerplate(ops::band, &)
-		assert_detail_gen_op_boilerplate(ops::bxor, ^)
-		assert_detail_gen_op_boilerplate(ops::bor, |)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shr, >>)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::eq, ==)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::neq, !=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::gt, >)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lt, <)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::gteq, >=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lteq, <=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::band, &)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bxor, ^)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bor, |)
 		#ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
-		 assert_detail_gen_op_boilerplate(ops::land, &&)
-		 assert_detail_gen_op_boilerplate(ops::lor, ||)
+		 ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::land, &&)
+		 ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lor, ||)
 		#endif
-		assert_detail_gen_op_boilerplate(ops::assign, =)
-		assert_detail_gen_op_boilerplate(ops::add_assign, +=)
-		assert_detail_gen_op_boilerplate(ops::sub_assign, -=)
-		assert_detail_gen_op_boilerplate(ops::mul_assign, *=)
-		assert_detail_gen_op_boilerplate(ops::div_assign, /=)
-		assert_detail_gen_op_boilerplate(ops::mod_assign, %=)
-		assert_detail_gen_op_boilerplate(ops::shl_assign, <<=)
-		assert_detail_gen_op_boilerplate(ops::shr_assign, >>=)
-		assert_detail_gen_op_boilerplate(ops::band_assign, &=)
-		assert_detail_gen_op_boilerplate(ops::bxor_assign, ^=)
-		assert_detail_gen_op_boilerplate(ops::bor_assign, |=)
-		#undef assert_detail_gen_op_boilerplate
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::assign, =)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::add_assign, +=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::sub_assign, -=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::mul_assign, *=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::div_assign, /=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::mod_assign, %=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shl_assign, <<=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shr_assign, >>=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::band_assign, &=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bxor_assign, ^=)
+		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bor_assign, |=)
+		#undef ASSERT_DETAIL_GEN_OP_BOILERPLATE
 	};
 
 	// for ternary support
@@ -744,7 +744,7 @@ namespace asserts::detail {
 		- 1
 		#endif
 		;
-		assert_detail_primitive_assert((sizeof...(args) == 0 && args_strings_count == 2)
+		ASSERT_DETAIL_PRIMITIVE_ASSERT((sizeof...(args) == 0 && args_strings_count == 2)
 		                               || args_strings_count == sizeof_extra_diagnostics + 1);
 		// process_args needs to be called as soon as possible in case errno needs to be read
 		const auto processed_args = process_args(args_strings, args...);
@@ -955,7 +955,7 @@ using asserts::ASSERTION;
           /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
           /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
           /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
-          if(assert_detail_strong_expect(!ASSERT_DETAIL_STATIC_CAST_TO_BOOL(assert_detail_value), 0)) { \
+          if(ASSERT_DETAIL_STRONG_EXPECT(!ASSERT_DETAIL_STATIC_CAST_TO_BOOL(assert_detail_value), 0)) { \
             failaction \
             ASSERT_DETAIL_STATIC_DATA(name, asserts::assert_type::type, #expr, __VA_ARGS__) \
             if constexpr(sizeof assert_detail_decomposer > 32) { \
@@ -1009,7 +1009,7 @@ using asserts::ASSERTION;
  #undef ASSERT_DETAIL_IS_MSVC
  #undef ASSERT_DETAIL_ATTR_COLD
  #undef ASSERT_DETAIL_ATTR_NOINLINE
- #undef assert_detail_primitive_assert
+ #undef ASSERT_DETAIL_PRIMITIVE_ASSERT
 #endif
 
 #endif
