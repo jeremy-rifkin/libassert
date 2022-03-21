@@ -62,14 +62,22 @@ def icdiff(a: Union[str, tuple], b: Union[str, tuple]):
 		to_delete.append(b_path)
 		with open(b_path, "w", newline="\n") as f:
 			f.write(b[0])
-	# TODO: Some issues with icdiff's edit distance......
-	"""dp = subprocess.Popen([
+	# TODO: Some issues with icdiff's edit distance...... For now just do both
+	print()
+	print("{x}========={x}".format(x = "=" * 40))
+	print("{x} icdiff: {x}".format(x = "=" * 40))
+	print("{x}========={x}".format(x = "=" * 40))
+	dp = subprocess.Popen([
 		"icdiff",
 		a_path,
 		b_path,
 		"--cols",
 		"170"
-	])"""
+	])
+	dp.wait()
+	print("{x}============={x}".format(x = "=" * 40))
+	print("{x} basic diff: {x}".format(x = "=" * 40))
+	print("{x}============={x}".format(x = "=" * 40))
 	dp = subprocess.Popen([
 		"diff",
 		"-y",

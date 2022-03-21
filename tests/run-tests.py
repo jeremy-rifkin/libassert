@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
 import os
 import subprocess
 import sys
+
+sys.stdout.reconfigure(encoding='utf-8') # for windows gh runner
 
 from pyutils.utils import parse_output, icdiff
 
@@ -18,13 +21,13 @@ else:
 def run_unit_tests(tests):
 	for test in tests:
 		binary = "bin/" + test + (".exe" if sys.platform == "win32" else "")
-		print("[Running test {}]".format(binary), flush=True)
+		print("[🔵 Running test {}]".format(binary), flush=True)
 		p = subprocess.Popen([binary], env=env)
 		p.wait(timeout=10)
 		if p.returncode != 0:
 			global ok
 			ok = False
-		print("[{}, code {}]".format("Passed" if p.returncode == 0 else "Failed", p.returncode), flush=True)
+		print("[{}, code {}]".format("🟢 Passed" if p.returncode == 0 else "🔴 Failed", p.returncode), flush=True)
 
 # This function scans two outputs and ignores close mismatches in line numbers
 def critical_difference(output: str, expected_output: str): # TODO: Make use of utils.parse_output
@@ -79,7 +82,7 @@ def critical_difference(output: str, expected_output: str): # TODO: Make use of 
 		return False
 
 def run_integration(expected_output_path: str):
-	print("[Running integration test against {}]".format(expected_output_path), flush=True)
+	print("[🔵 Running integration test against {}]".format(expected_output_path), flush=True)
 	with open(expected_output_path) as f:
 		expected_output = f.read()
 	p = subprocess.Popen(
@@ -95,15 +98,15 @@ def run_integration(expected_output_path: str):
 			print("WARNING: Difference in output but deemed non-critical", flush=True)
 		print(os.path.basename(expected_output_path))
 		icdiff(
-			(output, "output.txt"),
-			expected_output_path
+			expected_output_path,
+			(output, "output.txt")
 		)
 	elif p.returncode != 0:
 		print("p.retruncode = {}".format(p.returncode), flush=True)
 		passed = False
 	elif len(err) != 0:
 		print("Warning: Process stderr not empty:\n{}".format(err.decode("utf-8")), flush=True)
-	print("[{}]".format("Passed" if passed else "Failed"), flush=True)
+	print("[{}]".format("🟢 Passed" if passed else "🔴 Failed"), flush=True)
 	if not passed:
 		global ok
 		ok = False
@@ -113,7 +116,7 @@ def main():
 	run_unit_tests(["disambiguation", "literals", "type_handling"])
 	run_integration("integration/expected/{}.txt".format(sys.argv[1]))
 	global ok
-	print("tests " + ("passed" if ok else "failed"), flush=True)
+	print("Tests " + ("passed 🟢" if ok else "failed 🔴"), flush=True)
 	sys.exit(not ok)
 
 main()
