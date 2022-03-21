@@ -87,6 +87,17 @@ public:
 	}
 };
 
+// hashing utilities
+std::size_t hash_combine(std::size_t a, std::size_t b) {
+	return a ^ (b + 0x9e3779b9 + (a<<6) + (a>>2));
+}
+
+struct pair_hasher {
+	template<typename A, typename B> std::size_t operator()(const std::pair<A, B>& pair) const {
+		return hash_combine(std::hash<A>()(pair.first), std::hash<B>()(pair.second));
+	}
+};
+
 namespace asserts::utility {
 	ASSERT_DETAIL_ATTR_COLD
 	std::string strip_colors(const std::string& str) {
@@ -474,16 +485,18 @@ namespace asserts::detail {
 		};
 	}
 
-	//static std::unordered_map<ULONG, std::string> type_cache; // memoize, though it hardly matters
+	// for memoization, though it hardly matters
+	// maps (modbase, type_index) -> type
+	static std::unordered_map<std::pair<ULONG64, ULONG>, std::string, pair_hasher> type_cache;
 
 	// top-level type resolution function
 	ASSERT_DETAIL_ATTR_COLD static std::string get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
-		/*if(auto it = type_cache.find(type_index); it != type_cache.end()) {
+		if(auto it = type_cache.find({modbase, type_index}); it != type_cache.end()) {
 			return it->second;
 		} else {
-			auto p = type_cache.insert({ type_index, lookup_type(type_index, proc, modbase) });
+			auto p = type_cache.insert({ {modbase, type_index}, lookup_type(type_index, proc, modbase) });
 			return p.first->second;
-		}*/
+		}
 		return lookup_type(type_index, proc, modbase);
 	}
 
