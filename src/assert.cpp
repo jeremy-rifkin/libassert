@@ -87,17 +87,6 @@ public:
 	}
 };
 
-// hashing utilities
-std::size_t hash_combine(std::size_t a, std::size_t b) {
-	return a ^ (b + 0x9e3779b9 + (a<<6) + (a>>2));
-}
-
-struct pair_hasher {
-	template<typename A, typename B> std::size_t operator()(const std::pair<A, B>& pair) const {
-		return hash_combine(std::hash<A>()(pair.first), std::hash<B>()(pair.second));
-	}
-};
-
 namespace asserts::utility {
 	ASSERT_DETAIL_ATTR_COLD
 	std::string strip_colors(const std::string& str) {
@@ -461,8 +450,6 @@ namespace asserts::detail {
 		}
 	}
 
-	static std::string get_type(ULONG, HANDLE, ULONG64);
-
 	// Resolve more complex types
 	ASSERT_DETAIL_ATTR_COLD static std::string lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
 		auto tag = get_info<SymTagEnum, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMTAG>(type_index, proc, modbase);
@@ -473,7 +460,7 @@ namespace asserts::detail {
 				DWORD underlying_type_id =
 					get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
 				bool is_ref = get_info<BOOL, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_IS_REFERENCE>(type_index, proc, modbase);
-				return std::string(get_type(underlying_type_id, proc, modbase)) + (is_ref ? "&" : "*");
+				return std::string(lookup_type(underlying_type_id, proc, modbase)) + (is_ref ? "&" : "*");
 			}
 			case SymTagEnum::SymTagTypedef:
 			case SymTagEnum::SymTagEnum:
@@ -483,21 +470,6 @@ namespace asserts::detail {
 			default:
 				return "<unknown type>";
 		};
-	}
-
-	// for memoization, though it hardly matters
-	// maps (modbase, type_index) -> type
-	static std::unordered_map<std::pair<ULONG64, ULONG>, std::string, pair_hasher> type_cache;
-
-	// top-level type resolution function
-	ASSERT_DETAIL_ATTR_COLD static std::string get_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
-		if(auto it = type_cache.find({modbase, type_index}); it != type_cache.end()) {
-			return it->second;
-		} else {
-			auto p = type_cache.insert({ {modbase, type_index}, lookup_type(type_index, proc, modbase) });
-			return p.first->second;
-		}
-		return lookup_type(type_index, proc, modbase);
 	}
 
 	struct function_info {
@@ -518,7 +490,7 @@ namespace asserts::detail {
 		if(ctx->n_ignore-- > 0) {
 			return true; // just skip
 		}
-		ctx->str += get_type(symbol_info->TypeIndex, ctx->proc, ctx->modbase);
+		ctx->str += lookup_type(symbol_info->TypeIndex, ctx->proc, ctx->modbase);
 		if(ctx->counter < ctx->n_children) {
 			ctx->str += ", ";
 		}
@@ -540,7 +512,7 @@ namespace asserts::detail {
 		 std::vector<std::pair<PVOID, size_t>> deferred;
 		#endif
 		for(int i = 0; i < frames; i++) {
-			char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+			alignas(SYMBOL_INFO) char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
 			SYMBOL_INFO* symbol = (SYMBOL_INFO*)buffer;
 			symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
 			symbol->MaxNameLen = MAX_SYM_NAME;
@@ -583,7 +555,7 @@ namespace asserts::detail {
 			}
 		}
 		internal_verify(SymCleanup(proc));
-		 #if ASSERT_DETAIL_IS_GCC
+		#if ASSERT_DETAIL_IS_GCC
 		 // If we're compiling with gcc on windows, the debug symbols will be embedded in the
 		 // executable and retrievable with addr2line (this is provided by mingw).
 		 // The executable will not be PIE. TODO: I don't know if PIE gcc on windows is a
