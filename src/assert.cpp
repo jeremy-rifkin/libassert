@@ -1481,15 +1481,6 @@ namespace asserts::detail {
 		return escaped;
 	}
 
-	ASSERT_DETAIL_ATTR_COLD
-	std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r) {
-		ASSERT_DETAIL_PRIMITIVE_ASSERT(sig.find(l) != std::string_view::npos);
-		ASSERT_DETAIL_PRIMITIVE_ASSERT(sig.rfind(r) != std::string_view::npos);
-		ASSERT_DETAIL_PRIMITIVE_ASSERT(sig.find(l) < sig.rfind(r));
-		auto i = sig.find(l) + l.length();
-		return sig.substr(i, sig.rfind(r) - i);
-	}
-
 	ASSERT_DETAIL_ATTR_COLD std::string stringify(const std::string& value, literal_format) {
 		return escape_string(value, '"');
 	}

@@ -464,11 +464,16 @@ namespace asserts::detail {
 	 * stringification
 	 */
 
-	[[nodiscard]] std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r);
+	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+	constexpr std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r)
+	                                                                                                          noexcept {
+		auto i = sig.find(l) + l.length();
+		return sig.substr(i, sig.rfind(r) - i);
+	}
 
 	template<typename T>
 	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	constexpr std::string_view type_name() {
+	constexpr std::string_view type_name() noexcept {
 		// Cases to handle:
 		// gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
 		// clang: std::string_view ns::type_name() [T = int]
@@ -480,7 +485,7 @@ namespace asserts::detail {
 		#elif ASSERT_DETAIL_IS_MSVC
 		 return substring_bounded_by(ASSERT_DETAIL_PFUNC, "type_name<", ">(void)");
 		#else
-		 static_assert(false, "unsupported compiler")
+		 static_assert(false, "unsupported compiler");
 		#endif
 	}
 
