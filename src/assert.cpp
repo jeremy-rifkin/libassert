@@ -1942,7 +1942,7 @@ namespace asserts::detail {
 					size_t sig_width = remaining_width - file_width;
 					stacktrace += wrapped_print({
 						{ 1,          {{"", "#"}} },
-						{ left - 2,   {{"", std::to_string(frame_number)}}, true },
+						{ left - 2,   highlight_blocks(std::to_string(frame_number)), true },
 						{ file_width, {{"", files.at(source_path)}} },
 						{ middle,     highlight_blocks(line_number), true }, // intentionally not coloring "?"
 						{ sig_width,  sig }
@@ -1951,7 +1951,7 @@ namespace asserts::detail {
 					auto sig = highlight(signature + "("); // hack for the highlighter
 					sig = sig.substr(0, sig.rfind("("));
 					stacktrace += stringf(
-						"#%2d %s\n      at %s:%s\n",
+						"#" CYAN "%2d" RESET " %s\n      at %s:%s\n",
 						(int)frame_number,
 						sig.c_str(),
 						files.at(source_path).c_str(),
