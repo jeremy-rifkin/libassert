@@ -1489,6 +1489,10 @@ namespace asserts::detail {
 		return escape_string(value, '"');
 	}
 
+	ASSERT_DETAIL_ATTR_COLD std::string stringify(std::nullptr_t, literal_format) {
+		return "nullptr";
+	}
+
 	ASSERT_DETAIL_ATTR_COLD std::string stringify(char value, literal_format) {
 		return escape_string({&value, 1}, '\'');
 	}

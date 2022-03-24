@@ -501,6 +501,8 @@ namespace asserts::detail {
 
 	std::string stringify(const std::string&, literal_format = literal_format::none);
 	std::string stringify(const std::string_view&, literal_format = literal_format::none);
+	// without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
+	std::string stringify(std::nullptr_t, literal_format = literal_format::none);
 	std::string stringify(char, literal_format = literal_format::none);
 	std::string stringify(bool, literal_format = literal_format::none);
 	std::string stringify(short, literal_format = literal_format::none);
