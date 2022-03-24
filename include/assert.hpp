@@ -501,10 +501,7 @@ namespace asserts::detail {
 
 	std::string stringify(const std::string&, literal_format = literal_format::none);
 	std::string stringify(const std::string_view&, literal_format = literal_format::none);
-	std::string stringify(const char*, literal_format = literal_format::none);
 	std::string stringify(char, literal_format = literal_format::none);
-	std::string stringify(void*, literal_format = literal_format::none);
-	std::string stringify(std::nullptr_t, literal_format = literal_format::none);
 	std::string stringify(bool, literal_format = literal_format::none);
 	std::string stringify(short, literal_format = literal_format::none);
 	std::string stringify(int, literal_format = literal_format::none);
@@ -518,6 +515,8 @@ namespace asserts::detail {
 	std::string stringify(double, literal_format = literal_format::none);
 	std::string stringify(long double, literal_format = literal_format::none);
 
+	std::string stringify_ptr(const void*, literal_format = literal_format::none);
+
 	template<typename T> class can_basic_stringify {
 		template<typename C, typename = decltype(stringify(std::declval<C>()))>
 		static std::true_type test(int);
@@ -527,10 +526,20 @@ namespace asserts::detail {
 		static constexpr bool value = decltype(test<T>(0))::value;
 	};
 
-	template<typename T, typename std::enable_if<!can_basic_stringify<T>::value, int>::type = 0>
+	template<typename T, typename std::enable_if<std::is_pointer<strip<typename std::decay<T>::type>>::value
+	                                             || std::is_function<strip<T>>::value
+	                                             || !can_basic_stringify<T>::value, int>::type = 0>
 	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
 	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
-		if constexpr(has_stream_overload<T>::value) {
+		if constexpr(std::is_pointer<strip<typename std::decay<T>::type>>::value || std::is_function<strip<T>>::value) {
+			if constexpr(isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char>) { // strings
+				const void* v = t; // circumvent -Wnonnull-compare
+				if(v != nullptr) {
+					return stringify(std::string_view(t)); // not printing type for now, TODO: reconsider?
+				}
+			}
+			return prettify_type(std::string(type_name<T>())) + ": " + stringify_ptr(reinterpret_cast<const void*>(t), fmt);
+		} else if constexpr(has_stream_overload<T>::value) {
 			std::ostringstream oss;
 			oss<<t;
 			return std::move(oss).str();

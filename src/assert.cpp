@@ -1489,29 +1489,6 @@ namespace asserts::detail {
 		return escape_string(value, '"');
 	}
 
-	ASSERT_DETAIL_ATTR_COLD std::string stringify(const char* value, literal_format) {
-		if(value == nullptr) {
-			return "nullptr";
-		}
-		return escape_string(value, '"');
-	}
-
-	ASSERT_DETAIL_ATTR_COLD std::string stringify(void* value, literal_format) {
-		if(value == nullptr) {
-			return "nullptr";
-		}
-		std::ostringstream oss;
-		// Manually format the pointer - ostream::operator<<(void*) falls back to %p which
-		// is implementation-defined. MSVC prints pointers without the leading "0x" which
-		// messes up the highlighter.
-		oss<<std::showbase<<std::hex<<uintptr_t(value);
-		return std::move(oss).str();
-	}
-
-	ASSERT_DETAIL_ATTR_COLD std::string stringify(std::nullptr_t, literal_format) {
-		return "nullptr";
-	}
-
 	ASSERT_DETAIL_ATTR_COLD std::string stringify(char value, literal_format) {
 		return escape_string({&value, 1}, '\'');
 	}
@@ -1611,6 +1588,17 @@ namespace asserts::detail {
 		return stringify_floating_point(value, fmt);
 	}
 
+	ASSERT_DETAIL_ATTR_COLD std::string stringify_ptr(const void* value, literal_format) {
+		if(value == nullptr) {
+			return "nullptr";
+		}
+		std::ostringstream oss;
+		// Manually format the pointer - ostream::operator<<(void*) falls back to %p which
+		// is implementation-defined. MSVC prints pointers without the leading "0x" which
+		// messes up the highlighter.
+		oss<<std::showbase<<std::hex<<uintptr_t(value);
+		return std::move(oss).str();
+	}
 
 	/*
 	 * stack trace printing

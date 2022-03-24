@@ -33,7 +33,7 @@ Stack trace:
 Assertion failed at integration/integration.cpp:1107: void test_class<T>::something_else() [with T = int]:
     assert(buffer == thing);
     Where:
-        buffer => nullptr
+        buffer => char*: nullptr
         thing  => "foo"
 
 Stack trace:
@@ -48,7 +48,7 @@ Stack trace:
 Assertion failed at integration/integration.cpp:1108: void test_class<T>::something_else() [with T = int]:
     assert(buffer == +thing);
     Where:
-        buffer => nullptr
+        buffer => char*: nullptr
         +thing => "foo"
 
 Stack trace:
@@ -109,7 +109,7 @@ Stack trace:
 Assertion failed at integration/integration.cpp:1204: void test_class<T>::something_else() [with T = int]:
     assert(foo == nullptr);
     Where:
-        foo => 0xdeadbeef
+        foo => void*: 0xdeadbeef
 
 Stack trace:
 # 1 test_class<int>::something_else()
