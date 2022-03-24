@@ -20,6 +20,11 @@ jobs:
     - name: build tests
       working-directory: tests
       run: make tests
+    - name: dos2unix
+      working-directory: tests/integration/expected
+      run: |
+           sudo apt install dos2unix
+           dos2unix *.txt
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py gcc
@@ -36,6 +41,11 @@ jobs:
     - name: build tests
       working-directory: tests
       run: make tests COMPILER=clang++
+    - name: dos2unix
+      working-directory: tests/integration/expected
+      run: |
+           sudo apt install dos2unix
+           dos2unix *.txt
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py clang
@@ -54,6 +64,9 @@ jobs:
     - name: build tests
       working-directory: tests
       run: make tests COMPILER=msvc
+    - name: dos2unix
+      working-directory: tests/integration/expected
+      run: dos2unix *.txt
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py msvc
@@ -70,6 +83,9 @@ jobs:
     - name: build tests
       working-directory: tests
       run: make tests
+    - name: dos2unix
+      working-directory: tests/integration/expected
+      run: dos2unix *.txt
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py gcc_windows
@@ -86,6 +102,9 @@ jobs:
     - name: build tests
       working-directory: tests
       run: make tests COMPILER=clang++
+    - name: dos2unix
+      working-directory: tests/integration/expected
+      run: dos2unix *.txt
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py clang_windows
