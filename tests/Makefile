@@ -38,7 +38,7 @@ tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlight
 ifneq ($(COMPILER),msvc)
     CPP = $(COMPILER)
     LD = $(COMPILER)
-    WFLAGS := -Wall -Wextra -Wvla -Wshadow -Werror=return-type
+    WFLAGS := -Wall -Wextra -Wvla -Wshadow -Werror
     DFLAGS := -MMD -MP
     CPPFLAGS := -std=$(STD) -I../include
     GENERAL_FLAGS := -DASSERT_FAIL=custom_fail -DASSERT_LOWERCASE
@@ -82,7 +82,7 @@ ifneq ($(COMPILER),msvc)
     $(BIN)/o/unit/basic_test.cpp.o: unit/basic_test.cpp $(HPP)
 		$(MKDIR_P) $(dir $@)
 		echo "$(TARGET)"
-		$(CPP) $(CPPFLAGS) -Werror -c $< -o $@
+		$(CPP) $(CPPFLAGS) -c $< -o $@
 
     $(BIN)/o/%.cpp.o: %.cpp $(HPP)
 		$(MKDIR_P) $(dir $@)
@@ -92,7 +92,7 @@ else
     CPP = cl
     LD = link
     SHELL = powershell
-    WFLAGS := /W4
+    WFLAGS := /W4 /WX
     CPPFLAGS := /std:$(STD) /EHsc /I ../include /Z7
     GENERAL_FLAGS := /DASSERT_FAIL=custom_fail /DASSERT_LOWERCASE
     LDFLAGS := /LIBPATH:../bin assert.lib dbghelp.lib /DEBUG
@@ -127,7 +127,7 @@ else
 
     $(BIN)/o/unit/basic_test.cpp.o: unit/basic_test.cpp $(HPP)
 		-$(MKDIR_P) $(dir $@)
-		$(CPP) $(CPPFLAGS) /WX /c $< /Fo$@
+		$(CPP) $(CPPFLAGS) /c $< /Fo$@
 
     $(BIN)/o/%.cpp.o: %.cpp $(HPP)
 		-$(MKDIR_P) $(dir $@)
