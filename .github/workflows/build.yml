@@ -34,17 +34,6 @@ jobs:
     - name: build basic test
       working-directory: tests
       run: make basic_test COMPILER=msvc
-  build-msvc-permissive-:
-    runs-on: windows-2019
-    steps:
-    - uses: actions/checkout@v2
-    - name: Enable Developer Command Prompt
-      uses: ilammy/msvc-dev-cmd@v1.10.0
-    - name: make
-      run: make COMPILER=msvc FLAGS=/permissive-
-    - name: build basic test
-      working-directory: tests
-      run: make basic_test COMPILER=msvc FLAGS=/permissive-
   build-gcc-windows:
     runs-on: windows-2019
     steps:
