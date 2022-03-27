@@ -961,7 +961,13 @@ using asserts::ASSERTION;
 #else
  #define ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG
 #endif
+#if ASSERT_DETAIL_IS_CLANG // -Wall in clang
+ #define ASSERT_DETAIL_IGNORE_UNUSED_VALUE _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
+#else
+ #define ASSERT_DETAIL_IGNORE_UNUSED_VALUE
+#endif
 #define ASSERT_INVOKE(expr, doreturn, name, type, failaction, ...) \
+        ASSERT_DETAIL_IGNORE_UNUSED_VALUE \
         ASSERT_DETAIL_STMTEXPR( \
           ASSERT_DETAIL_WARNING_PRAGMA \
           auto assert_detail_decomposer = \

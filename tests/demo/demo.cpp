@@ -143,6 +143,11 @@ int get_mask() {
     return 0b00101101;
 }
 
+// disable unsafe use of bool warning msvc
+#ifdef _MSC_VER
+ #pragma warning(disable: 4806)
+#endif
+
 class foo {
 public:
     template<typename> void bar([[maybe_unused]] std::pair<int, int> x) {
@@ -186,6 +191,7 @@ public:
                  static_assert(std::is_same<decltype(i), float>::value);
              }
              float f = *assert(get_param());
+             (void)f;
             #else
              VERIFY(parameter);
              assert(get_param());
@@ -241,6 +247,9 @@ public:
         assert((puts("A"), false) && (puts("B"), false));
 
         {
+            #if defined(__GNUC__) || defined(__GNUG__) // gcc/clang
+             #pragma GCC diagnostic ignored "-Wshadow"
+            #endif
             std::string s = "h1eLlo";
             assert(std::find_if(s.begin(), s.end(), [](char c) {
                 assert(not isdigit(c), c);
@@ -249,7 +258,6 @@ public:
         }
 
         // Numeric
-        /*
         // Tests useful during development
         /*assert(.1f == .1);
         assert(1.0 == 1.0 + std::numeric_limits<double>::epsilon());
