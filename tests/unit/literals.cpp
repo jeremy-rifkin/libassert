@@ -42,7 +42,7 @@ inline std::string& trim(std::string& s, const char* t = ws) {
 }
 
 template<typename... T> std::string stringf(T... args) {
-    size_t length = snprintf(0, 0, args...);
+    int length = snprintf(0, 0, args...);
     if(length < 0) abort();
     std::string str(length, 0);
     snprintf(str.data(), length + 1, args...);

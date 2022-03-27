@@ -12,7 +12,7 @@ MKDIR_P ?= mkdir -p
 
 ifneq ($(COMPILER),msvc)
     # GCC / Clang
-    WFLAGS = -Wall -Wextra -Wvla -Wshadow -Werror=return-type
+    WFLAGS = -Wall -Wextra -Wvla -Wshadow -Werror
     FLAGS = -std=$(STD) -g -Iinclude
     LDFLAGS = -Wl,--whole-archive -Wl,--no-whole-archive
     ifeq ($(TARGET), debug)
@@ -54,7 +54,7 @@ else
     CPP = cl
     LD = link
     SHELL = powershell
-    WFLAGS = /W3
+    WFLAGS = /W4 /WX
     FLAGS = /std:$(STD) /EHsc
     LDFLAGS = /WHOLEARCHIVE # /PDB /OPT:ICF /OPT:REF
     ifeq ($(TARGET), debug)

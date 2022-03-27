@@ -111,6 +111,11 @@ void recursive_b(int n) {
 
 #define SECTION(s) std::cout<<"===================== ["<<s<<"] ====================="<<std::endl;
 
+// disable unsafe use of bool warning msvc
+#ifdef _MSC_VER
+ #pragma warning(disable: 4804)
+#endif
+
 // TODO: need to check assert, verify, and check...?
 // Opt/DNDEBUG
 
@@ -145,7 +150,7 @@ public:
         {
             assert((uintptr_t)-1 == 0xff);
             assert((uintptr_t)-1 == (uintptr_t)0xff);
-            void* foo = (void*)0xdeadbeef;
+            void* foo = (void*)0xdeadbeefULL;
             assert(foo == nullptr);
         }
         // value printing: number formats
