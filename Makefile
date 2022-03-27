@@ -12,28 +12,28 @@ MKDIR_P ?= mkdir -p
 
 ifneq ($(COMPILER),msvc)
     # GCC / Clang
-    WFLAGS = -Wall -Wextra -Wvla -Wshadow -Werror
-    FLAGS = -std=$(STD) -g -Iinclude
-    LDFLAGS = -Wl,--whole-archive -Wl,--no-whole-archive
-    ifeq ($(TARGET), debug)
-        FLAGS += -g
-    else
-        FLAGS += -O2
-    endif
     CPP = $(COMPILER)
     LD = $(COMPILER)
+    override WFLAGS += -Wall -Wextra -Wvla -Wshadow -Werror
+    override FLAGS += -std=$(STD) -g -Iinclude
+    override LDFLAGS += -Wl,--whole-archive -Wl,--no-whole-archive
+    ifeq ($(TARGET), debug)
+        override FLAGS += -g
+    else
+        override FLAGS += -O2
+    endif
     ifeq ($(OS),Windows_NT)
         STATIC_LIB = $(BIN)/assert.lib
         SHARED_LIB = $(BIN)/assert.dll
-        LDFLAGS += -ldbghelp
+        override LDFLAGS += -ldbghelp
     else
         STATIC_LIB = $(BIN)/libassert.a
         SHARED_LIB = $(BIN)/libassert.so
-        LDFLAGS += -ldl
+        override LDFLAGS += -ldl
         PIC = -fPIC
         ifeq ($(TARGET), debug)
-            FLAGS += -fsanitize=address
-            LDFLAGS += -fsanitize=address
+            override FLAGS += -fsanitize=address
+            override LDFLAGS += -fsanitize=address
         endif
     endif
 
@@ -54,14 +54,14 @@ else
     CPP = cl
     LD = link
     SHELL = powershell
-    WFLAGS = /W4 /WX
-    FLAGS = /std:$(STD) /EHsc
-    LDFLAGS = /WHOLEARCHIVE # /PDB /OPT:ICF /OPT:REF
+    override WFLAGS += /W4 /WX
+    override FLAGS += /std:$(STD) /EHsc
+    override LDFLAGS += /WHOLEARCHIVE # /PDB /OPT:ICF /OPT:REF
     ifeq ($(TARGET), debug)
-        FLAGS += /Z7
-		LDFLAGS += /DEBUG
+        override FLAGS += /Z7
+        override LDFLAGS += /DEBUG
     else
-        FLAGS += /O1
+        override FLAGS += /O1
     endif
     STATIC_LIB = $(BIN)/assert.lib
     SHARED_LIB = $(BIN)/assert.dll

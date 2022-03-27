@@ -68,6 +68,27 @@ jobs:
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py msvc
+  test-msvc-permissive-:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: Enable Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: dependencies
+      run: |
+           python3 -m pip install --upgrade pip
+           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+    - name: build library
+      run: make COMPILER=msvc CPPFLAGS=/permissive-
+    - name: build tests
+      working-directory: tests
+      run: make tests COMPILER=msvc CPPFLAGS=/permissive-
+    - name: dos2unix
+      working-directory: tests/integration/expected
+      run: dos2unix *.txt
+    - name: run tests
+      working-directory: tests
+      run: python3 run-tests.py msvc
   test-gcc-windows:
     runs-on: windows-2019
     steps:
