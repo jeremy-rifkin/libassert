@@ -2,6 +2,7 @@
 COMPILER = g++
 # release or debug
 TARGET = release
+STD = c++17
 
 BIN = bin
 
@@ -12,7 +13,7 @@ MKDIR_P ?= mkdir -p
 ifneq ($(COMPILER),msvc)
     # GCC / Clang
     WFLAGS = -Wall -Wextra -Wvla -Wshadow -Werror=return-type
-    FLAGS = -std=c++17 -g -Iinclude
+    FLAGS = -std=$(STD) -g -Iinclude
     LDFLAGS = -Wl,--whole-archive -Wl,--no-whole-archive
     ifeq ($(TARGET), debug)
         FLAGS += -g
@@ -54,7 +55,7 @@ else
     LD = link
     SHELL = powershell
     WFLAGS = /W3
-    FLAGS = /std:c++17 /EHsc
+    FLAGS = /std:$(STD) /EHsc
     LDFLAGS = /WHOLEARCHIVE # /PDB /OPT:ICF /OPT:REF
     ifeq ($(TARGET), debug)
         FLAGS += /Z7

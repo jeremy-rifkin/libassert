@@ -1,7 +1,10 @@
 # Asserts <!-- omit in toc -->
 
-![build status](https://github.com/jeremy-rifkin/asserts/workflows/build/badge.svg)
-![tests status](https://github.com/jeremy-rifkin/asserts/workflows/tests/badge.svg)
+![build status](https://github.com/jeremy-rifkin/asserts/actions/workflows/build.yml/badge.svg)
+![tests status](https://github.com/jeremy-rifkin/asserts/actions/workflows/tests.yml/badge.svg)
+<br/>
+![c++20 build status](https://github.com/jeremy-rifkin/asserts/actions/workflows/build-20.yml/badge.svg)
+![c++20 tests status](https://github.com/jeremy-rifkin/asserts/actions/workflows/test-20.yml/badge.svg)
 
 <p align="center">The most over-engineered assertion library</p>
 

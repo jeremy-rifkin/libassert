@@ -1,11 +1,11 @@
-name: tests
+name: tests c++20
 
 on:
   push:
   pull_request:
 
 jobs:
-  test-gcc:
+  test-gcc-cpp20:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
@@ -13,11 +13,12 @@ jobs:
       run: |
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+           sudo apt install gcc-10 g++-10
     - name: build library
-      run: make
+      run: make COMPILER=g++-10 STD=c++20
     - name: build tests
       working-directory: tests
-      run: make tests
+      run: make tests COMPILER=g++-10 STD=c++20
     - name: dos2unix
       working-directory: tests/integration/expected
       run: |
@@ -26,7 +27,7 @@ jobs:
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py gcc
-  test-clang:
+  test-clang-cpp20:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
@@ -35,10 +36,10 @@ jobs:
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
     - name: build library
-      run: make COMPILER=clang++
+      run: make COMPILER=clang++ STD=c++20
     - name: build tests
       working-directory: tests
-      run: make tests COMPILER=clang++
+      run: make tests COMPILER=clang++ STD=c++20
     - name: dos2unix
       working-directory: tests/integration/expected
       run: |
@@ -47,7 +48,7 @@ jobs:
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py clang
-  test-msvc:
+  test-msvc-cpp20:
     runs-on: windows-2019
     steps:
     - uses: actions/checkout@v2
@@ -58,17 +59,46 @@ jobs:
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
     - name: build library
-      run: make COMPILER=msvc
+      run: make COMPILER=msvc STD=c++20
     - name: build tests
       working-directory: tests
-      run: make tests COMPILER=msvc
+      run: make tests COMPILER=msvc STD=c++20
     - name: dos2unix
       working-directory: tests/integration/expected
       run: dos2unix *.txt
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py msvc
-  test-gcc-windows:
+  # TODO: Get this working
+  #test-gcc-windows-cpp20:
+  #  runs-on: windows-2019
+  #  steps:
+  #  - uses: actions/checkout@v2
+  #  - name: dependencies
+  #    run: |
+  #         python3 -m pip install --upgrade pip
+  #         python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+  #         which g++
+  #         choco upgrade mingw
+  #         refreshenv
+  #         which g++
+  #  - name: build library
+  #    run: make COMPILER=g++ STD=c++20
+  #  - name: build tests
+  #    working-directory: tests
+  #    run: |
+  #         make tests COMPILER=g++ STD=c++20
+  #         ldd bin/integration.exe
+  #         echo $Env:PATH
+  #         ls C:/Strawberry/c/bin/
+  #         cp C:/Strawberry/c/bin/libstdc++-6.dll bin # attempt to fix dll conflict leading to 0xC0000135
+  #  - name: dos2unix
+  #    working-directory: tests/integration/expected
+  #    run: dos2unix *.txt
+  #  - name: run tests
+  #    working-directory: tests
+  #    run: python3 run-tests.py gcc_windows
+  test-clang-windows-cpp20:
     runs-on: windows-2019
     steps:
     - uses: actions/checkout@v2
@@ -77,33 +107,10 @@ jobs:
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
     - name: build library
-      run: make
+      run: make COMPILER=clang++ STD=c++20
     - name: build tests
       working-directory: tests
-      run: |
-           make tests
-           ldd bin/integration.exe
-           echo $Env:PATH
-           ls C:/Strawberry/c/bin/
-    - name: dos2unix
-      working-directory: tests/integration/expected
-      run: dos2unix *.txt
-    - name: run tests
-      working-directory: tests
-      run: python3 run-tests.py gcc_windows
-  test-clang-windows:
-    runs-on: windows-2019
-    steps:
-    - uses: actions/checkout@v2
-    - name: dependencies
-      run: |
-           python3 -m pip install --upgrade pip
-           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
-    - name: build library
-      run: make COMPILER=clang++
-    - name: build tests
-      working-directory: tests
-      run: make tests COMPILER=clang++
+      run: make tests COMPILER=clang++ STD=c++20
     - name: dos2unix
       working-directory: tests/integration/expected
       run: dos2unix *.txt
