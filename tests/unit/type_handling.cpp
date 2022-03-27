@@ -9,8 +9,8 @@
 using namespace asserts::detail;
 
 void custom_fail(asserts::assertion_printer& printer, asserts::assert_type, asserts::ASSERTION) {
-	std::cerr<<printer(asserts::utility::terminal_width(2))<<std::endl<<std::endl;
-	abort();
+    std::cerr<<printer(asserts::utility::terminal_width(2))<<std::endl<<std::endl;
+    abort();
 }
 
 // Some test cases for TMP stuff
@@ -37,57 +37,57 @@ template<typename T> constexpr bool is_lvalue(T&&) {
 }
 
 struct only_move_constructable {
-	int x;
-	only_move_constructable(int _x) : x(_x) {}
-	compl only_move_constructable() = default;
-	only_move_constructable(const only_move_constructable&) = delete;
-	only_move_constructable(only_move_constructable&&) = default;
-	only_move_constructable& operator=(const only_move_constructable&) = delete;
-	only_move_constructable& operator=(only_move_constructable&&) = delete;
-	bool operator==(int y) {
-		return x == y;
-	}
+    int x;
+    only_move_constructable(int _x) : x(_x) {}
+    compl only_move_constructable() = default;
+    only_move_constructable(const only_move_constructable&) = delete;
+    only_move_constructable(only_move_constructable&&) = default;
+    only_move_constructable& operator=(const only_move_constructable&) = delete;
+    only_move_constructable& operator=(only_move_constructable&&) = delete;
+    bool operator==(int y) {
+        return x == y;
+    }
 };
 
 int main() {
-	// test rvalue
-	{
-		decltype(auto) a = ASSERT(only_move_constructable(2) == 2);
-		static_assert(std::is_same<decltype(a), only_move_constructable>::value);
-		assert(!is_lvalue(ASSERT(only_move_constructable(2) == 2)));
-		assert(ASSERT(only_move_constructable(2) == 2).x == 2);
-		//assert(assert(only_move_constructable(2) == 2).x++ == 2); // not allowed
-	}
+    // test rvalue
+    {
+        decltype(auto) a = ASSERT(only_move_constructable(2) == 2);
+        static_assert(std::is_same<decltype(a), only_move_constructable>::value);
+        assert(!is_lvalue(ASSERT(only_move_constructable(2) == 2)));
+        assert(ASSERT(only_move_constructable(2) == 2).x == 2);
+        //assert(assert(only_move_constructable(2) == 2).x++ == 2); // not allowed
+    }
 
-	// test lvalue
-	{
-		only_move_constructable x(2);
-		decltype(auto) b = ASSERT(x == 2);
-		static_assert(std::is_same<decltype(b), only_move_constructable&>::value);
-		assert(is_lvalue(ASSERT(x == 2)));
-		ASSERT(x == 2).x++;
-		ASSERT(x.x == 3);
-	}
+    // test lvalue
+    {
+        only_move_constructable x(2);
+        decltype(auto) b = ASSERT(x == 2);
+        static_assert(std::is_same<decltype(b), only_move_constructable&>::value);
+        assert(is_lvalue(ASSERT(x == 2)));
+        ASSERT(x == 2).x++;
+        ASSERT(x.x == 3);
+    }
 
-	// above cases test lhs returns, now test the case where the full value is returned
-	{
-		auto v0 = ASSERT(1 | 2);
-		ASSERT(v0 == 3);
-		auto v1 = ASSERT(7 & 4);
-		ASSERT(v1 == 4);
-		auto v2 = ASSERT(1 << 16);
-		ASSERT(v2 == 65536);
-		auto v3 = ASSERT(32 >> 2);
-		ASSERT(v3 == 8);
-	}
+    // above cases test lhs returns, now test the case where the full value is returned
+    {
+        auto v0 = ASSERT(1 | 2);
+        ASSERT(v0 == 3);
+        auto v1 = ASSERT(7 & 4);
+        ASSERT(v1 == 4);
+        auto v2 = ASSERT(1 << 16);
+        ASSERT(v2 == 65536);
+        auto v3 = ASSERT(32 >> 2);
+        ASSERT(v3 == 8);
+    }
 
-	// test CHECK returns nothing
-	{
-		auto f = [] {
-			return CHECK(false);
-		};
-		static_assert(std::is_same<decltype(f()), void>::value);
-	}
-	
-	return 0;
+    // test CHECK returns nothing
+    {
+        auto f = [] {
+            return CHECK(false);
+        };
+        static_assert(std::is_same<decltype(f()), void>::value);
+    }
+    
+    return 0;
 }

@@ -33,16 +33,16 @@ float f = *assert(get_param());
 - [Considerations](#considerations)
 - [Features](#features)
 - [Documentation](#documentation)
-	- [Parameters](#parameters)
-	- [Return value](#return-value)
-	- [Failure](#failure)
-	- [Configuration](#configuration)
-	- [Utilities](#utilities)
-	- [Namespace synopsis](#namespace-synopsis)
+    - [Parameters](#parameters)
+    - [Return value](#return-value)
+    - [Failure](#failure)
+    - [Configuration](#configuration)
+    - [Utilities](#utilities)
+    - [Namespace synopsis](#namespace-synopsis)
 - [How To Use This Library](#how-to-use-this-library)
-	- [1. Build](#1-build)
-	- [2. Install](#2-install)
-	- [3. Use](#3-use)
+    - [1. Build](#1-build)
+    - [2. Install](#2-install)
+    - [3. Use](#3-use)
 - [Replacing &lt;cassert&gt;](#replacing-cassert)
 - [Comparison With Other Languages](#comparison-with-other-languages)
 
@@ -309,7 +309,7 @@ columns in the output). `type` is the type of the assertion and `fatal` indicate
 assertion is fatal. A typical implementation looks like:
 ```cpp
 void custom_fail(asserts::assertion_printer& printer, asserts::assert_type type, ASSERTION fatal) {
-	std::string message = printer(asserts::utility::terminal_width(STDERR_FILENO));
+    std::string message = printer(asserts::utility::terminal_width(STDERR_FILENO));
     if(isatty(STDERR_FILENO)) {
         std::cerr<<message<<std::endl;
     } else {
@@ -351,28 +351,28 @@ The following utilities are made public in `asserts::utility::`:
  #define assert(...) ...
 #endif
 namespace asserts {
-	// Core functionality:
-	enum class ASSERTION { NONFATAL, FATAL };
-	class assertion_printer {
-		public: [[nodiscard]] std::string operator()(int width);
-	};
-	struct verification_failure : std::exception {
-		virtual const char* what() const noexcept final override;
-	}
-	struct check_failure : std::exception {
-		virtual const char* what() const noexcept final override;
-	}
-	// Other functionality:
-	enum class assert_type { assertion, verify, check };
-	namespace utility {
-		[[nodiscard]] std::string strip_colors(const std::string& str);
-		[[nodiscard]] int terminal_width(int fd);
-		[[nodiscard]] std::string stacktrace(int width);
-	};
-	namespace config {
-		void set_color_output(bool);
-	}
-	namespace detail { /* internals */ }
+    // Core functionality:
+    enum class ASSERTION { NONFATAL, FATAL };
+    class assertion_printer {
+        public: [[nodiscard]] std::string operator()(int width);
+    };
+    struct verification_failure : std::exception {
+        virtual const char* what() const noexcept final override;
+    }
+    struct check_failure : std::exception {
+        virtual const char* what() const noexcept final override;
+    }
+    // Other functionality:
+    enum class assert_type { assertion, verify, check };
+    namespace utility {
+        [[nodiscard]] std::string strip_colors(const std::string& str);
+        [[nodiscard]] int terminal_width(int fd);
+        [[nodiscard]] std::string stacktrace(int width);
+    };
+    namespace config {
+        void set_color_output(bool);
+    }
+    namespace detail { /* internals */ }
 }
 using asserts::ASSERTION;
 ```

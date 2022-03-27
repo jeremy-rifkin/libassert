@@ -4,5 +4,5 @@
 void test_path_differentiation_2();
 
 void test_path_differentiation() {
-	test_path_differentiation_2();
+    test_path_differentiation_2();
 }

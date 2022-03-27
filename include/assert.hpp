@@ -42,17 +42,17 @@
 #endif
 
 namespace asserts {
-	enum class ASSERTION {
-		NONFATAL, FATAL
-	};
+    enum class ASSERTION {
+        NONFATAL, FATAL
+    };
 
-	enum class assert_type {
-		assertion,
-		verify,
-		check
-	};
+    enum class assert_type {
+        assertion,
+        verify,
+        check
+    };
 
-	class assertion_printer;
+    class assertion_printer;
 }
 
 #ifndef ASSERT_FAIL
@@ -69,14 +69,14 @@ void ASSERT_FAIL(asserts::assertion_printer& printer, asserts::assert_type type,
  */
 
 namespace asserts::utility {
-	// strip ansi escape sequences from a string
-	[[nodiscard]] std::string strip_colors(const std::string& str);
+    // strip ansi escape sequences from a string
+    [[nodiscard]] std::string strip_colors(const std::string& str);
 
-	// returns the width of the terminal represented by fd, will be 0 on error
-	[[nodiscard]] int terminal_width(int fd);
+    // returns the width of the terminal represented by fd, will be 0 on error
+    [[nodiscard]] int terminal_width(int fd);
 
-	// generates a stack trace, formats to the given width
-	[[nodiscard]] std::string stacktrace(int width);
+    // generates a stack trace, formats to the given width
+    [[nodiscard]] std::string stacktrace(int width);
 }
 
 /*
@@ -84,7 +84,7 @@ namespace asserts::utility {
  */
 
 namespace asserts::config {
-	void set_color_output(bool);
+    void set_color_output(bool);
 }
 
 /*
@@ -94,733 +94,733 @@ namespace asserts::config {
  */
 
 namespace asserts::detail {
-	// Lightweight helper, eventually may use C++20 std::source_location if this library no longer
-	// targets C++17. Note: __builtin_FUNCTION only returns the name, so __PRETTY_FUNCTION__ is
-	// still needed.
-	struct source_location {
-		const char* const file;
-		const char* const function;
-		const int line;
-		constexpr source_location(
-			const char* _function /*= __builtin_FUNCTION()*/,
-			const char* _file     = __builtin_FILE(),
-			int _line             = __builtin_LINE()
-		) : file(_file), function(_function), line(_line) {}
-	};
+    // Lightweight helper, eventually may use C++20 std::source_location if this library no longer
+    // targets C++17. Note: __builtin_FUNCTION only returns the name, so __PRETTY_FUNCTION__ is
+    // still needed.
+    struct source_location {
+        const char* const file;
+        const char* const function;
+        const int line;
+        constexpr source_location(
+            const char* _function /*= __builtin_FUNCTION()*/,
+            const char* _file     = __builtin_FILE(),
+            int _line             = __builtin_LINE()
+        ) : file(_file), function(_function), line(_line) {}
+    };
 
-	// bootstrap with primitive implementations
-	void primitive_assert_impl(bool condition, bool verify, const char* expression,
-	                           source_location location, const char* message = nullptr);
+    // bootstrap with primitive implementations
+    void primitive_assert_impl(bool condition, bool verify, const char* expression,
+                               source_location location, const char* message = nullptr);
 
-	#ifndef NDEBUG
-	 #define ASSERT_DETAIL_PRIMITIVE_ASSERT(c, ...) asserts::detail::primitive_assert_impl(c, false, #c, \
-	                                                                                 ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
-	#else
-	 #define ASSERT_DETAIL_PRIMITIVE_ASSERT(c, ...) ASSERT_DETAIL_PHONY_USE(c)
-	#endif
+    #ifndef NDEBUG
+     #define ASSERT_DETAIL_PRIMITIVE_ASSERT(c, ...) asserts::detail::primitive_assert_impl(c, false, #c, \
+                                                                                     ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
+    #else
+     #define ASSERT_DETAIL_PRIMITIVE_ASSERT(c, ...) ASSERT_DETAIL_PHONY_USE(c)
+    #endif
 
-	/*
-	 * String utilities
-	 */
+    /*
+     * String utilities
+     */
 
-	[[nodiscard]] std::string bstringf(const char* format, ...);
+    [[nodiscard]] std::string bstringf(const char* format, ...);
 
-	/*
-	 * System wrappers
-	 */
+    /*
+     * System wrappers
+     */
 
-	[[nodiscard]] std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
+    [[nodiscard]] std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
 
-	/*
-	 * Stacktrace implementation
-	 */
+    /*
+     * Stacktrace implementation
+     */
 
-	// All in the .cpp
+    // All in the .cpp
 
-	void* get_stacktrace_opaque();
+    void* get_stacktrace_opaque();
 
-	/*
-	 * metaprogramming utilities
-	 */
+    /*
+     * metaprogramming utilities
+     */
 
-	struct nothing {};
+    struct nothing {};
 
-	template<typename T> constexpr bool is_nothing = std::is_same_v<T, nothing>;
+    template<typename T> constexpr bool is_nothing = std::is_same_v<T, nothing>;
 
-	// Hack to get around static_assert(false); being evaluated before any instantiation, even under
-	// an if-constexpr branch
-	template<typename T> constexpr bool always_false = false;
+    // Hack to get around static_assert(false); being evaluated before any instantiation, even under
+    // an if-constexpr branch
+    template<typename T> constexpr bool always_false = false;
 
-	template<typename T> using strip = std::remove_cv_t<std::remove_reference_t<T>>;
+    template<typename T> using strip = std::remove_cv_t<std::remove_reference_t<T>>;
 
-	template<typename A, typename B> constexpr bool isa = std::is_same_v<strip<A>, B>; // intentionally not stripping B
+    template<typename A, typename B> constexpr bool isa = std::is_same_v<strip<A>, B>; // intentionally not stripping B
 
-	// Is integral but not boolean
-	template<typename T> constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
+    // Is integral but not boolean
+    template<typename T> constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
 
-	template<typename T> constexpr bool is_string_type =
-	       isa<T, std::string>
-	    || isa<T, std::string_view>
-	    || isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
-	    || isa<std::decay_t<strip<T>>, const char*>;
+    template<typename T> constexpr bool is_string_type =
+           isa<T, std::string>
+        || isa<T, std::string_view>
+        || isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
+        || isa<std::decay_t<strip<T>>, const char*>;
 
-	/*
-	 * expression decomposition
-	 */
+    /*
+     * expression decomposition
+     */
 
-	// Lots of boilerplate
-	// Using int comparison functions here to support proper signed comparisons. Need to make sure
-	// assert(map.count(1) == 2) doesn't produce a warning. It wouldn't under normal circumstances
-	// but it would in this library due to the parameters being forwarded down a long chain.
-	// And we want to provide as much robustness as possible anyways.
-	// Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
-	// Not using std:: versions because library is targetting C++17
-	template<typename T, typename U>
-	[[nodiscard]] constexpr bool cmp_equal(T t, U u) {
-		using UT = std::make_unsigned_t<T>;
-		using UU = std::make_unsigned_t<U>;
-		if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
-			return t == u;
-		else if constexpr(std::is_signed_v<T>)
-			return t >= 0 && UT(t) == u;
-		else
-			return u >= 0 && t == UU(u);
-	}
+    // Lots of boilerplate
+    // Using int comparison functions here to support proper signed comparisons. Need to make sure
+    // assert(map.count(1) == 2) doesn't produce a warning. It wouldn't under normal circumstances
+    // but it would in this library due to the parameters being forwarded down a long chain.
+    // And we want to provide as much robustness as possible anyways.
+    // Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
+    // Not using std:: versions because library is targetting C++17
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_equal(T t, U u) {
+        using UT = std::make_unsigned_t<T>;
+        using UU = std::make_unsigned_t<U>;
+        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
+            return t == u;
+        else if constexpr(std::is_signed_v<T>)
+            return t >= 0 && UT(t) == u;
+        else
+            return u >= 0 && t == UU(u);
+    }
 
-	template<typename T, typename U>
-	[[nodiscard]] constexpr bool cmp_not_equal(T t, U u) {
-		return !cmp_equal(t, u);
-	}
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_not_equal(T t, U u) {
+        return !cmp_equal(t, u);
+    }
 
-	template<typename T, typename U>
-	[[nodiscard]] constexpr bool cmp_less(T t, U u) {
-		using UT = std::make_unsigned_t<T>;
-		using UU = std::make_unsigned_t<U>;
-		if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
-			return t < u;
-		else if constexpr(std::is_signed_v<T>)
-			return t < 0  || UT(t) < u;
-		else
-			return u >= 0 && t < UU(u);
-	}
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_less(T t, U u) {
+        using UT = std::make_unsigned_t<T>;
+        using UU = std::make_unsigned_t<U>;
+        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
+            return t < u;
+        else if constexpr(std::is_signed_v<T>)
+            return t < 0  || UT(t) < u;
+        else
+            return u >= 0 && t < UU(u);
+    }
 
-	template<typename T, typename U>
-	[[nodiscard]] constexpr bool cmp_greater(T t, U u) {
-		return cmp_less(u, t);
-	}
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_greater(T t, U u) {
+        return cmp_less(u, t);
+    }
 
-	template<typename T, typename U>
-	[[nodiscard]] constexpr bool cmp_less_equal(T t, U u) {
-		return !cmp_less(u, t);
-	}
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_less_equal(T t, U u) {
+        return !cmp_less(u, t);
+    }
 
-	template<typename T, typename U>
-	[[nodiscard]] constexpr bool cmp_greater_equal(T t, U u) {
-		return !cmp_less(t, u);
-	}
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_greater_equal(T t, U u) {
+        return !cmp_less(t, u);
+    }
 
-	// Lots of boilerplate
-	// std:: implementations don't allow two separate types for lhs/rhs
-	// Note: is this macro potentially bad when it comes to debugging(?)
-	namespace ops {
-		#define ASSERT_DETAIL_GEN_OP_BOILERPLATE(name, op) struct name { \
-			static constexpr std::string_view op_string = #op; \
-			template<typename A, typename B> \
-			ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
-			constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
-				return std::forward<A>(lhs) op std::forward<B>(rhs); \
-			} \
-		}
-		#define ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(name, op, cmp) struct name { \
-			static constexpr std::string_view op_string = #op; \
-			template<typename A, typename B> \
-			ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
-			constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
-				if constexpr(is_integral_and_not_bool<A> && is_integral_and_not_bool<B>) return cmp(lhs, rhs); \
-				else return std::forward<A>(lhs) op std::forward<B>(rhs); \
-			} \
-		}
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(shl, <<);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(shr, >>);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(eq,   ==, cmp_equal);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(neq,  !=, cmp_not_equal);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(gt,    >, cmp_greater);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(lt,    <, cmp_less);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(gteq, >=, cmp_greater_equal);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(lteq, <=, cmp_less_equal);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(band,   &);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(bxor,   ^);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(bor,    |);
-		#ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
-		 ASSERT_DETAIL_GEN_OP_BOILERPLATE(land,   &&);
-		 ASSERT_DETAIL_GEN_OP_BOILERPLATE(lor,    ||);
-		#endif
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(assign, =);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(add_assign,  +=);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(sub_assign,  -=);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(mul_assign,  *=);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(div_assign,  /=);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(mod_assign,  %=);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(shl_assign,  <<=);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(shr_assign,  >>=);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(band_assign, &=);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(bxor_assign, ^=);
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(bor_assign,  |=);
-		#undef ASSERT_DETAIL_GEN_OP_BOILERPLATE
-		#undef ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL
-	}
+    // Lots of boilerplate
+    // std:: implementations don't allow two separate types for lhs/rhs
+    // Note: is this macro potentially bad when it comes to debugging(?)
+    namespace ops {
+        #define ASSERT_DETAIL_GEN_OP_BOILERPLATE(name, op) struct name { \
+            static constexpr std::string_view op_string = #op; \
+            template<typename A, typename B> \
+            ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
+            constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
+                return std::forward<A>(lhs) op std::forward<B>(rhs); \
+            } \
+        }
+        #define ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(name, op, cmp) struct name { \
+            static constexpr std::string_view op_string = #op; \
+            template<typename A, typename B> \
+            ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
+            constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
+                if constexpr(is_integral_and_not_bool<A> && is_integral_and_not_bool<B>) return cmp(lhs, rhs); \
+                else return std::forward<A>(lhs) op std::forward<B>(rhs); \
+            } \
+        }
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(shl, <<);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(shr, >>);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(eq,   ==, cmp_equal);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(neq,  !=, cmp_not_equal);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(gt,    >, cmp_greater);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(lt,    <, cmp_less);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(gteq, >=, cmp_greater_equal);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(lteq, <=, cmp_less_equal);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(band,   &);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(bxor,   ^);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(bor,    |);
+        #ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
+         ASSERT_DETAIL_GEN_OP_BOILERPLATE(land,   &&);
+         ASSERT_DETAIL_GEN_OP_BOILERPLATE(lor,    ||);
+        #endif
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(assign, =);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(add_assign,  +=);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(sub_assign,  -=);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(mul_assign,  *=);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(div_assign,  /=);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(mod_assign,  %=);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(shl_assign,  <<=);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(shr_assign,  >>=);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(band_assign, &=);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(bxor_assign, ^=);
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(bor_assign,  |=);
+        #undef ASSERT_DETAIL_GEN_OP_BOILERPLATE
+        #undef ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL
+    }
 
-	// I learned this automatic expression decomposition trick from lest:
-	// https://github.com/martinmoene/lest/blob/master/include/lest/lest.hpp#L829-L853
-	//
-	// I have improved upon the trick by supporting more operators and generally improving
-	// functionality.
-	//
-	// Some cases to test and consider:
-	//
-	// Expression   Parsed as
-	// Basic:
-	// false        << false
-	// a == b       (<< a) == b
-	//
-	// Equal precedence following:
-	// a << b       (<< a) << b
-	// a << b << c  ((<< a) << b) << c
-	// a << b + c   (<< a) << (b + c)
-	// a << b < c   ((<< a) << b) < c  // edge case
-	//
-	// Higher precedence following:
-	// a + b        << (a + b)
-	// a + b + c    << ((a + b) + c)
-	// a + b * c    << (a + (b * c))
-	// a + b < c    (<< (a + b)) < c
-	//
-	// Lower precedence following:
-	// a < b        (<< a) < b
-	// a < b < c    ((<< a) < b) < c
-	// a < b + c    (<< a) < (b + c)
-	// a < b == c   ((<< a) < b) == c // edge case
+    // I learned this automatic expression decomposition trick from lest:
+    // https://github.com/martinmoene/lest/blob/master/include/lest/lest.hpp#L829-L853
+    //
+    // I have improved upon the trick by supporting more operators and generally improving
+    // functionality.
+    //
+    // Some cases to test and consider:
+    //
+    // Expression   Parsed as
+    // Basic:
+    // false        << false
+    // a == b       (<< a) == b
+    //
+    // Equal precedence following:
+    // a << b       (<< a) << b
+    // a << b << c  ((<< a) << b) << c
+    // a << b + c   (<< a) << (b + c)
+    // a << b < c   ((<< a) << b) < c  // edge case
+    //
+    // Higher precedence following:
+    // a + b        << (a + b)
+    // a + b + c    << ((a + b) + c)
+    // a + b * c    << (a + (b * c))
+    // a + b < c    (<< (a + b)) < c
+    //
+    // Lower precedence following:
+    // a < b        (<< a) < b
+    // a < b < c    ((<< a) < b) < c
+    // a < b + c    (<< a) < (b + c)
+    // a < b == c   ((<< a) < b) == c // edge case
 
-	template<typename A = nothing, typename B = nothing, typename C = nothing>
-	struct expression_decomposer {
-		A a;
-		B b;
-		explicit expression_decomposer() = default;
-		// not copyable
-		expression_decomposer(const expression_decomposer&) = delete;
-		expression_decomposer& operator=(const expression_decomposer&) = delete;
-		// allow move assignment
-		expression_decomposer(expression_decomposer&&) = default;
-		expression_decomposer& operator=(expression_decomposer&&) = delete;
-		// value constructors
-		template<typename U>
-		explicit expression_decomposer(U&& _a) : a(std::forward<U>(_a)) {}
-		template<typename U, typename V>
-		explicit expression_decomposer(U&& _a, V&& _b) : a(std::forward<U>(_a)), b(std::forward<V>(_b)) {}
-		/* Ownership logic:
-		 *  One of two things can happen to this class
-		 *   - Either it is composed with another operation
-		 * 	    + The value of the subexpression represented by this is computed (either get_value()
-		 *        or operator bool), either A& or C()(a, b)
-		 *      + Or, just the lhs is moved B is nothing
-		 *   - Or this class represents the whole expression
-		 *      + The value is computed (either A& or C()(a, b))
-		 *      + a and b are referenced freely
-		 *      + Either the value is taken or a is moved out
-		 * Ensuring the value is only computed once is left to the assert handler
-		 */
-		[[nodiscard]]
-		decltype(auto) get_value() {
-			if constexpr(is_nothing<C>) {
-				static_assert(is_nothing<B> && !is_nothing<A>);
-				return (((((((((((((((((((a)))))))))))))))))));
-			} else {
-				return C()(a, b);
-			}
-		}
-		[[nodiscard]]
-		operator bool() { // for ternary support
-			return (bool)get_value();
-		}
-		// return true if the lhs should be returned, false if full computed value should be
-		[[nodiscard]]
-		constexpr bool ret_lhs() {
-			static_assert(!is_nothing<A>);
-			static_assert(is_nothing<B> == is_nothing<C>);
-			if constexpr(is_nothing<C>) {
-				// if there is no top-level binary operation, A is the only thing that can be returned
-				return true;
-			} else {
-				if constexpr(
-					C::op_string == "=="
-				 || C::op_string == "!="
-				 || C::op_string == "<"
-				 || C::op_string == ">"
-				 || C::op_string == "<="
-				 || C::op_string == ">="
-				 || C::op_string == "&&"
-				 || C::op_string == "||"
-				) {
-					return true;
-				} else {
-					// might change these later
-					// << >> & ^ |
-					// all compound assignments
-					return false;
-				}
-			}
-		}
-		[[nodiscard]]
-		A take_lhs() { // should only be called if ret_lhs() == true
-			if constexpr(std::is_lvalue_reference<A>::value) {
-				return ((((a))));
-			} else {
-				return std::move(a);
-			}
-		}
-		// Need overloads for operators with precedence <= bitshift
-		// TODO: spaceship operator?
-		// Note: Could decompose more than just comparison and boolean operators, but it would take
-		// a lot of work and I don't think it's beneficial for this library.
-		template<typename O> [[nodiscard]] auto operator<<(O&& operand) && {
-			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
-			if constexpr(is_nothing<A>) {
-				static_assert(is_nothing<B> && is_nothing<C>);
-				return expression_decomposer<Q, nothing, nothing>(std::forward<O>(operand));
-			} else if constexpr(is_nothing<B>) {
-				static_assert(is_nothing<C>);
-				return expression_decomposer<A, Q, ops::shl>(std::forward<A>(a), std::forward<O>(operand));
-			} else {
-				static_assert(!is_nothing<C>);
-				return expression_decomposer<decltype(get_value()), O, ops::shl>(std::forward<A>(get_value()), std::forward<O>(operand));
-			}
-		}
-		#define ASSERT_DETAIL_GEN_OP_BOILERPLATE(functor, op) \
-		template<typename O> [[nodiscard]] auto operator op(O&& operand) && { \
-			static_assert(!is_nothing<A>); \
-			using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
-			if constexpr(is_nothing<B>) { \
-				static_assert(is_nothing<C>); \
-				return expression_decomposer<A, Q, functor>(std::forward<A>(a), std::forward<O>(operand)); \
-			} else { \
-				static_assert(!is_nothing<C>); \
-				return expression_decomposer<decltype(get_value()), Q, functor>(std::forward<A>(get_value()), std::forward<O>(operand)); \
-			} \
-		}
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shr, >>)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::eq, ==)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::neq, !=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::gt, >)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lt, <)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::gteq, >=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lteq, <=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::band, &)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bxor, ^)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bor, |)
-		#ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
-		 ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::land, &&)
-		 ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lor, ||)
-		#endif
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::assign, =)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::add_assign, +=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::sub_assign, -=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::mul_assign, *=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::div_assign, /=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::mod_assign, %=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shl_assign, <<=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shr_assign, >>=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::band_assign, &=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bxor_assign, ^=)
-		ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bor_assign, |=)
-		#undef ASSERT_DETAIL_GEN_OP_BOILERPLATE
-	};
+    template<typename A = nothing, typename B = nothing, typename C = nothing>
+    struct expression_decomposer {
+        A a;
+        B b;
+        explicit expression_decomposer() = default;
+        // not copyable
+        expression_decomposer(const expression_decomposer&) = delete;
+        expression_decomposer& operator=(const expression_decomposer&) = delete;
+        // allow move assignment
+        expression_decomposer(expression_decomposer&&) = default;
+        expression_decomposer& operator=(expression_decomposer&&) = delete;
+        // value constructors
+        template<typename U>
+        explicit expression_decomposer(U&& _a) : a(std::forward<U>(_a)) {}
+        template<typename U, typename V>
+        explicit expression_decomposer(U&& _a, V&& _b) : a(std::forward<U>(_a)), b(std::forward<V>(_b)) {}
+        /* Ownership logic:
+         *  One of two things can happen to this class
+         *   - Either it is composed with another operation
+         *         + The value of the subexpression represented by this is computed (either get_value()
+         *        or operator bool), either A& or C()(a, b)
+         *      + Or, just the lhs is moved B is nothing
+         *   - Or this class represents the whole expression
+         *      + The value is computed (either A& or C()(a, b))
+         *      + a and b are referenced freely
+         *      + Either the value is taken or a is moved out
+         * Ensuring the value is only computed once is left to the assert handler
+         */
+        [[nodiscard]]
+        decltype(auto) get_value() {
+            if constexpr(is_nothing<C>) {
+                static_assert(is_nothing<B> && !is_nothing<A>);
+                return (((((((((((((((((((a)))))))))))))))))));
+            } else {
+                return C()(a, b);
+            }
+        }
+        [[nodiscard]]
+        operator bool() { // for ternary support
+            return (bool)get_value();
+        }
+        // return true if the lhs should be returned, false if full computed value should be
+        [[nodiscard]]
+        constexpr bool ret_lhs() {
+            static_assert(!is_nothing<A>);
+            static_assert(is_nothing<B> == is_nothing<C>);
+            if constexpr(is_nothing<C>) {
+                // if there is no top-level binary operation, A is the only thing that can be returned
+                return true;
+            } else {
+                if constexpr(
+                    C::op_string == "=="
+                 || C::op_string == "!="
+                 || C::op_string == "<"
+                 || C::op_string == ">"
+                 || C::op_string == "<="
+                 || C::op_string == ">="
+                 || C::op_string == "&&"
+                 || C::op_string == "||"
+                ) {
+                    return true;
+                } else {
+                    // might change these later
+                    // << >> & ^ |
+                    // all compound assignments
+                    return false;
+                }
+            }
+        }
+        [[nodiscard]]
+        A take_lhs() { // should only be called if ret_lhs() == true
+            if constexpr(std::is_lvalue_reference<A>::value) {
+                return ((((a))));
+            } else {
+                return std::move(a);
+            }
+        }
+        // Need overloads for operators with precedence <= bitshift
+        // TODO: spaceship operator?
+        // Note: Could decompose more than just comparison and boolean operators, but it would take
+        // a lot of work and I don't think it's beneficial for this library.
+        template<typename O> [[nodiscard]] auto operator<<(O&& operand) && {
+            using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
+            if constexpr(is_nothing<A>) {
+                static_assert(is_nothing<B> && is_nothing<C>);
+                return expression_decomposer<Q, nothing, nothing>(std::forward<O>(operand));
+            } else if constexpr(is_nothing<B>) {
+                static_assert(is_nothing<C>);
+                return expression_decomposer<A, Q, ops::shl>(std::forward<A>(a), std::forward<O>(operand));
+            } else {
+                static_assert(!is_nothing<C>);
+                return expression_decomposer<decltype(get_value()), O, ops::shl>(std::forward<A>(get_value()), std::forward<O>(operand));
+            }
+        }
+        #define ASSERT_DETAIL_GEN_OP_BOILERPLATE(functor, op) \
+        template<typename O> [[nodiscard]] auto operator op(O&& operand) && { \
+            static_assert(!is_nothing<A>); \
+            using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
+            if constexpr(is_nothing<B>) { \
+                static_assert(is_nothing<C>); \
+                return expression_decomposer<A, Q, functor>(std::forward<A>(a), std::forward<O>(operand)); \
+            } else { \
+                static_assert(!is_nothing<C>); \
+                return expression_decomposer<decltype(get_value()), Q, functor>(std::forward<A>(get_value()), std::forward<O>(operand)); \
+            } \
+        }
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shr, >>)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::eq, ==)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::neq, !=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::gt, >)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lt, <)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::gteq, >=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lteq, <=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::band, &)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bxor, ^)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bor, |)
+        #ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
+         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::land, &&)
+         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lor, ||)
+        #endif
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::assign, =)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::add_assign, +=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::sub_assign, -=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::mul_assign, *=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::div_assign, /=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::mod_assign, %=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shl_assign, <<=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shr_assign, >>=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::band_assign, &=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bxor_assign, ^=)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bor_assign, |=)
+        #undef ASSERT_DETAIL_GEN_OP_BOILERPLATE
+    };
 
-	// for ternary support
-	template<typename U> expression_decomposer(U&&)
-	         -> expression_decomposer<std::conditional_t<std::is_rvalue_reference_v<U>, std::remove_reference_t<U>, U>>;
+    // for ternary support
+    template<typename U> expression_decomposer(U&&)
+             -> expression_decomposer<std::conditional_t<std::is_rvalue_reference_v<U>, std::remove_reference_t<U>, U>>;
 
-	/*
-	 * C++ syntax analysis logic
-	 */
+    /*
+     * C++ syntax analysis logic
+     */
 
-	enum class literal_format {
-		dec,
-		hex,
-		octal,
-		binary,
-		none
-	};
+    enum class literal_format {
+        dec,
+        hex,
+        octal,
+        binary,
+        none
+    };
 
-	[[nodiscard]] std::string prettify_type(std::string type);
+    [[nodiscard]] std::string prettify_type(std::string type);
 
-	[[nodiscard]] literal_format get_literal_format(const std::string& expression);
+    [[nodiscard]] literal_format get_literal_format(const std::string& expression);
 
-	[[nodiscard]] bool is_bitwise(std::string_view op);
+    [[nodiscard]] bool is_bitwise(std::string_view op);
 
-	[[nodiscard]] std::pair<std::string, std::string> decompose_expression(const std::string& expression,
-	                                                                       const std::string_view target_op);
+    [[nodiscard]] std::pair<std::string, std::string> decompose_expression(const std::string& expression,
+                                                                           const std::string_view target_op);
 
-	/*
-	 * stringification
-	 */
+    /*
+     * stringification
+     */
 
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	constexpr std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r)
-	                                                                                                          noexcept {
-		auto i = sig.find(l) + l.length();
-		return sig.substr(i, sig.rfind(r) - i);
-	}
+    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    constexpr std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r)
+                                                                                                              noexcept {
+        auto i = sig.find(l) + l.length();
+        return sig.substr(i, sig.rfind(r) - i);
+    }
 
-	template<typename T>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	constexpr std::string_view type_name() noexcept {
-		// Cases to handle:
-		// gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
-		// clang: std::string_view ns::type_name() [T = int]
-		// msvc:  class std::basic_string_view<char,struct std::char_traits<char> > __cdecl ns::type_name<int>(void)
-		#if ASSERT_DETAIL_IS_CLANG
-		 return substring_bounded_by(ASSERT_DETAIL_PFUNC, "[T = ", "]");
-		#elif ASSERT_DETAIL_IS_GCC
-		 return substring_bounded_by(ASSERT_DETAIL_PFUNC, "[with T = ", "; std::string_view = ");
-		#elif ASSERT_DETAIL_IS_MSVC
-		 return substring_bounded_by(ASSERT_DETAIL_PFUNC, "type_name<", ">(void)");
-		#else
-		 static_assert(false, "unsupported compiler");
-		#endif
-	}
+    template<typename T>
+    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    constexpr std::string_view type_name() noexcept {
+        // Cases to handle:
+        // gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
+        // clang: std::string_view ns::type_name() [T = int]
+        // msvc:  class std::basic_string_view<char,struct std::char_traits<char> > __cdecl ns::type_name<int>(void)
+        #if ASSERT_DETAIL_IS_CLANG
+         return substring_bounded_by(ASSERT_DETAIL_PFUNC, "[T = ", "]");
+        #elif ASSERT_DETAIL_IS_GCC
+         return substring_bounded_by(ASSERT_DETAIL_PFUNC, "[with T = ", "; std::string_view = ");
+        #elif ASSERT_DETAIL_IS_MSVC
+         return substring_bounded_by(ASSERT_DETAIL_PFUNC, "type_name<", ">(void)");
+        #else
+         static_assert(false, "unsupported compiler");
+        #endif
+    }
 
-	// https://stackoverflow.com/questions/28309164/checking-for-existence-of-an-overloaded-member-function
-	template<typename T> class has_stream_overload {
-		template<typename C, typename = decltype(std::declval<std::ostringstream>() << std::declval<C>())>
-		static std::true_type test(int);
-		template<typename C>
-		static std::false_type test(...);
-	public:
-		static constexpr bool value = decltype(test<T>(0))::value;
-	};
+    // https://stackoverflow.com/questions/28309164/checking-for-existence-of-an-overloaded-member-function
+    template<typename T> class has_stream_overload {
+        template<typename C, typename = decltype(std::declval<std::ostringstream>() << std::declval<C>())>
+        static std::true_type test(int);
+        template<typename C>
+        static std::false_type test(...);
+    public:
+        static constexpr bool value = decltype(test<T>(0))::value;
+    };
 
-	std::string stringify(const std::string&, literal_format = literal_format::none);
-	std::string stringify(const std::string_view&, literal_format = literal_format::none);
-	// without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
-	std::string stringify(std::nullptr_t, literal_format = literal_format::none);
-	std::string stringify(char, literal_format = literal_format::none);
-	std::string stringify(bool, literal_format = literal_format::none);
-	std::string stringify(short, literal_format = literal_format::none);
-	std::string stringify(int, literal_format = literal_format::none);
-	std::string stringify(long, literal_format = literal_format::none);
-	std::string stringify(long long, literal_format = literal_format::none);
-	std::string stringify(unsigned short, literal_format = literal_format::none);
-	std::string stringify(unsigned int, literal_format = literal_format::none);
-	std::string stringify(unsigned long, literal_format = literal_format::none);
-	std::string stringify(unsigned long long, literal_format = literal_format::none);
-	std::string stringify(float, literal_format = literal_format::none);
-	std::string stringify(double, literal_format = literal_format::none);
-	std::string stringify(long double, literal_format = literal_format::none);
+    std::string stringify(const std::string&, literal_format = literal_format::none);
+    std::string stringify(const std::string_view&, literal_format = literal_format::none);
+    // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
+    std::string stringify(std::nullptr_t, literal_format = literal_format::none);
+    std::string stringify(char, literal_format = literal_format::none);
+    std::string stringify(bool, literal_format = literal_format::none);
+    std::string stringify(short, literal_format = literal_format::none);
+    std::string stringify(int, literal_format = literal_format::none);
+    std::string stringify(long, literal_format = literal_format::none);
+    std::string stringify(long long, literal_format = literal_format::none);
+    std::string stringify(unsigned short, literal_format = literal_format::none);
+    std::string stringify(unsigned int, literal_format = literal_format::none);
+    std::string stringify(unsigned long, literal_format = literal_format::none);
+    std::string stringify(unsigned long long, literal_format = literal_format::none);
+    std::string stringify(float, literal_format = literal_format::none);
+    std::string stringify(double, literal_format = literal_format::none);
+    std::string stringify(long double, literal_format = literal_format::none);
 
-	std::string stringify_ptr(const void*, literal_format = literal_format::none);
+    std::string stringify_ptr(const void*, literal_format = literal_format::none);
 
-	template<typename T> class can_basic_stringify {
-		template<typename C, typename = decltype(stringify(std::declval<C>()))>
-		static std::true_type test(int);
-		template<typename C>
-		static std::false_type test(...);
-	public:
-		static constexpr bool value = decltype(test<T>(0))::value;
-	};
+    template<typename T> class can_basic_stringify {
+        template<typename C, typename = decltype(stringify(std::declval<C>()))>
+        static std::true_type test(int);
+        template<typename C>
+        static std::false_type test(...);
+    public:
+        static constexpr bool value = decltype(test<T>(0))::value;
+    };
 
-	template<typename T, typename std::enable_if<std::is_pointer<strip<typename std::decay<T>::type>>::value
-	                                             || std::is_function<strip<T>>::value
-	                                             || !can_basic_stringify<T>::value, int>::type = 0>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
-		if constexpr(std::is_pointer<strip<typename std::decay<T>::type>>::value || std::is_function<strip<T>>::value) {
-			if constexpr(isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char>) { // strings
-				const void* v = t; // circumvent -Wnonnull-compare
-				if(v != nullptr) {
-					return stringify(std::string_view(t)); // not printing type for now, TODO: reconsider?
-				}
-			}
-			return prettify_type(std::string(type_name<T>())) + ": " + stringify_ptr(reinterpret_cast<const void*>(t), fmt);
-		} else if constexpr(has_stream_overload<T>::value) {
-			std::ostringstream oss;
-			oss<<t;
-			return std::move(oss).str();
-		} else {
-			return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
-		}
-	}
+    template<typename T, typename std::enable_if<std::is_pointer<strip<typename std::decay<T>::type>>::value
+                                                 || std::is_function<strip<T>>::value
+                                                 || !can_basic_stringify<T>::value, int>::type = 0>
+    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
+        if constexpr(std::is_pointer<strip<typename std::decay<T>::type>>::value || std::is_function<strip<T>>::value) {
+            if constexpr(isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char>) { // strings
+                const void* v = t; // circumvent -Wnonnull-compare
+                if(v != nullptr) {
+                    return stringify(std::string_view(t)); // not printing type for now, TODO: reconsider?
+                }
+            }
+            return prettify_type(std::string(type_name<T>())) + ": " + stringify_ptr(reinterpret_cast<const void*>(t), fmt);
+        } else if constexpr(has_stream_overload<T>::value) {
+            std::ostringstream oss;
+            oss<<t;
+            return std::move(oss).str();
+        } else {
+            return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
+        }
+    }
 
-	/*
-	 * assert diagnostics generation
-	 */
+    /*
+     * assert diagnostics generation
+     */
 
-	template<typename T>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	std::vector<std::string> generate_stringifications(const T& v, const literal_format (&formats)[4]) {
-		if constexpr(std::is_arithmetic<strip<T>>::value
-				 && !isa<T, bool>
-				 && !isa<T, char>) {
-			std::vector<std::string> vec;
-			for(literal_format fmt : formats) {
-				if(fmt == literal_format::none) break;
-				// TODO: consider pushing empty fillers to keep columns aligned later on? Does not
-				// matter at the moment because floats only have decimal and hex literals but could
-				// if more formats are added.
-				std::string str = stringify(v, fmt);
-				if(!str.empty()) vec.push_back(std::move(str));
-			}
-			return vec;
-		} else {
-			return { stringify(v) };
-		}
-	}
+    template<typename T>
+    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    std::vector<std::string> generate_stringifications(const T& v, const literal_format (&formats)[4]) {
+        if constexpr(std::is_arithmetic<strip<T>>::value
+                 && !isa<T, bool>
+                 && !isa<T, char>) {
+            std::vector<std::string> vec;
+            for(literal_format fmt : formats) {
+                if(fmt == literal_format::none) break;
+                // TODO: consider pushing empty fillers to keep columns aligned later on? Does not
+                // matter at the moment because floats only have decimal and hex literals but could
+                // if more formats are added.
+                std::string str = stringify(v, fmt);
+                if(!str.empty()) vec.push_back(std::move(str));
+            }
+            return vec;
+        } else {
+            return { stringify(v) };
+        }
+    }
 
-	struct binary_diagnostics_descriptor {
-		std::vector<std::string> lstrings;
-		std::vector<std::string> rstrings;
-	    std::string a_str;
-		std::string b_str;
-		bool multiple_formats;
-		bool present = false;
-		binary_diagnostics_descriptor(); // = default; in the .cpp
-		binary_diagnostics_descriptor(std::vector<std::string>& lstrings, std::vector<std::string>& rstrings,
-		                              std::string a_str, std::string b_str, bool multiple_formats);
-		~binary_diagnostics_descriptor(); // = default; in the .cpp
-		binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = delete;
-		binary_diagnostics_descriptor(binary_diagnostics_descriptor&&); // = default; in the .cpp
-		binary_diagnostics_descriptor& operator=(const binary_diagnostics_descriptor&) = delete;
-		binary_diagnostics_descriptor& operator=(binary_diagnostics_descriptor&&); // = default; in the .cpp
-	};
+    struct binary_diagnostics_descriptor {
+        std::vector<std::string> lstrings;
+        std::vector<std::string> rstrings;
+        std::string a_str;
+        std::string b_str;
+        bool multiple_formats;
+        bool present = false;
+        binary_diagnostics_descriptor(); // = default; in the .cpp
+        binary_diagnostics_descriptor(std::vector<std::string>& lstrings, std::vector<std::string>& rstrings,
+                                      std::string a_str, std::string b_str, bool multiple_formats);
+        ~binary_diagnostics_descriptor(); // = default; in the .cpp
+        binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = delete;
+        binary_diagnostics_descriptor(binary_diagnostics_descriptor&&); // = default; in the .cpp
+        binary_diagnostics_descriptor& operator=(const binary_diagnostics_descriptor&) = delete;
+        binary_diagnostics_descriptor& operator=(binary_diagnostics_descriptor&&); // = default; in the .cpp
+    };
 
-	void sort_and_dedup(literal_format(&)[4]);
+    void sort_and_dedup(literal_format(&)[4]);
 
-	template<typename A, typename B>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	binary_diagnostics_descriptor generate_binary_diagnostic(const A& a, const B& b,
-	                                                         const char* a_str, const char* b_str,
-	                                                         std::string_view op) {
-		using lf = literal_format;
-		// Note: op
-		// figure out what information we need to print in the where clause
-		// find all literal formats involved (literal_format::dec included for everything)
-		auto lformat = get_literal_format(a_str);
-		auto rformat = get_literal_format(b_str);
-		// formerly used std::set here, now using array + sorting, `none` entries will be at the end and ignored
-		lf formats[4] = { lf::dec, lformat, rformat, // ↓ always display binary for bitwise
-		                  is_bitwise(op) ? lf::binary : lf::none };
-		sort_and_dedup(formats); // print in specific order, avoid duplicates
-		// generate raw strings for given formats, without highlighting
-		std::vector<std::string> lstrings = generate_stringifications(a, formats);
-		std::vector<std::string> rstrings = generate_stringifications(b, formats);
-		return binary_diagnostics_descriptor { lstrings, rstrings, a_str, b_str, formats[1] != lf::none };
-	}
+    template<typename A, typename B>
+    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    binary_diagnostics_descriptor generate_binary_diagnostic(const A& a, const B& b,
+                                                             const char* a_str, const char* b_str,
+                                                             std::string_view op) {
+        using lf = literal_format;
+        // Note: op
+        // figure out what information we need to print in the where clause
+        // find all literal formats involved (literal_format::dec included for everything)
+        auto lformat = get_literal_format(a_str);
+        auto rformat = get_literal_format(b_str);
+        // formerly used std::set here, now using array + sorting, `none` entries will be at the end and ignored
+        lf formats[4] = { lf::dec, lformat, rformat, // ↓ always display binary for bitwise
+                          is_bitwise(op) ? lf::binary : lf::none };
+        sort_and_dedup(formats); // print in specific order, avoid duplicates
+        // generate raw strings for given formats, without highlighting
+        std::vector<std::string> lstrings = generate_stringifications(a, formats);
+        std::vector<std::string> rstrings = generate_stringifications(b, formats);
+        return binary_diagnostics_descriptor { lstrings, rstrings, a_str, b_str, formats[1] != lf::none };
+    }
 
-	#define ASSERT_DETAIL_X(x) #x
-	#define ASSERT_DETAIL_Y(x) ASSERT_DETAIL_X(x)
-	constexpr const std::string_view errno_expansion = ASSERT_DETAIL_Y(errno);
-	#undef ASSERT_DETAIL_Y
-	#undef ASSERT_DETAIL_X
+    #define ASSERT_DETAIL_X(x) #x
+    #define ASSERT_DETAIL_Y(x) ASSERT_DETAIL_X(x)
+    constexpr const std::string_view errno_expansion = ASSERT_DETAIL_Y(errno);
+    #undef ASSERT_DETAIL_Y
+    #undef ASSERT_DETAIL_X
 
-	struct extra_diagnostics {
-		ASSERTION fatality = ASSERTION::FATAL;
-		std::string message;
-		std::vector<std::pair<std::string, std::string>> entries;
-		#if ASSERT_DETAIL_IS_MSVC
-		 const char* pretty_function = "<error>";
-		#endif
-		extra_diagnostics();
-		~extra_diagnostics();
-		extra_diagnostics(const extra_diagnostics&) = delete;
-		extra_diagnostics(extra_diagnostics&&); // = default; in the .cpp
-		extra_diagnostics& operator=(const extra_diagnostics&) = delete;
-		extra_diagnostics& operator=(extra_diagnostics&&) = delete;
-	};
+    struct extra_diagnostics {
+        ASSERTION fatality = ASSERTION::FATAL;
+        std::string message;
+        std::vector<std::pair<std::string, std::string>> entries;
+        #if ASSERT_DETAIL_IS_MSVC
+         const char* pretty_function = "<error>";
+        #endif
+        extra_diagnostics();
+        ~extra_diagnostics();
+        extra_diagnostics(const extra_diagnostics&) = delete;
+        extra_diagnostics(extra_diagnostics&&); // = default; in the .cpp
+        extra_diagnostics& operator=(const extra_diagnostics&) = delete;
+        extra_diagnostics& operator=(extra_diagnostics&&) = delete;
+    };
 
-	#if ASSERT_DETAIL_IS_MSVC
-	 struct msvc_pretty_function_wrapper {
-		 const char* pretty_function;
-	 };
-	#endif
+    #if ASSERT_DETAIL_IS_MSVC
+     struct msvc_pretty_function_wrapper {
+         const char* pretty_function;
+     };
+    #endif
 
-	template<typename T>
-	ASSERT_DETAIL_ATTR_COLD
-	void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, T& t) {
-		if constexpr(isa<T, ASSERTION>) {
-			entry.fatality = t;
-		}
-		#if ASSERT_DETAIL_IS_MSVC
-		 if constexpr(isa<T, msvc_pretty_function_wrapper>) {
-		 	 entry.pretty_function = t.pretty_function;
-		 }
-		#endif
-		else {
-			// three cases to handle: assert message, errno, and regular diagnostics
-			#if ASSERT_DETAIL_IS_MSVC
-			 #pragma warning(push)
-			 #pragma warning(disable: 4127) // MSVC thinks constexpr should be used here. It should not.
-			#endif
-			if(isa<T, strip<decltype(errno)>> && args_strings[i] == errno_expansion) {
-			#if ASSERT_DETAIL_IS_MSVC
-			 #pragma warning(pop)
-			#endif
-				// this is redundant and useless but the body for errno handling needs to be in an
-				// if constexpr wrapper
-				if constexpr(isa<T, strip<decltype(errno)>>) {
-				// errno will expand to something hideous like (*__errno_location()),
-				// may as well replace it with "errno"
-				entry.entries.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
-				}
-			} else {
-				if constexpr(is_string_type<T>) {
-					if(i == 0) {
-						entry.message = t;
-						return;
-					}
-				}
-				entry.entries.push_back({ args_strings[i], stringify(t, literal_format::dec) });
-			}
-		}
-	}
+    template<typename T>
+    ASSERT_DETAIL_ATTR_COLD
+    void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, T& t) {
+        if constexpr(isa<T, ASSERTION>) {
+            entry.fatality = t;
+        }
+        #if ASSERT_DETAIL_IS_MSVC
+         if constexpr(isa<T, msvc_pretty_function_wrapper>) {
+              entry.pretty_function = t.pretty_function;
+         }
+        #endif
+        else {
+            // three cases to handle: assert message, errno, and regular diagnostics
+            #if ASSERT_DETAIL_IS_MSVC
+             #pragma warning(push)
+             #pragma warning(disable: 4127) // MSVC thinks constexpr should be used here. It should not.
+            #endif
+            if(isa<T, strip<decltype(errno)>> && args_strings[i] == errno_expansion) {
+            #if ASSERT_DETAIL_IS_MSVC
+             #pragma warning(pop)
+            #endif
+                // this is redundant and useless but the body for errno handling needs to be in an
+                // if constexpr wrapper
+                if constexpr(isa<T, strip<decltype(errno)>>) {
+                // errno will expand to something hideous like (*__errno_location()),
+                // may as well replace it with "errno"
+                entry.entries.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
+                }
+            } else {
+                if constexpr(is_string_type<T>) {
+                    if(i == 0) {
+                        entry.message = t;
+                        return;
+                    }
+                }
+                entry.entries.push_back({ args_strings[i], stringify(t, literal_format::dec) });
+            }
+        }
+    }
 
-	template<typename... Args>
-	ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-	extra_diagnostics process_args(const char* const* const args_strings, Args&... args) {
-		extra_diagnostics entry;
-		size_t i = 0;
-		(process_arg(entry, i++, args_strings, args), ...);
-		(void)args_strings;
-		return entry;
-	}
+    template<typename... Args>
+    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    extra_diagnostics process_args(const char* const* const args_strings, Args&... args) {
+        extra_diagnostics entry;
+        size_t i = 0;
+        (process_arg(entry, i++, args_strings, args), ...);
+        (void)args_strings;
+        return entry;
+    }
 
-	/*
-	 * actual assertion handling, finally
-	 */
+    /*
+     * actual assertion handling, finally
+     */
 
-	struct lock {
-		lock();
-		~lock();
-		lock(const lock&) = delete;
-		lock(lock&&) = delete;
-		lock& operator=(const lock&) = delete;
-		lock& operator=(lock&&) = delete;
-	};
+    struct lock {
+        lock();
+        ~lock();
+        lock(const lock&) = delete;
+        lock(lock&&) = delete;
+        lock& operator=(const lock&) = delete;
+        lock& operator=(lock&&) = delete;
+    };
 
-	// collection of assertion data that can be put in static storage and all passed by a single pointer
-	struct assert_static_parameters {
-		const char* name;
-		assert_type type;
-		const char* expr_str;
-		source_location location;
-		const char* const* args_strings;
-	};
+    // collection of assertion data that can be put in static storage and all passed by a single pointer
+    struct assert_static_parameters {
+        const char* name;
+        assert_type type;
+        const char* expr_str;
+        source_location location;
+        const char* const* args_strings;
+    };
 }
 
 namespace asserts {
-	struct verification_failure : std::exception {
-		virtual const char* what() const noexcept final override;
-	};
+    struct verification_failure : std::exception {
+        virtual const char* what() const noexcept final override;
+    };
 
-	struct check_failure : std::exception {
-		virtual const char* what() const noexcept final override;
-	};
+    struct check_failure : std::exception {
+        virtual const char* what() const noexcept final override;
+    };
 
-	class assertion_printer {
-		const detail::assert_static_parameters* params;
-		const detail::extra_diagnostics& processed_args;
-		detail::binary_diagnostics_descriptor& binary_diagnostics;
-		void* raw_trace;
-		size_t sizeof_args;
-	public:
-		assertion_printer() = delete;
-		assertion_printer(const detail::assert_static_parameters* params,
-		                  const detail::extra_diagnostics& processed_args,
-		                  detail::binary_diagnostics_descriptor& binary_diagnostics,
-		                  void* raw_trace, size_t sizeof_args);
-		~assertion_printer();
-		assertion_printer(const assertion_printer&) = delete;
-		assertion_printer(assertion_printer&&) = delete;
-		assertion_printer& operator=(const assertion_printer&) = delete;
-		assertion_printer& operator=(assertion_printer&&) = delete;
-		[[nodiscard]] std::string operator()(int width);
-	};
+    class assertion_printer {
+        const detail::assert_static_parameters* params;
+        const detail::extra_diagnostics& processed_args;
+        detail::binary_diagnostics_descriptor& binary_diagnostics;
+        void* raw_trace;
+        size_t sizeof_args;
+    public:
+        assertion_printer() = delete;
+        assertion_printer(const detail::assert_static_parameters* params,
+                          const detail::extra_diagnostics& processed_args,
+                          detail::binary_diagnostics_descriptor& binary_diagnostics,
+                          void* raw_trace, size_t sizeof_args);
+        ~assertion_printer();
+        assertion_printer(const assertion_printer&) = delete;
+        assertion_printer(assertion_printer&&) = delete;
+        assertion_printer& operator=(const assertion_printer&) = delete;
+        assertion_printer& operator=(assertion_printer&&) = delete;
+        [[nodiscard]] std::string operator()(int width);
+    };
 }
 
 namespace asserts::detail {
-	size_t count_args_strings(const char* const* const);
+    size_t count_args_strings(const char* const* const);
 
-	template<typename A, typename B, typename C, typename... Args>
-	ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE
-	void process_assert_fail(expression_decomposer<A, B, C>& decomposer,
-	                            const assert_static_parameters* params, Args&&... args) {
-		lock l;
-		const auto args_strings = params->args_strings;
-		size_t args_strings_count = count_args_strings(args_strings);
-		size_t sizeof_extra_diagnostics = sizeof...(args)
-		#ifdef ASSERT_DETAIL_IS_MSVC
-		- 1
-		#endif
-		;
-		ASSERT_DETAIL_PRIMITIVE_ASSERT((sizeof...(args) == 0 && args_strings_count == 2)
-		                               || args_strings_count == sizeof_extra_diagnostics + 1);
-		// process_args needs to be called as soon as possible in case errno needs to be read
-		const auto processed_args = process_args(args_strings, args...);
-		const auto fatal = processed_args.fatality;
-		void* raw_trace = get_stacktrace_opaque();
-		// generate header
-		std::string output;
-		binary_diagnostics_descriptor binary_diagnostics;
-		// generate binary diagnostics
-		if constexpr(is_nothing<C>) {
-			static_assert(is_nothing<B> && !is_nothing<A>);
-			(void)decomposer; // suppress warning in msvc
-		} else {
-			auto [a_str, b_str] = decompose_expression(params->expr_str, C::op_string);
-			binary_diagnostics = generate_binary_diagnostic(decomposer.a, decomposer.b,
-			                                                a_str.c_str(), b_str.c_str(), C::op_string);
-		}
-		// send off
-		assertion_printer printer {
-			params,
-			processed_args,
-			binary_diagnostics,
-			raw_trace,
-			sizeof_extra_diagnostics
-		};
-		::ASSERT_FAIL(printer, params->type, fatal);
-	}
+    template<typename A, typename B, typename C, typename... Args>
+    ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE
+    void process_assert_fail(expression_decomposer<A, B, C>& decomposer,
+                                const assert_static_parameters* params, Args&&... args) {
+        lock l;
+        const auto args_strings = params->args_strings;
+        size_t args_strings_count = count_args_strings(args_strings);
+        size_t sizeof_extra_diagnostics = sizeof...(args)
+        #ifdef ASSERT_DETAIL_IS_MSVC
+        - 1
+        #endif
+        ;
+        ASSERT_DETAIL_PRIMITIVE_ASSERT((sizeof...(args) == 0 && args_strings_count == 2)
+                                       || args_strings_count == sizeof_extra_diagnostics + 1);
+        // process_args needs to be called as soon as possible in case errno needs to be read
+        const auto processed_args = process_args(args_strings, args...);
+        const auto fatal = processed_args.fatality;
+        void* raw_trace = get_stacktrace_opaque();
+        // generate header
+        std::string output;
+        binary_diagnostics_descriptor binary_diagnostics;
+        // generate binary diagnostics
+        if constexpr(is_nothing<C>) {
+            static_assert(is_nothing<B> && !is_nothing<A>);
+            (void)decomposer; // suppress warning in msvc
+        } else {
+            auto [a_str, b_str] = decompose_expression(params->expr_str, C::op_string);
+            binary_diagnostics = generate_binary_diagnostic(decomposer.a, decomposer.b,
+                                                            a_str.c_str(), b_str.c_str(), C::op_string);
+        }
+        // send off
+        assertion_printer printer {
+            params,
+            processed_args,
+            binary_diagnostics,
+            raw_trace,
+            sizeof_extra_diagnostics
+        };
+        ::ASSERT_FAIL(printer, params->type, fatal);
+    }
 
-	template<typename A, typename B, typename C, typename... Args>
-	ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE [[nodiscard]]
-	expression_decomposer<A, B, C> process_assert_fail_m(expression_decomposer<A, B, C> decomposer,
-	                                       const assert_static_parameters* params, Args&&... args) {
-		process_assert_fail(decomposer, params, std::forward<Args>(args)...);
-		return decomposer;
-	}
+    template<typename A, typename B, typename C, typename... Args>
+    ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE [[nodiscard]]
+    expression_decomposer<A, B, C> process_assert_fail_m(expression_decomposer<A, B, C> decomposer,
+                                           const assert_static_parameters* params, Args&&... args) {
+        process_assert_fail(decomposer, params, std::forward<Args>(args)...);
+        return decomposer;
+    }
 
-	template<typename T>
-	struct assert_value_wrapper {
-		T value;
-	};
+    template<typename T>
+    struct assert_value_wrapper {
+        T value;
+    };
 
-	template<bool R, bool ret_lhs, bool value_is_lval_ref,
-	         typename T, typename A, typename B, typename C>
-	auto get_expression_return_value(T& value, expression_decomposer<A, B, C>& decomposer) {
-		if constexpr(R) {
-			if constexpr(ret_lhs) {
-				if constexpr(std::is_lvalue_reference<A>::value) {
-					return assert_value_wrapper<A>{decomposer.take_lhs()};
-				} else {
-					return assert_value_wrapper<A>{std::move(decomposer.take_lhs())};
-				}
-			} else {
-				if constexpr(value_is_lval_ref) {
-					return assert_value_wrapper<T&>{value};
-				} else {
-					return assert_value_wrapper<T>{std::move(value)};
-				}
-			}
-		}
-	}
+    template<bool R, bool ret_lhs, bool value_is_lval_ref,
+             typename T, typename A, typename B, typename C>
+    auto get_expression_return_value(T& value, expression_decomposer<A, B, C>& decomposer) {
+        if constexpr(R) {
+            if constexpr(ret_lhs) {
+                if constexpr(std::is_lvalue_reference<A>::value) {
+                    return assert_value_wrapper<A>{decomposer.take_lhs()};
+                } else {
+                    return assert_value_wrapper<A>{std::move(decomposer.take_lhs())};
+                }
+            } else {
+                if constexpr(value_is_lval_ref) {
+                    return assert_value_wrapper<T&>{value};
+                } else {
+                    return assert_value_wrapper<T>{std::move(value)};
+                }
+            }
+        }
+    }
 }
 
 using asserts::ASSERTION;
@@ -985,7 +985,7 @@ using asserts::ASSERTION;
               assert_detail_decomposer.compl expression_decomposer(); \
               new (&assert_detail_decomposer) asserts::detail::expression_decomposer(std::move(assert_detail_r)); \
             } \
-          };, \
+          }, \
           /* Note: std::launder needed in 17 in case of placement new / move shenanigans above */ \
           /* https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3 */ \
           /* Note: Somewhat relying on this call being inlined so inefficiency is eliminated */ \
