@@ -38,25 +38,25 @@ tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlight
 ifneq ($(COMPILER),msvc)
     CPP = $(COMPILER)
     LD = $(COMPILER)
-    WFLAGS := -Wall -Wextra -Wvla -Wshadow -Werror
-    DFLAGS := -MMD -MP
-    CPPFLAGS := -std=$(STD) -I../include
-    GENERAL_FLAGS := -DASSERT_FAIL=custom_fail -DASSERT_LOWERCASE
-    LDFLAGS := -g -L../bin -lassert
+    override WFLAGS += -Wall -Wextra -Wvla -Wshadow -Werror
+    override DFLAGS += -MMD -MP
+    override CPPFLAGS += -std=$(STD) -I../include
+    override GENERAL_FLAGS += -DASSERT_FAIL=custom_fail -DASSERT_LOWERCASE
+    override LDFLAGS += -g -L../bin -lassert
     ifeq ($(TARGET),debug)
-        CPPFLAGS += -O0 -g
+        override CPPFLAGS += -O0 -g
         ifneq ($(OS),Windows_NT)
-            CPPFLAGS += -fsanitize=address
-            LDFLAGS += -fsanitize=address
+            override CPPFLAGS += -fsanitize=address
+            override LDFLAGS += -fsanitize=address
         endif
     else
-        CPPFLAGS += -O3 -funroll-loops -ffast-math -flto -march=native -DNDEBUG
-        LDFLAGS += -flto -s
+        override CPPFLAGS += -O3 -funroll-loops -ffast-math -flto -march=native -DNDEBUG
+        override LDFLAGS += -flto -s
     endif
     ifeq ($(OS),Windows_NT)
-        LDFLAGS += -ldbghelp
+        override LDFLAGS += -ldbghelp
     endif
-    CPPFLAGS += $(WFLAGS) $(DFLAGS)
+    override CPPFLAGS += $(WFLAGS) $(DFLAGS)
 
     $(BIN)/demo$(E): $(BIN)/o/demo/demo.cpp.o $(BIN)/o/demo/bar.cpp.o $(BIN)/o/demo/foo.cpp.o $(BIN)/o/demo/baz/demo.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
@@ -92,17 +92,17 @@ else
     CPP = cl
     LD = link
     SHELL = powershell
-    WFLAGS := /W4 /WX
-    CPPFLAGS := /std:$(STD) /EHsc /I ../include /Z7
-    GENERAL_FLAGS := /DASSERT_FAIL=custom_fail /DASSERT_LOWERCASE
-    LDFLAGS := /LIBPATH:../bin assert.lib dbghelp.lib /DEBUG
+    override WFLAGS += /W4 /WX
+    override CPPFLAGS += /std:$(STD) /EHsc /I ../include /Z7
+    override GENERAL_FLAGS += /DASSERT_FAIL=custom_fail /DASSERT_LOWERCASE
+    override LDFLAGS += /LIBPATH:../bin assert.lib dbghelp.lib /DEBUG
     ifeq ($(TARGET), debug)
-        CPPFLAGS +=
+        override CPPFLAGS +=
     else
-        CPPFLAGS += /O2 -DNDEBUG
-        LDFLAGS +=
+        override CPPFLAGS += /O2 -DNDEBUG
+        override LDFLAGS +=
     endif
-    CPPFLAGS += $(WFLAGS) $(DFLAGS)
+    override CPPFLAGS += $(WFLAGS) $(DFLAGS)
 
     $(BIN)/demo$(E): $(BIN)/o/demo/demo.cpp.o $(BIN)/o/demo/bar.cpp.o $(BIN)/o/demo/foo.cpp.o $(BIN)/o/demo/baz/demo.cpp.o
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
