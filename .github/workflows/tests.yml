@@ -79,10 +79,10 @@ jobs:
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
     - name: build library
-      run: make COMPILER=msvc CPPFLAGS=/permissive-
+      run: make COMPILER=msvc "CPPFLAGS=/permissive- /Zc:twoPhase-" # Annoying bug with two-phase lookup
     - name: build tests
       working-directory: tests
-      run: make tests COMPILER=msvc CPPFLAGS=/permissive-
+      run: make tests COMPILER=msvc "CPPFLAGS=/permissive- /Zc:twoPhase-" # Annoying bug with two-phase lookup
     - name: dos2unix
       working-directory: tests/integration/expected
       run: dos2unix *.txt

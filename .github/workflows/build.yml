@@ -41,10 +41,10 @@ jobs:
     - name: Enable Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1.10.0
     - name: make
-      run: make COMPILER=msvc FLAGS=/permissive-
+      run: make COMPILER=msvc "FLAGS=/permissive- /Zc:twoPhase-" # Annoying bug with two-phase lookup
     - name: build basic test
       working-directory: tests
-      run: make basic_test COMPILER=msvc FLAGS=/permissive-
+      run: make basic_test COMPILER=msvc "FLAGS=/permissive- /Zc:twoPhase-" # Annoying bug with two-phase lookup
   build-gcc-windows:
     runs-on: windows-2019
     steps:
