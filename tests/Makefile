@@ -27,13 +27,15 @@ endif
 
 HPP = ../include/assert.hpp
 
-_all: tests demo basic_test
+_all: tests demo basic_test integration
 
 demo: $(BIN)/demo$(E)
 
 basic_test: $(BIN)/basic_test$(E)
 
 tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/type_handling$(E) $(BIN)/basic_test$(E) $(BIN)/integration$(E)
+
+integration: $(BIN)/integration$(E)
 
 ifneq ($(COMPILER),msvc)
     CPP = $(COMPILER)
