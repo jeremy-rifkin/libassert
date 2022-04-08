@@ -43,7 +43,7 @@ ifneq ($(COMPILER),msvc)
     override WFLAGS += -Wall -Wextra -Wvla -Wshadow -Werror
     override DFLAGS += -MMD -MP
     override CPPFLAGS += -std=$(STD) -I../include
-    override GENERAL_FLAGS += -DASSERT_FAIL=custom_fail -DASSERT_LOWERCASE
+    override GENERAL_FLAGS += -DASSERT_USE_MAGIC_ENUM -DASSERT_FAIL=custom_fail -DASSERT_LOWERCASE
     override LDFLAGS += -g -L../bin -lassert
     ifeq ($(TARGET),debug)
         override CPPFLAGS += -O0 -g
@@ -96,7 +96,7 @@ else
     SHELL = powershell
     override WFLAGS += /W4 /WX
     override CPPFLAGS += /std:$(STD) /EHsc /I ../include /Z7
-    override GENERAL_FLAGS += /DASSERT_FAIL=custom_fail /DASSERT_LOWERCASE
+    override GENERAL_FLAGS += /DASSERT_USE_MAGIC_ENUM /DASSERT_FAIL=custom_fail /DASSERT_LOWERCASE
     override LDFLAGS += /LIBPATH:../bin assert.lib dbghelp.lib /DEBUG
     ifeq ($(TARGET), debug)
         override CPPFLAGS +=

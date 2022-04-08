@@ -10,6 +10,10 @@
 #include <string>
 #include <vector>
 
+#ifdef ASSERT_USE_MAGIC_ENUM
+ #include "../third_party/magic_enum.hpp"
+#endif
+
 #if defined(__clang__)
  #define ASSERT_DETAIL_IS_CLANG 1
 #elif defined(__GNUC__) || defined(__GNUG__)
@@ -545,7 +549,18 @@ namespace asserts::detail {
             std::ostringstream oss;
             oss<<t;
             return std::move(oss).str();
-        } else {
+        }
+        #ifdef ASSERT_USE_MAGIC_ENUM
+        else if constexpr(std::is_enum<strip<T>>::value) {
+            std::string_view name = magic_enum::enum_name(t);
+            if(!name.empty()) {
+                return std::string(name);
+            } else {
+                return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
+            }
+        }
+        #endif
+        else {
             return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
         }
     }

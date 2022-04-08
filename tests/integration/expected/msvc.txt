@@ -1003,8 +1003,8 @@ Stack trace:
 Assertion failed at integration/integration.cpp:2906: void __cdecl test_class<int>::something_else(void):
     assert(b != bar::A);
     Where:
-        b      => <instance of enum test_class<int>::something_else::bar>
-        bar::A => <instance of enum test_class<int>::something_else::bar>
+        b      => A
+        bar::A => A
 
 Stack trace:
 # 1 test_class<int>::something_else()

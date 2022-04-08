@@ -1003,8 +1003,8 @@ Stack trace:
 Assertion failed at integration/integration.cpp:2906: void test_class<T>::something_else() [with T = int]:
     assert(b != bar::A);
     Where:
-        b      => <instance of test_class<T>::something_else() [with T = int]::bar>
-        bar::A => <instance of test_class<T>::something_else() [with T = int]::bar>
+        b      => A
+        bar::A => A
 
 Stack trace:
 # 1 test_class<int>::something_else()

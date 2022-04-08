@@ -299,6 +299,7 @@ The following configurations can be applied on a per-TU basis:
   condition in this mode, an extra set of parentheses can be used: `assert((ptr && ptr->foo));`.)
 - `-DASSERT_LOWERCASE` Enables `assert` alias for `ASSERT`
 - `-DASSERT_FAIL=fn` Allows a custom failure handler to be provided
+- `-DASSERT_USE_MAGIC_ENUM` use the MagicEnum library to print better diagnostics for enum classes
 
 Custom failure actions: These are called when an assertion fails after diagnostic messages are
 printed. Set these macros to the name of the failure action function, signature is expected to be
