@@ -557,7 +557,7 @@ namespace asserts::detail {
     template<typename T>
     ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
     std::vector<std::string> generate_stringifications(const T& v, const literal_format (&formats)[4]) {
-        if constexpr(std::is_arithmetic<strip<T>>::value
+        if constexpr((std::is_arithmetic<strip<T>>::value || std::is_enum<strip<T>>::value)
                  && !isa<T, bool>
                  && !isa<T, char>) {
             std::vector<std::string> vec;
