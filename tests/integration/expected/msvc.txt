@@ -794,14 +794,14 @@ logger_type::compl logger_type() [n=1]
 ===================== [value forwarding: lvalue references] =====================
 logger_type::logger_type() [n=2]
 logger_type::operator==(const logger_type&, int) [n=2, b=2]
-Assertion failed at integration/integration.cpp:2804: decltype(auto) __cdecl test_class<int>::get_lt_a(struct logger_type &):
+Assertion failed at integration/integration.cpp:601: decltype(auto) __cdecl test_class<int>::get_lt_a(struct logger_type &):
     assert(l == 2);
     Where:
         l => logger_type [n = 2]
 
 Stack trace:
 # 1 test_class<int>::get_lt_a(logger_type&)
-      at integration.cpp:2804
+      at integration.cpp:601
 # 2 test_class<int>::something_else()
       at integration.cpp:2403
 # 3 test_class<int>::something<N>(std::pair<N, int>)
@@ -866,14 +866,14 @@ logger_type::compl logger_type() [n=-2]
 logger_type::compl logger_type() [n=-2]
 logger_type::operator==(const logger_type&, int) [n=2, b=2]
 logger_type::logger_type(logger_type&&) [n=2]
-Assertion failed at integration/integration.cpp:2808: decltype(auto) __cdecl test_class<int>::get_lt_b(void):
+Assertion failed at integration/integration.cpp:605: decltype(auto) __cdecl test_class<int>::get_lt_b(void):
     assert(logger_type(2) == 2);
     Where:
         logger_type(2) => logger_type [n = 2]
 
 Stack trace:
 # 1 test_class<int>::get_lt_b()
-      at integration.cpp:2808
+      at integration.cpp:605
 # 2 test_class<int>::something_else()
       at integration.cpp:2502
 # 3 test_class<int>::something<N>(std::pair<N, int>)
@@ -981,6 +981,37 @@ Stack trace:
 # 4 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 5 main()
+      at integration.cpp:403
+
+
+===================== [Enum handling] =====================
+Assertion failed at integration/integration.cpp:2904: void __cdecl test_class<int>::something_else(void):
+    assert(a != A);
+    Where:
+        a => 0
+        A => 0
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:2905
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:2906: void __cdecl test_class<int>::something_else(void):
+    assert(b != bar::A);
+    Where:
+        b      => <instance of enum test_class<int>::something_else::bar>
+        bar::A => <instance of enum test_class<int>::something_else::bar>
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:2908
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
       at integration.cpp:403
 
 

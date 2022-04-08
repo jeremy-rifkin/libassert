@@ -324,8 +324,20 @@ public:
         SECTION("Path differentiation");
         #line 2800
         test_path_differentiation();
+
+        SECTION("Enum handling");
+        #line 2900
+        {
+            enum foo { A, B };
+            enum class bar { A, B };
+            foo a = A;
+            assert(a != A);
+            bar b = bar::A;
+            assert(b != bar::A);
+        }
     }
 
+    #line 600
     decltype(auto) get_lt_a(logger_type& l) {
         return assert(l == 2);
     }
