@@ -40,12 +40,15 @@ jobs:
     runs-on: windows-2019
     steps:
     - uses: actions/checkout@v2
-    - name: update mingw
-      run: choco upgrade mingw
+    - uses: msys2/setup-msys2@v2
+      with:
+        install: mingw-w64-x86_64-gcc make
     - name: make
+      shell: msys2 {0}
       run: make COMPILER=g++ STD=c++20
     - name: build basic test
       working-directory: tests
+      shell: msys2 {0}
       run: make basic_test COMPILER=g++ STD=c++20
   build-clang-windows-cpp20:
     runs-on: windows-2019
