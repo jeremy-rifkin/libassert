@@ -69,35 +69,36 @@ jobs:
     - name: run tests
       working-directory: tests
       run: python3 run-tests.py msvc
-  # TODO: Get this working
-  #test-gcc-windows-cpp20:
+  #test-gcc-windows-cpp20: # currently addr2line is not working, not sure why
   #  runs-on: windows-2019
   #  steps:
   #  - uses: actions/checkout@v2
+  #  - uses: msys2/setup-msys2@v2
+  #    with:
+  #      install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-python make git dos2unix diffutils
   #  - name: dependencies
+  #    shell: msys2 {0}
   #    run: |
-  #         python3 -m pip install --upgrade pip
-  #         python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
-  #         which g++
-  #         choco upgrade mingw
-  #         refreshenv
-  #         which g++
+  #         git clone https://github.com/jeffkaufman/icdiff.git
+  #         cp -avp icdiff/icdiff tests/
   #  - name: build library
+  #    shell: msys2 {0}
   #    run: make COMPILER=g++ STD=c++20
   #  - name: build tests
+  #    shell: msys2 {0}
   #    working-directory: tests
-  #    run: |
-  #         make tests COMPILER=g++ STD=c++20
-  #         ldd bin/integration.exe
-  #         echo $Env:PATH
-  #         ls C:/Strawberry/c/bin/
-  #         cp C:/Strawberry/c/bin/libstdc++-6.dll bin # attempt to fix dll conflict leading to 0xC0000135
+  #    run: make tests COMPILER=g++ STD=c++20
   #  - name: dos2unix
+  #    shell: msys2 {0}
   #    working-directory: tests/integration/expected
   #    run: dos2unix *.txt
   #  - name: run tests
+  #    shell: msys2 {0}
   #    working-directory: tests
-  #    run: python3 run-tests.py gcc_windows
+  #    run: |
+  #          export PATH=$PATH:$(pwd)
+  #          nm bin/integration.exe
+  #          python run-tests.py gcc_windows
   test-clang-windows-cpp20:
     runs-on: windows-2019
     steps:
