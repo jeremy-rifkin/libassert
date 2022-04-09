@@ -67,26 +67,37 @@ def icdiff(a: Union[str, tuple], b: Union[str, tuple]):
     print("{x}========={x}".format(x = "=" * 40))
     print("{x} icdiff: {x}".format(x = "=" * 40))
     print("{x}========={x}".format(x = "=" * 40))
-    dp = subprocess.Popen([
-        "icdiff",
-        a_path,
-        b_path,
-        "--cols",
-        "170"
-    ])
-    dp.wait()
+    def launch_ic(*args):
+        dp = subprocess.Popen([
+            *args,
+            a_path,
+            b_path,
+            "--cols",
+            "170"
+        ])
+        dp.wait()
+    try:
+        launch_ic("icdiff")
+    except FileNotFoundError:
+        try:
+            launch_ic("python3", "./icdiff")
+        except FileNotFoundError:
+            print("FileNotFoundError while spawning subprocess")
     print("{x}============={x}".format(x = "=" * 40))
     print("{x} basic diff: {x}".format(x = "=" * 40))
     print("{x}============={x}".format(x = "=" * 40))
-    dp = subprocess.Popen([
-        "diff",
-        "-y",
-        "--suppress-common-lines",
-        "--width",
-        "200",
-        a_path,
-        b_path,
-    ])
-    dp.wait()
+    try:
+        dp = subprocess.Popen([
+            "diff",
+            "-y",
+            "--suppress-common-lines",
+            "--width",
+            "200",
+            a_path,
+            b_path,
+        ])
+        dp.wait()
+    except FileNotFoundError:
+        print("FileNotFoundError while spawning subprocess")
     for path in to_delete:
         os.remove(path)
