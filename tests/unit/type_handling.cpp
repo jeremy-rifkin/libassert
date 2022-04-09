@@ -66,19 +66,19 @@ int main() {
         static_assert(std::is_same<decltype(b), only_move_constructable&>::value);
         assert(is_lvalue(ASSERT(x == 2)));
         ASSERT(x == 2).x++;
-        ASSERT(x.x == 3);
+        VERIFY(x.x == 3);
     }
 
     // above cases test lhs returns, now test the case where the full value is returned
     {
         auto v0 = ASSERT(1 | 2);
-        ASSERT(v0 == 3);
+        VERIFY(v0 == 3);
         auto v1 = ASSERT(7 & 4);
-        ASSERT(v1 == 4);
+        VERIFY(v1 == 4);
         auto v2 = ASSERT(1 << 16);
-        ASSERT(v2 == 65536);
+        VERIFY(v2 == 65536);
         auto v3 = ASSERT(32 >> 2);
-        ASSERT(v3 == 8);
+        VERIFY(v3 == 8);
     }
 
     // test CHECK returns nothing
