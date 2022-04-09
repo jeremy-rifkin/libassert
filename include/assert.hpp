@@ -66,7 +66,8 @@ namespace asserts {
 void ASSERT_FAIL(asserts::assertion_printer& printer, asserts::assert_type type,
                  asserts::ASSERTION fatal);
 
-#define ASSERT_DETAIL_PHONY_USE(E) do { using x [[maybe_unused]] = decltype(E); } while(0)
+// always_false is just convenient to use here
+#define ASSERT_DETAIL_PHONY_USE(E) ((void)asserts::detail::always_false<decltype(E)>)
 
 /*
  * Public utilities
@@ -153,6 +154,7 @@ namespace asserts::detail {
 
     // Hack to get around static_assert(false); being evaluated before any instantiation, even under
     // an if-constexpr branch
+    // Also used for PHONY_USE
     template<typename T> constexpr bool always_false = false;
 
     template<typename T> using strip = std::remove_cv_t<std::remove_reference_t<T>>;
