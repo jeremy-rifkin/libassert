@@ -1077,7 +1077,7 @@ namespace asserts::detail {
         }
 
         ASSERT_DETAIL_ATTR_COLD
-        std::vector<token_t> _tokenize(const std::string& expression, bool decompose_shr = false) {
+        std::vector<token_t> tokenize(const std::string& expression, bool decompose_shr = false) {
             std::vector<token_t> tokens;
             size_t i = 0;
             while(i < expression.length()) {
@@ -1108,8 +1108,8 @@ namespace asserts::detail {
         }
 
         ASSERT_DETAIL_ATTR_COLD
-        std::vector<highlight_block> _highlight(const std::string& expression) try {
-            const auto tokens = _tokenize(expression);
+        std::vector<highlight_block> highlight(const std::string& expression) try {
+            const auto tokens = tokenize(expression);
             std::vector<highlight_block> output;
             for(size_t i = 0; i < tokens.size(); i++) {
                 const auto& token = tokens[i];
@@ -1165,7 +1165,7 @@ namespace asserts::detail {
         }
 
         ASSERT_DETAIL_ATTR_COLD
-        literal_format _get_literal_format(const std::string& expression) {
+        literal_format get_literal_format(const std::string& expression) {
             for(auto& [ re, type ] : literal_formats) {
                 if(std::regex_match(expression, re)) {
                     return type;
@@ -1336,7 +1336,7 @@ namespace asserts::detail {
         }
 
         ASSERT_DETAIL_ATTR_COLD
-        std::pair<std::string, std::string> _decompose_expression(const std::string& expression,
+        std::pair<std::string, std::string> decompose_expression(const std::string& expression,
                 const std::string_view target_op) {
             // While automatic decomposition allows something like `assert(foo(n) == bar<n> + n);`
             // treated as `assert_eq(foo(n), bar<n> + n);` we only get the full expression's string
@@ -1379,7 +1379,7 @@ namespace asserts::detail {
             // initial tokenization so we can pass the token vector by reference and avoid copying
             // for every recursive path (O(t^2)). This does not create an issue for syntax
             // highlighting as long as >> and > are highlighted the same.
-            const auto tokens = _tokenize(expression, true);
+            const auto tokens = tokenize(expression, true);
             // We're only looking for the split, we can just store a set of split indices. No need
             // to store a vector<pair<vector<token_t>, vector<token_t>>>
             std::set<int> candidates;
@@ -1420,7 +1420,7 @@ namespace asserts::detail {
         #ifdef NCOLOR
         return expression;
         #else
-        auto blocks = analysis::get()._highlight(expression);
+        auto blocks = analysis::get().highlight(expression);
         std::string str;
         for(auto& block : blocks) {
             str += block.color;
@@ -1436,12 +1436,12 @@ namespace asserts::detail {
         #ifdef NCOLOR
         return expression;
         #else
-        return analysis::get()._highlight(expression);
+        return analysis::get().highlight(expression);
         #endif
     }
 
     ASSERT_DETAIL_ATTR_COLD literal_format get_literal_format(const std::string& expression) {
-        return analysis::get()._get_literal_format(expression);
+        return analysis::get().get_literal_format(expression);
     }
 
     ASSERT_DETAIL_ATTR_COLD std::string trim_suffix(const std::string& expression) {
@@ -1454,7 +1454,7 @@ namespace asserts::detail {
 
     ASSERT_DETAIL_ATTR_COLD
     std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op) {
-        return analysis::get()._decompose_expression(expression, target_op);
+        return analysis::get().decompose_expression(expression, target_op);
     }
 
     /*
