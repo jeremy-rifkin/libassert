@@ -69,6 +69,44 @@ int main() {
         VERIFY(x.x == 3);
     }
 
+    // test values are forwarded properly
+    // serves as a regression test against issue with std::forwarding with the wrong type
+    {
+        // there was an issue with the decomposer trying to forward s << 2 as an S rather than a B
+        struct S;
+        struct B {
+            bool operator==(int) const {
+                return true;
+            }
+        };
+        struct S {
+            B operator<<(int) const {
+                return B{};
+            }
+        };
+        S s;
+        decltype(auto) v = ASSERT(s << 2 == false);
+        static_assert(std::is_same<decltype(v), B>::value);
+    }
+    {
+        struct S;
+        struct B {
+            bool operator==(int) const {
+                return true;
+            }
+        };
+        B b;
+        struct S {
+            B& _b;
+            B& operator<<(int) const {
+                return _b;
+            }
+        };
+        S s{b};
+        decltype(auto) v = ASSERT(s << 2 == false);
+        static_assert(std::is_same<decltype(v), B&>::value);
+    }
+
     // above cases test lhs returns, now test the case where the full value is returned
     {
         auto v0 = ASSERT(1 | 2);
