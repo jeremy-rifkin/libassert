@@ -1037,16 +1037,17 @@ namespace asserts::detail {
             // bottom few rows of the precedence table:
             const std::unordered_map<int, std::vector<std::string_view>> precedences = {
                 { -1, { "<<", ">>" } },
-                { -2, { "<", "<=", ">=", ">" } },
-                { -3, { "==", "!=" } },
-                { -4, { "&" } },
-                { -5, { "^" } },
-                { -6, { "|" } },
-                { -7, { "&&" } },
-                { -8, { "||" } },
-                            // Note: associativity logic currently relies on these having precedence -9
-                { -9, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } },
-                { -10, { "," } }
+                { -2, { "<=>" } },
+                { -3, { "<", "<=", ">=", ">" } },
+                { -4, { "==", "!=" } },
+                { -5, { "&" } },
+                { -6, { "^" } },
+                { -7, { "|" } },
+                { -8, { "&&" } },
+                { -9, { "||" } },
+                            // Note: associativity logic currently relies on these having precedence -10
+                { -10, { "?", ":", "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" } },
+                { -11, { "," } }
             };
             std::unordered_map<std::string_view, int> table;
             for(const auto& [ p, ops ] : precedences) {
@@ -1285,7 +1286,7 @@ namespace asserts::detail {
                                     std::string_view op = normalize_op(get_real_op(tokens, i));
                                     if(precedence.count(op))
                                     if(precedence.at(op) < current_lowest_precedence
-                                    || (precedence.at(op) == current_lowest_precedence && precedence.at(op) != -9)) {
+                                    || (precedence.at(op) == current_lowest_precedence && precedence.at(op) != -10)) {
                                         middle_index = (int)i;
                                         current_lowest_precedence = precedence.at(op);
                                     }
@@ -1591,6 +1592,29 @@ namespace asserts::detail {
     ASSERT_DETAIL_ATTR_COLD std::string stringify(long double value, literal_format fmt) {
         return stringify_floating_point(value, fmt);
     }
+
+    #if __cplusplus >= 202002L
+     ASSERT_DETAIL_ATTR_COLD std::string stringify(std::strong_ordering value, literal_format) {
+            if(value == std::strong_ordering::less)       return "std::strong_ordering::less";
+            if(value == std::strong_ordering::equivalent) return "std::strong_ordering::equivalent";
+            if(value == std::strong_ordering::equal)      return "std::strong_ordering::equal";
+            if(value == std::strong_ordering::greater)    return "std::strong_ordering::greater";
+            return "Unknown std::strong_ordering value";
+     }
+     ASSERT_DETAIL_ATTR_COLD std::string stringify(std::weak_ordering value, literal_format) {
+            if(value == std::weak_ordering::less)       return "std::weak_ordering::less";
+            if(value == std::weak_ordering::equivalent) return "std::weak_ordering::equivalent";
+            if(value == std::weak_ordering::greater)    return "std::weak_ordering::greater";
+            return "Unknown std::weak_ordering value";
+     }
+     ASSERT_DETAIL_ATTR_COLD std::string stringify(std::partial_ordering value, literal_format) {
+            if(value == std::partial_ordering::less)       return "std::partial_ordering::less";
+            if(value == std::partial_ordering::equivalent) return "std::partial_ordering::equivalent";
+            if(value == std::partial_ordering::greater)    return "std::partial_ordering::greater";
+            if(value == std::partial_ordering::unordered)  return "std::partial_ordering::unordered";
+            return "Unknown std::partial_ordering value";
+     }
+    #endif
 
     ASSERT_DETAIL_ATTR_COLD std::string stringify_ptr(const void* value, literal_format) {
         if(value == nullptr) {

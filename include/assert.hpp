@@ -10,6 +10,10 @@
 #include <string>
 #include <vector>
 
+#if __cplusplus >= 202002L
+ #include <compare>
+#endif
+
 #ifdef ASSERT_USE_MAGIC_ENUM
  #include "../third_party/magic_enum.hpp"
 #endif
@@ -248,6 +252,9 @@ namespace asserts::detail {
         }
         ASSERT_DETAIL_GEN_OP_BOILERPLATE(shl, <<);
         ASSERT_DETAIL_GEN_OP_BOILERPLATE(shr, >>);
+        #if __cplusplus >= 202002L
+         ASSERT_DETAIL_GEN_OP_BOILERPLATE(spaceship, <=>);
+        #endif
         ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(eq,   ==, cmp_equal);
         ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(neq,  !=, cmp_not_equal);
         ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(gt,    >, cmp_greater);
@@ -415,6 +422,9 @@ namespace asserts::detail {
             } \
         }
         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shr, >>)
+        #if __cplusplus >= 202002L
+         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::spaceship, <=>)
+        #endif
         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::eq, ==)
         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::neq, !=)
         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::gt, >)
@@ -523,6 +533,11 @@ namespace asserts::detail {
     std::string stringify(float, literal_format = literal_format::none);
     std::string stringify(double, literal_format = literal_format::none);
     std::string stringify(long double, literal_format = literal_format::none);
+    #if __cplusplus >= 202002L
+     std::string stringify(std::strong_ordering, literal_format = literal_format::none);
+     std::string stringify(std::weak_ordering, literal_format = literal_format::none);
+     std::string stringify(std::partial_ordering, literal_format = literal_format::none);
+    #endif
 
     std::string stringify_ptr(const void*, literal_format = literal_format::none);
 
