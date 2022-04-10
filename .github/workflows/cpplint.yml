@@ -1,0 +1,15 @@
+name: cpplint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  cpplint:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: pip3 install cpplint
+    - name: cpplint
+      run: python3 -m cpplint --recursive .

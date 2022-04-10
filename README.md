@@ -2,6 +2,7 @@
 
 ![build status](https://github.com/jeremy-rifkin/asserts/actions/workflows/build.yml/badge.svg?branch=master)
 ![tests status](https://github.com/jeremy-rifkin/asserts/actions/workflows/tests.yml/badge.svg?branch=master)
+![tests status](https://github.com/jeremy-rifkin/asserts/actions/workflows/cpplint.yml/badge.svg?branch=master)
 <br/>
 ![c++20 build status](https://github.com/jeremy-rifkin/asserts/actions/workflows/build-20.yml/badge.svg?branch=master)
 ![c++20 tests status](https://github.com/jeremy-rifkin/asserts/actions/workflows/test-20.yml/badge.svg?branch=master)
@@ -403,6 +404,7 @@ compatible with `-pedantic`.
 Option 1: `make`. Parameters:
 - `TARGET`: `release` (default) or `debug`
 - `COMPILER`: `g++` by default, you can specify any path / binary name or `msvc`.
+- `STD`: `c++17` by default, set to `c++20` if you plan to use with C++20 features
 
 Option 2: `cmake`
 
