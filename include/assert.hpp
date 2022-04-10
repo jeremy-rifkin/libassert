@@ -233,7 +233,7 @@ namespace asserts::detail {
             static constexpr std::string_view op_string = #op; \
             template<typename A, typename B> \
             ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
-            constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
+            constexpr decltype(auto) operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
                 return std::forward<A>(lhs) op std::forward<B>(rhs); \
             } \
         }
@@ -241,7 +241,7 @@ namespace asserts::detail {
             static constexpr std::string_view op_string = #op; \
             template<typename A, typename B> \
             ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
-            constexpr auto operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
+            constexpr decltype(auto) operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
                 if constexpr(is_integral_and_not_bool<A> && is_integral_and_not_bool<B>) return cmp(lhs, rhs); \
                 else return std::forward<A>(lhs) op std::forward<B>(rhs); \
             } \
@@ -410,7 +410,8 @@ namespace asserts::detail {
                 return expression_decomposer<A, Q, functor>(std::forward<A>(a), std::forward<O>(operand)); \
             } else { \
                 static_assert(!is_nothing<C>); \
-                return expression_decomposer<decltype(get_value()), Q, functor>(std::forward<A>(get_value()), std::forward<O>(operand)); \
+                using V = decltype(get_value()); \
+                return expression_decomposer<V, Q, functor>(std::forward<V>(get_value()), std::forward<O>(operand)); \
             } \
         }
         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shr, >>)
