@@ -327,7 +327,11 @@ namespace asserts::detail {
         expression_decomposer(const expression_decomposer&) = delete;
         expression_decomposer& operator=(const expression_decomposer&) = delete;
         // allow move construction
-        expression_decomposer(expression_decomposer&&) noexcept = default;
+        expression_decomposer(expression_decomposer&&)
+        #if !ASSERT_DETAIL_IS_GCC || __GNUC__ >= 10 // gcc 9 has some issue with the move constructor being noexcept
+         noexcept
+        #endif
+         = default;
         expression_decomposer& operator=(expression_decomposer&&) = delete;
         // value constructors
         template<typename U>

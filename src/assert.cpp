@@ -530,7 +530,7 @@ namespace asserts::detail {
                     // This is the stupidest fucking api I've ever worked with.
                     if(SymSetContext(proc, &frame, nullptr) == FALSE && GetLastError() != ERROR_SUCCESS) {
                         fprintf(stderr, "Stack trace: Internal error while calling SymSetContext\n");
-                        trace.push_back({line.FileName, symbol->Name, (int)line.LineNumber});
+                        trace.push_back({line.FileName, symbol->Name, (unsigned)line.LineNumber});
                         continue;
                     }
                     DWORD n_children = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT, true>
@@ -543,7 +543,7 @@ namespace asserts::detail {
                     // There's a phenomina with DIA not inserting commas after template parameters. Fix them here.
                     static std::regex comma_re(R"(,(?=\S))");
                     signature = std::regex_replace(signature, comma_re, ", ");
-                    trace.push_back({line.FileName, signature, (int)line.LineNumber});
+                    trace.push_back({line.FileName, signature, (unsigned)line.LineNumber});
                 } else {
                     trace.push_back({"", symbol->Name, 0});
                 }
@@ -2077,8 +2077,8 @@ namespace asserts::detail {
     }
 
     constexpr int min_term_width = 50;
-    constexpr int arrow_width = " => "sv.size();
-    constexpr int where_indent = 8;
+    constexpr size_t arrow_width = " => "sv.size();
+    constexpr size_t where_indent = 8;
 
     ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
     std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
