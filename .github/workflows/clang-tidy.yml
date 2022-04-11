@@ -17,7 +17,7 @@ jobs:
            while read f
            do
                echo checking $f
-               clang-tidy $f -- -std=c++17
+               clang-tidy $f -- -std=c++17 -Iinclude
                ret=$?
                if [ $ret -ne 0 ]; then
                    status=1
