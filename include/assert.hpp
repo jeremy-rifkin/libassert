@@ -1030,7 +1030,7 @@ using asserts::ASSERTION;
               auto assert_detail_r = process_assert_fail_m(std::move(assert_detail_decomposer), &assert_detail_params \
                                            ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG); \
               /* can't move-assign back to decomposer if it holds reference members */ \
-              assert_detail_decomposer.compl expression_decomposer(); \
+              assert_detail_decomposer.compl expression_decomposer(); /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */ \
               new (&assert_detail_decomposer) asserts::detail::expression_decomposer(std::move(assert_detail_r)); \
             } \
           }, \

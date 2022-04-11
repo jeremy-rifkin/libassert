@@ -1,6 +1,6 @@
 // Most basic of tests
 
-#include <assert.h>
+#include <cassert>
 #include <optional>
 #include <type_traits>
 

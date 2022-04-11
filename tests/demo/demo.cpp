@@ -35,11 +35,15 @@ static std::string indent(const std::string_view str, size_t depth, char c = ' '
     size_t i = 0, j;
     std::string output;
     while((j = str.find('\n', i)) != std::string::npos) {
-        if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
+        if(i != 0 || !ignore_first) {
+            output.insert(output.end(), depth, c);
+        }
         output.insert(output.end(), str.begin() + i, str.begin() + j + 1);
         i = j + 1;
     }
-    if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
+    if(i != 0 || !ignore_first) {
+        output.insert(output.end(), depth, c);
+    }
     output.insert(output.end(), str.begin() + i, str.end());
     return output;
 }
@@ -47,12 +51,13 @@ static std::string indent(const std::string_view str, size_t depth, char c = ' '
 template<class T> struct S {
     T x;
     S() = default;
+    ~S() = default;
     S(T&& _x) : x(std::forward<T>(_x)) {}
     // moveable, not copyable
     S(const S&) = delete;
-    S(S&&) = default;
+    S(S&&) noexcept = default;
     S& operator=(const S&) = delete;
-    S& operator=(S&&) = default;
+    S& operator=(S&&) noexcept = default;
     bool operator==(const S& s) const { return x == s.x; }
     friend std::ostream& operator<<(std::ostream& o, const S& s) {
         o<<"I'm S<"<<asserts::detail::type_name<T>()<<"> and I contain:"<<std::endl;
@@ -70,6 +75,7 @@ template<> struct S<void> {
 struct P {
     std::string str;
     P() = default;
+    ~P() = delete;
     P(const P&) = delete;
     P(P&&) = default;
     P& operator=(const P&) = delete;
@@ -106,19 +112,19 @@ int garple() {
 
 void rec(int n) {
     if(n == 0) assert(false);
-    else rec(n - 1);
+    else rec(n - 1); // NOLINT(readability-braces-around-statements)
 }
 
 void recursive_a(int), recursive_b(int);
 
 void recursive_a(int n) {
     if(n == 0) assert(false);
-    else recursive_b(n - 1);
+    else recursive_b(n - 1); // NOLINT(readability-braces-around-statements)
 }
 
 void recursive_b(int n) {
     if(n == 0) assert(false);
-    else recursive_a(n - 1);
+    else recursive_a(n - 1); // NOLINT(readability-braces-around-statements)
 }
 
 auto min_items() {
@@ -154,7 +160,7 @@ public:
         baz();
     }
 
-    void baz() {
+    void baz() { // NOLINT(readability-convert-member-functions-to-static)
         puts("");
         // General demos
         {
@@ -171,6 +177,7 @@ public:
             assert(open(path, O_RDONLY) >= 0, "Internal error with foobars", errno, path);
         }
         {
+            // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
             FILE* f = VERIFY(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
             ASSERT_DETAIL_PHONY_USE(f);
         }
@@ -196,6 +203,7 @@ public:
              VERIFY(parameter);
              assert(get_param());
             #endif
+            // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
             auto x = [&] () -> decltype(auto) { return VERIFY(parameter); };
             static_assert(std::is_same<decltype(x()), std::optional<float>&>::value);
         }
@@ -214,8 +222,8 @@ public:
         }
 
 
-        assert(true ? false : true == false);
-        assert(true ? false : true, "pffft");
+        assert(true ? false : true == false); // NOLINT(readability-simplify-boolean-expr)
+        assert(true ? false : true, "pffft"); // NOLINT(readability-simplify-boolean-expr)
 
         wubble();
 

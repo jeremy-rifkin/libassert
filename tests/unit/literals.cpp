@@ -1,5 +1,5 @@
+#include <cstdio>
 #include <regex>
-#include <stdio.h>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -15,7 +15,7 @@ inline std::vector<std::string> split(std::string_view s, std::string_view delim
             old_pos = pos + delim.length();
     }
     //if(old_pos != s.length()) { // TODO: verify condition?
-        vec.push_back(std::string(s.substr(old_pos)));
+        vec.emplace_back(s.substr(old_pos));
     //}
     return vec;
 }
@@ -42,8 +42,10 @@ inline std::string& trim(std::string& s, const char* t = ws) {
 }
 
 template<typename... T> std::string stringf(T... args) {
-    int length = snprintf(0, 0, args...);
-    if(length < 0) abort();
+    int length = snprintf(nullptr, 0, args...);
+    if(length < 0) {
+        abort();
+    }
     std::string str(length, 0);
     snprintf(str.data(), length + 1, args...);
     return str;
@@ -152,8 +154,8 @@ int main() {
     static std::string binary_exp = "[Pp][\\+-]?" + digit_sequence;
     static std::regex float_hex = std::regex(stringf("^0[Xx](?:%s|%s)%s%s?$",
                                     hex_frac_const.c_str(), hex_digit_sequence.c_str(), binary_exp.c_str(), suffix.c_str()));
-    let matches_any = [&](std::string str) {
-        let matches = [](std::string value, std::regex re) {
+    let matches_any = [&](const std::string& str) {
+        let matches = [](const std::string& value, const std::regex& re) {
             std::smatch base_match;
             return std::regex_match(value, base_match, re);
         };

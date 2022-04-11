@@ -59,16 +59,16 @@ struct logger_type {
     logger_type(const logger_type& other): n(other.n) {
         std::cout<<"logger_type::logger_type(const logger_type&) [n="<<n<<"]"<<std::endl;
     }
-    logger_type(logger_type&& other): n(other.n) {
+    logger_type(logger_type&& other) noexcept : n(other.n) {
         other.n = -2;
         std::cout<<"logger_type::logger_type(logger_type&&) [n="<<n<<"]"<<std::endl;
     }
-    logger_type& operator=(const logger_type& other) {
+    logger_type& operator=(const logger_type& other) { // NOLINT(cert-oop54-cpp)
         n = other.n;
         std::cout<<"logger_type::operator=(const logger_type&) [n="<<n<<"]"<<std::endl;
         return *this;
     }
-    logger_type& operator=(logger_type&& other) {
+    logger_type& operator=(logger_type&& other) noexcept {
         n = other.n;
         other.n = -2;
         std::cout<<"logger_type::operator=(logger_type&&) [n="<<n<<"]"<<std::endl;
@@ -94,22 +94,22 @@ std::ostream& operator<<(std::ostream& stream, const logger_type& lt) {
 #line 500
 void rec(int n) {
     if(n == 0) assert(false);
-    else rec(n - 1);
+    else rec(n - 1); // NOLINT(readability-braces-around-statements)
 }
 
 void recursive_a(int), recursive_b(int);
 
 void recursive_a(int n) {
     if(n == 0) assert(false);
-    else recursive_b(n - 1);
+    else recursive_b(n - 1); // NOLINT(readability-braces-around-statements)
 }
 
 void recursive_b(int n) {
     if(n == 0) assert(false);
-    else recursive_a(n - 1);
+    else recursive_a(n - 1); // NOLINT(readability-braces-around-statements)
 }
 
-#define SECTION(s) std::cout<<"===================== ["<<s<<"] ====================="<<std::endl;
+#define SECTION(s) std::cout<<"===================== ["<<(s)<<"] ====================="<<std::endl;
 
 // disable unsafe use of bool warning msvc
 #ifdef _MSC_VER
@@ -127,7 +127,7 @@ public:
         something_else();
     }
 
-    void something_else() {
+    void something_else() { // NOLINT(readability-function-size)
         // FIXME: Check all stack traces on msvc... Bug with __PRETTY_FUNCTION__ in lambdas.
         // value printing: strings
         SECTION("value printing: strings");
@@ -245,7 +245,7 @@ public:
             assert(x -= x -= 1); // TODO: double check....
             x = 2;
             assert(x -= x -= x -= 1); // TODO: double check....
-            assert(true ? false : true, "pffft");
+            assert(true ? false : true, "pffft"); // NOLINT(readability-simplify-boolean-expr)
         }
         // ensure values are only computed once
         SECTION("ensure values are only computed once");
