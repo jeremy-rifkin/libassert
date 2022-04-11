@@ -1,11 +1,11 @@
 # Asserts <!-- omit in toc -->
 
-![build status](https://github.com/jeremy-rifkin/asserts/actions/workflows/build.yml/badge.svg?branch=master)
-![tests status](https://github.com/jeremy-rifkin/asserts/actions/workflows/tests.yml/badge.svg?branch=master)
-![tests status](https://github.com/jeremy-rifkin/asserts/actions/workflows/cpplint.yml/badge.svg?branch=master)
+[![build](https://github.com/jeremy-rifkin/asserts/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/asserts/actions/workflows/build.yml)
+[![tests](https://github.com/jeremy-rifkin/asserts/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/asserts/actions/workflows/tests.yml)
+[![clang-tidy](https://github.com/jeremy-rifkin/asserts/actions/workflows/clang-tidy.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/asserts/actions/workflows/clang-tidy.yml)
 <br/>
-![c++20 build status](https://github.com/jeremy-rifkin/asserts/actions/workflows/build-20.yml/badge.svg?branch=master)
-![c++20 tests status](https://github.com/jeremy-rifkin/asserts/actions/workflows/test-20.yml/badge.svg?branch=master)
+[![build c++20](https://github.com/jeremy-rifkin/asserts/actions/workflows/build-20.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/asserts/actions/workflows/build-20.yml)
+[![tests c++20](https://github.com/jeremy-rifkin/asserts/actions/workflows/test-20.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/asserts/actions/workflows/test-20.yml)
 
 <p align="center">The most over-engineered assertion library</p>
 
