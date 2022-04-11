@@ -155,21 +155,22 @@ namespace asserts::detail {
 
     struct nothing {};
 
-    template<typename T> constexpr bool is_nothing = std::is_same_v<T, nothing>;
+    template<typename T> inline constexpr bool is_nothing = std::is_same_v<T, nothing>;
 
     // Hack to get around static_assert(false); being evaluated before any instantiation, even under
     // an if-constexpr branch
     // Also used for PHONY_USE
-    template<typename T> constexpr bool always_false = false;
+    template<typename T> inline constexpr bool always_false = false;
 
     template<typename T> using strip = std::remove_cv_t<std::remove_reference_t<T>>;
 
-    template<typename A, typename B> constexpr bool isa = std::is_same_v<strip<A>, B>; // intentionally not stripping B
+    // intentionally not stripping B
+    template<typename A, typename B> inline constexpr bool isa = std::is_same_v<strip<A>, B>;
 
     // Is integral but not boolean
-    template<typename T> constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
+    template<typename T> inline constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
 
-    template<typename T> constexpr bool is_string_type =
+    template<typename T> inline constexpr bool is_string_type =
            isa<T, std::string>
         || isa<T, std::string_view>
         || isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
