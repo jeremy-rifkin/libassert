@@ -1,13 +1,14 @@
 #ifndef ASSERT_HPP
 #define ASSERT_HPP
 
-// Jeremy Rifkin 2021, 2022
+// Copyright 2022 Jeremy Rifkin
 // https://github.com/jeremy-rifkin/asserts
 
+#include <cstdio>
 #include <sstream>
-#include <stdio.h>
-#include <string_view>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #if __cplusplus >= 202002L
@@ -189,12 +190,13 @@ namespace asserts::detail {
     [[nodiscard]] constexpr bool cmp_equal(T t, U u) {
         using UT = std::make_unsigned_t<T>;
         using UU = std::make_unsigned_t<U>;
-        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
+        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>) {
             return t == u;
-        else if constexpr(std::is_signed_v<T>)
+        } else if constexpr(std::is_signed_v<T>) {
             return t >= 0 && UT(t) == u;
-        else
+        } else {
             return u >= 0 && t == UU(u);
+        }
     }
 
     template<typename T, typename U>
@@ -206,12 +208,13 @@ namespace asserts::detail {
     [[nodiscard]] constexpr bool cmp_less(T t, U u) {
         using UT = std::make_unsigned_t<T>;
         using UU = std::make_unsigned_t<U>;
-        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>)
+        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>) {
             return t < u;
-        else if constexpr(std::is_signed_v<T>)
+        } else if constexpr(std::is_signed_v<T>) {
             return t < 0  || UT(t) < u;
-        else
+        } else {
             return u >= 0 && t < UU(u);
+        }
     }
 
     template<typename T, typename U>
@@ -319,14 +322,16 @@ namespace asserts::detail {
         A a;
         B b;
         explicit expression_decomposer() = default;
+        compl expression_decomposer() = default;
         // not copyable
         expression_decomposer(const expression_decomposer&) = delete;
         expression_decomposer& operator=(const expression_decomposer&) = delete;
-        // allow move assignment
-        expression_decomposer(expression_decomposer&&) = default;
+        // allow move construction
+        expression_decomposer(expression_decomposer&&) noexcept = default;
         expression_decomposer& operator=(expression_decomposer&&) = delete;
         // value constructors
         template<typename U>
+        // NOLINTNEXTLINE(bugprone-forwarding-reference-overload) // TODO
         explicit expression_decomposer(U&& _a) : a(std::forward<U>(_a)) {}
         template<typename U, typename V>
         explicit expression_decomposer(U&& _a, V&& _b) : a(std::forward<U>(_a)), b(std::forward<V>(_b)) {}
@@ -364,23 +369,16 @@ namespace asserts::detail {
                 // if there is no top-level binary operation, A is the only thing that can be returned
                 return true;
             } else {
-                if constexpr(
-                    C::op_string == "=="
-                 || C::op_string == "!="
-                 || C::op_string == "<"
-                 || C::op_string == ">"
-                 || C::op_string == "<="
-                 || C::op_string == ">="
-                 || C::op_string == "&&"
-                 || C::op_string == "||"
-                ) {
-                    return true;
-                } else {
-                    // might change these later
-                    // << >> & ^ |
-                    // all compound assignments
-                    return false;
-                }
+                // return LHS for the following types;
+                return C::op_string == "=="
+                    || C::op_string == "!="
+                    || C::op_string == "<"
+                    || C::op_string == ">"
+                    || C::op_string == "<="
+                    || C::op_string == ">="
+                    || C::op_string == "&&"
+                    || C::op_string == "||";
+                // don't return LHS for << >> & ^ | and all assignments
             }
         }
         [[nodiscard]]
@@ -438,7 +436,7 @@ namespace asserts::detail {
          ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::land, &&)
          ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lor, ||)
         #endif
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::assign, =)
+        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::assign, =) // NOLINT(cppcoreguidelines-c-copy-assignment-signature, misc-unconventional-assign-operator)
         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::add_assign, +=)
         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::sub_assign, -=)
         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::mul_assign, *=)
@@ -475,7 +473,7 @@ namespace asserts::detail {
     [[nodiscard]] bool is_bitwise(std::string_view op);
 
     [[nodiscard]] std::pair<std::string, std::string> decompose_expression(const std::string& expression,
-                                                                           const std::string_view target_op);
+                                                                           std::string_view target_op);
 
     /*
      * stringification
@@ -595,12 +593,14 @@ namespace asserts::detail {
                  && !isa<T, char>) {
             std::vector<std::string> vec;
             for(literal_format fmt : formats) {
-                if(fmt == literal_format::none) break;
+                if(fmt == literal_format::none) { break; }
                 // TODO: consider pushing empty fillers to keep columns aligned later on? Does not
                 // matter at the moment because floats only have decimal and hex literals but could
                 // if more formats are added.
                 std::string str = stringify(v, fmt);
-                if(!str.empty()) vec.push_back(std::move(str));
+                if(!str.empty()) {
+                    vec.push_back(std::move(str));
+                }
             }
             return vec;
         } else {
@@ -618,11 +618,11 @@ namespace asserts::detail {
         binary_diagnostics_descriptor(); // = default; in the .cpp
         binary_diagnostics_descriptor(std::vector<std::string>& lstrings, std::vector<std::string>& rstrings,
                                       std::string a_str, std::string b_str, bool multiple_formats);
-        ~binary_diagnostics_descriptor(); // = default; in the .cpp
+        compl binary_diagnostics_descriptor(); // = default; in the .cpp
         binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = delete;
-        binary_diagnostics_descriptor(binary_diagnostics_descriptor&&); // = default; in the .cpp
+        binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
         binary_diagnostics_descriptor& operator=(const binary_diagnostics_descriptor&) = delete;
-        binary_diagnostics_descriptor& operator=(binary_diagnostics_descriptor&&); // = default; in the .cpp
+        binary_diagnostics_descriptor& operator=(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
     };
 
     void sort_and_dedup(literal_format(&)[4]);
@@ -662,9 +662,9 @@ namespace asserts::detail {
          const char* pretty_function = "<error>";
         #endif
         extra_diagnostics();
-        ~extra_diagnostics();
+        compl extra_diagnostics();
         extra_diagnostics(const extra_diagnostics&) = delete;
-        extra_diagnostics(extra_diagnostics&&); // = default; in the .cpp
+        extra_diagnostics(extra_diagnostics&&) noexcept; // = default; in the .cpp
         extra_diagnostics& operator=(const extra_diagnostics&) = delete;
         extra_diagnostics& operator=(extra_diagnostics&&) = delete;
     };
@@ -731,7 +731,7 @@ namespace asserts::detail {
 
     struct lock {
         lock();
-        ~lock();
+        compl lock();
         lock(const lock&) = delete;
         lock(lock&&) = delete;
         lock& operator=(const lock&) = delete;
@@ -750,11 +750,15 @@ namespace asserts::detail {
 
 namespace asserts {
     struct verification_failure : std::exception {
-        virtual const char* what() const noexcept final override;
+        // I must just this once
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
+        [[nodiscard]] virtual const char* what() const noexcept final override;
     };
 
     struct check_failure : std::exception {
-        virtual const char* what() const noexcept final override;
+        // I must just this once
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
+        [[nodiscard]] virtual const char* what() const noexcept final override;
     };
 
     class assertion_printer {
@@ -769,7 +773,7 @@ namespace asserts {
                           const detail::extra_diagnostics& processed_args,
                           detail::binary_diagnostics_descriptor& binary_diagnostics,
                           void* raw_trace, size_t sizeof_args);
-        ~assertion_printer();
+        compl assertion_printer();
         assertion_printer(const assertion_printer&) = delete;
         assertion_printer(assertion_printer&&) = delete;
         assertion_printer& operator=(const assertion_printer&) = delete;
@@ -779,14 +783,14 @@ namespace asserts {
 }
 
 namespace asserts::detail {
-    size_t count_args_strings(const char* const* const);
+    size_t count_args_strings(const char* const*);
 
     template<typename A, typename B, typename C, typename... Args>
     ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE
     void process_assert_fail(expression_decomposer<A, B, C>& decomposer,
                                 const assert_static_parameters* params, Args&&... args) {
         lock l;
-        const auto args_strings = params->args_strings;
+        const auto* args_strings = params->args_strings;
         size_t args_strings_count = count_args_strings(args_strings);
         size_t sizeof_extra_diagnostics = sizeof...(args)
         #ifdef ASSERT_DETAIL_IS_MSVC
@@ -856,6 +860,7 @@ namespace asserts::detail {
     }
 }
 
+// NOLINTNEXTLINE(misc-unused-using-decls)
 using asserts::ASSERTION;
 
 #if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC

@@ -2,11 +2,12 @@
 #define _CRT_SECURE_NO_WARNINGS // done only for strerror
 #include "assert.hpp"
 
-// Jeremy Rifkin 2021, 2022
+// Copyright 2022 Jeremy Rifkin
 // https://github.com/jeremy-rifkin/asserts
 
 #include <atomic>
 #include <bitset>
+#include <cstdarg>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -14,7 +15,6 @@
 #include <optional>
 #include <regex>
 #include <set>
-#include <stdarg.h>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -36,7 +36,7 @@
 #elif defined(__linux)
  #define IS_LINUX 1
  #include <execinfo.h>
- #include <limits.h>
+ #include <climits>
  #include <sys/ioctl.h>
  #include <sys/stat.h>
  #include <sys/types.h>
@@ -68,6 +68,9 @@
 #define CYAN ANSIRGB(86, 194, 192) // modified
 #define PURPL ANSIRGB(198, 120, 221)
 
+using namespace std::string_literals;
+using namespace std::string_view_literals;
+
 // Container utility
 template<typename N> class small_static_map {
     const N& needle;
@@ -75,14 +78,14 @@ public:
     small_static_map(const N& n) : needle(n) {}
     template<typename K, typename V, typename... Rest>
     constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
-        if(needle == option) return result;
-        if constexpr (sizeof...(Rest) > 0) return lookup(rest...);
+        if(needle == option) { return result; }
+        if constexpr (sizeof...(Rest) > 0) { return lookup(rest...); }
         else { ASSERT_DETAIL_PRIMITIVE_ASSERT(false); ASSERT_DETAIL_UNREACHABLE; }
     }
     constexpr bool is_in() { return false; }
     template<typename T, typename... Rest>
     constexpr bool is_in(const T& option, const Rest&... rest) {
-        if(needle == option) return true;
+        if(needle == option) { return true; }
         return is_in(rest...);
     }
 };
@@ -107,12 +110,12 @@ namespace asserts::utility {
          );
          CONSOLE_SCREEN_BUFFER_INFO csbi;
          HANDLE h = GetStdHandle(windows_handle);
-         if(h == INVALID_HANDLE_VALUE) return 0;
-         if(!GetConsoleScreenBufferInfo(h, &csbi)) return 0;
+         if(h == INVALID_HANDLE_VALUE) { return 0; }
+         if(!GetConsoleScreenBufferInfo(h, &csbi)) { return 0; }
          return csbi.srWindow.Right - csbi.srWindow.Left + 1;
         #else
          struct winsize w;
-         if(ioctl(fd, TIOCGWINSZ, &w) == -1) return 0;
+         if(ioctl(fd, TIOCGWINSZ, &w) == -1) { return 0; }
          return w.ws_col;
         #endif
     }
@@ -128,11 +131,11 @@ namespace asserts::config {
 
 namespace asserts::detail {
     ASSERT_DETAIL_ATTR_COLD
-    void primitive_assert_impl(bool condition, bool verification, const char* expression,
+    void primitive_assert_impl(bool condition, bool verify, const char* expression,
                                source_location location, const char* message) {
         if(!condition) {
-            const char* action = verification ? "Verification" : "Assertion";
-            const char* name   = verification ? "verify"       : "assert";
+            const char* action = verify ? "Verification" : "Assertion";
+            const char* name   = verify ? "verify"       : "assert";
             if(message == nullptr) {
                 fprintf(stderr, "%s failed at %s:%d: %s\n",
                     action, location.file, location.line, location.function);
@@ -155,8 +158,8 @@ namespace asserts::detail {
     template<typename... T>
     ASSERT_DETAIL_ATTR_COLD
     std::string stringf(T... args) {
-        int length = snprintf(0, 0, args...);
-        if(length < 0) ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf");
+        int length = snprintf(nullptr, 0, args...);
+        if(length < 0) { ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
         std::string str(length, 0);
         snprintf(str.data(), length + 1, args...);
         return str;
@@ -169,8 +172,8 @@ namespace asserts::detail {
         va_list args2;
         va_start(args1, format);
         va_start(args2, format);
-        int length = vsnprintf(0, 0, format, args1);
-        if(length < 0) ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf");
+        int length = vsnprintf(nullptr, 0, format, args1);
+        if(length < 0) { ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
         std::string str(length, 0);
         vsnprintf(str.data(), length + 1, format, args2);
         va_end(args1);
@@ -183,13 +186,11 @@ namespace asserts::detail {
         std::vector<std::string> vec;
         size_t old_pos = 0;
         size_t pos = 0;
-        std::string token;
         while((pos = s.find_first_of(delims, old_pos)) != std::string::npos) {
-            token = s.substr(old_pos, pos - old_pos);
-            vec.push_back(token);
+            vec.emplace_back(s.substr(old_pos, pos - old_pos));
             old_pos = pos + 1;
         }
-        vec.push_back(std::string(s.substr(old_pos)));
+        vec.emplace_back(std::string(s.substr(old_pos)));
         return vec;
     }
 
@@ -231,21 +232,22 @@ namespace asserts::detail {
 
     ASSERT_DETAIL_ATTR_COLD
     static std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false) {
-        size_t i = 0, j;
+        size_t i = 0;
+        size_t j;
         std::string output;
         while((j = str.find('\n', i)) != std::string::npos) {
-            if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
+            if(i != 0 || !ignore_first) { output.insert(output.end(), depth, c); }
             output.insert(output.end(), str.begin() + i, str.begin() + j + 1);
             i = j + 1;
         }
-        if(i != 0 || !ignore_first) output.insert(output.end(), depth, c);
+        if(i != 0 || !ignore_first) { output.insert(output.end(), depth, c); }
         output.insert(output.end(), str.begin() + i, str.end());
         return output;
     }
 
     template<size_t N>
     ASSERT_DETAIL_ATTR_COLD
-    std::optional<std::array<std::string, N>> match(const std::string s, const std::regex& r) {
+    std::optional<std::array<std::string, N>> match(const std::string& s, const std::regex& r) {
         std::smatch match;
         if(std::regex_match(s, match, r)) {
             std::array<std::string, N> arr;
@@ -322,7 +324,7 @@ namespace asserts::detail {
     struct stacktrace_entry {
         std::string source_path;
         std::string signature;
-        int line = 0;
+        unsigned line = 0;
         ASSERT_DETAIL_ATTR_COLD bool operator==(const stacktrace_entry& other) const {
             return line == other.line && signature == other.signature && source_path == other.source_path;
         }
@@ -403,7 +405,6 @@ namespace asserts::detail {
             if constexpr(FAILABLE) {
                 return (T)-1;
             } else {
-                using namespace std::string_literals;
                 ASSERT_DETAIL_PRIMITIVE_ASSERT(false, ("SymGetTypeInfo failed: "s +
                                            std::system_error(GetLastError(), std::system_category()).what()).c_str());
             }
@@ -521,7 +522,6 @@ namespace asserts::detail {
             bool got_line = SymGetLineFromAddr64(proc, (DWORD64)addrs[i], &displacement.b, &line);
             if(SymFromAddr(proc, (DWORD64)addrs[i], &displacement.a, symbol)) {
                 if(got_line) {
-                    using namespace std::string_literals;
                     IMAGEHLP_STACK_FRAME frame;
                     frame.InstructionOffset = symbol->Address;
                     // https://docs.microsoft.com/en-us/windows/win32/api/dbghelp/nf-dbghelp-symsetcontext
@@ -596,7 +596,7 @@ namespace asserts::detail {
         // Detects if addr2line exists by trying to invoke addr2line --help
         constexpr int magic = 42;
         pid_t pid = fork();
-        if(pid == -1) return false;
+        if(pid == -1) { return false; }
         if(pid == 0) { // child
             close(STDOUT_FILENO);
             execlp("addr2line", "addr2line", "--help", nullptr);
@@ -610,7 +610,7 @@ namespace asserts::detail {
     // returns 1 for little endian, 2 for big endien, matches elf
     ASSERT_DETAIL_ATTR_COLD static int endianness() {
         int n = 1;
-        if(*(char*)&n == 1) {
+        if(*reinterpret_cast<char*>(&n) == 1) {
             return 1; // little
         } else {
             return 2; // big
@@ -638,7 +638,7 @@ namespace asserts::detail {
 
     ASSERT_DETAIL_ATTR_COLD static uint16_t get_executable_e_type(const std::string& path) {
         FILE* f = fopen(path.c_str(), "rb");
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(f != NULL);
+        ASSERT_DETAIL_PRIMITIVE_ASSERT(f != nullptr);
         partial_elf_file_header h;
         internal_verify(fread(&h, sizeof(partial_elf_file_header), 1, f) == 1, "error while reading file");
         char magic[] = {0x7F, 'E', 'L', 'F'};
@@ -709,7 +709,7 @@ namespace asserts::detail {
         internal_verify(pipe(output_pipe.data) == 0);
         internal_verify(pipe(input_pipe.data) == 0);
         pid_t pid = fork();
-        if(pid == -1) return ""; // error? TODO: Diagnostic
+        if(pid == -1) { return ""; } // error? TODO: Diagnostic
         if(pid == 0) { // child
             dup2(output_pipe.write_end, STDOUT_FILENO);
             dup2(input_pipe.read_end, STDIN_FILENO);
@@ -732,7 +732,7 @@ namespace asserts::detail {
             output.insert(output.end(), buffer, buffer + count);
         }
         // TODO: check status from addr2line?
-        waitpid(pid, NULL, 0);
+        waitpid(pid, nullptr, 0);
         return output;
     }
 
@@ -770,7 +770,7 @@ namespace asserts::detail {
                     addr = (uintptr_t)entry.raw_address - (uintptr_t)entry.obj_base;
                 }
                 ///printf("%s :: %p\n", entry.obj_path.c_str(), addr);
-                if(entries.count(entry.obj_path) == 0) entries.insert({entry.obj_path, {{}, {}}});
+                if(entries.count(entry.obj_path) == 0) { entries.insert({entry.obj_path, {{}, {}}}); }
                 auto& obj_entry = entries.at(entry.obj_path);
                 obj_entry.first.push_back(stringf("%#tx", addr));
                 obj_entry.second.push_back(&trace[i]);
@@ -828,7 +828,7 @@ namespace asserts::detail {
         std::string content;
         // Get as much code into the .cpp as possible
         ASSERT_DETAIL_ATTR_COLD highlight_block(std::string_view _color, std::string _content)
-                                                         : color(_color), content(_content) { }
+                                                         : color(_color), content(std::move(_content)) { }
         ASSERT_DETAIL_ATTR_COLD highlight_block(const highlight_block&) = default;
         ASSERT_DETAIL_ATTR_COLD highlight_block(highlight_block&&) = default;
         ASSERT_DETAIL_ATTR_COLD ~highlight_block() = default;
@@ -840,7 +840,9 @@ namespace asserts::detail {
     std::string union_regexes(std::initializer_list<std::string_view> regexes) {
         std::string composite;
         for(const std::string_view str : regexes) {
-            if(composite != "") composite += "|";
+            if(!composite.empty()) {
+                composite += "|";
+            }
             composite += "(?:" + std::string(str) + ")";
         }
         return composite;
@@ -941,9 +943,9 @@ namespace asserts::detail {
                 "xor_eq", "not_eq", "#" }; // # appears in some lambda signatures
             // Sort longest -> shortest (secondarily A->Z)
             const auto cmp = [](const std::string_view a, const std::string_view b) {
-                if(a.length() > b.length()) return true;
-                else if(a.length() == b.length()) return a < b;
-                else return false;
+                if(a.length() > b.length()) { return true; }
+                else if(a.length() == b.length()) { return a < b; }
+                else { return false; }
             };
             std::sort(std::begin(keywords), std::end(keywords), cmp);
             std::sort(std::begin(punctuators), std::end(punctuators), cmp);
@@ -1064,8 +1066,11 @@ namespace asserts::detail {
             // Operators need to be normalized to support alternative operators like and and bitand
             // Normalization instead of just adding to the precedence table because target operators
             // will always be the normalized operator even when the alternative operator is used.
-            if(alternative_operators_map.count(op)) return alternative_operators_map.at(op);
-            else return op;
+            if(auto it = alternative_operators_map.find(op); it != alternative_operators_map.end()) {
+                return it->second;
+            } else {
+                return op;
+            }
         }
 
         ASSERT_DETAIL_ATTR_COLD
@@ -1073,8 +1078,11 @@ namespace asserts::detail {
             // Operators need to be normalized to support alternative operators like and and bitand
             // Normalization instead of just adding to the precedence table because target operators
             // will always be the normalized operator even when the alternative operator is used.
-            if(digraph_map.count(brace)) return digraph_map.at(brace);
-            else return brace;
+            if(auto it = digraph_map.find(brace); it != digraph_map.end()) {
+                return it->second;
+            } else {
+                return brace;
+            }
         }
 
         ASSERT_DETAIL_ATTR_COLD
@@ -1128,35 +1136,36 @@ namespace asserts::detail {
                 };
                 switch(token.token_type) {
                     case token_e::keyword:
-                        output.push_back({PURPL, token.str});
+                        output.emplace_back(PURPL, token.str);
                         break;
                     case token_e::punctuation:
                         if(highlight_ops.count(token.str)) {
-                            output.push_back({PURPL, token.str});
+                            output.emplace_back(PURPL, token.str);
                         } else {
-                            output.push_back({"", token.str});
+                            output.emplace_back("", token.str);
                         }
                         break;
                     case token_e::named_literal:
-                        output.push_back({ORANGE, token.str});
+                        output.emplace_back(ORANGE, token.str);
                         break;
                     case token_e::number:
-                        output.push_back({CYAN, token.str});
+                        output.emplace_back(CYAN, token.str);
                         break;
                     case token_e::string:
-                        output.push_back({GREEN, std::regex_replace(token.str, escapes_re, BLUE "$&" GREEN)});
+                        output.emplace_back(GREEN, std::regex_replace(token.str, escapes_re, BLUE "$&" GREEN));
                         break;
                     case token_e::identifier:
+                        // NOLINTNEXTLINE(bugprone-branch-clone)
                         if(peek().str == "(") {
-                            output.push_back({BLUE, token.str});
+                            output.emplace_back(BLUE, token.str);
                         } else if(peek().str == "::") {
-                            output.push_back({YELLOW, token.str});
+                            output.emplace_back(YELLOW, token.str);
                         } else {
-                            output.push_back({BLUE, token.str});
+                            output.emplace_back(BLUE, token.str);
                         }
                         break;
                     case token_e::whitespace:
-                        output.push_back({"", token.str});
+                        output.emplace_back("", token.str);
                         break;
                 }
             }
@@ -1176,7 +1185,7 @@ namespace asserts::detail {
         }
 
         ASSERT_DETAIL_ATTR_COLD
-        token_t find_last_non_ws(const std::vector<token_t>& tokens, size_t i) {
+        static token_t find_last_non_ws(const std::vector<token_t>& tokens, size_t i) {
             // returns empty token_e::whitespace on failure
             while(i--) {
                 if(tokens[i].token_type != token_e::whitespace) {
@@ -1230,8 +1239,9 @@ namespace asserts::detail {
                     bool empty = true;
                     int count = 0;
                     while(++i < tokens.size()) {
-                        if(normalize_brace(tokens[i].str) == normalize_brace(open)) count++;
-                        else if(normalize_brace(tokens[i].str) == normalize_brace(close)) {
+                        if(normalize_brace(tokens[i].str) == normalize_brace(open)) {
+                            count++;
+                        } else if(normalize_brace(tokens[i].str) == normalize_brace(close)) {
                             if(count-- == 0) {
                                 break;
                             }
@@ -1239,7 +1249,9 @@ namespace asserts::detail {
                             empty = false;
                         }
                     }
-                    if(i == tokens.size() && count != -1) ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "ill-formed expression input");
+                    if(i == tokens.size() && count != -1) {
+                        ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "ill-formed expression input");
+                    }
                     return empty;
                 };
                 switch(token.token_type) {
@@ -1284,13 +1296,15 @@ namespace asserts::detail {
                                 if(template_depth == 0) { // ignore precedence in template parameter list
                                     // re-coalesce >> if necessary
                                     std::string_view op = normalize_op(get_real_op(tokens, i));
-                                    if(precedence.count(op))
+                                    if(precedence.count(op)) // NOLINT(readability-braces-around-statements)
                                     if(precedence.at(op) < current_lowest_precedence
                                     || (precedence.at(op) == current_lowest_precedence && precedence.at(op) != -10)) {
                                         middle_index = (int)i;
                                         current_lowest_precedence = precedence.at(op);
                                     }
-                                    if(op == ">>") i++;
+                                    if(op == ">>") {  // NOLINT(readability-misleading-indentation)
+                                        i++;
+                                    }
                                 }
                                 state = expecting_term;
                             }
@@ -1384,7 +1398,7 @@ namespace asserts::detail {
             // We're only looking for the split, we can just store a set of split indices. No need
             // to store a vector<pair<vector<token_t>, vector<token_t>>>
             std::set<int> candidates;
-            bool success = pseudoparse(std::move(tokens), target_op, 0, 0, 0, -1, 0, candidates);
+            bool success = pseudoparse(tokens, target_op, 0, 0, 0, -1, 0, candidates);
             #ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
             fprintf(stderr, "\n%d %d\n", (int)candidates.size(), success);
             for(size_t m : candidates) {
@@ -1401,8 +1415,12 @@ namespace asserts::detail {
                 std::vector<std::string> left_strings;
                 std::vector<std::string> right_strings;
                 size_t m = *candidates.begin();
-                for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
-                for(size_t i = m + 1; i < tokens.size(); i++) right_strings.push_back(tokens[i].str);
+                for(size_t i = 0; i < m; i++) {
+                    left_strings.push_back(tokens[i].str);
+                }
+                for(size_t i = m + 1; i < tokens.size(); i++) {
+                    right_strings.push_back(tokens[i].str);
+                }
                 return {
                     std::string(trim(join(left_strings, ""))),
                     std::string(trim(join(right_strings, "")))
@@ -1426,7 +1444,9 @@ namespace asserts::detail {
         for(auto& block : blocks) {
             str += block.color;
             str += block.content;
-            if(!block.color.empty()) str += RESET;
+            if(!block.color.empty()) {
+                str += RESET;
+            }
         }
         return str;
         #endif
@@ -1467,12 +1487,12 @@ namespace asserts::detail {
         std::string escaped;
         escaped += quote;
         for(unsigned char c : str) {
-            if(c == '\\') escaped += "\\\\";
-            else if(c == '\t') escaped += "\\t";
-            else if(c == '\r') escaped += "\\r";
-            else if(c == '\n') escaped += "\\n";
-            else if(c == quote) escaped += "\\" + std::to_string(quote);
-            else if(c >= 32 && c <= 126) escaped += c; // printable
+            if(c == '\\') escaped += "\\\\"; // NOLINT(readability-braces-around-statements)
+            else if(c == '\t') escaped += "\\t"; // NOLINT(readability-braces-around-statements)
+            else if(c == '\r') escaped += "\\r"; // NOLINT(readability-braces-around-statements)
+            else if(c == '\n') escaped += "\\n"; // NOLINT(readability-braces-around-statements)
+            else if(c == quote) escaped += "\\" + std::to_string(quote); // NOLINT(readability-braces-around-statements)
+            else if(c >= 32 && c <= 126) escaped += c; // NOLINT(readability-braces-around-statements) // printable
             else {
                 constexpr const char * const hexdig = "0123456789abcdef";
                 escaped += std::string("\\x") + hexdig[c >> 4] + hexdig[c & 0xF];
@@ -1577,7 +1597,9 @@ namespace asserts::detail {
         oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<value;
         std::string s = std::move(oss).str();
         // std::showpoint adds a bunch of unecessary digits, so manually doing it correctly here
-        if(s.find('.') == std::string::npos) s += ".0";
+        if(s.find('.') == std::string::npos) {
+            s += ".0";
+        }
         return s;
     }
 
@@ -1637,7 +1659,7 @@ namespace asserts::detail {
         std::vector<highlight_block> blocks;
         bool right_align = false;
         ASSERT_DETAIL_ATTR_COLD column_t(size_t _width, std::vector<highlight_block> _blocks, bool _right_align = false)
-                                                  : width(_width), blocks(_blocks), right_align(_right_align) {}
+                                               : width(_width), blocks(std::move(_blocks)), right_align(_right_align) {}
         ASSERT_DETAIL_ATTR_COLD column_t(const column_t&) = default;
         ASSERT_DETAIL_ATTR_COLD column_t(column_t&&) = default;
         ASSERT_DETAIL_ATTR_COLD ~column_t() = default;
@@ -1646,16 +1668,22 @@ namespace asserts::detail {
     };
 
     ASSERT_DETAIL_ATTR_COLD
-    static constexpr int log10(int n) {
-        if(n <= 1) return 1;
-        int t = 1;
+    static constexpr unsigned log10(unsigned n) {
+        if(n <= 1) {
+            return 1;
+        }
+        unsigned t = 1;
         for(int i = 0; i < [] {
                 // was going to reuse `i` but https://bugs.llvm.org/show_bug.cgi?id=51986
                 int j = 0, v = std::numeric_limits<int>::max();
-                while(v /= 10) j++;
+                while(v /= 10) {
+                    j++;
+                }
                 return j;
             } () - 1; i++) {
-            if(n <= t) return i;
+            if(n <= t) {
+                return i;
+            }
             t *= 10;
         }
         return t;
@@ -1689,7 +1717,7 @@ namespace asserts::detail {
                 // first gets added no matter what
                 parts.push_back(part);
             } else {
-                if(part == "") {
+                if(part.empty()) { // NOLINT(bugprone-branch-clone)
                     // nop
                 } else if(part == ".") {
                     // nop
@@ -1725,7 +1753,7 @@ namespace asserts::detail {
         std::unordered_map<std::string, path_trie*> edges;
     public:
         ASSERT_DETAIL_ATTR_COLD
-        path_trie(std::string _root) : root(_root) {};
+        path_trie(std::string _root) : root(std::move(_root)) {};
         ASSERT_DETAIL_ATTR_COLD
         compl path_trie() {
             for(auto& [k, trie] : edges) {
@@ -1734,7 +1762,7 @@ namespace asserts::detail {
         }
         path_trie(const path_trie&) = delete;
         ASSERT_DETAIL_ATTR_COLD
-        path_trie(path_trie&& other) { // needed for std::vector
+        path_trie(path_trie&& other) noexcept { // needed for std::vector
             downstream_branches = other.downstream_branches;
             root = other.root;
             for(auto& [k, trie] : edges) {
@@ -1757,7 +1785,9 @@ namespace asserts::detail {
             result.push_back(current->root);
             for(size_t i = path.size() - 2; i >= 1; i--) {
                 ASSERT_DETAIL_PRIMITIVE_ASSERT(current->downstream_branches >= 1);
-                if(current->downstream_branches == 1) break;
+                if(current->downstream_branches == 1) {
+                    break;
+                }
                 const std::string& component = path[i];
                 ASSERT_DETAIL_PRIMITIVE_ASSERT(current->edges.count(component));
                 current = current->edges.at(component);
@@ -1769,9 +1799,13 @@ namespace asserts::detail {
     private:
         ASSERT_DETAIL_ATTR_COLD
         void insert(const path_components& path, int i) {
-            if(i < 0) return;
+            if(i < 0) {
+                return;
+            }
             if(!edges.count(path[i])) {
-                if(!edges.empty()) downstream_branches++; // this is to deal with making leaves have count 1
+                if(!edges.empty()) {
+                    downstream_branches++; // this is to deal with making leaves have count 1
+                }
                 edges.insert({path[i], new path_trie(path[i])});
             }
             downstream_branches -= edges.at(path[i])->downstream_branches;
@@ -1797,7 +1831,9 @@ namespace asserts::detail {
                 size_t block_i = 0;
                 // digest block
                 while(block_i != block.content.size()) {
-                    if(lines.size() == current_line) lines.emplace_back(columns.size());
+                    if(lines.size() == current_line) {
+                        lines.emplace_back(columns.size());
+                    }
                     // number of characters we can extract from the block
                     size_t extract = std::min(width - lines[current_line][i].length, block.content.size() - block_i);
                     ASSERT_DETAIL_PRIMITIVE_ASSERT(block_i + extract <= block.content.size());
@@ -1816,7 +1852,9 @@ namespace asserts::detail {
                     lines[current_line][i].length += extract;
                     // new line if necessary
                     // substr.size() != extract iff newline
-                    if(lines[current_line][i].length >= width || substr.size() != extract) current_line++;
+                    if(lines[current_line][i].length >= width || substr.size() != extract) {
+                        current_line++;
+                    }
                 }
             }
         }
@@ -1827,7 +1865,7 @@ namespace asserts::detail {
             // don't print empty spaces they'll mess up lines after terminal resizing even more
             size_t last_col = 0;
             for(size_t i = 0; i < line.size(); i++) {
-                if(line[i].content != "") {
+                if(!line[i].content.empty()) {
                     last_col = i;
                 }
             }
@@ -1896,7 +1934,9 @@ namespace asserts::detail {
         for(auto& [raw, parsed_path] : parsed_paths) {
             std::string new_path = join(tries.at(parsed_path.back()).disambiguate(parsed_path), "/");
             internal_verify(files.insert({raw, new_path}).second);
-            if(new_path.size() > longest_file_width) longest_file_width = new_path.size();
+            if(new_path.size() > longest_file_width) {
+                longest_file_width = new_path.size();
+            }
         }
         return std::pair(files, std::min(longest_file_width, size_t(50)));
     }
@@ -1915,11 +1955,11 @@ namespace asserts::detail {
             // path preprocessing
             constexpr size_t max_file_length = 50;
             auto [files, longest_file_width] = process_paths(trace, start, end);
-            int max_line_number_width = log10(std::max_element(trace.begin(), trace.begin() + end + 1,
+            size_t max_line_number_width = log10(std::max_element(trace.begin(), trace.begin() + end + 1,
                 [](const asserts::detail::stacktrace_entry& a, const asserts::detail::stacktrace_entry& b) {
                     return std::to_string(a.line).size() < std::to_string(b.line).size();
                 })->line - start + 1 + 1); // +1 for indices starting at 0, +1 again for log
-            int max_frame_width = log10(end - start + 1 + 1); // ^
+            size_t max_frame_width = log10(end - start + 1 + 1); // ^
             // do the actual trace
             for(size_t i = start; i <= end; i++) {
                 const auto& [source_path, signature, _line] = trace[i];
@@ -1929,7 +1969,9 @@ namespace asserts::detail {
                 if(end - i >= 4) {
                     size_t j = 1;
                     for( ; i + j <= end; j++) {
-                        if(trace[i + j] != trace[i] || trace[i + j].signature == "??") break;
+                        if(trace[i + j] != trace[i] || trace[i + j].signature == "??") {
+                            break;
+                        }
                     }
                     if(j >= 4) {
                         recursion_folded = j - 2;
@@ -1942,7 +1984,7 @@ namespace asserts::detail {
                     auto sig = highlight_blocks(signature + "("); // hack for the highlighter
                     sig.pop_back();
                     size_t left = 2 + max_frame_width;
-                    size_t middle = std::max((int)line_number.size(), max_line_number_width); // todo: is this looking right...?
+                    size_t middle = std::max(line_number.size(), max_line_number_width); // todo: is this looking right...?
                     size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
                     ASSERT_DETAIL_PRIMITIVE_ASSERT(remaining_width >= 2);
                     size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
@@ -1956,7 +1998,7 @@ namespace asserts::detail {
                     });
                 } else {
                     auto sig = highlight(signature + "("); // hack for the highlighter
-                    sig = sig.substr(0, sig.rfind("("));
+                    sig = sig.substr(0, sig.rfind('('));
                     stacktrace += stringf(
                         "#" CYAN "%2d" RESET " %s\n      at %s:%s\n",
                         (int)frame_number,
@@ -1983,17 +2025,18 @@ namespace asserts::detail {
     ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
                                     std::vector<std::string>& _lstrings, std::vector<std::string>& _rstrings,
                                     std::string _a_str, std::string _b_str, bool _multiple_formats):
-                                    lstrings(_lstrings), rstrings(_rstrings), a_str(_a_str), b_str(_b_str),
+                                    lstrings(_lstrings), rstrings(_rstrings),
+                                    a_str(std::move(_a_str)), b_str(std::move(_b_str)),
                                     multiple_formats(_multiple_formats), present(true) {}
     ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
     ASSERT_DETAIL_ATTR_COLD
-    binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) = default;
-    ASSERT_DETAIL_ATTR_COLD
-    binary_diagnostics_descriptor& binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) = default;
+    binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
+    ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor&
+    binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept = default;
 
     ASSERT_DETAIL_ATTR_COLD
     static std::string print_values(const std::vector<std::string>& vec, size_t lw) {
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(vec.size() > 0);
+        ASSERT_DETAIL_PRIMITIVE_ASSERT(!vec.empty());
         std::string values;
         if(vec.size() == 1) {
             values += stringf("%s\n", indent(highlight(vec[0]), 8 + lw + 4, ' ', true).c_str());
@@ -2003,7 +2046,9 @@ namespace asserts::detail {
             values += " ";
             for(const auto& str : vec) {
                 values += stringf("%s", highlight(str).c_str());
-                if(&str != &*--vec.end()) values += "  ";
+                if(&str != &*--vec.end()) {
+                    values += "  ";
+                }
             }
             values += "\n";
         }
@@ -2012,31 +2057,35 @@ namespace asserts::detail {
 
     ASSERT_DETAIL_ATTR_COLD
     static std::vector<highlight_block> get_values(const std::vector<std::string>& vec) {
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(vec.size() > 0);
+        ASSERT_DETAIL_PRIMITIVE_ASSERT(!vec.empty());
         if(vec.size() == 1) {
             return highlight_blocks(vec[0]);
         } else {
             std::vector<highlight_block> blocks;
             // spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
             // no indentation done here for multiple value printing
-            blocks.push_back({"", " "});
+            blocks.emplace_back("", " ");
             for(const auto& str : vec) {
                 auto h = highlight_blocks(str);
                 blocks.insert(blocks.end(), h.begin(), h.end());
-                if(&str != &*--vec.end()) blocks.push_back({"", "  "});
+                if(&str != &*--vec.end()) {
+                    blocks.emplace_back("", "  ");
+                }
             }
             return blocks;
         }
     }
 
     constexpr int min_term_width = 50;
+    constexpr int arrow_width = " => "sv.size();
+    constexpr int where_indent = 8;
 
     ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
     std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
         auto& [ lstrings, rstrings, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;
         const char* a_str = a_sstr.c_str(), *b_str = b_sstr.c_str();
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(lstrings.size() > 0);
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(rstrings.size() > 0);
+        ASSERT_DETAIL_PRIMITIVE_ASSERT(!lstrings.empty());
+        ASSERT_DETAIL_PRIMITIVE_ASSERT(!rstrings.empty());
         // pad all columns where there is overlap
         // TODO: Use column printer instead of manual padding.
         for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()); i++) {
@@ -2060,12 +2109,14 @@ namespace asserts::detail {
                 has_useful_where_clause.right ? strlen(b_str) : 0
             );
             // Limit lw to about half the screen. TODO: Re-evaluate what we want to do here.
-            if(term_width > 0) lw = std::min(lw, term_width / 2 - 8 /* indent */ - 4 /* arrow */);
+            if(term_width > 0) {
+                lw = std::min(lw, term_width / 2 - where_indent - arrow_width);
+            }
             where += "    Where:\n";
             auto print_clause = [term_width, lw, &where](const char* expr_str, std::vector<std::string>& expr_strs) {
                 if(term_width >= min_term_width) {
                     where += wrapped_print({
-                        { 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
+                        { where_indent - 1, {{"", ""}} }, // 8 space indent, wrapper will add a space
                         { lw, highlight_blocks(expr_str) },
                         { 2, {{"", "=>"}} },
                         { term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(expr_strs) }
@@ -2105,10 +2156,10 @@ namespace asserts::detail {
                                         const decltype(extra_diagnostics::entries)& extra_diagnostics) {
         std::string output = "    Extra diagnostics:\n";
         size_t lw = 0;
-        for(auto& entry : extra_diagnostics) {
+        for(const auto& entry : extra_diagnostics) {
             lw = std::max(lw, entry.first.size());
         }
-        for(auto& entry : extra_diagnostics) {
+        for(const auto& entry : extra_diagnostics) {
             if(term_width >= min_term_width) {
                 output += wrapped_print({
                     { 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
@@ -2127,7 +2178,7 @@ namespace asserts::detail {
 
     ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics() = default;
     ASSERT_DETAIL_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
-    ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) = default;
+    ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) noexcept = default;
 
     #if ASSERT_DETAIL_IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
      CRITICAL_SECTION CriticalSection;
@@ -2165,7 +2216,7 @@ namespace asserts::detail {
     ASSERT_DETAIL_ATTR_COLD
     size_t count_args_strings(const char* const* const arr) {
         size_t c = 0;
-        for(size_t i = 0; *arr[i]; i++) {
+        for(size_t i = 0; *arr[i] != 0; i++) {
             c++;
         }
         return c + 1; // plus one, count the empty string
@@ -2190,7 +2241,7 @@ namespace asserts {
                                 binary_diagnostics(_binary_diagnostics), raw_trace(_raw_trace),
                                 sizeof_args(_sizeof_args) {}
     ASSERT_DETAIL_ATTR_COLD assertion_printer::~assertion_printer() {
-        auto trace = (trace_t*) raw_trace;
+        auto* trace = static_cast<trace_t*>(raw_trace);
         delete trace;
     }
     ASSERT_DETAIL_ATTR_COLD std::string assertion_printer::operator()(int width) {
@@ -2202,12 +2253,12 @@ namespace asserts {
         ] = processed_args;
         std::string output;
         // generate header
-        auto function = location.function
+        const auto* function = location.function
          #if ASSERT_DETAIL_IS_MSVC
           ? location.function : msvc_pretty_function
          #endif
         ;
-        if(message != "") {
+        if(!message.empty()) {
             output += stringf("%s failed at %s:%d: %s: %s\n",
                               assert_type_name(type), location.file, location.line,
                               highlight(function).c_str(), message.c_str());
@@ -2227,7 +2278,7 @@ namespace asserts {
         }
         // generate stack trace
         output += "\nStack trace:\n";
-        output += print_stacktrace((trace_t*) raw_trace, width);
+        output += print_stacktrace(static_cast<trace_t*>(raw_trace), width);
         return output;
     }
 }
