@@ -1008,7 +1008,7 @@ Assertion failed at integration/integration.cpp:2906: void __cdecl test_class<in
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2906
+      at integration.cpp:2909
 # 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main()
