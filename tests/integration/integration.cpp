@@ -335,6 +335,16 @@ public:
             bar b = bar::A;
             assert(b != bar::A);
         }
+
+        SECTION("Literal format handling");
+        #line 3000
+        {
+            assert(0xff == 077);
+            assert('x' == 20);
+            assert('x' == 'y');
+            char c = 'x';
+            assert(c == 20);
+        }
     }
 
     #line 600

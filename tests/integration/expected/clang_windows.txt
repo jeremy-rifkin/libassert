@@ -1015,3 +1015,61 @@ Stack trace:
       at integration.cpp:403
 
 
+===================== [Literal format handling] =====================
+Assertion failed at integration/integration.cpp:3001: void test_class<int>::something_else() [T = int]:
+    assert(0xff == 077);
+    Where:
+        0xff =>  255  0xff  0377
+        077  =>  63   0x3f  077
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3001
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:3002: void test_class<int>::something_else() [T = int]:
+    assert('x' == 20);
+    Where:
+        'x' =>  'x'     120
+        20  =>  '\x14'  20
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3002
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:3003: void test_class<int>::something_else() [T = int]:
+    assert('x' == 'y');
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3003
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:3005: void test_class<int>::something_else() [T = int]:
+    assert(c == 20);
+    Where:
+        c  =>  'x'     120
+        20 =>  '\x14'  20
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3005
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
