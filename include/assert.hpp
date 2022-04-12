@@ -170,6 +170,9 @@ namespace asserts::detail {
     // Is integral but not boolean
     template<typename T> inline constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
 
+    template<typename T> inline constexpr bool is_arith_not_bool_char =
+                                                       std::is_arithmetic_v<strip<T>> && !isa<T, bool> && !isa<T, char>;
+
     template<typename T> inline constexpr bool is_string_type =
            isa<T, std::string>
         || isa<T, std::string_view>
@@ -464,11 +467,12 @@ namespace asserts::detail {
      */
 
     enum class literal_format {
+        character,
         dec,
         hex,
         octal,
         binary,
-        none
+        none // needs to be at the end for sorting reasons
     };
 
     [[nodiscard]] std::string prettify_type(std::string type);
@@ -590,12 +594,12 @@ namespace asserts::detail {
      * assert diagnostics generation
      */
 
+    constexpr size_t format_arr_length = 5;
+
     template<typename T>
     ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-    std::vector<std::string> generate_stringifications(const T& v, const literal_format (&formats)[4]) {
-        if constexpr((std::is_arithmetic<strip<T>>::value || std::is_enum<strip<T>>::value)
-                 && !isa<T, bool>
-                 && !isa<T, char>) {
+    std::vector<std::string> generate_stringifications(const T& v, const literal_format (&formats)[format_arr_length]) {
+        if constexpr((std::is_arithmetic<strip<T>>::value || std::is_enum<strip<T>>::value) && !isa<T, bool>) {
             std::vector<std::string> vec;
             for(literal_format fmt : formats) {
                 if(fmt == literal_format::none) { break; }
@@ -603,9 +607,7 @@ namespace asserts::detail {
                 // matter at the moment because floats only have decimal and hex literals but could
                 // if more formats are added.
                 std::string str = stringify(v, fmt);
-                if(!str.empty()) {
-                    vec.push_back(std::move(str));
-                }
+                vec.push_back(std::move(str));
             }
             return vec;
         } else {
@@ -630,7 +632,7 @@ namespace asserts::detail {
         binary_diagnostics_descriptor& operator=(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
     };
 
-    void sort_and_dedup(literal_format(&)[4]);
+    void sort_and_dedup(literal_format(&)[format_arr_length]);
 
     template<typename A, typename B>
     ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
@@ -644,9 +646,18 @@ namespace asserts::detail {
         auto lformat = get_literal_format(a_str);
         auto rformat = get_literal_format(b_str);
         // formerly used std::set here, now using array + sorting, `none` entries will be at the end and ignored
-        lf formats[4] = { lf::dec, lformat, rformat, // ↓ always display binary for bitwise
-                          is_bitwise(op) ? lf::binary : lf::none };
+        constexpr bool either_is_character = isa<A, char> || isa<B, char>;
+        constexpr bool either_is_arithmetic = is_arith_not_bool_char<A> || is_arith_not_bool_char<B>;
+        lf formats[format_arr_length] = {
+            either_is_arithmetic ? lf::dec :  lf::none,
+            lformat, rformat, // ↓ always display binary for bitwise
+            is_bitwise(op) ? lf::binary : lf::none,
+            either_is_character ? lf::character : lf::none
+        };
         sort_and_dedup(formats); // print in specific order, avoid duplicates
+        if(formats[0] == lf::none) {
+            formats[0] = lf::dec; // if no formats apply just print everything default, TODO this is a bit of a hack
+        }
         // generate raw strings for given formats, without highlighting
         std::vector<std::string> lstrings = generate_stringifications(a, formats);
         std::vector<std::string> rstrings = generate_stringifications(b, formats);

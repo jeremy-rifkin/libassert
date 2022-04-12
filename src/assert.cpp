@@ -1033,7 +1033,8 @@ namespace asserts::detail {
                 { std::regex(int_decimal),   literal_format::dec },
                 { std::regex(int_hex),       literal_format::hex },
                 { std::regex(float_decimal), literal_format::dec },
-                { std::regex(float_hex),     literal_format::hex }
+                { std::regex(float_hex),     literal_format::hex },
+                { std::regex(char_literal),  literal_format::character }
             };
             // generate precedence table
             // bottom few rows of the precedence table:
@@ -1514,8 +1515,12 @@ namespace asserts::detail {
         return "nullptr";
     }
 
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(char value, literal_format) {
-        return escape_string({&value, 1}, '\'');
+    ASSERT_DETAIL_ATTR_COLD std::string stringify(char value, literal_format fmt) {
+        if(fmt == literal_format::character) {
+            return escape_string({&value, 1}, '\'');
+        } else {
+            return stringify((int)value, fmt);
+        }
     }
 
     ASSERT_DETAIL_ATTR_COLD std::string stringify(bool value, literal_format) {
@@ -1527,6 +1532,13 @@ namespace asserts::detail {
     static std::string stringify_integral(T value, literal_format fmt) {
         std::ostringstream oss;
         switch(fmt) {
+            case literal_format::character:
+                if(cmp_greater_equal(value, std::numeric_limits<char>::min())
+                   && cmp_less_equal(value, std::numeric_limits<char>::max())) {
+                    return stringify(static_cast<char>(value), literal_format::character);
+                } else {
+                    return "";
+                }
             case literal_format::dec:
                 break;
             case literal_format::hex:
@@ -1582,6 +1594,8 @@ namespace asserts::detail {
     static std::string stringify_floating_point(T value, literal_format fmt) {
         std::ostringstream oss;
         switch(fmt) {
+            case literal_format::character:
+                return "";
             case literal_format::dec:
                 break;
             case literal_format::hex:
@@ -2138,7 +2152,7 @@ namespace asserts::detail {
     }
 
     ASSERT_DETAIL_ATTR_COLD
-    void sort_and_dedup(literal_format (&formats)[4]) {
+    void sort_and_dedup(literal_format (&formats)[format_arr_length]) {
         std::sort(std::begin(formats), std::end(formats));
         size_t write_index = 1, read_index = 1;
         for(; read_index < std::size(formats); read_index++) {
