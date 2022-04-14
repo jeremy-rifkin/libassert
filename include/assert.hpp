@@ -513,15 +513,24 @@ namespace asserts::detail {
         #endif
     }
 
-    // https://stackoverflow.com/questions/28309164/checking-for-existence-of-an-overloaded-member-function
-    template<typename T> class has_stream_overload {
-        template<typename C, typename = decltype(std::declval<std::ostringstream>() << std::declval<C>())>
-        static std::true_type test(int);
-        template<typename C>
-        static std::false_type test(...);
-    public:
-        static constexpr bool value = decltype(test<T>(0))::value;
-    };
+    template<typename T, typename = void> class has_stream_overload : public std::false_type {};
+    template<typename T> class has_stream_overload<
+                                T,
+                                std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
+                            > : public std::true_type {};
+
+    template<typename T, typename = void> class is_printable_container : public std::false_type {};
+    template<typename T> class is_printable_container<
+                                T,
+                                std::void_t<
+                                    decltype(std::declval<T>().size()),
+                                    decltype(begin(std::declval<T>())),
+                                    decltype(end(std::declval<T>())),
+                                    typename std::enable_if<
+                                        has_stream_overload<decltype(*begin(std::declval<T>()))>::value,
+                                    void>::type
+                                >
+                            > : public std::true_type {};
 
     std::string stringify(const std::string&, literal_format = literal_format::none);
     std::string stringify(const std::string_view&, literal_format = literal_format::none);
@@ -548,14 +557,11 @@ namespace asserts::detail {
 
     std::string stringify_ptr(const void*, literal_format = literal_format::none);
 
-    template<typename T> class can_basic_stringify {
-        template<typename C, typename = decltype(stringify(std::declval<C>()))>
-        static std::true_type test(int);
-        template<typename C>
-        static std::false_type test(...);
-    public:
-        static constexpr bool value = decltype(test<T>(0))::value;
-    };
+    template<typename T, typename = void> class can_basic_stringify : public std::false_type {};
+    template<typename T> class can_basic_stringify<
+                                T,
+                                std::void_t<decltype(stringify(std::declval<T>()))>
+                            > : public std::true_type {};
 
     template<typename T, typename std::enable_if<std::is_pointer<strip<typename std::decay<T>::type>>::value
                                                  || std::is_function<strip<T>>::value
@@ -573,6 +579,17 @@ namespace asserts::detail {
         } else if constexpr(has_stream_overload<T>::value) {
             std::ostringstream oss;
             oss<<t;
+            return std::move(oss).str();
+        } else if constexpr(is_printable_container<T>::value) {
+            std::ostringstream oss;
+            oss<<prettify_type(std::string(type_name<T>()))<<" [size: "<<t.size()<<"]: [";
+            for(auto it = begin(t); it != end(t); it++) {
+                if(it != begin(t)) {
+                    oss<<", ";
+                }
+                oss<<*it;
+            }
+            oss<<"]";
             return std::move(oss).str();
         }
         #ifdef ASSERT_USE_MAGIC_ENUM
