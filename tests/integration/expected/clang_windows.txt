@@ -1073,3 +1073,21 @@ Stack trace:
       at integration.cpp:403
 
 
+===================== [Container printing] =====================
+Assertion failed at integration/integration.cpp:3104: void test_class<int>::something_else() [T = int]:
+    assert(a == b, ...);
+    Where:
+        a => std::set<int> [size: 4]: [2, 4, 6, 10]
+        b => std::set<int> [size: 4]: [2, 5, 6, 10]
+    Extra diagnostics:
+        c => std::vector<float> [size: 4]: [1.2, 2.44, 3.15159, 5.2]
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3104
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
