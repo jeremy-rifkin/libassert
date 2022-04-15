@@ -7,6 +7,7 @@
 #include <iostream>
 #include <map>
 #include <optional>
+#include <set>
 #include <streambuf>
 #include <string_view>
 #include <string>
@@ -132,7 +133,7 @@ auto min_items() {
 }
 
 void zoog(std::vector<int>& vec) {
-    assert(vec.size() > min_items(), "vector doesn't have enough items");
+    assert(vec.size() > min_items(), "vector doesn't have enough items", vec);
     assert(vec.size() > 7);
 }
 
@@ -263,6 +264,25 @@ public:
                 assert(not isdigit(c), c);
                 return c >= 'A' and c <= 'Z';
             }) == s.end());
+        }
+
+        {
+            std::set<int> a = { 2, 2, 4, 6, 10 };
+            std::set<int> b = { 2, 2, 5, 6, 10 };
+            std::vector<float> c = { 1.2, 2.44, 3.15159, 5.2 };
+            assert(a == b, c);
+            std::map<std::string, int> m0 = {
+                {"foo", 2},
+                {"bar", -2}
+            };
+            assert(false, m0);
+            std::map<std::string, std::vector<int>> m1 = {
+                {"foo", {1, -2, 3, -4}},
+                {"bar", {-100, 200, 400, -800}}
+            };
+            assert(false, m1);
+            auto t = std::make_tuple(1, 0.1 + 0.2, "foobars");
+            assert(false, t);
         }
 
         // Numeric

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <optional>
+#include <set>
 #include <streambuf>
 #include <string_view>
 #include <string>
@@ -344,6 +345,15 @@ public:
             assert('x' == 'y');
             char c = 'x';
             assert(c == 20);
+        }
+
+        SECTION("Container printing");
+        #line 3100
+        {
+            std::set<int> a = { 2, 2, 4, 6, 10 };
+            std::set<int> b = { 2, 2, 5, 6, 10 };
+            std::vector<float> c = { 1.2f, 2.44f, 3.15159f, 5.2f };
+            assert(a == b, c);
         }
     }
 
