@@ -26,6 +26,7 @@ def run_command(*args: List[str]):
     global env
     p = subprocess.Popen(args, env=env)
     p.wait()
+    print("\033[0m") # makefile in parallel sometimes messes up colors
     if p.returncode != 0:
         print("[🔴 Command \"{}\" failed]".format(" ".join(args)))
         sys.exit(1)
@@ -35,7 +36,6 @@ def build(compiler: str):
     run_command("make", "-C", "..", f"COMPILER={compiler}", "-j")
     run_command("make", "clean")
     run_command("make", "integration", f"COMPILER={compiler}", "-j")
-    print("\033[0m") # makefile in parallel sometimes messes up colors
 
 def generate(compiler: str, output_name: str):
     global env
