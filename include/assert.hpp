@@ -750,7 +750,7 @@ namespace asserts::detail {
 
     template<typename T>
     ASSERT_DETAIL_ATTR_COLD
-    void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, T& t) {
+    void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, const T& t) {
         if constexpr(isa<T, ASSERTION>) {
             entry.fatality = t;
         }
