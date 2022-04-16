@@ -1080,11 +1080,67 @@ Assertion failed at integration/integration.cpp:3104: void __cdecl test_class<in
         a => class std::set<int,struct std::less<int>,class std::allocator<int>> [size: 4]: [2, 4, 6, 10]
         b => class std::set<int,struct std::less<int>,class std::allocator<int>> [size: 4]: [2, 5, 6, 10]
     Extra diagnostics:
-        c => class std::vector<float,class std::allocator<float>> [size: 4]: [1.2, 2.44, 3.15159, 5.2]
+        c => class std::vector<double,class std::allocator<double>> [size: 4]: [1.2000000476837158, 2.440000057220459, 3.15159010887146, 5.1999998092651367]
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:3104
+      at integration.cpp:3105
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:3109: void __cdecl test_class<int>::something_else(void):
+    assert(false, ...);
+    Extra diagnostics:
+        m0 => class std::map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>>,int,struct std::less<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>>>,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>> const ,int>>> [size: 2]: [["bar", -2], ["foo", 2]]
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3110
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:3114: void __cdecl test_class<int>::something_else(void):
+    assert(false, ...);
+    Extra diagnostics:
+        m1 => class std::map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>>,class std::vector<int,class std::allocator<int>>,struct std::less<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>>>,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>> const ,class std::vector<int,class std::allocator<int>>>>> [size: 2]: [["bar", [-100, 200, 400, -800]], ["foo", [1, -2, 3, -4]]]
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3115
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:3116: void __cdecl test_class<int>::something_else(void):
+    assert(false, ...);
+    Extra diagnostics:
+        t => class std::tuple<int,double,char const *>: [1, 0.30000000000000004, "foobars"]
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3117
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:3118: void __cdecl test_class<int>::something_else(void):
+    assert(false, ...);
+    Extra diagnostics:
+        arr => class std::array<int,10> [size: 10]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3118
 # 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main()

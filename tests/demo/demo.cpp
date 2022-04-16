@@ -2,6 +2,7 @@
 
 #include "assert.hpp"
 
+#include <array>
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -269,7 +270,7 @@ public:
         {
             std::set<int> a = { 2, 2, 4, 6, 10 };
             std::set<int> b = { 2, 2, 5, 6, 10 };
-            std::vector<float> c = { 1.2, 2.44, 3.15159, 5.2 };
+            std::vector<double> c = { 1.2, 2.44, 3.15159, 5.2 };
             assert(a == b, c);
             std::map<std::string, int> m0 = {
                 {"foo", 2},
@@ -283,6 +284,8 @@ public:
             assert(false, m1);
             auto t = std::make_tuple(1, 0.1 + 0.2, "foobars");
             assert(false, t);
+            std::array<int, 10> arr = {1,2,3,4,5,6,7,8,9,10};
+            assert(false, arr);
         }
 
         // Numeric
