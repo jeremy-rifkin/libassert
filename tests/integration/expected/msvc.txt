@@ -397,7 +397,33 @@ Assertion failed at integration/integration.cpp:1709: void __cdecl test_class<in
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1712
+      at integration.cpp:1710
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:1710: void __cdecl test_class<int>::something_else(void):
+    assert(false, ...);
+    Extra diagnostics:
+        nullptr => nullptr
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:1711
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:1711: void __cdecl test_class<int>::something_else(void): (nullptr)
+    assert(false, ...);
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:1714
 # 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main()

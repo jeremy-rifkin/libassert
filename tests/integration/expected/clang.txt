@@ -404,6 +404,32 @@ Stack trace:
       at integration.cpp:402
 
 
+Assertion failed at integration/integration.cpp:1710: void test_class<int>::something_else() [T = int]:
+    assert(false, ...);
+    Extra diagnostics:
+        nullptr => nullptr
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:1710
+# 2 void test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1004
+# 3 main
+      at integration.cpp:402
+
+
+Assertion failed at integration/integration.cpp:1711: void test_class<int>::something_else() [T = int]: (nullptr)
+    assert(false, ...);
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:1711
+# 2 void test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1004
+# 3 main
+      at integration.cpp:402
+
+
 ===================== [errno] =====================
 Assertion failed at integration/integration.cpp:1802: void test_class<int>::something_else() [T = int]:
     assert(false, ...);

@@ -205,6 +205,8 @@ public:
             assert(false, "foo"s, 2);
             assert(false, "foo"sv, 2);
             assert(false, (char*)"foo", 2);
+            assert(false, nullptr);
+            assert(false, (char*)nullptr);
         }
         // extra diagnostics
         SECTION("errno");
