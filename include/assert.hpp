@@ -779,6 +779,12 @@ namespace asserts::detail {
             } else {
                 if constexpr(is_string_type<T>) {
                     if(i == 0) {
+                        if constexpr(std::is_pointer<T>::value) {
+                            if(t == nullptr) {
+                                entry.message = "(nullptr)";
+                                return;
+                            }
+                        }
                         entry.message = t;
                         return;
                     }
