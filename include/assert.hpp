@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -513,25 +514,6 @@ namespace asserts::detail {
         #endif
     }
 
-    template<typename T, typename = void> class has_stream_overload : public std::false_type {};
-    template<typename T> class has_stream_overload<
-                                T,
-                                std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
-                            > : public std::true_type {};
-
-    template<typename T, typename = void> class is_printable_container : public std::false_type {};
-    template<typename T> class is_printable_container<
-                                T,
-                                std::void_t<
-                                    decltype(std::declval<T>().size()),
-                                    decltype(begin(std::declval<T>())),
-                                    decltype(end(std::declval<T>())),
-                                    typename std::enable_if<
-                                        has_stream_overload<decltype(*begin(std::declval<T>()))>::value,
-                                    void>::type
-                                >
-                            > : public std::true_type {};
-
     std::string stringify(const std::string&, literal_format = literal_format::none);
     std::string stringify(const std::string_view&, literal_format = literal_format::none);
     // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
@@ -563,6 +545,43 @@ namespace asserts::detail {
                                 std::void_t<decltype(stringify(std::declval<T>()))>
                             > : public std::true_type {};
 
+    template<typename T, typename = void> class has_stream_overload : public std::false_type {};
+    template<typename T> class has_stream_overload<
+                                T,
+                                std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
+                            > : public std::true_type {};
+
+    template<typename T, typename = void> class is_tuple_like : public std::false_type {};
+    template<typename T> class is_tuple_like<
+                                T,
+                                std::void_t<
+                                    typename std::tuple_size<T>::type,
+                                    decltype(std::get<0>(std::declval<T>()))
+                                >
+                            > : public std::true_type {};
+
+    template<typename T, typename = void> class is_printable_container : public std::false_type {};
+    template<typename T> class is_printable_container<
+                                T,
+                                std::void_t<
+                                    decltype(std::declval<T>().size()),
+                                    decltype(begin(std::declval<T>())),
+                                    decltype(end(std::declval<T>())),
+                                    typename std::enable_if< // can stringify (and not just give an instance of string)
+                                        has_stream_overload<decltype(*begin(std::declval<T>()))>::value
+                                        || std::is_enum<strip<decltype(*begin(std::declval<T>()))>>::value
+                                        || is_printable_container<strip<decltype(*begin(std::declval<T>()))>>::value
+                                        || is_tuple_like<strip<decltype(*begin(std::declval<T>()))>>::value,
+                                    void>::type
+                                >
+                            > : public std::true_type {};
+
+    template<typename T, size_t... I> std::string stringify_tuple_like(const T&, std::index_sequence<I...>);
+
+    template<typename T> std::string stringify_tuple_like(const T& t) {
+        return stringify_tuple_like(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
+    }
+
     template<typename T, typename std::enable_if<std::is_pointer<strip<typename std::decay<T>::type>>::value
                                                  || std::is_function<strip<T>>::value
                                                  || !can_basic_stringify<T>::value, int>::type = 0>
@@ -581,16 +600,17 @@ namespace asserts::detail {
             oss<<t;
             return std::move(oss).str();
         } else if constexpr(is_printable_container<T>::value) {
-            std::ostringstream oss;
-            oss<<prettify_type(std::string(type_name<T>()))<<" [size: "<<t.size()<<"]: [";
+            std::string str = "[";
             for(auto it = begin(t); it != end(t); it++) {
                 if(it != begin(t)) {
-                    oss<<", ";
+                    str += ", ";
                 }
-                oss<<*it;
+                str += stringify(*it, literal_format::dec);
             }
-            oss<<"]";
-            return std::move(oss).str();
+            str += "]";
+            return str;
+        } else if constexpr(is_tuple_like<T>::value) {
+            return stringify_tuple_like(t);
         }
         #ifdef ASSERT_USE_MAGIC_ENUM
         else if constexpr(std::is_enum<strip<T>>::value) {
@@ -607,11 +627,31 @@ namespace asserts::detail {
         }
     }
 
+    // I'm going to assume at least one index because is_tuple_like requires index 0 to exist
+    template<typename T, size_t... I> std::string stringify_tuple_like(const T& t, std::index_sequence<I...>) {
+        using lf = literal_format;
+        return "[" + (stringify(std::get<0>(t), lf::dec) + ... + (", " + stringify(std::get<I + 1>(t), lf::dec))) + "]";
+    }
+
     /*
      * assert diagnostics generation
      */
 
     constexpr size_t format_arr_length = 5;
+
+    // TODO: Not yet happy with the naming of this function / how it's used
+    template<typename T>
+    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    std::string generate_stringification(const T& v, literal_format fmt = literal_format::none) {
+        if constexpr((is_printable_container<T>::value && !is_string_type<T>)) {
+            return prettify_type(std::string(type_name<T>()))
+                       + " [size: " + std::to_string(v.size()) + "]: " + stringify(v, fmt);
+        } else if constexpr(is_tuple_like<T>::value) {
+            return prettify_type(std::string(type_name<T>())) + ": " + stringify(v, fmt);
+        } else {
+            return stringify(v, fmt);
+        }
+    }
 
     template<typename T>
     ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
@@ -628,7 +668,7 @@ namespace asserts::detail {
             }
             return vec;
         } else {
-            return { stringify(v) };
+            return { generate_stringification(v) };
         }
     }
 
@@ -743,7 +783,7 @@ namespace asserts::detail {
                         return;
                     }
                 }
-                entry.entries.push_back({ args_strings[i], stringify(t, literal_format::dec) });
+                entry.entries.push_back({ args_strings[i], generate_stringification(t, literal_format::dec) });
             }
         }
     }
