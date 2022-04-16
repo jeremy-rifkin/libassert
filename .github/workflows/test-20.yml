@@ -36,10 +36,10 @@ jobs:
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
     - name: build library
-      run: make COMPILER=clang++ STD=c++20
+      run: make COMPILER=clang++-12 STD=c++20
     - name: build tests
       working-directory: tests
-      run: make tests COMPILER=clang++ STD=c++20
+      run: make tests COMPILER=clang++-12 STD=c++20
     - name: dos2unix
       working-directory: tests/integration/expected
       run: |
