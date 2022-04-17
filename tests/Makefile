@@ -52,7 +52,7 @@ ifneq ($(COMPILER),msvc)
             override LDFLAGS += -fsanitize=address
         endif
     else
-        override CPPFLAGS += -O3 -funroll-loops -ffast-math -flto -march=native -DNDEBUG
+        override CPPFLAGS += -O3 -funroll-loops -ffast-math -flto -march=native
         override LDFLAGS += -flto -s
     endif
     ifeq ($(OS),Windows_NT)

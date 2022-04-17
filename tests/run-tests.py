@@ -69,10 +69,15 @@ def main():
     target = sys.argv[1]
     opt = False
     if len(sys.argv) == 3:
-        opt = sys.argv[2] == "opt"
+        opt = sys.argv[2] == "release" or sys.argv[2] == "opt"
     if target == "self":
         test_critical_difference()
         return
+    # canonicalize
+    if target.startswith("g++"):
+        target = "gcc" + ("_windows" if target.endswith("_windows") else "")
+    if target.startswith("clang"):
+        target = "clang" + ("_windows" if target.endswith("_windows") else "")
     run_unit_tests(["disambiguation", "literals", "type_handling", "basic_test"])
     run_integration("integration/expected/{}.txt".format(target), opt)
     global ok

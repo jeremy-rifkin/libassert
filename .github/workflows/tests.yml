@@ -5,8 +5,13 @@ on:
   pull_request:
 
 jobs:
-  test-gcc:
+  test-linux:
     runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++-12]
+        target: [debug, release]
     steps:
     - uses: actions/checkout@v2
     - name: dependencies
@@ -14,10 +19,10 @@ jobs:
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
     - name: build library
-      run: make
+      run: make COMPILER=${{matrix.compiler}} TARGET=${{matrix.target}}
     - name: build tests
       working-directory: tests
-      run: make tests
+      run: make tests COMPILER=${{matrix.compiler}} TARGET=${{matrix.target}}
     - name: dos2unix
       working-directory: tests/integration/expected
       run: |
@@ -25,9 +30,14 @@ jobs:
            dos2unix *.txt
     - name: run tests
       working-directory: tests
-      run: python3 run-tests.py gcc
-  test-clang:
-    runs-on: ubuntu-20.04
+      run: python3 run-tests.py ${{matrix.compiler}} ${{matrix.target}}
+  test-windows:
+    runs-on: windows-2019
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+        target: [debug] # currently running into issues with testing release TODO
     steps:
     - uses: actions/checkout@v2
     - name: dependencies
@@ -35,20 +45,23 @@ jobs:
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
     - name: build library
-      run: make COMPILER=clang++-12
+      run: make COMPILER=${{matrix.compiler}} TARGET=${{matrix.target}}
     - name: build tests
       working-directory: tests
-      run: make tests COMPILER=clang++-12
+      run: make tests COMPILER=${{matrix.compiler}} TARGET=${{matrix.target}}
     - name: dos2unix
       working-directory: tests/integration/expected
-      run: |
-           sudo apt install dos2unix
-           dos2unix *.txt
+      run: dos2unix *.txt
     - name: run tests
       working-directory: tests
-      run: python3 run-tests.py clang
+      run: python3 run-tests.py ${{matrix.compiler}}_windows ${{matrix.target}}
   test-msvc:
     runs-on: windows-2019
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [debug, release]
+        cppflags: ["", "/permissive- /Zc:twoPhase-"]
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
@@ -58,76 +71,13 @@ jobs:
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
     - name: build library
-      run: make COMPILER=msvc
+      run: make COMPILER=msvc "CPPFLAGS=${{matrix.cppflags}}"
     - name: build tests
       working-directory: tests
-      run: make tests COMPILER=msvc
+      run: make tests COMPILER=msvc "CPPFLAGS=${{matrix.cppflags}}"
     - name: dos2unix
       working-directory: tests/integration/expected
       run: dos2unix *.txt
     - name: run tests
       working-directory: tests
-      run: python3 run-tests.py msvc
-  test-msvc-permissive-:
-    runs-on: windows-2019
-    steps:
-    - uses: actions/checkout@v2
-    - name: Enable Developer Command Prompt
-      uses: ilammy/msvc-dev-cmd@v1.10.0
-    - name: dependencies
-      run: |
-           python3 -m pip install --upgrade pip
-           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
-    - name: build library
-      run: make COMPILER=msvc "CPPFLAGS=/permissive- /Zc:twoPhase-" # Annoying bug with two-phase lookup
-    - name: build tests
-      working-directory: tests
-      run: make tests COMPILER=msvc "CPPFLAGS=/permissive- /Zc:twoPhase-" # Annoying bug with two-phase lookup
-    - name: dos2unix
-      working-directory: tests/integration/expected
-      run: dos2unix *.txt
-    - name: run tests
-      working-directory: tests
-      run: python3 run-tests.py msvc
-  test-gcc-windows:
-    runs-on: windows-2019
-    steps:
-    - uses: actions/checkout@v2
-    - name: dependencies
-      run: |
-           python3 -m pip install --upgrade pip
-           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
-    - name: build library
-      run: make
-    - name: build tests
-      working-directory: tests
-      run: |
-           make tests
-           ldd bin/integration.exe
-           echo $Env:PATH
-           ls C:/Strawberry/c/bin/
-    - name: dos2unix
-      working-directory: tests/integration/expected
-      run: dos2unix *.txt
-    - name: run tests
-      working-directory: tests
-      run: python3 run-tests.py gcc_windows
-  test-clang-windows:
-    runs-on: windows-2019
-    steps:
-    - uses: actions/checkout@v2
-    - name: dependencies
-      run: |
-           python3 -m pip install --upgrade pip
-           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
-    - name: build library
-      run: make COMPILER=clang++
-    - name: build tests
-      working-directory: tests
-      run: make tests COMPILER=clang++
-    - name: dos2unix
-      working-directory: tests/integration/expected
-      run: dos2unix *.txt
-    - name: run tests
-      working-directory: tests
-      run: python3 run-tests.py clang_windows
+      run: python3 run-tests.py msvc ${{matrix.target}}
