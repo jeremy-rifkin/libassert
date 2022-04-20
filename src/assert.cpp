@@ -2258,7 +2258,7 @@ namespace asserts {
         auto* trace = static_cast<trace_t*>(raw_trace);
         delete trace;
     }
-    ASSERT_DETAIL_ATTR_COLD std::string assertion_printer::operator()(int width) {
+    ASSERT_DETAIL_ATTR_COLD std::string assertion_printer::operator()(int width) const {
         const auto& [ name, type, expr_str, location, args_strings ] = *params;
         const auto& [ fatal, message, extra_diagnostics
          #if ASSERT_DETAIL_IS_MSVC
@@ -2311,8 +2311,8 @@ namespace asserts::utility {
 // Default handler
 
 ASSERT_DETAIL_ATTR_COLD
-void assert_detail_default_fail_action(asserts::assertion_printer& printer, asserts::assert_type type,
-                                       ASSERTION fatal) {
+void assert_detail_default_fail_action(asserts::assert_type type, ASSERTION fatal,
+                                       const asserts::assertion_printer& printer) { 
     asserts::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
     std::string message = printer(asserts::utility::terminal_width(STDERR_FILENO));
     if(asserts::detail::isatty(STDERR_FILENO) && asserts::config::output_colors) {

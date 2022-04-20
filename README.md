@@ -304,13 +304,13 @@ The following configurations can be applied on a per-TU basis:
 
 Custom failure actions: These are called when an assertion fails after diagnostic messages are
 printed. Set these macros to the name of the failure action function, signature is expected to be
-`void custom_fail(asserts::assertion_printer&, asserts::assert_type, ASSERTION)`.
+`void custom_fail(asserts::assert_type, ASSERTION, const asserts::assertion_printer&)`.
 The `printer` is used to allow the failure handler to format to a desired width. It accepts zero and
 negative widths to indicate the message should be printed to work on any width (i.e., no pretty
 columns in the output). `type` is the type of the assertion and `fatal` indicates whether an
 assertion is fatal. A typical implementation looks like:
 ```cpp
-void custom_fail(asserts::assertion_printer& printer, asserts::assert_type type, ASSERTION fatal) {
+void custom_fail(asserts::assert_type type, ASSERTION fatal, const asserts::assertion_printer& printer) {
     std::string message = printer(asserts::utility::terminal_width(STDERR_FILENO));
     if(isatty(STDERR_FILENO)) {
         std::cerr<<message<<std::endl;
@@ -356,7 +356,7 @@ namespace asserts {
     // Core functionality:
     enum class ASSERTION { NONFATAL, FATAL };
     class assertion_printer {
-        public: [[nodiscard]] std::string operator()(int width);
+        public: [[nodiscard]] std::string operator()(int width) const;
     };
     struct verification_failure : std::exception {
         virtual const char* what() const noexcept final override;
@@ -419,6 +419,8 @@ Put the header (`include/assert.hpp`) and library files (in `bin/`) in a locatio
 - Debug symbols will be needed for good stack traces
 
 Special notes for generating debug symbols:
+
+TODO:::: Note about /Z7 or whatever?
 
 | Compiler | Linux | Windows |
 |--|--|--|

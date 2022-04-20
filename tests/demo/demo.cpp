@@ -29,7 +29,7 @@
 void qux();
 void wubble();
 
-void custom_fail(asserts::assertion_printer& printer, asserts::assert_type, asserts::ASSERTION) {
+void custom_fail(asserts::assert_type, asserts::ASSERTION, const asserts::assertion_printer& printer) {
     std::cerr<<printer(asserts::utility::terminal_width(STDERR_FILENO))<<std::endl<<std::endl;
 }
 

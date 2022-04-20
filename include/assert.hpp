@@ -69,8 +69,7 @@ namespace asserts {
  #define ASSERT_FAIL assert_detail_default_fail_action
 #endif
 
-void ASSERT_FAIL(asserts::assertion_printer& printer, asserts::assert_type type,
-                 asserts::ASSERTION fatal);
+void ASSERT_FAIL(asserts::assert_type type, asserts::ASSERTION fatal, const asserts::assertion_printer& printer);
 
 // always_false is just convenient to use here
 #define ASSERT_DETAIL_PHONY_USE(E) ((void)asserts::detail::always_false<decltype(E)>)
@@ -857,7 +856,7 @@ namespace asserts {
         assertion_printer(assertion_printer&&) = delete;
         assertion_printer& operator=(const assertion_printer&) = delete;
         assertion_printer& operator=(assertion_printer&&) = delete;
-        [[nodiscard]] std::string operator()(int width);
+        [[nodiscard]] std::string operator()(int width) const;
     };
 }
 
@@ -902,7 +901,7 @@ namespace asserts::detail {
             raw_trace,
             sizeof_extra_diagnostics
         };
-        ::ASSERT_FAIL(printer, params->type, fatal);
+        ::ASSERT_FAIL(params->type, fatal, printer);
     }
 
     template<typename A, typename B, typename C, typename... Args>

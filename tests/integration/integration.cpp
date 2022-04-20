@@ -14,7 +14,7 @@ using namespace std::literals;
 
 void test_path_differentiation();
 
-void custom_fail(asserts::assertion_printer& printer, asserts::assert_type, asserts::ASSERTION) {
+void custom_fail(asserts::assert_type, asserts::ASSERTION, const asserts::assertion_printer& printer) {
     std::cout<<asserts::utility::strip_colors(printer(0))<<std::endl<<std::endl;
 }
 
