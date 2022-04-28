@@ -1120,7 +1120,7 @@ Stack trace:
 Assertion failed at integration/integration.cpp:3109: void test_class<T>::something_else() [with T = int]:
     assert(false, ...);
     Extra diagnostics:
-        m0 => std::map<std::__cxx11::basic_string<char>, int> [size: 2]: [["bar", -2], ["foo", 2]]
+        m0 => std::map<std::string, int> [size: 2]: [["bar", -2], ["foo", 2]]
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -1134,7 +1134,7 @@ Stack trace:
 Assertion failed at integration/integration.cpp:3114: void test_class<T>::something_else() [with T = int]:
     assert(false, ...);
     Extra diagnostics:
-        m1 => std::map<std::__cxx11::basic_string<char>, std::vector<int>> [size: 2]: [["bar", [-100, 200, 400, -800]], ["foo", [1, -2, 3, -4]]]
+        m1 => std::map<std::string, std::vector<int>> [size: 2]: [["bar", [-100, 200, 400, -800]], ["foo", [1, -2, 3, -4]]]
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -1170,6 +1170,24 @@ Stack trace:
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
+      at integration.cpp:403
+
+
+===================== [Type cleaning] =====================
+Assertion failed at integration/integration.cpp:3305: void test_class<T>::test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>>&) [with T = int]:
+    assert(map == other);
+    Where:
+        map   => std::map<std::string, std::vector<std::string_view>> [size: 2]: [["bar", ["b1", "b3", "b5"]], ["foo", ["f1", "f3", "f5"]]]
+        other => std::map<std::string, std::vector<std::string_view>> [size: 0]: []
+
+Stack trace:
+# 1 test_class<int>::test_pretty_function_cleaning(std::map<std::string, std::vector<std::string_view>, std::less<std::string>> const&)
+      at integration.cpp:3305
+# 2 test_class<int>::something_else()
+      at integration.cpp:3201
+# 3 void test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 4 main
       at integration.cpp:403
 
 

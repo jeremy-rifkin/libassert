@@ -371,6 +371,12 @@ public:
             std::array<int, 10> arr = {1,2,3,4,5,6,7,8,9,10};
             assert(false, arr);
         }
+
+        SECTION("Type cleaning"); // also pretty thoughroughly tested above aside from std::string_view
+        #line 3200
+        {
+            test_pretty_function_cleaning({});
+        }
     }
 
     #line 600
@@ -380,6 +386,15 @@ public:
 
     decltype(auto) get_lt_b() {
         return assert(logger_type(2) == 2);
+    }
+
+    #line 3300
+    void test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>>& other) {
+        std::map<std::string, std::vector<std::string_view>> map = {
+            {"foo", {"f1", "f3", "f5"}},
+            {"bar", {"b1", "b3", "b5"}}
+        };
+        assert(map == other);
     }
 };
 

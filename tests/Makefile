@@ -33,7 +33,7 @@ demo: $(BIN)/demo$(E)
 
 basic_test: $(BIN)/basic_test$(E)
 
-tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/type_handling$(E) $(BIN)/basic_test$(E) $(BIN)/integration$(E)
+tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/type_handling$(E) $(BIN)/basic_test$(E) $(BIN)/test_type_prettier$(E) $(BIN)/integration$(E)
 
 integration: $(BIN)/integration$(E)
 
@@ -76,6 +76,9 @@ ifneq ($(COMPILER),msvc)
 		$(LD) $^ -o $@ $(LDFLAGS)
 
     $(BIN)/basic_test$(E): $(BIN)/o/unit/basic_test.cpp.o
+		$(LD) $^ -o $@ $(LDFLAGS)
+
+    $(BIN)/test_type_prettier$(E): $(BIN)/o/unit/test_type_prettier.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
     $(BIN)/integration$(E): $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o
@@ -122,6 +125,9 @@ else
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/basic_test$(E): $(BIN)/o/unit/basic_test.cpp.o
+		$(LD) $^ /OUT:$@ $(LDFLAGS)
+
+    $(BIN)/test_type_prettier$(E): $(BIN)/o/unit/test_type_prettier.cpp.o
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/integration$(E): $(BIN)/o/integration/integration.cpp.o $(BIN)/o/integration/a.cpp.o $(BIN)/o/integration/x/a.cpp.o

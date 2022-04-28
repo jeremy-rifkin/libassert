@@ -258,8 +258,8 @@ Stack trace:
 Assertion failed at integration/integration.cpp:1602: void __cdecl test_class<int>::something_else(void):
     assert(p == not_printable{2.55});
     Where:
-        p                   => <instance of struct not_printable<double>>
-        not_printable{2.55} => <instance of struct not_printable<double>>
+        p                   => <instance of not_printable<double>>
+        not_printable{2.55} => <instance of not_printable<double>>
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -273,8 +273,8 @@ Stack trace:
 Assertion failed at integration/integration.cpp:1603: void __cdecl test_class<int>::something_else(void):
     assert(p.f == not_printable{2.55}.f);
     Where:
-        p.f                   => <instance of class std::optional<double>>
-        not_printable{2.55}.f => <instance of class std::optional<double>>
+        p.f                   => <instance of std::optional<double>>
+        not_printable{2.55}.f => <instance of std::optional<double>>
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -820,7 +820,7 @@ logger_type::compl logger_type() [n=1]
 ===================== [value forwarding: lvalue references] =====================
 logger_type::logger_type() [n=2]
 logger_type::operator==(const logger_type&, int) [n=2, b=2]
-Assertion failed at integration/integration.cpp:601: decltype(auto) __cdecl test_class<int>::get_lt_a(struct logger_type &):
+Assertion failed at integration/integration.cpp:601: decltype(auto) __cdecl test_class<int>::get_lt_a(logger_type &):
     assert(l == 2);
     Where:
         l => logger_type [n = 2]
@@ -1103,10 +1103,10 @@ Stack trace:
 Assertion failed at integration/integration.cpp:3104: void __cdecl test_class<int>::something_else(void):
     assert(a == b, ...);
     Where:
-        a => class std::set<int,struct std::less<int>,class std::allocator<int>> [size: 4]: [2, 4, 6, 10]
-        b => class std::set<int,struct std::less<int>,class std::allocator<int>> [size: 4]: [2, 5, 6, 10]
+        a => std::set<int, std::less<int>> [size: 4]: [2, 4, 6, 10]
+        b => std::set<int, std::less<int>> [size: 4]: [2, 5, 6, 10]
     Extra diagnostics:
-        c => class std::vector<double,class std::allocator<double>> [size: 4]: [1.2000000476837158, 2.440000057220459, 3.15159010887146, 5.1999998092651367]
+        c => std::vector<double> [size: 4]: [1.2000000476837158, 2.440000057220459, 3.15159010887146, 5.1999998092651367]
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -1120,7 +1120,7 @@ Stack trace:
 Assertion failed at integration/integration.cpp:3109: void __cdecl test_class<int>::something_else(void):
     assert(false, ...);
     Extra diagnostics:
-        m0 => class std::map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>>,int,struct std::less<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>>>,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>> const ,int>>> [size: 2]: [["bar", -2], ["foo", 2]]
+        m0 => std::map<std::string, int, std::less<std::string>> [size: 2]: [["bar", -2], ["foo", 2]]
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -1134,7 +1134,7 @@ Stack trace:
 Assertion failed at integration/integration.cpp:3114: void __cdecl test_class<int>::something_else(void):
     assert(false, ...);
     Extra diagnostics:
-        m1 => class std::map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>>,class std::vector<int,class std::allocator<int>>,struct std::less<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>>>,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char>> const ,class std::vector<int,class std::allocator<int>>>>> [size: 2]: [["bar", [-100, 200, 400, -800]], ["foo", [1, -2, 3, -4]]]
+        m1 => std::map<std::string, std::vector<int>, std::less<std::string>> [size: 2]: [["bar", [-100, 200, 400, -800]], ["foo", [1, -2, 3, -4]]]
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -1148,7 +1148,7 @@ Stack trace:
 Assertion failed at integration/integration.cpp:3116: void __cdecl test_class<int>::something_else(void):
     assert(false, ...);
     Extra diagnostics:
-        t => class std::tuple<int,double,char const *>: [1, 0.30000000000000004, "foobars"]
+        t => std::tuple<int, double, char const *>: [1, 0.30000000000000004, "foobars"]
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -1162,7 +1162,7 @@ Stack trace:
 Assertion failed at integration/integration.cpp:3118: void __cdecl test_class<int>::something_else(void):
     assert(false, ...);
     Extra diagnostics:
-        arr => class std::array<int,10> [size: 10]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        arr => std::array<int, 10> [size: 10]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -1170,6 +1170,24 @@ Stack trace:
 # 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main()
+      at integration.cpp:403
+
+
+===================== [Type cleaning] =====================
+Assertion failed at integration/integration.cpp:3305: void __cdecl test_class<int>::test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>, std::less<std::string>> &):
+    assert(map == other);
+    Where:
+        map   => std::map<std::string, std::vector<std::string_view>, std::less<std::string>> [size: 2]: [["bar", ["b1", "b3", "b5"]], ["foo", ["f1", "f3", "f5"]]]
+        other => std::map<std::string, std::vector<std::string_view>, std::less<std::string>> [size: 0]: []
+
+Stack trace:
+# 1 test_class<int>::test_pretty_function_cleaning(std::map<std::string, std::vector<std::string_view>, std::less<std::string>>&)
+      at integration.cpp:3305
+# 2 test_class<int>::something_else()
+      at integration.cpp:3201
+# 3 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 4 main()
       at integration.cpp:403
 
 
