@@ -231,6 +231,38 @@ namespace asserts::detail {
     }
 
     ASSERT_DETAIL_ATTR_COLD
+    static void replace_all(std::string& str, const std::regex& re, std::string_view replacement) {
+        std::smatch match;
+        std::size_t i = 0;
+        while(std::regex_search(str.cbegin() + i, str.cend(), match, re)) {
+            str.replace(i + match.position(), match.length(), replacement);
+            i += match.position() + replacement.length();
+        }
+    }
+
+    ASSERT_DETAIL_ATTR_COLD
+    static void replace_all_template(std::string& str, const std::pair<std::regex, std::string_view>& rule) {
+        const auto& [re, replacement] = rule;
+        std::smatch match;
+        std::size_t cursor = 0;
+        while(std::regex_search(str.cbegin() + cursor, str.cend(), match, re)) {
+            // find matching >
+            std::size_t match_begin = cursor + match.position();
+            std::size_t end = match_begin + match.length();
+            for(int c = 1; end < str.size() && c > 0; end++) {
+                if(str[end] == '<') {
+                    c++;
+                } else if(str[end] == '>') {
+                    c--;
+                }
+            }
+            // make the replacement
+            str.replace(match_begin, end - match_begin, replacement);
+            cursor = match_begin + replacement.length();
+        }
+    };
+
+    ASSERT_DETAIL_ATTR_COLD
     static std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false) {
         size_t i = 0;
         size_t j;
@@ -850,10 +882,30 @@ namespace asserts::detail {
 
     ASSERT_DETAIL_ATTR_COLD
     std::string prettify_type(std::string type) {
-        // for now just doing basic > > -> >> replacement
+        // > > -> >> replacement
         // could put in analysis:: but the replacement is basic and this is more convenient for
         // using in the stringifier too
         replace_all_dynamic(type, "> >", ">>");
+        // "," -> ", " and " ," -> ", "
+        static const std::regex comma_re(R"(\s*,\s*)");
+        replace_all(type, comma_re, ", ");
+        // class C -> C for msvc
+        static const std::regex class_re(R"(\b(class|struct)\s+)");
+        replace_all(type, class_re, "");
+        // rules to replace std::basic_string -> std::string and std::basic_string_view -> std::string_view
+        static const std::pair<std::regex, std::string_view> basic_string = {
+            std::regex(R"(std(::[a-zA-Z0-9_]+)?::basic_string<char)"), "std::string"
+        };
+        static const std::pair<std::regex, std::string_view> basic_string_view = {
+            std::regex(R"(std(::[a-zA-Z0-9_]+)?::basic_string_view<char)"), "std::string_view"
+        };
+        // rule to replace ", std::allocator<whatever>"
+        static const std::pair<std::regex, std::string_view> allocator = {
+            std::regex(R"(,\s*std(::[a-zA-Z0-9_]+)?::allocator<)"), ""
+        };
+        replace_all_template(type, basic_string);
+        replace_all_template(type, basic_string_view);
+        replace_all_template(type, allocator);
         return type;
     }
 
@@ -1960,12 +2012,12 @@ namespace asserts::detail {
         std::string stacktrace;
         if(raw_trace) {
             auto& trace = *raw_trace;
+            // [start, end] is an inclusive range
+            auto [start, end] = get_trace_window(trace);
             // prettify signatures
             for(auto& frame : trace) {
                 frame.signature = prettify_type(frame.signature);
             }
-            // [start, end] is an inclusive range
-            auto [start, end] = get_trace_window(trace);
             // path preprocessing
             constexpr size_t max_file_length = 50;
             auto [files, longest_file_width] = process_paths(trace, start, end);
@@ -2267,11 +2319,12 @@ namespace asserts {
         ] = processed_args;
         std::string output;
         // generate header
-        const auto* function = location.function
+        const char* raw_function = location.function
          #if ASSERT_DETAIL_IS_MSVC
           ? location.function : msvc_pretty_function
          #endif
         ;
+        const auto function = prettify_type(raw_function);
         if(!message.empty()) {
             output += stringf("%s failed at %s:%d: %s: %s\n",
                               assert_type_name(type), location.file, location.line,
