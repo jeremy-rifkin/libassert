@@ -3,8 +3,12 @@ cmake_minimum_required(VERSION 3.1)
 project(asserts)
 
 add_library(asserts_library_warnings INTERFACE)
-target_compile_options(asserts_library_warnings
-    INTERFACE -Wall -Wextra -Werror=return-type -Wshadow)
+
+if(MSVC)
+    target_compile_options(asserts_library_warnings INTERFACE /W4 /WX /permissive-)
+else()
+    target_compile_options(asserts_library_warnings INTERFACE -Wall -Wextra -Werror=return-type -Wshadow)
+endif()
 
 add_library(assert src/assert.cpp)
 target_include_directories(assert PUBLIC
