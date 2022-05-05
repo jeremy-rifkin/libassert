@@ -78,7 +78,14 @@ def main():
         target = "gcc" + ("_windows" if target.endswith("_windows") else "")
     if target.startswith("clang"):
         target = "clang" + ("_windows" if target.endswith("_windows") else "")
-    run_unit_tests(["disambiguation", "literals", "type_handling", "basic_test", "test_type_prettier"])
+    run_unit_tests([
+        "disambiguation",
+        "literals",
+        "test_public_utilities",
+        "type_handling",
+        "basic_test",
+        "test_type_prettier"
+    ])
     run_integration("integration/expected/{}.txt".format(target), opt)
     global ok
     print("Tests " + ("passed 🟢" if ok else "failed 🔴"), flush=True)

@@ -33,7 +33,7 @@ demo: $(BIN)/demo$(E)
 
 basic_test: $(BIN)/basic_test$(E)
 
-tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/type_handling$(E) $(BIN)/basic_test$(E) $(BIN)/test_type_prettier$(E) $(BIN)/integration$(E)
+tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/test_public_utilities$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/type_handling$(E) $(BIN)/basic_test$(E) $(BIN)/test_type_prettier$(E) $(BIN)/integration$(E)
 
 integration: $(BIN)/integration$(E)
 
@@ -69,6 +69,9 @@ ifneq ($(COMPILER),msvc)
     $(BIN)/literals$(E): $(BIN)/o/unit/literals.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
+    $(BIN)/test_public_utilities$(E): $(BIN)/o/unit/test_public_utilities.cpp.o
+		$(LD) $^ -o $@ $(LDFLAGS)
+
     $(BIN)/tokens_and_highlighting$(E): $(BIN)/o/unit/tokens_and_highlighting.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
@@ -85,6 +88,11 @@ ifneq ($(COMPILER),msvc)
 		$(LD) $^ -o $@ $(LDFLAGS)
 
     $(BIN)/o/unit/basic_test.cpp.o: unit/basic_test.cpp $(HPP)
+		$(MKDIR_P) $(dir $@)
+		echo "$(TARGET)"
+		$(CPP) $(CPPFLAGS) -c $< -o $@
+
+    $(BIN)/o/unit/test_public_utilities.cpp.o: unit/test_public_utilities.cpp $(HPP)
 		$(MKDIR_P) $(dir $@)
 		echo "$(TARGET)"
 		$(CPP) $(CPPFLAGS) -c $< -o $@
@@ -118,6 +126,9 @@ else
     $(BIN)/literals$(E): $(BIN)/o/unit/literals.cpp.o
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
+    $(BIN)/test_public_utilities$(E): $(BIN)/o/unit/test_public_utilities.cpp.o
+		$(LD) $^ /OUT:$@ $(LDFLAGS)
+
     $(BIN)/tokens_and_highlighting$(E): $(BIN)/o/unit/tokens_and_highlighting.cpp.o
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
@@ -134,6 +145,10 @@ else
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/o/unit/basic_test.cpp.o: unit/basic_test.cpp $(HPP)
+		-$(MKDIR_P) $(dir $@)
+		$(CPP) $(CPPFLAGS) /c $< /Fo$@
+
+    $(BIN)/o/unit/test_public_utilities.cpp.o: unit/test_public_utilities.cpp $(HPP)
 		-$(MKDIR_P) $(dir $@)
 		$(CPP) $(CPPFLAGS) /c $< /Fo$@
 

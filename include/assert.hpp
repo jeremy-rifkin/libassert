@@ -75,29 +75,6 @@ void ASSERT_FAIL(asserts::assert_type type, asserts::ASSERTION fatal, const asse
 #define ASSERT_DETAIL_PHONY_USE(E) ((void)asserts::detail::always_false<decltype(E)>)
 
 /*
- * Public utilities
- */
-
-namespace asserts::utility {
-    // strip ansi escape sequences from a string
-    [[nodiscard]] std::string strip_colors(const std::string& str);
-
-    // returns the width of the terminal represented by fd, will be 0 on error
-    [[nodiscard]] int terminal_width(int fd);
-
-    // generates a stack trace, formats to the given width
-    [[nodiscard]] std::string stacktrace(int width);
-}
-
-/*
- * Configuration
- */
-
-namespace asserts::config {
-    void set_color_output(bool);
-}
-
-/*
  * Internal mechanisms
  *
  * Macros exposed: ASSERT_DETAIL_PRIMITIVE_ASSERT
@@ -826,6 +803,10 @@ namespace asserts::detail {
     };
 }
 
+/*
+ * Public constructs
+ */
+
 namespace asserts {
     struct verification_failure : std::exception {
         // I must just this once
@@ -859,6 +840,52 @@ namespace asserts {
         [[nodiscard]] std::string operator()(int width) const;
     };
 }
+
+/*
+ * Public utilities
+ */
+
+namespace asserts::utility {
+    // strip ansi escape sequences from a string
+    [[nodiscard]] std::string strip_colors(const std::string& str);
+
+    // returns the width of the terminal represented by fd, will be 0 on error
+    [[nodiscard]] int terminal_width(int fd);
+
+    // generates a stack trace, formats to the given width
+    [[nodiscard]] std::string stacktrace(int width);
+
+    // returns the type name of T
+    template<typename T>
+    [[nodiscard]] std::string_view type_name() noexcept {
+        return detail::type_name<T>();
+    }
+
+    // returns the prettified type name for T
+    template<typename T>
+    [[nodiscard]] std::string pretty_type_name() noexcept {
+        return detail::prettify_type(std::string(detail::type_name<T>()));
+    }
+
+    // returns a text representation of t
+    template<typename T>
+    [[nodiscard]] std::string stringify(const T& t) {
+        using lf = detail::literal_format;
+        return detail::stringify(t, detail::isa<T, char> ? lf::character : lf::dec);
+    }
+}
+
+/*
+ * Configuration
+ */
+
+namespace asserts::config {
+    void set_color_output(bool);
+}
+
+/*
+ * Actual top-level assertion processing
+ */
 
 namespace asserts::detail {
     size_t count_args_strings(const char* const*);

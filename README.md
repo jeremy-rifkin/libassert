@@ -340,12 +340,15 @@ void custom_fail(asserts::assert_type type, ASSERTION fatal, const asserts::asse
 
 ### Utilities
 
-The following utilities are made public in `asserts::utility::`:
-- `std::string strip_colors(const std::string& str)` Strips ansi sequences from a string.
+The following utilities are made public in `asserts::utility::`, as they are immensely useful:
+- `std::string strip_colors(const std::string& str)` Strips ansi sequences from a string
 - `int terminal_width(int fd)` Returns the width of the TTY referenced by the given file descriptor,
-  or 0 on error.
+  or 0 on error
 - `std::string stacktrace(int width)` Generates a stack trace, formatted for the given width (0 for
-  a width-independent formatting).
+  a width-independent formatting)
+- `std::string_view type_name<T>()` Produces a type name for type `T`
+- `std::string pretty_type_name<T>()` Produces a prettified type name for type `T`
+- `std::string stringify(const T& t)` Prints a text representation of `t`
 
 ### Namespace synopsis
 
@@ -375,6 +378,9 @@ namespace asserts {
         [[nodiscard]] std::string strip_colors(const std::string& str);
         [[nodiscard]] int terminal_width(int fd);
         [[nodiscard]] std::string stacktrace(int width);
+        [[nodiscard]] std::string_view type_name<T>() noexcept;
+        [[nodiscard]] std::string pretty_type_name<T>();
+        [[nodiscard]] std::string stringify(const T&);
     };
     namespace config {
         void set_color_output(bool);
