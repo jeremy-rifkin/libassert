@@ -1,13 +1,13 @@
-# Asserts <!-- omit in toc -->
+# libassert <!-- omit in toc -->
 
-[![build](https://github.com/jeremy-rifkin/asserts/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/asserts/actions/workflows/build.yml)
-[![tests](https://github.com/jeremy-rifkin/asserts/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/asserts/actions/workflows/tests.yml)
-[![clang-tidy](https://github.com/jeremy-rifkin/asserts/actions/workflows/clang-tidy.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/asserts/actions/workflows/clang-tidy.yml)
+[![build](https://github.com/jeremy-rifkin/libassert/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/build.yml)
+[![tests](https://github.com/jeremy-rifkin/libassert/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/tests.yml)
+[![clang-tidy](https://github.com/jeremy-rifkin/libassert/actions/workflows/clang-tidy.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/clang-tidy.yml)
 <br/>
-[![build c++20](https://github.com/jeremy-rifkin/asserts/actions/workflows/build-20.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/asserts/actions/workflows/build-20.yml)
-[![tests c++20](https://github.com/jeremy-rifkin/asserts/actions/workflows/test-20.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/asserts/actions/workflows/test-20.yml)
+[![build c++20](https://github.com/jeremy-rifkin/libassert/actions/workflows/build-20.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/build-20.yml)
+[![tests c++20](https://github.com/jeremy-rifkin/libassert/actions/workflows/test-20.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/test-20.yml)
 
-<p align="center">The most over-engineered assertion library</p>
+<p align="center">The most over-engineered C++ assertion library</p>
 
 ```cpp
 void zoog(std::vector<int>& vec) {
@@ -420,7 +420,7 @@ Put the header (`include/assert.hpp`) and library files (in `bin/`) in a locatio
 
 Special notes for generating debug symbols:
 
-TODO:::: Note about /Z7 or whatever?
+Note: MSVC may require /Z7 for generating debug symbols.
 
 | Compiler | Linux | Windows |
 |--|--|--|
