@@ -10,11 +10,16 @@
 <p align="center">The most over-engineered C++ assertion library</p>
 
 ```cpp
-void zoog(std::vector<int>& vec) {
-    assert(vec.size() > min_items(), "vector doesn't have enough items");
+void zoog(const std::map<std::string, int>& map) {
+    assert(map.contains("foo"), "expected key not found", map);
 }
 ```
 ![](screenshots/a.png)
+
+```cpp
+assert(vec.size() > min_items(), "vector doesn't have enough items", vec);
+```
+![](screenshots/a_vec.png)
 
 ```cpp
 const char* path = "/home/foobar/baz";

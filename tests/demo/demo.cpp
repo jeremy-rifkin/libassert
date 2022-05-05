@@ -133,9 +133,13 @@ auto min_items() {
     return 10;
 }
 
-void zoog(std::vector<int>& vec) {
-    assert(vec.size() > min_items(), "vector doesn't have enough items", vec);
-    assert(vec.size() > 7);
+void zoog(const std::map<std::string, int>& map) {
+    #if __cplusplus >= 202002L
+     assert(map.contains("foo"), "expected key not found", map);
+    #else
+     assert(map.count("foo") != 1, "expected key not found", map);
+    #endif
+    CHECK(map.at("bar") >= 0, "unexpected value for foo in the map", map);
 }
 
 #define O_RDONLY 0
@@ -166,8 +170,13 @@ public:
         puts("");
         // General demos
         {
-            std::vector<int> vec = {1, 2, 3, 4, 5, 6, 7};
-            zoog(vec);
+            zoog({
+                //{ "foo", 2 },
+                { "bar", -2 },
+                { "baz", 20 }
+            });
+            std::vector<int> vec = {2, 3, 5, 7, 11, 13};
+            assert(vec.size() > min_items(), "vector doesn't have enough items", vec);
         }
         const char* path = "/home/foobar/baz";
         {
