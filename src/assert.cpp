@@ -515,7 +515,7 @@ namespace asserts::detail {
     };
 
     ASSERT_DETAIL_ATTR_COLD
-    static BOOL enumerator_callback(PSYMBOL_INFO symbol_info, [[maybe_unused]] ULONG symbol_size, PVOID data) {
+    static BOOL __stdcall enumerator_callback(PSYMBOL_INFO symbol_info, [[maybe_unused]] ULONG symbol_size, PVOID data) {
         function_info* ctx = (function_info*)data;
         if(ctx->counter++ >= ctx->n_children) {
             return false;
@@ -2365,7 +2365,7 @@ namespace asserts::utility {
 
 ASSERT_DETAIL_ATTR_COLD
 void assert_detail_default_fail_action(asserts::assert_type type, ASSERTION fatal,
-                                       const asserts::assertion_printer& printer) { 
+                                       const asserts::assertion_printer& printer) {
     asserts::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
     std::string message = printer(asserts::utility::terminal_width(STDERR_FILENO));
     if(asserts::detail::isatty(STDERR_FILENO) && asserts::config::output_colors) {
@@ -2377,10 +2377,15 @@ void assert_detail_default_fail_action(asserts::assert_type type, ASSERTION fata
         switch(type) {
             case asserts::assert_type::assertion:
                 abort();
+                // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
+                // this library
+                break;
             case asserts::assert_type::verify:
                 throw asserts::verification_failure();
+                break;
             case asserts::assert_type::check:
                 throw asserts::check_failure();
+                break;
             default:
                 ASSERT_DETAIL_PRIMITIVE_ASSERT(false);
         }
