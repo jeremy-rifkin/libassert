@@ -2306,10 +2306,12 @@ namespace asserts {
                                 size_t _sizeof_args): params(_params), processed_args(_processed_args),
                                 binary_diagnostics(_binary_diagnostics), raw_trace(_raw_trace),
                                 sizeof_args(_sizeof_args) {}
+
     ASSERT_DETAIL_ATTR_COLD assertion_printer::~assertion_printer() {
         auto* trace = static_cast<trace_t*>(raw_trace);
         delete trace;
     }
+
     ASSERT_DETAIL_ATTR_COLD std::string assertion_printer::operator()(int width) const {
         const auto& [ name, type, expr_str, location, args_strings ] = *params;
         const auto& [ fatal, message, extra_diagnostics
@@ -2347,6 +2349,18 @@ namespace asserts {
         output += "\nStack trace:\n";
         output += print_stacktrace(static_cast<trace_t*>(raw_trace), width);
         return output;
+    }
+
+    ASSERT_DETAIL_ATTR_COLD
+    std::tuple<const char*, int, std::string, const char*> assertion_printer::get_assertion_info() const {
+        const auto& location = params->location;
+        #if !ASSERT_DETAIL_IS_MSVC
+         const char* raw_function = location.function;
+        #else
+         const char* raw_function = processed_args.pretty_function;
+        #endif
+        auto function = prettify_type(raw_function);
+        return std::make_tuple(location.file, location.line, std::move(function), processed_args.message.c_str());
     }
 }
 

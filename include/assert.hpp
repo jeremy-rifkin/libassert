@@ -838,6 +838,8 @@ namespace asserts {
         assertion_printer& operator=(const assertion_printer&) = delete;
         assertion_printer& operator=(assertion_printer&&) = delete;
         [[nodiscard]] std::string operator()(int width) const;
+        // filename, line, function, message
+        [[nodiscard]] std::tuple<const char*, int, std::string, const char*> get_assertion_info() const;
     };
 }
 
@@ -880,6 +882,7 @@ namespace asserts::utility {
  */
 
 namespace asserts::config {
+    // configures whether the default assertion handler prints in color or not to tty devices
     void set_color_output(bool);
 }
 

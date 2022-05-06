@@ -39,16 +39,16 @@ float f = *assert(get_param());
 - [Considerations](#considerations)
 - [Features](#features)
 - [Documentation](#documentation)
-    - [Parameters](#parameters)
-    - [Return value](#return-value)
-    - [Failure](#failure)
-    - [Configuration](#configuration)
-    - [Utilities](#utilities)
-    - [Namespace synopsis](#namespace-synopsis)
+  - [Parameters](#parameters)
+  - [Return value](#return-value)
+  - [Failure](#failure)
+  - [Configuration](#configuration)
+  - [Utilities](#utilities)
+  - [Namespace synopsis](#namespace-synopsis)
 - [How To Use This Library](#how-to-use-this-library)
-    - [1. Build](#1-build)
-    - [2. Install](#2-install)
-    - [3. Use](#3-use)
+  - [1. Build](#1-build)
+  - [2. Install](#2-install)
+  - [3. Use](#3-use)
 - [Replacing &lt;cassert&gt;](#replacing-cassert)
 - [Comparison With Other Languages](#comparison-with-other-languages)
 
@@ -293,8 +293,8 @@ behaviors are:
 
 The following can be used to set application-wide settings:
 
-- `asserts::config::set_color_output(bool)` Enables or disables colored assertion messages on TTY
-  outputs. It is thread-safe (not that that should ever matter).
+- `asserts::config::set_color_output(bool)` Enables or disables colored assertion messages on TTY outputs by the default
+  assertion handler. This is thread-safe, not that it should ever matter.
 
 The following configurations can be applied on a per-TU basis:
 
@@ -364,7 +364,10 @@ namespace asserts {
     // Core functionality:
     enum class ASSERTION { NONFATAL, FATAL };
     class assertion_printer {
-        public: [[nodiscard]] std::string operator()(int width) const;
+    public:
+        [[nodiscard]] std::string operator()(int width) const;
+        // returns filename, line number, pretty function, message
+        [[nodiscard]] std::tuple<const char*, int, std::string, const char*> get_assertion_info() const;
     };
     struct verification_failure : std::exception {
         virtual const char* what() const noexcept final override;
