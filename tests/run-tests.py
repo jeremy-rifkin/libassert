@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
+import re
 import subprocess
 import sys
+from typing import List
 
 sys.stdout.reconfigure(encoding='utf-8') # for windows gh runner
 
@@ -64,20 +66,64 @@ def run_integration(expected_output_path: str, opt: bool):
         global ok
         ok = False
 
+# Note: duplicate code with generate_outputs.py
+def load_msvc_environment():
+    global env
+    run_command("powershell.exe", "./dump_msvc_env.ps1")
+    with open(f"{env['TEMP']}/vcvars.txt", "r") as f:
+        for line in f:
+            m = re.match(r"^(.*)=(.*)$", line)
+            #if m.group(1) not in env or env[m.group(1)] != m.group(2):
+            #    print(f"setting {m.group(1)} = {m.group(2)}")
+            env[m.group(1)] = m.group(2)
+
+# Note: duplicate code with generate_outputs.py
+def run_command(*args: List[str]):
+    global env
+    p = subprocess.Popen(args, env=env)
+    p.wait()
+    print("\033[0m") # makefile in parallel sometimes messes up colors
+    if p.returncode != 0:
+        print("[🔴 Command \"{}\" failed]".format(" ".join(args)))
+        sys.exit(1)
+
 def main():
-    assert(len(sys.argv) == 2 or len(sys.argv) == 3)
-    target = sys.argv[1]
+    assert(len(sys.argv) >= 2)
+    # usage: python3 run-tests.py [release|opt] [build] <compiler name>
+    # in any order
     opt = False
-    if len(sys.argv) == 3:
-        opt = sys.argv[2] == "release" or sys.argv[2] == "opt"
+    build_and_run = False
+    for arg in sys.argv:
+        if arg == "release" or arg == "opt":
+            opt = True
+        elif arg == "debug":
+            pass
+        elif arg == "build":
+            build_and_run = True
+        else:
+            target = arg
+    print(f"Running tests for {target}")
     if target == "self":
         test_critical_difference()
         return
     # canonicalize
-    if target.startswith("g++"):
-        target = "gcc" + ("_windows" if target.endswith("_windows") else "")
-    if target.startswith("clang"):
-        target = "clang" + ("_windows" if target.endswith("_windows") else "")
+    if target.startswith("g++") or target.startswith("gcc"):
+        target_file = "gcc" + ("_windows" if target.endswith("_windows") else "")
+        compiler_name = target
+    elif target.startswith("clang"):
+        target_file = "clang" + ("_windows" if target.endswith("_windows") else "")
+        compiler_name = target
+    else:
+        assert(target == "msvc")
+        target_file = "msvc"
+        compiler_name = target
+    # build if needed
+    if build_and_run:
+        run_command("make", "-C", "..", "clean")
+        run_command("make", "-C", "..", f"COMPILER={compiler_name}", "-j")
+        run_command("make", "clean")
+        run_command("make", f"COMPILER={compiler_name}", "-j")
+    # run everything
     run_unit_tests([
         "disambiguation",
         "literals",
@@ -86,7 +132,7 @@ def main():
         "basic_test",
         "test_type_prettier"
     ])
-    run_integration("integration/expected/{}.txt".format(target), opt)
+    run_integration("integration/expected/{}.txt".format(target_file), opt)
     global ok
     print("Tests " + ("passed 🟢" if ok else "failed 🔴"), flush=True)
     sys.exit(not ok)
