@@ -83,10 +83,12 @@ Assertions return a value so they can be integrated seamlessly into code:
 
 Me too, you can enable the lowercase `debug_assert` and `assert` aliases with `-DASSERT_LOWERCASE`.
 
-**Installation:**
+**Using the library:**
 
-`make` or cmake the library. Link with it. Additionally you will need to link with libdl on linux and dbghelp on
-windows. More details [below](#how-to-use-this-library).
+This library is for C++17 and newer.
+
+Use `make` or cmake to build library. Link with it either statically or dynamically. Additionally link with libdl on
+linux and dbghelp on windows. More details [below](#how-to-use-this-library).
 
 ---
 
@@ -374,7 +376,8 @@ void custom_fail(asserts::assert_type type, ASSERTION fatal, const asserts::asse
             }
             break;
         default:
-            ASSERT_DETAIL_PRIMITIVE_ASSERT(false);
+            std::cerr<<"ERROR: Unknown assertion type encountered during assertion failure handling. Aborting."<<std::endl;
+            abort();
     }
 }
 ```
