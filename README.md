@@ -9,6 +9,31 @@
 
 <p align="center">The most over-engineered C++ assertion library</p>
 
+### Table of Contents: <!-- omit in toc -->
+- [30-Second Overview](#30-second-overview)
+- [In-Depth Library Documentation](#in-depth-library-documentation)
+  - [Philosophy](#philosophy)
+  - [Methodology](#methodology)
+  - [Considerations](#considerations)
+  - [Features](#features)
+  - [Documentation](#documentation)
+    - [Parameters](#parameters)
+    - [Return value](#return-value)
+    - [Failure](#failure)
+    - [Configuration](#configuration)
+    - [Utilities](#utilities)
+    - [Namespace synopsis](#namespace-synopsis)
+  - [How To Use This Library](#how-to-use-this-library)
+    - [1. Build](#1-build)
+    - [2. Install](#2-install)
+    - [3. Use](#3-use)
+  - [Replacing &lt;cassert&gt;](#replacing-cassert)
+  - [Comparison With Other Languages](#comparison-with-other-languages)
+
+# 30-Second Overview
+
+**Some of the awesome things the library does:**
+
 ```cpp
 void zoog(const std::map<std::string, int>& map) {
     assert(map.contains("foo"), "expected key not found", map);
@@ -33,24 +58,39 @@ float f = *assert(get_param());
 ```
 ![](screenshots/c.png)
 
-### Table of Contents: <!-- omit in toc -->
-- [Philosophy](#philosophy)
-- [Methodology](#methodology)
-- [Considerations](#considerations)
-- [Features](#features)
-- [Documentation](#documentation)
-  - [Parameters](#parameters)
-  - [Return value](#return-value)
-  - [Failure](#failure)
-  - [Configuration](#configuration)
-  - [Utilities](#utilities)
-  - [Namespace synopsis](#namespace-synopsis)
-- [How To Use This Library](#how-to-use-this-library)
-  - [1. Build](#1-build)
-  - [2. Install](#2-install)
-  - [3. Use](#3-use)
-- [Replacing &lt;cassert&gt;](#replacing-cassert)
-- [Comparison With Other Languages](#comparison-with-other-languages)
+**Library philosophy:** Provide as much helpful diagnostic info as possible.
+
+**Types of assertions:**
+
+- `DEBUG_ASSERT` This is the analog for &lt;cassert&gt;: checked in debug and does nothing in release
+- `ASSERT` Checked in debug but still evaluated and returned ([more below](#methodology)) in release
+  - Of course, if the expression's value isn't used or doesn't have any side effects it should be eliminated by the
+    optimizer
+- `ASSUME` Checks core assumptions, preconditions, and postconditions in debug and provides hints to the optimizer in
+  release
+- `VERIFY` Checks the condition in both debug and release
+
+**Returning a value:**
+
+Assertions return a value so they can be integrated seamlessly into code:
+
+- `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, and `||` expressions return the <ins>left-hand operand</ins>
+  - E.g. `VERIFY(fopen(path, "r") != nullptr)` returns the pointer from `fopen`
+- Otherwise the full expression is returned
+  - E.g. `ASSERT(5)` and `ASSERT(4 | 1)` return 5
+
+**Prefer lowecase `assert`?**
+
+Me too, you can enable the lowercase `debug_assert` and `assert` aliases with `-DASSERT_LOWERCASE`.
+
+**Installation:**
+
+`make` or cmake the library. Link with it. Additionally you will need to link with libdl on linux and dbghelp on
+windows. More details [below](#how-to-use-this-library).
+
+---
+
+# In-Depth Library Documentation
 
 ## Philosophy
 
@@ -68,31 +108,29 @@ packed into assertions while also providing a quick and easy interface for the d
 
 ## Methodology
 
-Different types of assumptions call for different handling. This library has a tiered assertion
-system:
-- For core assumptions that must always be true under normal operation use `ASSERT`
-- For convenient assumptions, e.g. not worrying about an edge case for the time being, use `VERIFY`
-- For quick development/sanity checks, use `CHECK`
+Different types of assumptions call for different handling and different behavior. This library implements a tiered
+assertion system:
 
-| Name     | When to Use                 | Effect |
-| -------- | --------------------------- | ------ |
-| `ASSERT` / `assert`* | Core assumptions | Checked in debug, assumed in release |
-| `VERIFY` | Convenient assumptions      | Checked always |
-| `CHECK`  | Sanity checks               | Checked in debug, does nothing in release |
+| Name           | When to Use                 | Effect |
+| -------------- | --------------------------- | ------ |
+| `DEBUG_ASSERT` | Core assumptions that potentially can't be optimized away (e.g. calls to `std::unordered_map::at`) | Checked in debug, no codegen in release |
+| `ASSERT`       | Core assumptions | Checked in debug, still evaluated and returned in release (usually elided by the optimizer if appropriate) |
+| `ASSUME`       | Assumptions that can serve as hints to the optimizer | Checked in debug, `if(!expr) { __builtin_unreachable(); }` in release |
+| `VERIFY`       | Checks that are good to have even in release | Checked in debug, does nothing in release |
 
-Rationale for `CHECK`: Sometimes it's problematic to assume expressions, e.g. a call to
-`std::unordered_map::at` call can't be optimized away even if the result is unused.
+All assertions except `DEBUG_ASSERT` return a value from the assertion expression so checks can be seamlessly integrated
+into a program's structure. Because an expression's result may still be relevant even in a release build the expression
+still has to be valid and evaluated even in a release build. Of course, if the result is unused and produces no side
+effects it will be optimized away (at the very least during LTO). But consequently all side effects are preserved unlike
+traditional asserts. This is the motivation for `DEBUG_ASSERT`, where it's undesirable for side effects to be preserved.
 
-Under `-DNDEBUG` assertions will mark the fail path as unreachable, potentially providing helpful
-information to the optimizer. It's important to note the immediate consequence of this is tha
-assertion failure in `-DNDEBUG` can lead to UB.
+`ASSUME` marks the fail path as unreachable in release, potentially providing helpful information to the optimizer. This
+isn't the default behavior for all assertions because the immediate consequence of this is that assertion failure in
+`-DNDEBUG` can lead to UB and it's better to make this very explicit.
 
-`VERIFY` and `CHECK` calls may specified to be nonfatal. If marked nonfatal `CHECK`/`VERIFY` will
-simply log a failure message but not abort or throw an exception.
-
-\*: `assert` as an alias for `ASSERT` is not enabled by default (see
-[Replacing &lt;cassert&gt;](#replacing-cassert)). Provide `-DASSERT_LOWERCASE` to enable it. I will
-use lowercase `assert` throughout this README.
+All of these assertions can be marked as nonfatal by passing `ASSERTION::FATAL` which prevents aborting or throwing in
+the default assertion failure handler. Except `ASSUME` which aborts regardless of being marked fatal. This can all be
+customized in a custom assertion failure handler.
 
 ## Considerations
 
@@ -136,7 +174,7 @@ the expression correspond to what values requires some basic expression parsing.
 ambiguous but most expressions can be disambiguated.
 
 #### Extra Diagnostics <!-- omit in toc -->
-Asserts, checks, and verifies support optional diagnostic messages as well as arbitrary other
+All assertions in this library support optional diagnostic messages as well as arbitrary other
 diagnostic messages.
 
 ```cpp
@@ -201,20 +239,20 @@ assert(get_mask() == 0b00001101);
 
 ## Documentation
 
-The library provides a set of macros which effectively function as such:
+All assertion functions are macros. Here are some pseudo-declarations for interfacing with them:
 
 ```cpp
-decltype(auto) assert(<expression>, [optional assertion message],
-                                    [optional extra diagnostics, ...], fatal?);
+void DEBUG_ASSERT(<expression>, [optional assertion message],
+                                [optional extra diagnostics, ...], fatal?);
 decltype(auto) ASSERT(<expression>, [optional assertion message],
+                                    [optional extra diagnostics, ...], fatal?);
+decltype(auto) ASSUME(<expression>, [optional assertion message],
                                     [optional extra diagnostics, ...], fatal?);
 decltype(auto) VERIFY(<expression>, [optional assertion message],
                                     [optional extra diagnostics, ...], fatal?);
-void CHECK(<expression>, [optional assertion message],
-                         [optional extra diagnostics, ...], fatal?);
 ```
 
-`-DASSERT_LOWERCASE` can be used to enable the `assert` alias for `ASSERT`. See:
+`-DASSERT_LOWERCASE` can be used to enable the `debug_assert` and `assert` aliases for `DEBUG_ASSERT` and `ASSERT`. See:
 [Replacing &lt;cassert&gt;](#replacing-cassert).
 
 ### Parameters
@@ -252,14 +290,14 @@ automatically.
 
 #### `fatal?` <!-- omit in toc -->
 
-`ASSERT::FATAL` and `ASSERT::NONFATAL` may be passed in any position in a call. By default asserts,
-verifies, and checks are fatal. If nonfatal, failure will simply be logged but abort isn't called
+`ASSERT::FATAL` and `ASSERT::NONFATAL` may be passed in any position in a call. By default all
+assertions, are fatal. If nonfatal, failure will simply be logged but abort isn't called
 and exceptions aren't raised.
 
 ### Return value
 
-To facilitate ease of integration into code, `ASSERT` and `VERIFY` return a value from the assert
-expression. The returned value is the following:
+To facilitate ease of integration into code, all asserts except `DEBUG_ASSERT` return a value from the
+assert expression. The returned value is the following:
 
 - If there is no top-level binary operation (e.g. as in `assert(foo());` or `assert(false);`) in the
   `<expression>`, the value of the expression is simply returned.
@@ -272,10 +310,8 @@ I.e., `assert(foo() > 2);` returns the computed result from `foo()` and `assert(
 computed result of `x & y`;
 
 If the value from `<expression>` selected to be returned is an lvalue, the type of the
-`ASSERT`/`VERIFY` call will be an lvalue reference. If the value from `<expression>` is an rvalue
+assertion call will be an lvalue reference. If the value from `<expression>` is an rvalue
 then the type of the call will be an rvalue.
-
-`CHECK` does not return anything as its expression is not evaluated at all under `-DNDEBUG`.
 
 ### Failure
 
@@ -283,11 +319,12 @@ After the assertion handler processes the failure and prints diagnostic informat
 an assert failure action. These may be overridden by the user on a per-TU basis, the default
 behaviors are:
 
-| Name     | Failure |
-| -------- | ------- |
-| `ASSERT` / `assert` | `abort()` is called. In `-DNDEBUG`, fail path is marked unreachable. |
-| `VERIFY` | `asserts::verification_failure` is thrown |
-| `CHECK`  | `asserts::check_failure` is thrown |
+| Name           | Failure |
+| -------------- | ------- |
+| `DEBUG_ASSERT` | `abort()` is called in debug, nothing happens in release |
+| `ASSERT`       | `abort()` is called in debug, nothing happens in release |
+| `ASSUME`       | `abort()` is called in debug, fail path is marked unreachable in release |
+| `VERIFY`       | `asserts::verification_failure` is thrown |
 
 ### Configuration
 
@@ -323,17 +360,21 @@ void custom_fail(asserts::assert_type type, ASSERTION fatal, const asserts::asse
         std::cerr<<asserts::utility::strip_colors(message)<<std::endl;
     }
     using asserts::assert_type;
-    if(fatal == ASSERT::FATAL) {
-        switch(type) {
-            case assert_type::assertion:
+    switch(type) {
+        case assert_type::debug_assertion:
+        case assert_type::assertion:
+            if(fatal == ASSERTION::FATAL) {
+                case assert_type::assumption: // switch->if->case, cursed!
                 abort();
-            case assert_type::verify:
-                throw asserts::verification_failure();
-            case assert_type::check:
-                throw asserts::check_failure();
-            default:
-                assert(false);
-        }
+            }
+            break;
+        case assert_type::verification:
+            if(fatal == ASSERTION::FATAL) {
+                throw verification_failure();
+            }
+            break;
+        default:
+            ASSERT_DETAIL_PRIMITIVE_ASSERT(false);
     }
 }
 ```
@@ -354,10 +395,12 @@ The following utilities are made public in `asserts::utility::`, as they are imm
 
 ```cpp
 // Macros:
+#define DEBUG_ASSERT(...) ...
 #define ASSERT(...) ...
+#define ASSUME(...) ...
 #define VERIFY(...) ...
-#define CHECK(...) ...
 #ifdef ASSERT_LOWERCASE
+ #define debug_assert(...) ...
  #define assert(...) ...
 #endif
 namespace asserts {
@@ -370,13 +413,10 @@ namespace asserts {
         [[nodiscard]] std::tuple<const char*, int, std::string, const char*> get_assertion_info() const;
     };
     struct verification_failure : std::exception {
-        virtual const char* what() const noexcept final override;
-    }
-    struct check_failure : std::exception {
-        virtual const char* what() const noexcept final override;
-    }
+        [[nodiscard]] const char* what() const noexcept override;
+    };
     // Other functionality:
-    enum class assert_type { assertion, verify, check };
+    enum class assert_type { debug_assertion, assertion, assumption, verification };
     namespace utility {
         [[nodiscard]] std::string strip_colors(const std::string& str);
         [[nodiscard]] int terminal_width(int fd);
@@ -444,14 +484,11 @@ Note: MSVC may require /Z7 for generating debug symbols.
 
 ## Replacing &lt;cassert&gt;
 
-With `-DASSERT_LOWERCASE` this library can be used as a drop-in replacement for `<cassert>` but it
-is important to be aware of two things:
+This library is not a drop-in replacement for `<cassert>` but you can achieve traditional assert behavior with
+`-DASSERT_LOWERCASE` and the use of `debug_assert`.
 
-- `assert(expr);` will still evaluate `expr` under `-DNDEBUG`. Side effects will still be present,
-  though there probably should not be any side effects. If there are no side effects `expr` should
-  be optimized away, at the very least during LTO.
-- Defining `assert` is [technically not allowed][16.4.5.3.3] by the standard but thi should not be
-  an issues on any sane compiler.
+`-DASSERT_LOWERCASE` is not default because defining `assert` is technically [not allowed][16.4.5.3.3] by the standard,
+but this should not be an issues on any sane compiler.
 
 ## Comparison With Other Languages
 

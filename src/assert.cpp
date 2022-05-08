@@ -2270,9 +2270,10 @@ namespace asserts::detail {
     ASSERT_DETAIL_ATTR_COLD
     const char* assert_type_name(assert_type t) {
         switch(t) {
-            case assert_type::assertion: return "Assertion";
-            case assert_type::verify: return "Verification";
-            case assert_type::check: return "Check";
+            case assert_type::debug_assertion: return "Debug Assertion";
+            case assert_type::assertion:       return "Assertion";
+            case assert_type::assumption:      return "Assumption";
+            case assert_type::verification:    return "Verification";
             default:
                 ASSERT_DETAIL_PRIMITIVE_ASSERT(false);
                 return "";
@@ -2293,11 +2294,7 @@ namespace asserts {
     using namespace detail;
 
     const char* verification_failure::what() const noexcept {
-        return "Call to VERIFY() failed";
-    }
-
-    const char* check_failure::what() const noexcept {
-        return "Call to CHECK() failed";
+        return "VERIFY() call failed";
     }
 
     ASSERT_DETAIL_ATTR_COLD assertion_printer::assertion_printer(
@@ -2387,21 +2384,22 @@ void assert_detail_default_fail_action(asserts::assert_type type, ASSERTION fata
     } else {
         std::cerr << asserts::utility::strip_colors(message) << std::endl;
     }
-    if(fatal == ASSERTION::FATAL) {
-        switch(type) {
-            case asserts::assert_type::assertion:
+    switch(type) {
+        case asserts::assert_type::debug_assertion:
+        case asserts::assert_type::assertion:
+            if(fatal == ASSERTION::FATAL) {
+                case asserts::assert_type::assumption: // switch-if-case, cursed!
                 abort();
-                // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
-                // this library
-                break;
-            case asserts::assert_type::verify:
+            }
+            // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
+            // this library (on top of preventing fallthrough from nonfatal asserts)
+            break;
+        case asserts::assert_type::verification:
+            if(fatal == ASSERTION::FATAL) {
                 throw asserts::verification_failure();
-                break;
-            case asserts::assert_type::check:
-                throw asserts::check_failure();
-                break;
-            default:
-                ASSERT_DETAIL_PRIMITIVE_ASSERT(false);
-        }
+            }
+            break;
+        default:
+            ASSERT_DETAIL_PRIMITIVE_ASSERT(false);
     }
 }

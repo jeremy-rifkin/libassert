@@ -119,10 +119,10 @@ int main() {
         VERIFY(v3 == 8);
     }
 
-    // test CHECK returns nothing
+    // test DEBUG_ASSERT returns nothing
     {
         auto f = [] {
-            return CHECK(false);
+            return DEBUG_ASSERT(false);
         };
         static_assert(std::is_same<decltype(f()), void>::value);
     }

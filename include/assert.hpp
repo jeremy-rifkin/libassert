@@ -57,9 +57,10 @@ namespace asserts {
     };
 
     enum class assert_type {
+        debug_assertion,
         assertion,
-        verify,
-        check
+        assumption,
+        verification
     };
 
     class assertion_printer;
@@ -808,13 +809,13 @@ namespace asserts::detail {
  */
 
 namespace asserts {
-    struct verification_failure : std::exception {
+    struct debug_assert_failure : std::exception {
         // I must just this once
         // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
         [[nodiscard]] virtual const char* what() const noexcept final override;
     };
 
-    struct check_failure : std::exception {
+    struct verification_failure : std::exception {
         // I must just this once
         // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
         [[nodiscard]] virtual const char* what() const noexcept final override;
@@ -1112,7 +1113,7 @@ using asserts::ASSERTION;
 #else
  #define ASSERT_DETAIL_IGNORE_UNUSED_VALUE
 #endif
-#define ASSERT_INVOKE(expr, doreturn, name, type, failaction, ...) \
+#define ASSERT_INVOKE(expr, doreturn, check_expression, name, type, failaction, ...) \
         ASSERT_DETAIL_IGNORE_UNUSED_VALUE \
         ASSERT_DETAIL_STMTEXPR( \
           ASSERT_DETAIL_WARNING_PRAGMA \
@@ -1120,22 +1121,24 @@ using asserts::ASSERTION;
                              asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr); \
           decltype(auto) assert_detail_value = assert_detail_decomposer.get_value(); \
           constexpr bool assert_detail_ret_lhs = assert_detail_decomposer.ret_lhs(); \
-          /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
-          /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
-          /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
-          if(ASSERT_DETAIL_STRONG_EXPECT(!ASSERT_DETAIL_STATIC_CAST_TO_BOOL(assert_detail_value), 0)) { \
-            failaction \
-            ASSERT_DETAIL_STATIC_DATA(name, asserts::assert_type::type, #expr, __VA_ARGS__) \
-            if constexpr(sizeof assert_detail_decomposer > 32) { \
-              process_assert_fail(assert_detail_decomposer, &assert_detail_params \
+          if constexpr(check_expression) { \
+            /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
+            /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
+            /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
+            if(ASSERT_DETAIL_STRONG_EXPECT(!ASSERT_DETAIL_STATIC_CAST_TO_BOOL(assert_detail_value), 0)) { \
+              failaction \
+              ASSERT_DETAIL_STATIC_DATA(name, asserts::assert_type::type, #expr, __VA_ARGS__) \
+              if constexpr(sizeof assert_detail_decomposer > 32) { \
+                process_assert_fail(assert_detail_decomposer, &assert_detail_params \
                                            ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG); \
-            } else { \
-              /* std::move it to assert_fail_m, will be moved back to r */ \
-              auto assert_detail_r = process_assert_fail_m(std::move(assert_detail_decomposer), &assert_detail_params \
-                                           ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG); \
-              /* can't move-assign back to decomposer if it holds reference members */ \
-              assert_detail_decomposer.compl expression_decomposer(); /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */ \
-              new (&assert_detail_decomposer) asserts::detail::expression_decomposer(std::move(assert_detail_r)); \
+              } else { \
+                /* std::move it to assert_fail_m, will be moved back to r */ \
+                auto assert_detail_r = process_assert_fail_m(std::move(assert_detail_decomposer), &assert_detail_params \
+                                             ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) ASSERT_DETAIL_MSVC_PRETTY_FUNCTION_ARG); \
+                /* can't move-assign back to decomposer if it holds reference members */ \
+                assert_detail_decomposer.compl expression_decomposer(); /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */ \
+                new (&assert_detail_decomposer) asserts::detail::expression_decomposer(std::move(assert_detail_r)); \
+              } \
             } \
           }, \
           /* Note: std::launder needed in 17 in case of placement new / move shenanigans above */ \
@@ -1147,29 +1150,35 @@ using asserts::ASSERTION;
         ) ASSERT_DETAIL_IF(doreturn)(.value,)
 
 #ifdef NDEBUG
- #define ASSERT_DETAIL_NDEBUG_ACTION ASSERT_DETAIL_UNREACHABLE;
+ #define ASSERT_DETAIL_ASSUME_ACTION ASSERT_DETAIL_UNREACHABLE;
 #else
- #define ASSERT_DETAIL_NDEBUG_ACTION
+ #define ASSERT_DETAIL_ASSUME_ACTION
 #endif
 
-#define ASSERT(expr, ...) ASSERT_INVOKE(expr, true, "ASSERT", assertion, ASSERT_DETAIL_NDEBUG_ACTION, __VA_ARGS__)
+#ifndef NDEBUG
+ #define DEBUG_ASSERT(expr, ...) ASSERT_INVOKE(expr, false, true, "DEBUG_ASSERT", debug_assertion, , __VA_ARGS__)
+ #define ASSERT(expr, ...) ASSERT_INVOKE(expr, true, true, "ASSERT", assertion, , __VA_ARGS__)
+#else
+ #define DEBUG_ASSERT(expr, ...) (void)0
+ #define ASSERT(expr, ...) ASSERT_INVOKE(expr, true, false, "ASSERT", assertion, , __VA_ARGS__)
+#endif
 
 #ifdef ASSERT_LOWERCASE
  #ifdef assert
   #undef assert
  #endif
- #define assert(expr, ...) ASSERT_INVOKE(expr, true, "assert", assertion, ASSERT_DETAIL_NDEBUG_ACTION, __VA_ARGS__)
+ #ifndef NDEBUG
+  #define debug_assert(expr, ...) ASSERT_INVOKE(expr, false, true, "debug_assert", debug_assertion, , __VA_ARGS__)
+  #define assert(expr, ...) ASSERT_INVOKE(expr, true, true, "assert", assertion, , __VA_ARGS__)
+ #else
+  #define debug_assert(expr, ...) (void)0
+  #define assert(expr, ...) ASSERT_INVOKE(expr, true, false, "assert", assertion, , __VA_ARGS__)
+ #endif
 #endif
 
-#define VERIFY(expr, ...) ASSERT_INVOKE(expr, true, "VERIFY", verify, , __VA_ARGS__)
+#define ASSUME(expr, ...) ASSERT_INVOKE(expr, true, true, "ASSUME", assumption, ASSERT_DETAIL_ASSUME_ACTION, __VA_ARGS__)
 
-#ifndef NDEBUG
- #define CHECK(expr, ...) ASSERT_INVOKE(expr, false, "CHECK", check, , __VA_ARGS__)
-#else
- // omitting the expression could cause unused variable warnings, surpressing for now
- // TODO: Is this the right design decision? Re-evaluated whether PHONY_USE should be used here or internally at all
- #define CHECK(expr, ...) ASSERT_DETAIL_PHONY_USE(expr)
-#endif
+#define VERIFY(expr, ...) ASSERT_INVOKE(expr, true, true, "VERIFY", verification, , __VA_ARGS__)
 
 #ifndef ASSERT_DETAIL_IS_CPP // keep macros for the .cpp
  #undef ASSERT_DETAIL_IS_CLANG

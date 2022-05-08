@@ -139,7 +139,7 @@ void zoog(const std::map<std::string, int>& map) {
     #else
      assert(map.count("foo") != 1, "expected key not found", map);
     #endif
-    CHECK(map.at("bar") >= 0, "unexpected value for foo in the map", map);
+    DEBUG_ASSERT(map.at("bar") >= 0, "unexpected value for foo in the map", map);
 }
 
 #define O_RDONLY 0
@@ -194,7 +194,7 @@ public:
         }
         assert(false, "Error while doing XYZ");
         assert(false);
-        CHECK((puts("CHECK called") && false));
+        DEBUG_ASSERT((puts("DEBUG_ASSERT called") && false));
 
         {
             std::map<int, int> map {{1,1}};
