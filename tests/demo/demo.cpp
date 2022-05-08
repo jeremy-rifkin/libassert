@@ -133,7 +133,7 @@ auto min_items() {
     return 10;
 }
 
-void zoog(const std::map<std::string, int>& map) {
+void zoog(std::map<std::string, int> map) {
     #if __cplusplus >= 202002L
      assert(map.contains("foo"), "expected key not found", map);
     #else
