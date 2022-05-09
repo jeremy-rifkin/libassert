@@ -1,8 +1,8 @@
 #ifndef ASSERT_HPP
 #define ASSERT_HPP
 
-// Copyright 2022 Jeremy Rifkin
-// https://github.com/jeremy-rifkin/asserts
+// Copyright (c) 2022 Jeremy Rifkin under the MIT license
+// https://github.com/jeremy-rifkin/libassert
 
 #include <cstdio>
 #include <sstream>
@@ -17,7 +17,9 @@
 #endif
 
 #ifdef ASSERT_USE_MAGIC_ENUM
- #include "../third_party/magic_enum.hpp"
+ // this is a temporary hack to make testing thing in compiler explorer quicker (it disallows simple relative includes)
+ #include\
+ "../third_party/magic_enum.hpp"
 #endif
 
 #if defined(__clang__)
@@ -809,12 +811,6 @@ namespace asserts::detail {
  */
 
 namespace asserts {
-    struct debug_assert_failure : std::exception {
-        // I must just this once
-        // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
-        [[nodiscard]] virtual const char* what() const noexcept final override;
-    };
-
     struct verification_failure : std::exception {
         // I must just this once
         // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
