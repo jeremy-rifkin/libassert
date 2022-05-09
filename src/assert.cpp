@@ -5,6 +5,7 @@
 // Copyright 2022 Jeremy Rifkin
 // https://github.com/jeremy-rifkin/asserts
 
+#include <array>
 #include <atomic>
 #include <bitset>
 #include <cstdarg>

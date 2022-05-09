@@ -5,6 +5,7 @@
 // https://github.com/jeremy-rifkin/libassert
 
 #include <cstdio>
+#include <cstring>
 #include <sstream>
 #include <string>
 #include <string_view>
