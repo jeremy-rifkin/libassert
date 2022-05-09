@@ -1172,6 +1172,23 @@ using asserts::ASSERTION;
  #endif
 #endif
 
+#ifdef NO_ASSERT_RELEASE_EVAL
+ #undef ASSERT
+ #ifndef NDEBUG
+  #define ASSERT(expr, ...) ASSERT_INVOKE(expr, false, true, "ASSERT", assertion, , __VA_ARGS__)
+ #else
+  #define ASSERT(expr, ...) (void)0
+ #endif
+ #ifdef ASSERT_LOWERCASE
+  #undef assert
+  #ifndef NDEBUG
+   #define assert(expr, ...) ASSERT_INVOKE(expr, false, true, "assert", assertion, , __VA_ARGS__)
+  #else
+   #define assert(expr, ...) (void)0
+  #endif
+ #endif
+#endif
+
 #define ASSUME(expr, ...) ASSERT_INVOKE(expr, true, true, "ASSUME", assumption, ASSERT_DETAIL_ASSUME_ACTION, __VA_ARGS__)
 
 #define VERIFY(expr, ...) ASSERT_INVOKE(expr, true, true, "VERIFY", verification, , __VA_ARGS__)

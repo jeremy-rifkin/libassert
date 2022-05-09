@@ -343,6 +343,7 @@ The following configurations can be applied on a per-TU basis:
   This disables short-circuiting in assert expressions**. (If you really need short-circuiting in a
   condition in this mode, an extra set of parentheses can be used: `assert((ptr && ptr->foo));`.)
 - `-DASSERT_LOWERCASE` Enables `assert` alias for `ASSERT`
+- `-DNO_ASSERT_RELEASE_EVAL` Makes `ASSERT` behave as `DEBUG_ASSERT` and traditional &lt;cassert&gt;
 - `-DASSERT_FAIL=fn` Allows a custom failure handler to be provided
 - `-DASSERT_USE_MAGIC_ENUM` use the MagicEnum library to print better diagnostics for enum classes
 
@@ -487,11 +488,12 @@ Note: MSVC may require /Z7 for generating debug symbols.
 
 ## Replacing &lt;cassert&gt;
 
-This library is not a drop-in replacement for `<cassert>` but you can achieve traditional assert behavior with
-`-DASSERT_LOWERCASE` and the use of `debug_assert`.
+This library is not a drop-in replacement for `<cassert>` out of the box but it can be with two settings:
+`-DASSERT_LOWERCASE` and `-DNO_ASSERT_RELEASE_EVAL`. Alternatively, just change all current asserts in a codebase to
+`DEBUG_ASSERT` (or `debug_assert` in conjunction with `-DASSERT_LOWERCASE`).
 
-`-DASSERT_LOWERCASE` is not default because defining `assert` is technically [not allowed][16.4.5.3.3] by the standard,
-but this should not be an issues on any sane compiler.
+One thing to be aware: Overriding cassert's `assert` is technically [not allowed][16.4.5.3.3] by the standard, but this
+should not be an issue for any sane compiler.
 
 ## Comparison With Other Languages
 
