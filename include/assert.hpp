@@ -1077,6 +1077,7 @@ using asserts::ASSERTION;
 #define ASSERT_DETAIL_STATIC_DATA(name, type, expr_str, ...) \
                                   /* extra string here because of extra comma from map, also serves as terminator */ \
                                   /* ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS because msvc */ \
+                                  /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
                                   static constexpr const char* const assert_detail_arg_strings[] = { \
                                     ASSERT_DETAIL_MAP(ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS(__VA_ARGS__)) "" \
                                   }; \
