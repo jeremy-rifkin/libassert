@@ -9,15 +9,17 @@
 #include <atomic>
 #include <bitset>
 #include <cstdarg>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <mutex>
 #include <optional>
-#include <regex>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+
+#include "../third_party/ctre.hpp"
 
 #if defined(_WIN32)
  #define IS_WINDOWS 1
@@ -91,11 +93,32 @@ public:
     }
 };
 
+// CTRE regex replace utility
+template<const auto& Pattern>
+ASSERT_DETAIL_ATTR_COLD
+[[nodiscard]] constexpr std::string ctre_replace(std::string_view str, std::string_view replacement) {
+    std::string result;
+    auto searcher = ctre::search<Pattern>;
+    // NOLINTNEXTLINE(readability-qualified-auto)
+    auto cursor = str.begin();
+    while(cursor != str.end()) {
+        if(auto search_result = searcher(cursor, str.end())) {
+            result.insert(result.end(), cursor, search_result.begin());
+            result += replacement;
+            cursor = search_result.end();
+        } else {
+            result.insert(result.end(), cursor, str.end());
+            break;
+        }
+    }
+    return result;
+}
+
 namespace asserts::utility {
     ASSERT_DETAIL_ATTR_COLD
     std::string strip_colors(const std::string& str) {
-        static std::regex ansi_escape_re("\033\\[[^m]+m");
-        return std::regex_replace(str, ansi_escape_re, "");
+        static constexpr ctll::fixed_string ansi_escape_pattern = "\033\\[[^m]+m";
+        return ctre_replace<ansi_escape_pattern>(str, "");
     }
     
     // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
@@ -231,35 +254,31 @@ namespace asserts::detail {
         }
     }
 
+    template<const auto& Pattern>
     ASSERT_DETAIL_ATTR_COLD
-    static void replace_all(std::string& str, const std::regex& re, std::string_view replacement) {
-        std::smatch match;
-        std::size_t i = 0;
-        while(std::regex_search(str.cbegin() + i, str.cend(), match, re)) {
-            str.replace(i + match.position(), match.length(), replacement);
-            i += match.position() + replacement.length();
-        }
-    }
-
-    ASSERT_DETAIL_ATTR_COLD
-    static void replace_all_template(std::string& str, const std::pair<std::regex, std::string_view>& rule) {
-        const auto& [re, replacement] = rule;
-        std::smatch match;
-        std::size_t cursor = 0;
-        while(std::regex_search(str.cbegin() + cursor, str.cend(), match, re)) {
-            // find matching >
-            std::size_t match_begin = cursor + match.position();
-            std::size_t end = match_begin + match.length();
-            for(int c = 1; end < str.size() && c > 0; end++) {
-                if(str[end] == '<') {
-                    c++;
-                } else if(str[end] == '>') {
-                    c--;
+    static void replace_all_template(std::string& str, std::string_view replacement) {
+        auto searcher = ctre::search<Pattern>;
+        // NOLINTNEXTLINE(readability-qualified-auto)
+        auto cursor = str.begin();
+        while(true) {
+            if(auto search_result = searcher(cursor, str.end())) {
+                // find matching >
+                auto match_begin = search_result.begin();
+                auto end = search_result.end();
+                for(int c = 1; end != str.end() && c > 0; end++) {
+                    if(*end == '<') {
+                        c++;
+                    } else if(*end == '>') {
+                        c--;
+                    }
                 }
+                // make the replacement
+                //str.replace(match_begin, end - match_begin, replacement);
+                str.replace(match_begin, end, replacement);
+                cursor = match_begin + replacement.length();
+            } else {
+                break;
             }
-            // make the replacement
-            str.replace(match_begin, end - match_begin, replacement);
-            cursor = match_begin + replacement.length();
         }
     };
 
@@ -276,21 +295,6 @@ namespace asserts::detail {
         if(i != 0 || !ignore_first) { output.insert(output.end(), depth, c); }
         output.insert(output.end(), str.begin() + i, str.end());
         return output;
-    }
-
-    template<size_t N>
-    ASSERT_DETAIL_ATTR_COLD
-    std::optional<std::array<std::string, N>> match(const std::string& s, const std::regex& r) {
-        std::smatch match;
-        if(std::regex_match(s, match, r)) {
-            std::array<std::string, N> arr;
-            for(size_t i = 0; i < N; i++) {
-                arr[i] = match[i + 1].str();
-            }
-            return arr;
-        } else {
-            return {};
-        }
     }
 
     /*
@@ -574,8 +578,8 @@ namespace asserts::detail {
                     SymEnumSymbols(proc, 0, nullptr, enumerator_callback, &fi);
                     std::string signature = symbol->Name + "("s + fi.str + ")";
                     // There's a phenomina with DIA not inserting commas after template parameters. Fix them here.
-                    static std::regex comma_re(R"(,(?=\S))");
-                    signature = std::regex_replace(signature, comma_re, ", ");
+                    static constexpr ctll::fixed_string comma_pattern = R"(,(?=\S))";
+                    signature = ctre_replace<comma_pattern>(signature, ", ");
                     trace.push_back({line.FileName, signature, (unsigned)line.LineNumber});
                 } else {
                     trace.push_back({"", symbol->Name, 0});
@@ -608,10 +612,10 @@ namespace asserts::detail {
              // path:?
              // ??:?
              // Regex modified from the linux version to eat the C:\\ at the beginning
-             static std::regex location_re(R"(^((?:\w:[\\/])?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
-             auto m = match<2>(output[i * 2 + 1], location_re);
-             ASSERT_DETAIL_PRIMITIVE_ASSERT(m.has_value());
-             auto [path, line] = *m;
+             constexpr static ctll::fixed_string location_pattern
+                                                    = R"(^((?:\w:[\\/])?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)";
+             auto [match, path, line] = ctre::match<location_pattern>(output[i * 2 + 1]);
+             ASSERT_DETAIL_PRIMITIVE_ASSERT(match);
              if(path != "??") {
                  trace[deferred[i].second].source_path = path;
              }
@@ -824,10 +828,12 @@ namespace asserts::detail {
                     // path:line
                     // path:?
                     // ??:?
-                    static std::regex location_re(R"(^([^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
-                    auto m = match<2>(output[i * 2 + 1], location_re);
-                    ASSERT_DETAIL_PRIMITIVE_ASSERT(m.has_value());
-                    auto [path, line] = *m;
+                    constexpr static ctll::fixed_string location_pattern =
+                                                                   R"(^([^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)";
+                    auto match = ctre::match<location_pattern>(output[i * 2 + 1]);
+                    ASSERT_DETAIL_PRIMITIVE_ASSERT(match);
+                    auto path = match.get<1>().to_string();
+                    auto line = match.get<2>().to_string();
                     if(path != "??") {
                         target[i]->source_path = path;
                     }
@@ -888,25 +894,19 @@ namespace asserts::detail {
         // using in the stringifier too
         replace_all_dynamic(type, "> >", ">>");
         // "," -> ", " and " ," -> ", "
-        static const std::regex comma_re(R"(\s*,\s*)");
-        replace_all(type, comma_re, ", ");
+        static constexpr ctll::fixed_string comma_pattern(R"(\s*,\s*)");
+        type = ctre_replace<comma_pattern>(type, ", ");
         // class C -> C for msvc
-        static const std::regex class_re(R"(\b(class|struct)\s+)");
-        replace_all(type, class_re, "");
+        static constexpr ctll::fixed_string class_pattern(R"(\b(class|struct)\s+)");
+        type = ctre_replace<class_pattern>(type, "");
         // rules to replace std::basic_string -> std::string and std::basic_string_view -> std::string_view
-        static const std::pair<std::regex, std::string_view> basic_string = {
-            std::regex(R"(std(::[a-zA-Z0-9_]+)?::basic_string<char)"), "std::string"
-        };
-        static const std::pair<std::regex, std::string_view> basic_string_view = {
-            std::regex(R"(std(::[a-zA-Z0-9_]+)?::basic_string_view<char)"), "std::string_view"
-        };
+        static constexpr ctll::fixed_string basic_string_pattern = R"(std(::[a-zA-Z0-9_]+)?::basic_string<char)";
+        static constexpr ctll::fixed_string basic_string_view_pattern = R"(std(::[a-zA-Z0-9_]+)?::basic_string_view<char)";
+        replace_all_template<basic_string_pattern>(type, "std::string");
+        replace_all_template<basic_string_view_pattern>(type, "std::string_view");
         // rule to replace ", std::allocator<whatever>"
-        static const std::pair<std::regex, std::string_view> allocator = {
-            std::regex(R"(,\s*std(::[a-zA-Z0-9_]+)?::allocator<)"), ""
-        };
-        replace_all_template(type, basic_string);
-        replace_all_template(type, basic_string_view);
-        replace_all_template(type, allocator);
+        static constexpr ctll::fixed_string allocator_pattern = R"(,\s*std(::[a-zA-Z0-9_]+)?::allocator<)";
+        replace_all_template<allocator_pattern>(type, "");
         return type;
     }
 
