@@ -12,7 +12,7 @@ add_library(assert src/assert.cpp)
 target_include_directories(
   assert PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/assert>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/assert/assert>
 )
 
 set_target_properties(
@@ -46,11 +46,6 @@ endif()
 
 if(ASSERT_USE_MAGIC_ENUM)
   target_compile_definitions(assert PUBLIC ASSERT_USE_MAGIC_ENUM)
-
-  target_include_directories(
-    assert PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party>
-  )
 endif()
 
 if(NOT "${ASSERT_FAIL}" STREQUAL "")
@@ -70,8 +65,13 @@ install(
 install(
   FILES
   include/assert.hpp
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/assert/assert
+)
+
+install(
+  FILES
   third_party/magic_enum.hpp
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/assert/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/assert/third_party
 )
 
 export(

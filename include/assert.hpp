@@ -19,7 +19,7 @@
 
 #ifdef ASSERT_USE_MAGIC_ENUM
  // this is a temporary hack to make testing thing in compiler explorer quicker (it disallows simple relative includes)
- #include "magic_enum.hpp"
+ #include "../third_party/magic_enum.hpp"
 #endif
 
 #if defined(__clang__)
