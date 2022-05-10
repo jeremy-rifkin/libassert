@@ -118,7 +118,7 @@ assertion system:
 | `DEBUG_ASSERT` | Core assumptions that potentially can't be optimized away (e.g. calls to `std::unordered_map::at`) | Checked in debug, no codegen in release |
 | `ASSERT`       | Core assumptions | Checked in debug, still evaluated and returned in release (usually elided by the optimizer if appropriate) |
 | `ASSUME`       | Assumptions that can serve as hints to the optimizer | Checked in debug, `if(!expr) { __builtin_unreachable(); }` in release |
-| `VERIFY`       | Checks that are good to have even in release | Checked in debug, does nothing in release |
+| `VERIFY`       | Checks that are good to have even in release | Checked in both debug and release builds |
 
 All assertions except `DEBUG_ASSERT` return a value from the assertion expression so checks can be seamlessly integrated
 into a program's structure. Because an expression's result may still be relevant even in a release build the expression
