@@ -153,11 +153,16 @@ namespace asserts::detail {
     template<typename T> inline constexpr bool is_arith_not_bool_char =
                                                        std::is_arithmetic_v<strip<T>> && !isa<T, bool> && !isa<T, char>;
 
+    template<typename T> inline constexpr bool is_c_string =
+           isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
+        || isa<std::decay_t<strip<T>>, const char*>;
+
     template<typename T> inline constexpr bool is_string_type =
            isa<T, std::string>
         || isa<T, std::string_view>
-        || isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
-        || isa<std::decay_t<strip<T>>, const char*>;
+        || is_c_string<T>;
+
+    template<typename T> typename std::add_lvalue_reference<T>::type decllval() noexcept;
 
     /*
      * expression decomposition
@@ -539,21 +544,24 @@ namespace asserts::detail {
                                 >
                             > : public std::true_type {};
 
-    template<typename T, typename = void> class is_printable_container : public std::false_type {};
-    template<typename T> class is_printable_container<
-                                T,
-                                std::void_t<
-                                    decltype(std::declval<T>().size()),
-                                    decltype(begin(std::declval<T>())),
-                                    decltype(end(std::declval<T>())),
-                                    typename std::enable_if< // can stringify (and not just give an instance of string)
-                                        has_stream_overload<decltype(*begin(std::declval<T>()))>::value
-                                        || std::is_enum<strip<decltype(*begin(std::declval<T>()))>>::value
-                                        || is_printable_container<strip<decltype(*begin(std::declval<T>()))>>::value
-                                        || is_tuple_like<strip<decltype(*begin(std::declval<T>()))>>::value,
-                                    void>::type
-                                >
-                            > : public std::true_type {};
+    namespace adl {
+        using std::size, std::begin, std::end; // ADL
+        template<typename T, typename = void> class is_printable_container : public std::false_type {};
+        template<typename T> class is_printable_container<
+                                    T,
+                                    std::void_t<
+                                        decltype(size(decllval<T>())),
+                                        decltype(begin(decllval<T>())),
+                                        decltype(end(decllval<T>())),
+                                        typename std::enable_if< // can stringify (and not just give an "instance of")
+                                            has_stream_overload<decltype(*begin(decllval<T>()))>::value
+                                            || std::is_enum<strip<decltype(*begin(decllval<T>()))>>::value
+                                            || is_printable_container<strip<decltype(*begin(decllval<T>()))>>::value
+                                            || is_tuple_like<strip<decltype(*begin(decllval<T>()))>>::value,
+                                        void>::type
+                                    >
+                                > : public std::true_type {};
+    }
 
     template<typename T, size_t... I> std::string stringify_tuple_like(const T&, std::index_sequence<I...>);
 
@@ -566,7 +574,18 @@ namespace asserts::detail {
                                                  || !can_basic_stringify<T>::value, int>::type = 0>
     ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
     std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
-        if constexpr(std::is_pointer<strip<typename std::decay<T>::type>>::value || std::is_function<strip<T>>::value) {
+        if constexpr(adl::is_printable_container<T>::value && !is_c_string<T>) {
+            using std::begin, std::end; // ADL
+            std::string str = "[";
+            for(auto it = begin(t); it != end(t); it++) {
+                if(it != begin(t)) {
+                    str += ", ";
+                }
+                str += stringify(*it, literal_format::dec);
+            }
+            str += "]";
+            return str;
+        } else if constexpr(std::is_pointer<strip<typename std::decay<T>::type>>::value || std::is_function<strip<T>>::value) {
             if constexpr(isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char>) { // strings
                 const void* v = t; // circumvent -Wnonnull-compare
                 if(v != nullptr) {
@@ -578,16 +597,6 @@ namespace asserts::detail {
             std::ostringstream oss;
             oss<<t;
             return std::move(oss).str();
-        } else if constexpr(is_printable_container<T>::value) {
-            std::string str = "[";
-            for(auto it = begin(t); it != end(t); it++) {
-                if(it != begin(t)) {
-                    str += ", ";
-                }
-                str += stringify(*it, literal_format::dec);
-            }
-            str += "]";
-            return str;
         } else if constexpr(is_tuple_like<T>::value) {
             return stringify_tuple_like(t);
         }
@@ -622,9 +631,10 @@ namespace asserts::detail {
     template<typename T>
     ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
     std::string generate_stringification(const T& v, literal_format fmt = literal_format::none) {
-        if constexpr((is_printable_container<T>::value && !is_string_type<T>)) {
+        if constexpr((adl::is_printable_container<T>::value && !is_string_type<T>)) {
+            using std::size; // ADL
             return prettify_type(std::string(type_name<T>()))
-                       + " [size: " + std::to_string(v.size()) + "]: " + stringify(v, fmt);
+                       + " [size: " + std::to_string(size(v)) + "]: " + stringify(v, fmt);
         } else if constexpr(is_tuple_like<T>::value) {
             return prettify_type(std::string(type_name<T>())) + ": " + stringify(v, fmt);
         } else {
