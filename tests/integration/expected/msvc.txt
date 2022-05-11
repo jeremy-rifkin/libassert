@@ -1166,7 +1166,21 @@ Assertion failed at integration/integration.cpp:3118: void __cdecl test_class<in
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:3118
+      at integration.cpp:3119
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:3120: void __cdecl test_class<int>::something_else(void):
+    assert(false, ...);
+    Extra diagnostics:
+        carr => int[5] [size: 5]: [5, 4, 3, 2, 1]
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3120
 # 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main()

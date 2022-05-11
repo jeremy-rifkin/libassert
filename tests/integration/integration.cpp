@@ -368,8 +368,10 @@ public:
             assert(false, m1);
             auto t = std::make_tuple(1, 0.1 + 0.2, "foobars");
             assert(false, t);
-            std::array<int, 10> arr = {1,2,3,4,5,6,7,8,9,10};
+            std::array<int, 10> arr = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
             assert(false, arr);
+            int carr[] = { 5, 4, 3, 2, 1 };
+            assert(false, carr);
         }
 
         SECTION("Type cleaning"); // also pretty thoughroughly tested above aside from std::string_view

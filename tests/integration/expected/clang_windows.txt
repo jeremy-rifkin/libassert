@@ -1173,6 +1173,20 @@ Stack trace:
       at integration.cpp:403
 
 
+Assertion failed at integration/integration.cpp:3120: void test_class<int>::something_else() [T = int]:
+    assert(false, ...);
+    Extra diagnostics:
+        carr => int [5] [size: 5]: [5, 4, 3, 2, 1]
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3120
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
 ===================== [Type cleaning] =====================
 Assertion failed at integration/integration.cpp:3305: void test_class<int>::test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>> &) [T = int]:
     assert(map == other);
