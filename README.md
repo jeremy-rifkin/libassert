@@ -383,6 +383,46 @@ void custom_fail(asserts::assert_type type, ASSERTION fatal, const asserts::asse
 }
 ```
 
+### Debug Stringification
+
+Stringification resolution uses the following precedence:
+
+- Library customization point
+- Primitives and strings
+- `operator<<(ostream&, ...)` overload
+- Container-like object (has a size and iterators) with printable contents
+- Tuple-like objects
+- Enum values
+
+If nothing matches the stringifier displays `<instance of Type>`.
+
+#### User-Defined Types
+
+User defined types custom stringification can be provided with either a ``operator<<(ostream&, ...)` overload or through
+a library customization point.
+
+Customization point: ADL-resolved `std::string stringify(const T& p, asserts::detail::literal_format)`. I.e., declare
+a function with this signature for your type in the namespace of your type `T`.
+
+`asserts::detail::literal_format` is an enum class containing `character, dec, hex, octal, binary, none`, it's used for
+formatting of ints and floats but it's part of all stringify signatures, you can ignore it. It also helps the library's
+customization point not interfere with any other functions named `stringify`.
+
+Example:
+
+```cpp
+struct S {
+    int x;
+    debug_print_customization(int x) : x(x) {}
+    friend std::ostream& operator<<(std::ostream& stream, const S&) {
+        return stream<<"this won't be called if the customization point is used";
+};
+
+std::string stringify(const S& s, asserts::detail::literal_format) {
+    return "this will be used for the stringification";
+}
+```
+
 ### Utilities
 
 The following utilities are made public in `asserts::utility::`, as they are immensely useful:
@@ -393,7 +433,7 @@ The following utilities are made public in `asserts::utility::`, as they are imm
   a width-independent formatting)
 - `std::string_view type_name<T>()` Produces a type name for type `T`
 - `std::string pretty_type_name<T>()` Produces a prettified type name for type `T`
-- `std::string stringify(const T& t)` Prints a text representation of `t`
+- `std::string stringify(const T& t)` Prints a debug stringification of `t`
 
 ### Namespace synopsis
 

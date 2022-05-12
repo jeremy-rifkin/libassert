@@ -26,6 +26,7 @@ struct printable {
         return f == other.f;
     }
 };
+
 template<typename T>
 struct not_printable {
     std::optional<T> f;
@@ -34,9 +35,25 @@ struct not_printable {
         return f == other.f;
     }
 };
+
 template<typename T>
 std::ostream& operator<<(std::ostream& stream, const printable<T>& p) {
     return stream<<"(printable = "<<*p.f<<")";
+}
+
+struct debug_print_customization {
+    int x;
+    debug_print_customization(int t) : x(t) {}
+    bool operator==(const debug_print_customization& other) const {
+        return x == other.x;
+    }
+    friend std::ostream& operator<<(std::ostream& stream, const debug_print_customization&) {
+        return stream<<"wrong print";
+    }
+};
+
+[[nodiscard]] std::string stringify(const debug_print_customization& p, asserts::detail::literal_format) {
+    return "(debug_print_customization = " + std::to_string(p.x) + ")";
 }
 
 int foo() {
@@ -312,7 +329,7 @@ public:
             }
             std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
         }
-        
+
         // general stack traces are tested throughout
         // simple recursion
         SECTION("simple recursion");
@@ -378,6 +395,13 @@ public:
         #line 3200
         {
             test_pretty_function_cleaning({});
+        }
+
+        SECTION("Debug stringification customization point");
+        #line 3300
+        {
+            debug_print_customization x = 2, y = 1;
+            assert(x == y, x, y);
         }
     }
 

@@ -97,7 +97,7 @@ namespace asserts::utility {
         static std::regex ansi_escape_re("\033\\[[^m]+m");
         return std::regex_replace(str, ansi_escape_re, "");
     }
-    
+
     // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
     ASSERT_DETAIL_ATTR_COLD int terminal_width(int fd) {
         if(fd < 0) {
@@ -1556,165 +1556,167 @@ namespace asserts::detail {
         return escaped;
     }
 
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(const std::string& value, literal_format) {
-        return escape_string(value, '"');
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(const std::string_view& value, literal_format) {
-        return escape_string(value, '"');
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(std::nullptr_t, literal_format) {
-        return "nullptr";
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(char value, literal_format fmt) {
-        if(fmt == literal_format::character) {
-            return escape_string({&value, 1}, '\'');
-        } else {
-            return stringify((int)value, fmt);
+    namespace stringification {
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(const std::string& value, literal_format) {
+            return escape_string(value, '"');
         }
-    }
 
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(bool value, literal_format) {
-            return value ? "true" : "false";
-    }
-
-    template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-    static std::string stringify_integral(T value, literal_format fmt) {
-        std::ostringstream oss;
-        switch(fmt) {
-            case literal_format::character:
-                if(cmp_greater_equal(value, std::numeric_limits<char>::min())
-                   && cmp_less_equal(value, std::numeric_limits<char>::max())) {
-                    return stringify(static_cast<char>(value), literal_format::character);
-                } else {
-                    return "";
-                }
-            case literal_format::dec:
-                break;
-            case literal_format::hex:
-                oss<<std::showbase<<std::hex;
-                break;
-            case literal_format::octal:
-                oss<<std::showbase<<std::oct;
-                break;
-            case literal_format::binary:
-                oss<<"0b"<<std::bitset<sizeof(value) * 8>(value);
-                goto r;
-            default:
-                ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(const std::string_view& value, literal_format) {
+            return escape_string(value, '"');
         }
-        oss<<value;
-        r: return std::move(oss).str();
-    }
 
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(short value, literal_format fmt) {
-        return stringify_integral(value, fmt);
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(int value, literal_format fmt) {
-        return stringify_integral(value, fmt);
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(long value, literal_format fmt) {
-        return stringify_integral(value, fmt);
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(long long value, literal_format fmt) {
-        return stringify_integral(value, fmt);
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned short value, literal_format fmt) {
-        return stringify_integral(value, fmt);
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned int value, literal_format fmt) {
-        return stringify_integral(value, fmt);
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned long value, literal_format fmt) {
-        return stringify_integral(value, fmt);
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned long long value, literal_format fmt) {
-        return stringify_integral(value, fmt);
-    }
-
-    template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-    static std::string stringify_floating_point(T value, literal_format fmt) {
-        std::ostringstream oss;
-        switch(fmt) {
-            case literal_format::character:
-                return "";
-            case literal_format::dec:
-                break;
-            case literal_format::hex:
-                // apparently std::hexfloat automatically prepends "0x" while std::hex does not
-                oss<<std::hexfloat;
-                break;
-            case literal_format::octal:
-            case literal_format::binary:
-                return "";
-            default:
-                ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
-        }
-        oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<value;
-        std::string s = std::move(oss).str();
-        // std::showpoint adds a bunch of unecessary digits, so manually doing it correctly here
-        if(s.find('.') == std::string::npos) {
-            s += ".0";
-        }
-        return s;
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(float value, literal_format fmt) {
-        return stringify_floating_point(value, fmt);
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(double value, literal_format fmt) {
-        return stringify_floating_point(value, fmt);
-    }
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify(long double value, literal_format fmt) {
-        return stringify_floating_point(value, fmt);
-    }
-
-    #if __cplusplus >= 202002L
-     ASSERT_DETAIL_ATTR_COLD std::string stringify(std::strong_ordering value, literal_format) {
-            if(value == std::strong_ordering::less)       return "std::strong_ordering::less";
-            if(value == std::strong_ordering::equivalent) return "std::strong_ordering::equivalent";
-            if(value == std::strong_ordering::equal)      return "std::strong_ordering::equal";
-            if(value == std::strong_ordering::greater)    return "std::strong_ordering::greater";
-            return "Unknown std::strong_ordering value";
-     }
-     ASSERT_DETAIL_ATTR_COLD std::string stringify(std::weak_ordering value, literal_format) {
-            if(value == std::weak_ordering::less)       return "std::weak_ordering::less";
-            if(value == std::weak_ordering::equivalent) return "std::weak_ordering::equivalent";
-            if(value == std::weak_ordering::greater)    return "std::weak_ordering::greater";
-            return "Unknown std::weak_ordering value";
-     }
-     ASSERT_DETAIL_ATTR_COLD std::string stringify(std::partial_ordering value, literal_format) {
-            if(value == std::partial_ordering::less)       return "std::partial_ordering::less";
-            if(value == std::partial_ordering::equivalent) return "std::partial_ordering::equivalent";
-            if(value == std::partial_ordering::greater)    return "std::partial_ordering::greater";
-            if(value == std::partial_ordering::unordered)  return "std::partial_ordering::unordered";
-            return "Unknown std::partial_ordering value";
-     }
-    #endif
-
-    ASSERT_DETAIL_ATTR_COLD std::string stringify_ptr(const void* value, literal_format) {
-        if(value == nullptr) {
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(std::nullptr_t, literal_format) {
             return "nullptr";
         }
-        std::ostringstream oss;
-        // Manually format the pointer - ostream::operator<<(void*) falls back to %p which
-        // is implementation-defined. MSVC prints pointers without the leading "0x" which
-        // messes up the highlighter.
-        oss<<std::showbase<<std::hex<<uintptr_t(value);
-        return std::move(oss).str();
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(char value, literal_format fmt) {
+            if(fmt == literal_format::character) {
+                return escape_string({&value, 1}, '\'');
+            } else {
+                return stringify((int)value, fmt);
+            }
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(bool value, literal_format) {
+                return value ? "true" : "false";
+        }
+
+        template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>
+        ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+        static std::string stringify_integral(T value, literal_format fmt) {
+            std::ostringstream oss;
+            switch(fmt) {
+                case literal_format::character:
+                    if(cmp_greater_equal(value, std::numeric_limits<char>::min())
+                    && cmp_less_equal(value, std::numeric_limits<char>::max())) {
+                        return stringify(static_cast<char>(value), literal_format::character);
+                    } else {
+                        return "";
+                    }
+                case literal_format::dec:
+                    break;
+                case literal_format::hex:
+                    oss<<std::showbase<<std::hex;
+                    break;
+                case literal_format::octal:
+                    oss<<std::showbase<<std::oct;
+                    break;
+                case literal_format::binary:
+                    oss<<"0b"<<std::bitset<sizeof(value) * 8>(value);
+                    goto r;
+                default:
+                    ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
+            }
+            oss<<value;
+            r: return std::move(oss).str();
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(short value, literal_format fmt) {
+            return stringify_integral(value, fmt);
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(int value, literal_format fmt) {
+            return stringify_integral(value, fmt);
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(long value, literal_format fmt) {
+            return stringify_integral(value, fmt);
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(long long value, literal_format fmt) {
+            return stringify_integral(value, fmt);
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned short value, literal_format fmt) {
+            return stringify_integral(value, fmt);
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned int value, literal_format fmt) {
+            return stringify_integral(value, fmt);
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned long value, literal_format fmt) {
+            return stringify_integral(value, fmt);
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned long long value, literal_format fmt) {
+            return stringify_integral(value, fmt);
+        }
+
+        template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
+        ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+        static std::string stringify_floating_point(T value, literal_format fmt) {
+            std::ostringstream oss;
+            switch(fmt) {
+                case literal_format::character:
+                    return "";
+                case literal_format::dec:
+                    break;
+                case literal_format::hex:
+                    // apparently std::hexfloat automatically prepends "0x" while std::hex does not
+                    oss<<std::hexfloat;
+                    break;
+                case literal_format::octal:
+                case literal_format::binary:
+                    return "";
+                default:
+                    ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
+            }
+            oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<value;
+            std::string s = std::move(oss).str();
+            // std::showpoint adds a bunch of unecessary digits, so manually doing it correctly here
+            if(s.find('.') == std::string::npos) {
+                s += ".0";
+            }
+            return s;
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(float value, literal_format fmt) {
+            return stringify_floating_point(value, fmt);
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(double value, literal_format fmt) {
+            return stringify_floating_point(value, fmt);
+        }
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(long double value, literal_format fmt) {
+            return stringify_floating_point(value, fmt);
+        }
+
+        #if __cplusplus >= 202002L
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(std::strong_ordering value, literal_format) {
+                if(value == std::strong_ordering::less)       return "std::strong_ordering::less";
+                if(value == std::strong_ordering::equivalent) return "std::strong_ordering::equivalent";
+                if(value == std::strong_ordering::equal)      return "std::strong_ordering::equal";
+                if(value == std::strong_ordering::greater)    return "std::strong_ordering::greater";
+                return "Unknown std::strong_ordering value";
+        }
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(std::weak_ordering value, literal_format) {
+                if(value == std::weak_ordering::less)       return "std::weak_ordering::less";
+                if(value == std::weak_ordering::equivalent) return "std::weak_ordering::equivalent";
+                if(value == std::weak_ordering::greater)    return "std::weak_ordering::greater";
+                return "Unknown std::weak_ordering value";
+        }
+        ASSERT_DETAIL_ATTR_COLD std::string stringify(std::partial_ordering value, literal_format) {
+                if(value == std::partial_ordering::less)       return "std::partial_ordering::less";
+                if(value == std::partial_ordering::equivalent) return "std::partial_ordering::equivalent";
+                if(value == std::partial_ordering::greater)    return "std::partial_ordering::greater";
+                if(value == std::partial_ordering::unordered)  return "std::partial_ordering::unordered";
+                return "Unknown std::partial_ordering value";
+        }
+        #endif
+
+        ASSERT_DETAIL_ATTR_COLD std::string stringify_ptr(const void* value, literal_format) {
+            if(value == nullptr) {
+                return "nullptr";
+            }
+            std::ostringstream oss;
+            // Manually format the pointer - ostream::operator<<(void*) falls back to %p which
+            // is implementation-defined. MSVC prints pointers without the leading "0x" which
+            // messes up the highlighter.
+            oss<<std::showbase<<std::hex<<uintptr_t(value);
+            return std::move(oss).str();
+        }
     }
 
     /*

@@ -498,127 +498,135 @@ namespace asserts::detail {
         #endif
     }
 
-    std::string stringify(const std::string&, literal_format = literal_format::none);
-    std::string stringify(const std::string_view&, literal_format = literal_format::none);
-    // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
-    std::string stringify(std::nullptr_t, literal_format = literal_format::none);
-    std::string stringify(char, literal_format = literal_format::none);
-    std::string stringify(bool, literal_format = literal_format::none);
-    std::string stringify(short, literal_format = literal_format::none);
-    std::string stringify(int, literal_format = literal_format::none);
-    std::string stringify(long, literal_format = literal_format::none);
-    std::string stringify(long long, literal_format = literal_format::none);
-    std::string stringify(unsigned short, literal_format = literal_format::none);
-    std::string stringify(unsigned int, literal_format = literal_format::none);
-    std::string stringify(unsigned long, literal_format = literal_format::none);
-    std::string stringify(unsigned long long, literal_format = literal_format::none);
-    std::string stringify(float, literal_format = literal_format::none);
-    std::string stringify(double, literal_format = literal_format::none);
-    std::string stringify(long double, literal_format = literal_format::none);
-    #if __cplusplus >= 202002L
-     std::string stringify(std::strong_ordering, literal_format = literal_format::none);
-     std::string stringify(std::weak_ordering, literal_format = literal_format::none);
-     std::string stringify(std::partial_ordering, literal_format = literal_format::none);
-    #endif
+    namespace stringification {
+        [[nodiscard]] std::string stringify(const std::string&, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(const std::string_view&, literal_format = literal_format::none);
+        // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
+        [[nodiscard]] std::string stringify(std::nullptr_t, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(char, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(bool, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(short, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(int, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(long, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(long long, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(unsigned short, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(unsigned int, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(unsigned long, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(unsigned long long, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(float, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(double, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(long double, literal_format = literal_format::none);
+        #if __cplusplus >= 202002L
+        [[nodiscard]] std::string stringify(std::strong_ordering, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(std::weak_ordering, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(std::partial_ordering, literal_format = literal_format::none);
+        #endif
 
-    std::string stringify_ptr(const void*, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify_ptr(const void*, literal_format = literal_format::none);
 
-    template<typename T, typename = void> class can_basic_stringify : public std::false_type {};
-    template<typename T> class can_basic_stringify<
-                                T,
-                                std::void_t<decltype(stringify(std::declval<T>()))>
-                            > : public std::true_type {};
+        template<typename T, typename = void> class can_basic_stringify : public std::false_type {};
+        template<typename T> class can_basic_stringify<
+                                    T,
+                                    std::void_t<decltype(stringify(std::declval<T>()))>
+                                > : public std::true_type {};
 
-    template<typename T, typename = void> class has_stream_overload : public std::false_type {};
-    template<typename T> class has_stream_overload<
-                                T,
-                                std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
-                            > : public std::true_type {};
+        template<typename T, typename = void> class has_stream_overload : public std::false_type {};
+        template<typename T> class has_stream_overload<
+                                    T,
+                                    std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
+                                > : public std::true_type {};
 
-    template<typename T, typename = void> class is_tuple_like : public std::false_type {};
-    template<typename T> class is_tuple_like<
-                                T,
-                                std::void_t<
-                                    typename std::tuple_size<T>::type,
-                                    decltype(std::get<0>(std::declval<T>()))
-                                >
-                            > : public std::true_type {};
-
-    namespace adl {
-        using std::size, std::begin, std::end; // ADL
-        template<typename T, typename = void> class is_printable_container : public std::false_type {};
-        template<typename T> class is_printable_container<
+        template<typename T, typename = void> class is_tuple_like : public std::false_type {};
+        template<typename T> class is_tuple_like<
                                     T,
                                     std::void_t<
-                                        decltype(size(decllval<T>())),
-                                        decltype(begin(decllval<T>())),
-                                        decltype(end(decllval<T>())),
-                                        typename std::enable_if< // can stringify (and not just give an "instance of")
-                                            has_stream_overload<decltype(*begin(decllval<T>()))>::value
-                                            || std::is_enum<strip<decltype(*begin(decllval<T>()))>>::value
-                                            || is_printable_container<strip<decltype(*begin(decllval<T>()))>>::value
-                                            || is_tuple_like<strip<decltype(*begin(decllval<T>()))>>::value,
-                                        void>::type
+                                        typename std::tuple_size<T>::type,
+                                        decltype(std::get<0>(std::declval<T>()))
                                     >
                                 > : public std::true_type {};
-    }
 
-    template<typename T, size_t... I> std::string stringify_tuple_like(const T&, std::index_sequence<I...>);
-
-    template<typename T> std::string stringify_tuple_like(const T& t) {
-        return stringify_tuple_like(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
-    }
-
-    template<typename T, typename std::enable_if<std::is_pointer<strip<typename std::decay<T>::type>>::value
-                                                 || std::is_function<strip<T>>::value
-                                                 || !can_basic_stringify<T>::value, int>::type = 0>
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
-    std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
-        if constexpr(adl::is_printable_container<T>::value && !is_c_string<T>) {
-            using std::begin, std::end; // ADL
-            std::string str = "[";
-            for(auto it = begin(t); it != end(t); it++) {
-                if(it != begin(t)) {
-                    str += ", ";
-                }
-                str += stringify(*it, literal_format::dec);
-            }
-            str += "]";
-            return str;
-        } else if constexpr(std::is_pointer<strip<typename std::decay<T>::type>>::value || std::is_function<strip<T>>::value) {
-            if constexpr(isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char>) { // strings
-                const void* v = t; // circumvent -Wnonnull-compare
-                if(v != nullptr) {
-                    return stringify(std::string_view(t)); // not printing type for now, TODO: reconsider?
-                }
-            }
-            return prettify_type(std::string(type_name<T>())) + ": " + stringify_ptr(reinterpret_cast<const void*>(t), fmt);
-        } else if constexpr(has_stream_overload<T>::value) {
-            std::ostringstream oss;
-            oss<<t;
-            return std::move(oss).str();
-        } else if constexpr(is_tuple_like<T>::value) {
-            return stringify_tuple_like(t);
+        namespace adl {
+            using std::size, std::begin, std::end; // ADL
+            template<typename T, typename = void> class is_printable_container : public std::false_type {};
+            template<typename T> class is_printable_container<
+                                        T,
+                                        std::void_t<
+                                            decltype(size(decllval<T>())),
+                                            decltype(begin(decllval<T>())),
+                                            decltype(end(decllval<T>())),
+                                            typename std::enable_if< // can stringify (and not just "instance of")
+                                                has_stream_overload<decltype(*begin(decllval<T>()))>::value
+                                                || std::is_enum<strip<decltype(*begin(decllval<T>()))>>::value
+                                                || is_printable_container<strip<decltype(*begin(decllval<T>()))>>::value
+                                                || is_tuple_like<strip<decltype(*begin(decllval<T>()))>>::value,
+                                            void>::type
+                                        >
+                                    > : public std::true_type {};
         }
-        #ifdef ASSERT_USE_MAGIC_ENUM
-        else if constexpr(std::is_enum<strip<T>>::value) {
-            std::string_view name = magic_enum::enum_name(t);
-            if(!name.empty()) {
-                return std::string(name);
-            } else {
+
+        template<typename T, size_t... I> std::string stringify_tuple_like(const T&, std::index_sequence<I...>);
+
+        template<typename T> std::string stringify_tuple_like(const T& t) {
+            return stringify_tuple_like(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
+        }
+
+        template<typename T, typename std::enable_if<std::is_pointer<strip<typename std::decay<T>::type>>::value
+                                                    || std::is_function<strip<T>>::value
+                                                    || !can_basic_stringify<T>::value, int>::type = 0>
+        ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+        std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
+            if constexpr(has_stream_overload<T>::value && !is_string_type<T>
+                      && !std::is_pointer<strip<typename std::decay<T>::type>>::value) {
+                std::ostringstream oss;
+                oss<<t;
+                return std::move(oss).str();
+            } else if constexpr(adl::is_printable_container<T>::value && !is_c_string<T>) {
+                using std::begin, std::end; // ADL
+                std::string str = "[";
+                for(auto it = begin(t); it != end(t); it++) {
+                    if(it != begin(t)) {
+                        str += ", ";
+                    }
+                    str += stringify(*it, literal_format::dec);
+                }
+                str += "]";
+                return str;
+            } else if constexpr(std::is_pointer<strip<typename std::decay<T>::type>>::value
+                             || std::is_function<strip<T>>::value) {
+                if constexpr(isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char>) { // strings
+                    const void* v = t; // circumvent -Wnonnull-compare
+                    if(v != nullptr) {
+                        return stringify(std::string_view(t)); // not printing type for now, TODO: reconsider?
+                    }
+                }
+                return prettify_type(std::string(type_name<T>())) + ": "
+                                                    + stringify_ptr(reinterpret_cast<const void*>(t), fmt);
+            } else if constexpr(is_tuple_like<T>::value) {
+                return stringify_tuple_like(t);
+            }
+            #ifdef ASSERT_USE_MAGIC_ENUM
+            else if constexpr(std::is_enum<strip<T>>::value) {
+                std::string_view name = magic_enum::enum_name(t);
+                if(!name.empty()) {
+                    return std::string(name);
+                } else {
+                    return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
+                }
+            }
+            #endif
+            else {
                 return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
             }
         }
-        #endif
-        else {
-            return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
-        }
-    }
 
-    // I'm going to assume at least one index because is_tuple_like requires index 0 to exist
-    template<typename T, size_t... I> std::string stringify_tuple_like(const T& t, std::index_sequence<I...>) {
-        using lf = literal_format;
-        return "[" + (stringify(std::get<0>(t), lf::dec) + ... + (", " + stringify(std::get<I + 1>(t), lf::dec))) + "]";
+        // I'm going to assume at least one index because is_tuple_like requires index 0 to exist
+        template<typename T, size_t... I> std::string stringify_tuple_like(const T& t, std::index_sequence<I...>) {
+            using lf = literal_format;
+            using stringification::stringify; // ADL
+            return "[" +
+                        (stringify(std::get<0>(t), lf::dec) + ... + (", " + stringify(std::get<I + 1>(t), lf::dec)))
+                    + "]";
+        }
     }
 
     /*
@@ -631,11 +639,12 @@ namespace asserts::detail {
     template<typename T>
     ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
     std::string generate_stringification(const T& v, literal_format fmt = literal_format::none) {
-        if constexpr((adl::is_printable_container<T>::value && !is_string_type<T>)) {
+        using stringification::stringify; // ADL
+        if constexpr((stringification::adl::is_printable_container<T>::value && !is_string_type<T>)) {
             using std::size; // ADL
             return prettify_type(std::string(type_name<T>()))
                        + " [size: " + std::to_string(size(v)) + "]: " + stringify(v, fmt);
-        } else if constexpr(is_tuple_like<T>::value) {
+        } else if constexpr(stringification::is_tuple_like<T>::value) {
             return prettify_type(std::string(type_name<T>())) + ": " + stringify(v, fmt);
         } else {
             return stringify(v, fmt);
@@ -649,6 +658,7 @@ namespace asserts::detail {
             std::vector<std::string> vec;
             for(literal_format fmt : formats) {
                 if(fmt == literal_format::none) { break; }
+                using stringification::stringify; // ADL
                 // TODO: consider pushing empty fillers to keep columns aligned later on? Does not
                 // matter at the moment because floats only have decimal and hex literals but could
                 // if more formats are added.
@@ -876,11 +886,12 @@ namespace asserts::utility {
         return detail::prettify_type(std::string(detail::type_name<T>()));
     }
 
-    // returns a text representation of t
+    // returns a debug stringification of t
     template<typename T>
     [[nodiscard]] std::string stringify(const T& t) {
+        using detail::stringification::stringify; // ADL
         using lf = detail::literal_format;
-        return detail::stringify(t, detail::isa<T, char> ? lf::character : lf::dec);
+        return stringify(t, detail::isa<T, char> ? lf::character : lf::dec);
     }
 }
 
