@@ -125,12 +125,13 @@ def main():
         run_command("make", f"COMPILER={compiler_name}", "-j")
     # run everything
     run_unit_tests([
+        "basic_test",
+        "constexpr_contexts", # The real test here is whether it compiles
         "disambiguation",
         "literals",
         "test_public_utilities",
-        "type_handling",
-        "basic_test",
-        "test_type_prettier"
+        "test_type_prettier",
+        "type_handling"
     ])
     run_integration("integration/expected/{}.txt".format(target_file), opt)
     global ok

@@ -133,16 +133,16 @@ namespace asserts::config {
 namespace asserts::detail {
     ASSERT_DETAIL_ATTR_COLD
     void primitive_assert_impl(bool condition, bool verify, const char* expression,
-                               source_location location, const char* message) {
+                               const char* signature, source_location location, const char* message) {
         if(!condition) {
             const char* action = verify ? "Verification" : "Assertion";
             const char* name   = verify ? "verify"       : "assert";
             if(message == nullptr) {
                 fprintf(stderr, "%s failed at %s:%d: %s\n",
-                    action, location.file, location.line, location.function);
+                    action, location.file, location.line, signature);
             } else {
                 fprintf(stderr, "%s failed at %s:%d: %s: %s\n",
-                    action, location.file, location.line, location.function, message);
+                    action, location.file, location.line, signature, message);
             }
             fprintf(stderr, "    primitive_%s(%s);\n", name, expression);
             abort();
@@ -150,7 +150,7 @@ namespace asserts::detail {
     }
 
     // Still present in release mode, nonfatal
-    #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, ASSERT_DETAIL_PFUNC, ##__VA_ARGS__)
+    #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, ASSERT_DETAIL_PFUNC, {}, ##__VA_ARGS__)
 
     /*
      * string utilities
@@ -2314,19 +2314,10 @@ namespace asserts {
 
     ASSERT_DETAIL_ATTR_COLD std::string assertion_printer::operator()(int width) const {
         const auto& [ name, type, expr_str, location, args_strings ] = *params;
-        const auto& [ fatal, message, extra_diagnostics
-         #if ASSERT_DETAIL_IS_MSVC
-          , msvc_pretty_function
-         #endif
-        ] = processed_args;
+        const auto& [ fatal, message, extra_diagnostics, pretty_function ] = processed_args;
         std::string output;
         // generate header
-        const char* raw_function = location.function
-         #if ASSERT_DETAIL_IS_MSVC
-          ? location.function : msvc_pretty_function
-         #endif
-        ;
-        const auto function = prettify_type(raw_function);
+        const auto function = prettify_type(pretty_function);
         if(!message.empty()) {
             output += stringf("%s failed at %s:%d: %s: %s\n",
                               assert_type_name(type), location.file, location.line,
@@ -2354,13 +2345,8 @@ namespace asserts {
     ASSERT_DETAIL_ATTR_COLD
     std::tuple<const char*, int, std::string, const char*> assertion_printer::get_assertion_info() const {
         const auto& location = params->location;
-        #if !ASSERT_DETAIL_IS_MSVC
-         const char* raw_function = location.function;
-        #else
-         const char* raw_function = processed_args.pretty_function;
-        #endif
-        auto function = prettify_type(raw_function);
-        return std::make_tuple(location.file, location.line, std::move(function), processed_args.message.c_str());
+        auto function = prettify_type(processed_args.pretty_function);
+        return {location.file, location.line, std::move(function), processed_args.message.c_str()};
     }
 }
 

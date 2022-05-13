@@ -33,7 +33,7 @@ demo: $(BIN)/demo$(E)
 
 basic_test: $(BIN)/basic_test$(E)
 
-tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/test_public_utilities$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/type_handling$(E) $(BIN)/basic_test$(E) $(BIN)/test_type_prettier$(E) $(BIN)/integration$(E)
+tests: $(BIN)/disambiguation$(E) $(BIN)/literals$(E) $(BIN)/test_public_utilities$(E) $(BIN)/tokens_and_highlighting$(E) $(BIN)/type_handling$(E) $(BIN)/basic_test$(E) $(BIN)/constexpr_contexts$(E) $(BIN)/test_type_prettier$(E) $(BIN)/integration$(E)
 
 integration: $(BIN)/integration$(E)
 
@@ -81,6 +81,9 @@ ifneq ($(COMPILER),msvc)
     $(BIN)/basic_test$(E): $(BIN)/o/unit/basic_test.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
+    $(BIN)/constexpr_contexts$(E): $(BIN)/o/unit/constexpr_contexts.cpp.o
+		$(LD) $^ -o $@ $(LDFLAGS)
+
     $(BIN)/test_type_prettier$(E): $(BIN)/o/unit/test_type_prettier.cpp.o
 		$(LD) $^ -o $@ $(LDFLAGS)
 
@@ -88,6 +91,11 @@ ifneq ($(COMPILER),msvc)
 		$(LD) $^ -o $@ $(LDFLAGS)
 
     $(BIN)/o/unit/basic_test.cpp.o: unit/basic_test.cpp $(HPP)
+		$(MKDIR_P) $(dir $@)
+		echo "$(TARGET)"
+		$(CPP) $(CPPFLAGS) -c $< -o $@
+
+    $(BIN)/o/unit/constexpr_contexts.cpp.o: unit/constexpr_contexts.cpp $(HPP)
 		$(MKDIR_P) $(dir $@)
 		echo "$(TARGET)"
 		$(CPP) $(CPPFLAGS) -c $< -o $@
@@ -138,6 +146,9 @@ else
     $(BIN)/basic_test$(E): $(BIN)/o/unit/basic_test.cpp.o
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
+    $(BIN)/constexpr_contexts$(E): $(BIN)/o/unit/constexpr_contexts.cpp.o
+		$(LD) $^ /OUT:$@ $(LDFLAGS)
+
     $(BIN)/test_type_prettier$(E): $(BIN)/o/unit/test_type_prettier.cpp.o
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
@@ -145,6 +156,10 @@ else
 		$(LD) $^ /OUT:$@ $(LDFLAGS)
 
     $(BIN)/o/unit/basic_test.cpp.o: unit/basic_test.cpp $(HPP)
+		-$(MKDIR_P) $(dir $@)
+		$(CPP) $(CPPFLAGS) /c $< /Fo$@
+
+    $(BIN)/o/unit/constexpr_contexts.cpp.o: unit/constexpr_contexts.cpp $(HPP)
 		-$(MKDIR_P) $(dir $@)
 		$(CPP) $(CPPFLAGS) /c $< /Fo$@
 
