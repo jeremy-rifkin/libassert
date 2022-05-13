@@ -14,6 +14,10 @@
 #include <utility>
 #include <vector>
 
+#if __cplusplus < 201703L // try to give a nice error message
+ #error "libassert requires C++17"
+#endif
+
 #if __cplusplus >= 202002L
  #include <compare>
 #endif
