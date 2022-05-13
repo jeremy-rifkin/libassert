@@ -328,13 +328,13 @@ behaviors are:
 | `DEBUG_ASSERT` | `abort()` is called in debug, nothing happens in release |
 | `ASSERT`       | `abort()` is called in debug, nothing happens in release |
 | `ASSUME`       | `abort()` is called in debug, fail path is marked unreachable in release |
-| `VERIFY`       | `asserts::verification_failure` is thrown |
+| `VERIFY`       | `libassert::verification_failure` is thrown |
 
 ### Configuration
 
 The following can be used to set application-wide settings:
 
-- `asserts::config::set_color_output(bool)` Enables or disables colored assertion messages on TTY outputs by the default
+- `libassert::config::set_color_output(bool)` Enables or disables colored assertion messages on TTY outputs by the default
   assertion handler. This is thread-safe, not that it should ever matter.
 
 The following configurations can be applied on a per-TU basis:
@@ -351,20 +351,20 @@ The following configurations can be applied on a per-TU basis:
 
 Custom failure actions: These are called when an assertion fails after diagnostic messages are
 printed. Set these macros to the name of the failure action function, signature is expected to be
-`void custom_fail(asserts::assert_type, ASSERTION, const asserts::assertion_printer&)`.
+`void custom_fail(libassert::assert_type, ASSERTION, const libassert::assertion_printer&)`.
 The `printer` is used to allow the failure handler to format to a desired width. It accepts zero and
 negative widths to indicate the message should be printed to work on any width (i.e., no pretty
 columns in the output). `type` is the type of the assertion and `fatal` indicates whether an
 assertion is fatal. A typical implementation looks like:
 ```cpp
-void custom_fail(asserts::assert_type type, ASSERTION fatal, const asserts::assertion_printer& printer) {
-    std::string message = printer(asserts::utility::terminal_width(STDERR_FILENO));
+void custom_fail(libassert::assert_type type, ASSERTION fatal, const libassert::assertion_printer& printer) {
+    std::string message = printer(libassert::utility::terminal_width(STDERR_FILENO));
     if(isatty(STDERR_FILENO)) {
         std::cerr<<message<<std::endl;
     } else {
-        std::cerr<<asserts::utility::strip_colors(message)<<std::endl;
+        std::cerr<<libassert::utility::strip_colors(message)<<std::endl;
     }
-    using asserts::assert_type;
+    using libassert::assert_type;
     switch(type) {
         case assert_type::debug_assertion:
         case assert_type::assertion:
@@ -403,10 +403,10 @@ If nothing matches the stringifier displays `<instance of Type>`.
 User defined types custom stringification can be provided with either a ``operator<<(ostream&, ...)` overload or through
 a library customization point.
 
-Customization point: ADL-resolved `std::string stringify(const T& p, asserts::detail::literal_format)`. I.e., declare
+Customization point: ADL-resolved `std::string stringify(const T& p, libassert::detail::literal_format)`. I.e., declare
 a function with this signature for your type in the namespace of your type `T`.
 
-`asserts::detail::literal_format` is an enum class containing `character, dec, hex, octal, binary, none`, it's used for
+`libassert::detail::literal_format` is an enum class containing `character, dec, hex, octal, binary, none`, it's used for
 formatting of ints and floats but it's part of all stringify signatures, you can ignore it. It also helps the library's
 customization point not interfere with any other functions named `stringify`.
 
@@ -420,14 +420,14 @@ struct S {
         return stream<<"this won't be called if the customization point is used";
 };
 
-std::string stringify(const S& s, asserts::detail::literal_format) {
+std::string stringify(const S& s, libassert::detail::literal_format) {
     return "this will be used for the stringification";
 }
 ```
 
 ### Utilities
 
-The following utilities are made public in `asserts::utility::`, as they are immensely useful:
+The following utilities are made public in `libassert::utility::`, as they are immensely useful:
 - `std::string strip_colors(const std::string& str)` Strips ansi sequences from a string
 - `int terminal_width(int fd)` Returns the width of the TTY referenced by the given file descriptor,
   or 0 on error
@@ -449,7 +449,7 @@ The following utilities are made public in `asserts::utility::`, as they are imm
  #define debug_assert(...) ...
  #define assert(...) ...
 #endif
-namespace asserts {
+namespace libassert {
     // Core functionality:
     enum class ASSERTION { NONFATAL, FATAL };
     class assertion_printer {
@@ -476,7 +476,7 @@ namespace asserts {
     }
     namespace detail { /* internals */ }
 }
-using asserts::ASSERTION;
+using libassert::ASSERTION;
 ```
 
 This library defines macros of the form `LIBASSERT_*`. In macro expansion variables of the form

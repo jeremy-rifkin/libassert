@@ -3,7 +3,7 @@
 #include "assert.hpp"
 
 // Copyright 2022 Jeremy Rifkin
-// https://github.com/jeremy-rifkin/asserts
+// https://github.com/jeremy-rifkin/libassert
 
 #include <array>
 #include <atomic>
@@ -91,7 +91,7 @@ public:
     }
 };
 
-namespace asserts::utility {
+namespace libassert::utility {
     LIBASSERT_ATTR_COLD
     std::string strip_colors(const std::string& str) {
         static std::regex ansi_escape_re("\033\\[[^m]+m");
@@ -122,7 +122,7 @@ namespace asserts::utility {
     }
 }
 
-namespace asserts::config {
+namespace libassert::config {
     static std::atomic_bool output_colors = true;
 
     LIBASSERT_ATTR_COLD void set_color_output(bool enable) {
@@ -130,7 +130,7 @@ namespace asserts::config {
     }
 }
 
-namespace asserts::detail {
+namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     void primitive_assert_impl(bool condition, bool verify, const char* expression,
                                const char* signature, source_location location, const char* message) {
@@ -1773,7 +1773,7 @@ namespace asserts::detail {
          constexpr std::string_view path_delim = "/";
         #endif
         // Some cases to consider
-        // projects/asserts/demo.cpp               projects   asserts  demo.cpp
+        // projects/libassert/demo.cpp               projects   libassert  demo.cpp
         // /glibc-2.27/csu/../csu/libc-start.c  /  glibc-2.27 csu      libc-start.c
         // ./demo.exe                           .  demo.exe
         // ./../demo.exe                        .. demo.exe
@@ -1964,7 +1964,7 @@ namespace asserts::detail {
         size_t start = 0;
         size_t end = trace.size() - 1;
         for(size_t i = 0; i < trace.size(); i++) {
-            if(trace[i].signature.find("asserts::detail::") != std::string::npos) {
+            if(trace[i].signature.find("libassert::detail::") != std::string::npos) {
                 start = i + 1;
             }
             if(trace[i].signature == "main" || trace[i].signature.find("main(") == 0) {
@@ -2025,7 +2025,7 @@ namespace asserts::detail {
             constexpr size_t max_file_length = 50;
             auto [files, longest_file_width] = process_paths(trace, start, end);
             size_t max_line_number_width = log10(std::max_element(trace.begin(), trace.begin() + end + 1,
-                [](const asserts::detail::stacktrace_entry& a, const asserts::detail::stacktrace_entry& b) {
+                [](const libassert::detail::stacktrace_entry& a, const libassert::detail::stacktrace_entry& b) {
                     return std::to_string(a.line).size() < std::to_string(b.line).size();
                 })->line - start + 1 + 1); // +1 for indices starting at 0, +1 again for log
             size_t max_frame_width = log10(end - start + 1 + 1); // ^
@@ -2293,7 +2293,7 @@ namespace asserts::detail {
     }
 }
 
-namespace asserts {
+namespace libassert {
     using namespace detail;
 
     const char* verification_failure::what() const noexcept {
@@ -2350,7 +2350,7 @@ namespace asserts {
     }
 }
 
-namespace asserts::utility {
+namespace libassert::utility {
     LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int width) {
         auto trace = get_stacktrace();
         if(trace) {
@@ -2364,28 +2364,28 @@ namespace asserts::utility {
 // Default handler
 
 LIBASSERT_ATTR_COLD
-void libassert_default_fail_action(asserts::assert_type type, ASSERTION fatal,
-                                       const asserts::assertion_printer& printer) {
-    asserts::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-    std::string message = printer(asserts::utility::terminal_width(STDERR_FILENO));
-    if(asserts::detail::isatty(STDERR_FILENO) && asserts::config::output_colors) {
+void libassert_default_fail_action(libassert::assert_type type, ASSERTION fatal,
+                                       const libassert::assertion_printer& printer) {
+    libassert::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
+    std::string message = printer(libassert::utility::terminal_width(STDERR_FILENO));
+    if(libassert::detail::isatty(STDERR_FILENO) && libassert::config::output_colors) {
         std::cerr << message << std::endl;
     } else {
-        std::cerr << asserts::utility::strip_colors(message) << std::endl;
+        std::cerr << libassert::utility::strip_colors(message) << std::endl;
     }
     switch(type) {
-        case asserts::assert_type::debug_assertion:
-        case asserts::assert_type::assertion:
+        case libassert::assert_type::debug_assertion:
+        case libassert::assert_type::assertion:
             if(fatal == ASSERTION::FATAL) {
-                case asserts::assert_type::assumption: // switch-if-case, cursed!
+                case libassert::assert_type::assumption: // switch-if-case, cursed!
                 abort();
             }
             // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
-            // this library (on top of preventing fallthrough from nonfatal asserts)
+            // this library (on top of preventing fallthrough from nonfatal libassert)
             break;
-        case asserts::assert_type::verification:
+        case libassert::assert_type::verification:
             if(fatal == ASSERTION::FATAL) {
-                throw asserts::verification_failure();
+                throw libassert::verification_failure();
             }
             break;
         default:

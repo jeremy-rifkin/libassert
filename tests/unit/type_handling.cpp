@@ -6,10 +6,10 @@
 #include <type_traits>
 #include <utility>
 
-using namespace asserts::detail;
+using namespace libassert::detail;
 
-void custom_fail(asserts::assert_type, asserts::ASSERTION, const asserts::assertion_printer& printer) {
-    std::cerr<<printer(asserts::utility::terminal_width(2))<<std::endl<<std::endl;
+void custom_fail(libassert::assert_type, libassert::ASSERTION, const libassert::assertion_printer& printer) {
+    std::cerr<<printer(libassert::utility::terminal_width(2))<<std::endl<<std::endl;
     abort();
 }
 
@@ -126,6 +126,6 @@ int main() {
         };
         static_assert(std::is_same<decltype(f()), void>::value);
     }
-    
+
     return 0;
 }

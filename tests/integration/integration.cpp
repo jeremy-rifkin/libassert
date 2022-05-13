@@ -14,8 +14,8 @@ using namespace std::literals;
 
 void test_path_differentiation();
 
-void custom_fail(asserts::assert_type, asserts::ASSERTION, const asserts::assertion_printer& printer) {
-    std::cout<<asserts::utility::strip_colors(printer(0))<<std::endl<<std::endl;
+void custom_fail(libassert::assert_type, libassert::ASSERTION, const libassert::assertion_printer& printer) {
+    std::cout<<libassert::utility::strip_colors(printer(0))<<std::endl<<std::endl;
 }
 
 template<typename T>
@@ -52,7 +52,7 @@ struct debug_print_customization {
     }
 };
 
-[[nodiscard]] std::string stringify(const debug_print_customization& p, asserts::detail::literal_format) {
+[[nodiscard]] std::string stringify(const debug_print_customization& p, libassert::detail::literal_format) {
     return "(debug_print_customization = " + std::to_string(p.x) + ")";
 }
 

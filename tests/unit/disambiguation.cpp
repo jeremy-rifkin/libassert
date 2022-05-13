@@ -14,7 +14,7 @@
 #define DARK ESC "1;30m"
 #define RESET ESC "0m"
 
-namespace asserts::detail {
+namespace libassert::detail {
     [[nodiscard]] std::string highlight(const std::string& expression);
 }
 
@@ -35,11 +35,11 @@ int main() {
     };
     bool ok = true;
     for(auto [expression, target_op, should_disambiguate] : tests) {
-        std::cout<<asserts::detail::highlight(expression)<<" target: "<<target_op<<std::endl;
-        auto [l, r] = asserts::detail::decompose_expression(expression, target_op);
+        std::cout<<libassert::detail::highlight(expression)<<" target: "<<target_op<<std::endl;
+        auto [l, r] = libassert::detail::decompose_expression(expression, target_op);
         std::cout<<"Final:"<<std::endl
-                 <<"left:  "<<asserts::detail::highlight(l)<<std::endl
-                 <<"right: "<<asserts::detail::highlight(r)<<std::endl<<std::endl;
+                 <<"left:  "<<libassert::detail::highlight(l)<<std::endl
+                 <<"right: "<<libassert::detail::highlight(r)<<std::endl<<std::endl;
         bool disambiguated = !(l == "left" && r == "right");
         if(should_disambiguate == disambiguated) {
             std::cout<<GREEN "Passed" RESET<<std::endl;

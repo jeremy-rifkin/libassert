@@ -53,7 +53,7 @@
  #define LIBASSERT_STRONG_EXPECT(expr, value) __builtin_expect((expr), (value))
 #endif
 
-namespace asserts {
+namespace libassert {
     enum class ASSERTION {
         NONFATAL, FATAL
     };
@@ -72,10 +72,10 @@ namespace asserts {
  #define ASSERT_FAIL libassert_default_fail_action
 #endif
 
-void ASSERT_FAIL(asserts::assert_type type, asserts::ASSERTION fatal, const asserts::assertion_printer& printer);
+void ASSERT_FAIL(libassert::assert_type type, libassert::ASSERTION fatal, const libassert::assertion_printer& printer);
 
 // always_false is just convenient to use here
-#define LIBASSERT_PHONY_USE(E) ((void)asserts::detail::always_false<decltype(E)>)
+#define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
 
 /*
  * Internal mechanisms
@@ -83,7 +83,7 @@ void ASSERT_FAIL(asserts::assert_type type, asserts::ASSERTION fatal, const asse
  * Macros exposed: LIBASSERT_PRIMITIVE_ASSERT
  */
 
-namespace asserts::detail {
+namespace libassert::detail {
     // Lightweight helper, eventually may use C++20 std::source_location if this library no longer
     // targets C++17. Note: __builtin_FUNCTION only returns the name, so __PRETTY_FUNCTION__ is
     // still needed.
@@ -103,7 +103,7 @@ namespace asserts::detail {
                                const char* signature, source_location location, const char* message = nullptr);
 
     #ifndef NDEBUG
-     #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) asserts::detail::primitive_assert_impl(c, false, #c, \
+     #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) libassert::detail::primitive_assert_impl(c, false, #c, \
                                                                                  LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
     #else
      #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) LIBASSERT_PHONY_USE(c)
@@ -823,7 +823,7 @@ namespace asserts::detail {
  * Public constructs
  */
 
-namespace asserts {
+namespace libassert {
     struct verification_failure : std::exception {
         // I must just this once
         // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
@@ -857,7 +857,7 @@ namespace asserts {
  * Public utilities
  */
 
-namespace asserts::utility {
+namespace libassert::utility {
     // strip ansi escape sequences from a string
     [[nodiscard]] std::string strip_colors(const std::string& str);
 
@@ -892,7 +892,7 @@ namespace asserts::utility {
  * Configuration
  */
 
-namespace asserts::config {
+namespace libassert::config {
     // configures whether the default assertion handler prints in color or not to tty devices
     void set_color_output(bool);
 }
@@ -901,7 +901,7 @@ namespace asserts::config {
  * Actual top-level assertion processing
  */
 
-namespace asserts::detail {
+namespace libassert::detail {
     size_t count_args_strings(const char* const*);
 
     template<typename A, typename B, typename C, typename... Args>
@@ -978,7 +978,7 @@ namespace asserts::detail {
 inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {}
 
 // NOLINTNEXTLINE(misc-unused-using-decls)
-using asserts::ASSERTION;
+using libassert::ASSERTION;
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
@@ -1065,8 +1065,8 @@ using asserts::ASSERTION;
 #else
  #define LIBASSERT_STMTEXPR(B, R) [&](const char* libassert_msvc_pfunc) { B return R }(LIBASSERT_PFUNC)
  #define LIBASSERT_WARNING_PRAGMA
- #define LIBASSERT_STATIC_CAST_TO_BOOL(x) asserts::detail::static_cast_to_bool(x)
- namespace asserts::detail {
+ #define LIBASSERT_STATIC_CAST_TO_BOOL(x) libassert::detail::static_cast_to_bool(x)
+ namespace libassert::detail {
      template<typename T> constexpr bool static_cast_to_bool(T&& t) {
          return static_cast<bool>(t);
      }
@@ -1087,11 +1087,11 @@ using asserts::ASSERTION;
                                 /* extra string here because of extra comma from map, also serves as terminator */ \
                                 /* LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS because msvc */ \
                                 /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
-                                const asserts::detail::assert_static_parameters* libassert_params = []() { \
+                                const libassert::detail::assert_static_parameters* libassert_params = []() { \
                                   static constexpr const char* const libassert_arg_strings[] = { \
                                     LIBASSERT_MAP(LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS(__VA_ARGS__)) "" \
                                   }; \
-                                  static constexpr asserts::detail::assert_static_parameters _libassert_params = { \
+                                  static constexpr libassert::detail::assert_static_parameters _libassert_params = { \
                                     name LIBASSERT_COMMA \
                                     type LIBASSERT_COMMA \
                                     expr_str LIBASSERT_COMMA \
@@ -1112,11 +1112,11 @@ using asserts::ASSERTION;
 // A wrapper struct is used here to return an lvalue reference from a gcc statement expression.
 // Note: There is a current issue with tarnaries: auto x = assert(b ? y : y); must copy y. This can be fixed with
 // lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
-// Note: asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr) done for ternary
+// Note: libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr) done for ternary
 #if LIBASSERT_IS_MSVC
- #define LIBASSERT_PRETTY_FUNCTION_ARG ,asserts::detail::pretty_function_name_wrapper{libassert_msvc_pfunc}
+ #define LIBASSERT_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{libassert_msvc_pfunc}
 #else
- #define LIBASSERT_PRETTY_FUNCTION_ARG ,asserts::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
+ #define LIBASSERT_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
 #endif
 #if LIBASSERT_IS_CLANG // -Wall in clang
  #define LIBASSERT_IGNORE_UNUSED_VALUE _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
@@ -1128,7 +1128,7 @@ using asserts::ASSERTION;
         LIBASSERT_STMTEXPR( \
           LIBASSERT_WARNING_PRAGMA \
           auto libassert_decomposer = \
-                             asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr); \
+                             libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
           decltype(auto) libassert_value = libassert_decomposer.get_value(); \
           constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
           if constexpr(check_expression) { \
@@ -1138,7 +1138,7 @@ using asserts::ASSERTION;
             if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
               ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
               failaction \
-              LIBASSERT_STATIC_DATA(name, asserts::assert_type::type, #expr, __VA_ARGS__) \
+              LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
               if constexpr(sizeof libassert_decomposer > 32) { \
                 process_assert_fail(libassert_decomposer, libassert_params \
                                            LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
@@ -1148,14 +1148,14 @@ using asserts::ASSERTION;
                                            LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
                 /* can't move-assign back to decomposer if it holds reference members */ \
                 libassert_decomposer.compl expression_decomposer(); /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */ \
-                new (&libassert_decomposer) asserts::detail::expression_decomposer(std::move(libassert_r)); \
+                new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \
               } \
             } \
           }, \
           /* Note: std::launder needed in 17 in case of placement new / move shenanigans above */ \
           /* https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3 */ \
           /* Note: Somewhat relying on this call being inlined so inefficiency is eliminated */ \
-          asserts::detail::get_expression_return_value <doreturn LIBASSERT_COMMA \
+          libassert::detail::get_expression_return_value <doreturn LIBASSERT_COMMA \
             libassert_ret_lhs LIBASSERT_COMMA std::is_lvalue_reference<decltype(libassert_value)>::value> \
               (libassert_value, *std::launder(&libassert_decomposer)); \
         ) LIBASSERT_IF(doreturn)(.value,)

@@ -5,7 +5,7 @@
 int main() {
     bool success = true;
     auto test = [&success](const std::string& type, const std::string& expected) {
-        auto pretty = asserts::detail::prettify_type(type);
+        auto pretty = libassert::detail::prettify_type(type);
         if(pretty != expected) {
             std::cout<<"Error:"<<std::endl;
             std::cout<<"Expected:"<<expected<<std::endl;

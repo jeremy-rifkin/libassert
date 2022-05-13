@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-using namespace asserts::utility;
+using namespace libassert::utility;
 
 int main() {
     // pretty_type_name tests

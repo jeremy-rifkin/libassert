@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
-project(asserts)
+project(libassert)
 
 option(ASSERT_DECOMPOSE_BINARY_LOGICAL "Enables expression decomposition of && and ||" OFF)
 option(ASSERT_LOWERCASE "Enables assert alias for ASSERT" OFF)
