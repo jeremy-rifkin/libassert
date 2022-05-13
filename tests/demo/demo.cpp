@@ -182,7 +182,7 @@ public:
         {
             int fd = open(path, O_RDONLY);
             assert(fd >= 0, "Internal error with foobars", errno, path);
-            ASSERT_DETAIL_PHONY_USE(fd);
+            LIBASSERT_PHONY_USE(fd);
         }
         {
             assert(open(path, O_RDONLY) >= 0, "Internal error with foobars", errno, path);
@@ -190,7 +190,7 @@ public:
         {
             // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
             FILE* f = VERIFY(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
-            ASSERT_DETAIL_PHONY_USE(f);
+            LIBASSERT_PHONY_USE(f);
         }
         assert(false, "Error while doing XYZ");
         assert(false);
@@ -218,7 +218,7 @@ public:
             auto x = [&] () -> decltype(auto) { return VERIFY(parameter); };
             static_assert(std::is_same<decltype(x()), std::optional<float>&>::value);
         }
-        
+
         qux();
 
         {
@@ -333,7 +333,7 @@ public:
 
         assert(0 == (2  ==  garple()));
         //assert(0 == 2 == garple());
-        
+
         assert(true ? false : true, "pffft");
         {
             std::string x = "aa";
@@ -354,7 +354,7 @@ public:
             assert(x == P {"bb"});
         }
         assert((42 & 3U) == 1UL);
-        
+
         assert([](int a, int b) {
             return a + b;
         } (10, 32) not_eq 42);
@@ -367,7 +367,7 @@ public:
         assert(<:](){return 42;%>() not_eq 42);
 
         assert(&a == nullptr);
-        
+
         {
             std::string s = "h1ello";
             assert(std::find_if(s.begin(), s.end(), [](char c) {

@@ -23,34 +23,34 @@
 #endif
 
 #if defined(__clang__)
- #define ASSERT_DETAIL_IS_CLANG 1
+ #define LIBASSERT_IS_CLANG 1
 #elif defined(__GNUC__) || defined(__GNUG__)
- #define ASSERT_DETAIL_IS_GCC 1
+ #define LIBASSERT_IS_GCC 1
 #elif defined(_MSC_VER)
- #define ASSERT_DETAIL_IS_MSVC 1
+ #define LIBASSERT_IS_MSVC 1
  #include <iso646.h> // alternative operator tokens are standard but msvc requires the include or /permissive- or /Za
 #else
  #error "Unsupported compiler"
 #endif
 
-#if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC
- #define ASSERT_DETAIL_PFUNC __extension__ __PRETTY_FUNCTION__
- #define ASSERT_DETAIL_ATTR_COLD     [[gnu::cold]]
- #define ASSERT_DETAIL_ATTR_NOINLINE [[gnu::noinline]]
- #define ASSERT_DETAIL_UNREACHABLE __builtin_unreachable()
+#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
+ #define LIBASSERT_PFUNC __extension__ __PRETTY_FUNCTION__
+ #define LIBASSERT_ATTR_COLD     [[gnu::cold]]
+ #define LIBASSERT_ATTR_NOINLINE [[gnu::noinline]]
+ #define LIBASSERT_UNREACHABLE __builtin_unreachable()
 #else
- #define ASSERT_DETAIL_PFUNC __FUNCSIG__
- #define ASSERT_DETAIL_ATTR_COLD
- #define ASSERT_DETAIL_ATTR_NOINLINE __declspec(noinline)
- #define ASSERT_DETAIL_UNREACHABLE __assume(false)
+ #define LIBASSERT_PFUNC __FUNCSIG__
+ #define LIBASSERT_ATTR_COLD
+ #define LIBASSERT_ATTR_NOINLINE __declspec(noinline)
+ #define LIBASSERT_UNREACHABLE __assume(false)
 #endif
 
-#if ASSERT_DETAIL_IS_MSVC
- #define ASSERT_DETAIL_STRONG_EXPECT(expr, value) (expr)
+#if LIBASSERT_IS_MSVC
+ #define LIBASSERT_STRONG_EXPECT(expr, value) (expr)
 #elif defined(__clang__) && __clang_major__ >= 11 || __GNUC__ >= 9
- #define ASSERT_DETAIL_STRONG_EXPECT(expr, value) __builtin_expect_with_probability((expr), (value), 1)
+ #define LIBASSERT_STRONG_EXPECT(expr, value) __builtin_expect_with_probability((expr), (value), 1)
 #else
- #define ASSERT_DETAIL_STRONG_EXPECT(expr, value) __builtin_expect((expr), (value))
+ #define LIBASSERT_STRONG_EXPECT(expr, value) __builtin_expect((expr), (value))
 #endif
 
 namespace asserts {
@@ -69,18 +69,18 @@ namespace asserts {
 }
 
 #ifndef ASSERT_FAIL
- #define ASSERT_FAIL assert_detail_default_fail_action
+ #define ASSERT_FAIL libassert_default_fail_action
 #endif
 
 void ASSERT_FAIL(asserts::assert_type type, asserts::ASSERTION fatal, const asserts::assertion_printer& printer);
 
 // always_false is just convenient to use here
-#define ASSERT_DETAIL_PHONY_USE(E) ((void)asserts::detail::always_false<decltype(E)>)
+#define LIBASSERT_PHONY_USE(E) ((void)asserts::detail::always_false<decltype(E)>)
 
 /*
  * Internal mechanisms
  *
- * Macros exposed: ASSERT_DETAIL_PRIMITIVE_ASSERT
+ * Macros exposed: LIBASSERT_PRIMITIVE_ASSERT
  */
 
 namespace asserts::detail {
@@ -103,10 +103,10 @@ namespace asserts::detail {
                                const char* signature, source_location location, const char* message = nullptr);
 
     #ifndef NDEBUG
-     #define ASSERT_DETAIL_PRIMITIVE_ASSERT(c, ...) asserts::detail::primitive_assert_impl(c, false, #c, \
-                                                                                 ASSERT_DETAIL_PFUNC, {}, ##__VA_ARGS__)
+     #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) asserts::detail::primitive_assert_impl(c, false, #c, \
+                                                                                 LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
     #else
-     #define ASSERT_DETAIL_PRIMITIVE_ASSERT(c, ...) ASSERT_DETAIL_PHONY_USE(c)
+     #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) LIBASSERT_PHONY_USE(c)
     #endif
 
     /*
@@ -225,54 +225,54 @@ namespace asserts::detail {
     // std:: implementations don't allow two separate types for lhs/rhs
     // Note: is this macro potentially bad when it comes to debugging(?)
     namespace ops {
-        #define ASSERT_DETAIL_GEN_OP_BOILERPLATE(name, op) struct name { \
+        #define LIBASSERT_GEN_OP_BOILERPLATE(name, op) struct name { \
             static constexpr std::string_view op_string = #op; \
             template<typename A, typename B> \
-            ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
+            LIBASSERT_ATTR_COLD [[nodiscard]] \
             constexpr decltype(auto) operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
                 return std::forward<A>(lhs) op std::forward<B>(rhs); \
             } \
         }
-        #define ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(name, op, cmp) struct name { \
+        #define LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(name, op, cmp) struct name { \
             static constexpr std::string_view op_string = #op; \
             template<typename A, typename B> \
-            ASSERT_DETAIL_ATTR_COLD [[nodiscard]] \
+            LIBASSERT_ATTR_COLD [[nodiscard]] \
             constexpr decltype(auto) operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
                 if constexpr(is_integral_and_not_bool<A> && is_integral_and_not_bool<B>) return cmp(lhs, rhs); \
                 else return std::forward<A>(lhs) op std::forward<B>(rhs); \
             } \
         }
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(shl, <<);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(shr, >>);
+        LIBASSERT_GEN_OP_BOILERPLATE(shl, <<);
+        LIBASSERT_GEN_OP_BOILERPLATE(shr, >>);
         #if __cplusplus >= 202002L
-         ASSERT_DETAIL_GEN_OP_BOILERPLATE(spaceship, <=>);
+         LIBASSERT_GEN_OP_BOILERPLATE(spaceship, <=>);
         #endif
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(eq,   ==, cmp_equal);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(neq,  !=, cmp_not_equal);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(gt,    >, cmp_greater);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(lt,    <, cmp_less);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(gteq, >=, cmp_greater_equal);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL(lteq, <=, cmp_less_equal);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(band,   &);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(bxor,   ^);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(bor,    |);
+        LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(eq,   ==, cmp_equal);
+        LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(neq,  !=, cmp_not_equal);
+        LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(gt,    >, cmp_greater);
+        LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(lt,    <, cmp_less);
+        LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(gteq, >=, cmp_greater_equal);
+        LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(lteq, <=, cmp_less_equal);
+        LIBASSERT_GEN_OP_BOILERPLATE(band,   &);
+        LIBASSERT_GEN_OP_BOILERPLATE(bxor,   ^);
+        LIBASSERT_GEN_OP_BOILERPLATE(bor,    |);
         #ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
-         ASSERT_DETAIL_GEN_OP_BOILERPLATE(land,   &&);
-         ASSERT_DETAIL_GEN_OP_BOILERPLATE(lor,    ||);
+         LIBASSERT_GEN_OP_BOILERPLATE(land,   &&);
+         LIBASSERT_GEN_OP_BOILERPLATE(lor,    ||);
         #endif
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(assign, =);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(add_assign,  +=);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(sub_assign,  -=);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(mul_assign,  *=);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(div_assign,  /=);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(mod_assign,  %=);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(shl_assign,  <<=);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(shr_assign,  >>=);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(band_assign, &=);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(bxor_assign, ^=);
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(bor_assign,  |=);
-        #undef ASSERT_DETAIL_GEN_OP_BOILERPLATE
-        #undef ASSERT_DETAIL_GEN_OP_BOILERPLATE_SPECIAL
+        LIBASSERT_GEN_OP_BOILERPLATE(assign, =);
+        LIBASSERT_GEN_OP_BOILERPLATE(add_assign,  +=);
+        LIBASSERT_GEN_OP_BOILERPLATE(sub_assign,  -=);
+        LIBASSERT_GEN_OP_BOILERPLATE(mul_assign,  *=);
+        LIBASSERT_GEN_OP_BOILERPLATE(div_assign,  /=);
+        LIBASSERT_GEN_OP_BOILERPLATE(mod_assign,  %=);
+        LIBASSERT_GEN_OP_BOILERPLATE(shl_assign,  <<=);
+        LIBASSERT_GEN_OP_BOILERPLATE(shr_assign,  >>=);
+        LIBASSERT_GEN_OP_BOILERPLATE(band_assign, &=);
+        LIBASSERT_GEN_OP_BOILERPLATE(bxor_assign, ^=);
+        LIBASSERT_GEN_OP_BOILERPLATE(bor_assign,  |=);
+        #undef LIBASSERT_GEN_OP_BOILERPLATE
+        #undef LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL
     }
 
     // I learned this automatic expression decomposition trick from lest:
@@ -317,7 +317,7 @@ namespace asserts::detail {
         constexpr expression_decomposer& operator=(const expression_decomposer&) = delete;
         // allow move construction
         constexpr expression_decomposer(expression_decomposer&&)
-        #if !ASSERT_DETAIL_IS_GCC || __GNUC__ >= 10 // gcc 9 has some issue with the move constructor being noexcept
+        #if !LIBASSERT_IS_GCC || __GNUC__ >= 10 // gcc 9 has some issue with the move constructor being noexcept
          noexcept
         #endif
          = default;
@@ -399,7 +399,7 @@ namespace asserts::detail {
                 return expression_decomposer<decltype(get_value()), O, ops::shl>(std::forward<A>(get_value()), std::forward<O>(operand));
             }
         }
-        #define ASSERT_DETAIL_GEN_OP_BOILERPLATE(functor, op) \
+        #define LIBASSERT_GEN_OP_BOILERPLATE(functor, op) \
         template<typename O> [[nodiscard]] constexpr auto operator op(O&& operand) && { \
             static_assert(!is_nothing<A>); \
             using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
@@ -412,35 +412,35 @@ namespace asserts::detail {
                 return expression_decomposer<V, Q, functor>(std::forward<V>(get_value()), std::forward<O>(operand)); \
             } \
         }
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shr, >>)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::shr, >>)
         #if __cplusplus >= 202002L
-         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::spaceship, <=>)
+         LIBASSERT_GEN_OP_BOILERPLATE(ops::spaceship, <=>)
         #endif
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::eq, ==)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::neq, !=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::gt, >)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lt, <)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::gteq, >=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lteq, <=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::band, &)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bxor, ^)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bor, |)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::eq, ==)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::neq, !=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::gt, >)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::lt, <)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::gteq, >=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::lteq, <=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::band, &)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::bxor, ^)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::bor, |)
         #ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
-         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::land, &&)
-         ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::lor, ||)
+         LIBASSERT_GEN_OP_BOILERPLATE(ops::land, &&)
+         LIBASSERT_GEN_OP_BOILERPLATE(ops::lor, ||)
         #endif
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::assign, =) // NOLINT(cppcoreguidelines-c-copy-assignment-signature, misc-unconventional-assign-operator)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::add_assign, +=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::sub_assign, -=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::mul_assign, *=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::div_assign, /=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::mod_assign, %=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shl_assign, <<=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::shr_assign, >>=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::band_assign, &=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bxor_assign, ^=)
-        ASSERT_DETAIL_GEN_OP_BOILERPLATE(ops::bor_assign, |=)
-        #undef ASSERT_DETAIL_GEN_OP_BOILERPLATE
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::assign, =) // NOLINT(cppcoreguidelines-c-copy-assignment-signature, misc-unconventional-assign-operator)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::add_assign, +=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::sub_assign, -=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::mul_assign, *=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::div_assign, /=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::mod_assign, %=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::shl_assign, <<=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::shr_assign, >>=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::band_assign, &=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::bxor_assign, ^=)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::bor_assign, |=)
+        #undef LIBASSERT_GEN_OP_BOILERPLATE
     };
 
     // for ternary support
@@ -473,7 +473,7 @@ namespace asserts::detail {
      * stringification
      */
 
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    LIBASSERT_ATTR_COLD [[nodiscard]]
     constexpr std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r)
                                                                                                               noexcept {
         auto i = sig.find(l) + l.length();
@@ -481,18 +481,18 @@ namespace asserts::detail {
     }
 
     template<typename T>
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    LIBASSERT_ATTR_COLD [[nodiscard]]
     constexpr std::string_view type_name() noexcept {
         // Cases to handle:
         // gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
         // clang: std::string_view ns::type_name() [T = int]
         // msvc:  class std::basic_string_view<char,struct std::char_traits<char> > __cdecl ns::type_name<int>(void)
-        #if ASSERT_DETAIL_IS_CLANG
-         return substring_bounded_by(ASSERT_DETAIL_PFUNC, "[T = ", "]");
-        #elif ASSERT_DETAIL_IS_GCC
-         return substring_bounded_by(ASSERT_DETAIL_PFUNC, "[with T = ", "; std::string_view = ");
-        #elif ASSERT_DETAIL_IS_MSVC
-         return substring_bounded_by(ASSERT_DETAIL_PFUNC, "type_name<", ">(void)");
+        #if LIBASSERT_IS_CLANG
+         return substring_bounded_by(LIBASSERT_PFUNC, "[T = ", "]");
+        #elif LIBASSERT_IS_GCC
+         return substring_bounded_by(LIBASSERT_PFUNC, "[with T = ", "; std::string_view = ");
+        #elif LIBASSERT_IS_MSVC
+         return substring_bounded_by(LIBASSERT_PFUNC, "type_name<", ">(void)");
         #else
          static_assert(false, "unsupported compiler");
         #endif
@@ -573,7 +573,7 @@ namespace asserts::detail {
         template<typename T, typename std::enable_if<std::is_pointer<strip<typename std::decay<T>::type>>::value
                                                     || std::is_function<strip<T>>::value
                                                     || !can_basic_stringify<T>::value, int>::type = 0>
-        ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+        LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
             if constexpr(has_stream_overload<T>::value && !is_string_type<T>
                       && !std::is_pointer<strip<typename std::decay<T>::type>>::value) {
@@ -637,7 +637,7 @@ namespace asserts::detail {
 
     // TODO: Not yet happy with the naming of this function / how it's used
     template<typename T>
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string generate_stringification(const T& v, literal_format fmt = literal_format::none) {
         using stringification::stringify; // ADL
         if constexpr((stringification::adl::is_printable_container<T>::value && !is_string_type<T>)) {
@@ -652,7 +652,7 @@ namespace asserts::detail {
     }
 
     template<typename T>
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    LIBASSERT_ATTR_COLD [[nodiscard]]
     std::vector<std::string> generate_stringifications(const T& v, const literal_format (&formats)[format_arr_length]) {
         if constexpr((std::is_arithmetic<strip<T>>::value || std::is_enum<strip<T>>::value) && !isa<T, bool>) {
             std::vector<std::string> vec;
@@ -691,7 +691,7 @@ namespace asserts::detail {
     void sort_and_dedup(literal_format(&)[format_arr_length]);
 
     template<typename A, typename B>
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    LIBASSERT_ATTR_COLD [[nodiscard]]
     binary_diagnostics_descriptor generate_binary_diagnostic(const A& a, const B& b,
                                                              const char* a_str, const char* b_str,
                                                              std::string_view op) {
@@ -720,11 +720,11 @@ namespace asserts::detail {
         return binary_diagnostics_descriptor { lstrings, rstrings, a_str, b_str, formats[1] != lf::none };
     }
 
-    #define ASSERT_DETAIL_X(x) #x
-    #define ASSERT_DETAIL_Y(x) ASSERT_DETAIL_X(x)
-    constexpr const std::string_view errno_expansion = ASSERT_DETAIL_Y(errno);
-    #undef ASSERT_DETAIL_Y
-    #undef ASSERT_DETAIL_X
+    #define LIBASSERT_X(x) #x
+    #define LIBASSERT_Y(x) LIBASSERT_X(x)
+    constexpr const std::string_view errno_expansion = LIBASSERT_Y(errno);
+    #undef LIBASSERT_Y
+    #undef LIBASSERT_X
 
     struct extra_diagnostics {
         ASSERTION fatality = ASSERTION::FATAL;
@@ -744,7 +744,7 @@ namespace asserts::detail {
     };
 
     template<typename T>
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, const T& t) {
         if constexpr(isa<T, ASSERTION>) {
             entry.fatality = t;
@@ -753,12 +753,12 @@ namespace asserts::detail {
             entry.pretty_function = t.pretty_function;
         } else {
             // three cases to handle: assert message, errno, and regular diagnostics
-            #if ASSERT_DETAIL_IS_MSVC
+            #if LIBASSERT_IS_MSVC
              #pragma warning(push)
              #pragma warning(disable: 4127) // MSVC thinks constexpr should be used here. It should not.
             #endif
             if(isa<T, strip<decltype(errno)>> && args_strings[i] == errno_expansion) {
-            #if ASSERT_DETAIL_IS_MSVC
+            #if LIBASSERT_IS_MSVC
              #pragma warning(pop)
             #endif
                 // this is redundant and useless but the body for errno handling needs to be in an
@@ -787,7 +787,7 @@ namespace asserts::detail {
     }
 
     template<typename... Args>
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    LIBASSERT_ATTR_COLD [[nodiscard]]
     extra_diagnostics process_args(const char* const* const args_strings, Args&... args) {
         extra_diagnostics entry;
         size_t i = 0;
@@ -905,14 +905,14 @@ namespace asserts::detail {
     size_t count_args_strings(const char* const*);
 
     template<typename A, typename B, typename C, typename... Args>
-    ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE
+    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
     void process_assert_fail(expression_decomposer<A, B, C>& decomposer,
                                 const assert_static_parameters* params, Args&&... args) {
         lock l;
         const auto* args_strings = params->args_strings;
         size_t args_strings_count = count_args_strings(args_strings);
         size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
-        ASSERT_DETAIL_PRIMITIVE_ASSERT((sizeof...(args) == 1 && args_strings_count == 2)
+        LIBASSERT_PRIMITIVE_ASSERT((sizeof...(args) == 1 && args_strings_count == 2)
                                        || args_strings_count == sizeof_extra_diagnostics + 1);
         // process_args needs to be called as soon as possible in case errno needs to be read
         const auto processed_args = process_args(args_strings, args...);
@@ -942,7 +942,7 @@ namespace asserts::detail {
     }
 
     template<typename A, typename B, typename C, typename... Args>
-    ASSERT_DETAIL_ATTR_COLD ASSERT_DETAIL_ATTR_NOINLINE [[nodiscard]]
+    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE [[nodiscard]]
     expression_decomposer<A, B, C> process_assert_fail_m(expression_decomposer<A, B, C> decomposer,
                                            const assert_static_parameters* params, Args&&... args) {
         process_assert_fail(decomposer, params, std::forward<Args>(args)...);
@@ -980,92 +980,92 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {}
 // NOLINTNEXTLINE(misc-unused-using-decls)
 using asserts::ASSERTION;
 
-#if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC
+#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
- #define ASSERT_DETAIL_EVAL0(...) __VA_ARGS__
- #define ASSERT_DETAIL_EVAL1(...) ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(__VA_ARGS__)))
- #define ASSERT_DETAIL_EVAL2(...) ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(__VA_ARGS__)))
- #define ASSERT_DETAIL_EVAL3(...) ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(__VA_ARGS__)))
- #define ASSERT_DETAIL_EVAL4(...) ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(__VA_ARGS__)))
- #define ASSERT_DETAIL_EVAL(...)  ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(__VA_ARGS__)))
- #define ASSERT_DETAIL_MAP_END(...)
- #define ASSERT_DETAIL_MAP_OUT
- #define ASSERT_DETAIL_MAP_COMMA ,
- #define ASSERT_DETAIL_MAP_GET_END2() 0, ASSERT_DETAIL_MAP_END
- #define ASSERT_DETAIL_MAP_GET_END1(...) ASSERT_DETAIL_MAP_GET_END2
- #define ASSERT_DETAIL_MAP_GET_END(...) ASSERT_DETAIL_MAP_GET_END1
- #define ASSERT_DETAIL_MAP_NEXT0(test, next, ...) next ASSERT_DETAIL_MAP_OUT
- #define ASSERT_DETAIL_MAP_NEXT1(test, next) ASSERT_DETAIL_MAP_NEXT0(test, next, 0)
- #define ASSERT_DETAIL_MAP_NEXT(test, next)  ASSERT_DETAIL_MAP_NEXT1(ASSERT_DETAIL_MAP_GET_END test, next)
- #define ASSERT_DETAIL_MAP0(f, x, peek, ...) f(x) ASSERT_DETAIL_MAP_NEXT(peek, ASSERT_DETAIL_MAP1)(f, peek, __VA_ARGS__)
- #define ASSERT_DETAIL_MAP1(f, x, peek, ...) f(x) ASSERT_DETAIL_MAP_NEXT(peek, ASSERT_DETAIL_MAP0)(f, peek, __VA_ARGS__)
- #define ASSERT_DETAIL_MAP_LIST_NEXT1(test, next) ASSERT_DETAIL_MAP_NEXT0(test, ASSERT_DETAIL_MAP_COMMA next, 0)
- #define ASSERT_DETAIL_MAP_LIST_NEXT(test, next)  ASSERT_DETAIL_MAP_LIST_NEXT1(ASSERT_DETAIL_MAP_GET_END test, next)
- #define ASSERT_DETAIL_MAP_LIST0(f, x, peek, ...) \
-                                   f(x) ASSERT_DETAIL_MAP_LIST_NEXT(peek, ASSERT_DETAIL_MAP_LIST1)(f, peek, __VA_ARGS__)
- #define ASSERT_DETAIL_MAP_LIST1(f, x, peek, ...) \
-                                   f(x) ASSERT_DETAIL_MAP_LIST_NEXT(peek, ASSERT_DETAIL_MAP_LIST0)(f, peek, __VA_ARGS__)
- #define ASSERT_DETAIL_MAP(f, ...) ASSERT_DETAIL_EVAL(ASSERT_DETAIL_MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
+ #define LIBASSERT_EVAL0(...) __VA_ARGS__
+ #define LIBASSERT_EVAL1(...) LIBASSERT_EVAL0(LIBASSERT_EVAL0(LIBASSERT_EVAL0(__VA_ARGS__)))
+ #define LIBASSERT_EVAL2(...) LIBASSERT_EVAL1(LIBASSERT_EVAL1(LIBASSERT_EVAL1(__VA_ARGS__)))
+ #define LIBASSERT_EVAL3(...) LIBASSERT_EVAL2(LIBASSERT_EVAL2(LIBASSERT_EVAL2(__VA_ARGS__)))
+ #define LIBASSERT_EVAL4(...) LIBASSERT_EVAL3(LIBASSERT_EVAL3(LIBASSERT_EVAL3(__VA_ARGS__)))
+ #define LIBASSERT_EVAL(...)  LIBASSERT_EVAL4(LIBASSERT_EVAL4(LIBASSERT_EVAL4(__VA_ARGS__)))
+ #define LIBASSERT_MAP_END(...)
+ #define LIBASSERT_MAP_OUT
+ #define LIBASSERT_MAP_COMMA ,
+ #define LIBASSERT_MAP_GET_END2() 0, LIBASSERT_MAP_END
+ #define LIBASSERT_MAP_GET_END1(...) LIBASSERT_MAP_GET_END2
+ #define LIBASSERT_MAP_GET_END(...) LIBASSERT_MAP_GET_END1
+ #define LIBASSERT_MAP_NEXT0(test, next, ...) next LIBASSERT_MAP_OUT
+ #define LIBASSERT_MAP_NEXT1(test, next) LIBASSERT_MAP_NEXT0(test, next, 0)
+ #define LIBASSERT_MAP_NEXT(test, next)  LIBASSERT_MAP_NEXT1(LIBASSERT_MAP_GET_END test, next)
+ #define LIBASSERT_MAP0(f, x, peek, ...) f(x) LIBASSERT_MAP_NEXT(peek, LIBASSERT_MAP1)(f, peek, __VA_ARGS__)
+ #define LIBASSERT_MAP1(f, x, peek, ...) f(x) LIBASSERT_MAP_NEXT(peek, LIBASSERT_MAP0)(f, peek, __VA_ARGS__)
+ #define LIBASSERT_MAP_LIST_NEXT1(test, next) LIBASSERT_MAP_NEXT0(test, LIBASSERT_MAP_COMMA next, 0)
+ #define LIBASSERT_MAP_LIST_NEXT(test, next)  LIBASSERT_MAP_LIST_NEXT1(LIBASSERT_MAP_GET_END test, next)
+ #define LIBASSERT_MAP_LIST0(f, x, peek, ...) \
+                                   f(x) LIBASSERT_MAP_LIST_NEXT(peek, LIBASSERT_MAP_LIST1)(f, peek, __VA_ARGS__)
+ #define LIBASSERT_MAP_LIST1(f, x, peek, ...) \
+                                   f(x) LIBASSERT_MAP_LIST_NEXT(peek, LIBASSERT_MAP_LIST0)(f, peek, __VA_ARGS__)
+ #define LIBASSERT_MAP(f, ...) LIBASSERT_EVAL(LIBASSERT_MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
 #else
  // https://stackoverflow.com/a/29474124/15675011
- #define ASSERT_DETAIL_PLUS_TEXT_(x,y) x ## y
- #define ASSERT_DETAIL_PLUS_TEXT(x, y) ASSERT_DETAIL_PLUS_TEXT_(x, y)
- #define ASSERT_DETAIL_ARG_1(_1, ...) _1
- #define ASSERT_DETAIL_ARG_2(_1, _2, ...) _2
- #define ASSERT_DETAIL_ARG_3(_1, _2, _3, ...) _3
- #define ASSERT_DETAIL_ARG_40( _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, \
+ #define LIBASSERT_PLUS_TEXT_(x,y) x ## y
+ #define LIBASSERT_PLUS_TEXT(x, y) LIBASSERT_PLUS_TEXT_(x, y)
+ #define LIBASSERT_ARG_1(_1, ...) _1
+ #define LIBASSERT_ARG_2(_1, _2, ...) _2
+ #define LIBASSERT_ARG_3(_1, _2, _3, ...) _3
+ #define LIBASSERT_ARG_40( _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, \
                  _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, \
                  _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, \
                  _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, \
                  ...) _39
- #define ASSERT_DETAIL_OTHER_1(_1, ...) __VA_ARGS__
- #define ASSERT_DETAIL_OTHER_3(_1, _2, _3, ...) __VA_ARGS__
- #define ASSERT_DETAIL_EVAL0(...) __VA_ARGS__
- #define ASSERT_DETAIL_EVAL1(...) ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(ASSERT_DETAIL_EVAL0(__VA_ARGS__)))
- #define ASSERT_DETAIL_EVAL2(...) ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(ASSERT_DETAIL_EVAL1(__VA_ARGS__)))
- #define ASSERT_DETAIL_EVAL3(...) ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(ASSERT_DETAIL_EVAL2(__VA_ARGS__)))
- #define ASSERT_DETAIL_EVAL4(...) ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(ASSERT_DETAIL_EVAL3(__VA_ARGS__)))
- #define ASSERT_DETAIL_EVAL(...) ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(ASSERT_DETAIL_EVAL4(__VA_ARGS__)))
- #define ASSERT_DETAIL_EXPAND(x) x
- #define ASSERT_DETAIL_MAP_SWITCH(...)\
-     ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_ARG_40(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
+ #define LIBASSERT_OTHER_1(_1, ...) __VA_ARGS__
+ #define LIBASSERT_OTHER_3(_1, _2, _3, ...) __VA_ARGS__
+ #define LIBASSERT_EVAL0(...) __VA_ARGS__
+ #define LIBASSERT_EVAL1(...) LIBASSERT_EVAL0(LIBASSERT_EVAL0(LIBASSERT_EVAL0(__VA_ARGS__)))
+ #define LIBASSERT_EVAL2(...) LIBASSERT_EVAL1(LIBASSERT_EVAL1(LIBASSERT_EVAL1(__VA_ARGS__)))
+ #define LIBASSERT_EVAL3(...) LIBASSERT_EVAL2(LIBASSERT_EVAL2(LIBASSERT_EVAL2(__VA_ARGS__)))
+ #define LIBASSERT_EVAL4(...) LIBASSERT_EVAL3(LIBASSERT_EVAL3(LIBASSERT_EVAL3(__VA_ARGS__)))
+ #define LIBASSERT_EVAL(...) LIBASSERT_EVAL4(LIBASSERT_EVAL4(LIBASSERT_EVAL4(__VA_ARGS__)))
+ #define LIBASSERT_EXPAND(x) x
+ #define LIBASSERT_MAP_SWITCH(...)\
+     LIBASSERT_EXPAND(LIBASSERT_ARG_40(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
              2, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
              2, 2, 2, 2, 2, 2, 2, 2, 2,\
              2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0))
- #define ASSERT_DETAIL_MAP_A(...) ASSERT_DETAIL_PLUS_TEXT(ASSERT_DETAIL_MAP_NEXT_, \
-                                            ASSERT_DETAIL_MAP_SWITCH(0, __VA_ARGS__)) (ASSERT_DETAIL_MAP_B, __VA_ARGS__)
- #define ASSERT_DETAIL_MAP_B(...) ASSERT_DETAIL_PLUS_TEXT(ASSERT_DETAIL_MAP_NEXT_, \
-                                            ASSERT_DETAIL_MAP_SWITCH(0, __VA_ARGS__)) (ASSERT_DETAIL_MAP_A, __VA_ARGS__)
- #define ASSERT_DETAIL_MAP_CALL(fn, Value) ASSERT_DETAIL_EXPAND(fn(Value))
- #define ASSERT_DETAIL_MAP_OUT
- #define ASSERT_DETAIL_MAP_NEXT_2(...)\
-     ASSERT_DETAIL_MAP_CALL(ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_ARG_2(__VA_ARGS__)), \
-     ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_ARG_3(__VA_ARGS__))) \
-     ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_ARG_1(__VA_ARGS__)) \
-     ASSERT_DETAIL_MAP_OUT \
-     (ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_ARG_2(__VA_ARGS__)), ASSERT_DETAIL_EXPAND(ASSERT_DETAIL_OTHER_3(__VA_ARGS__)))
- #define ASSERT_DETAIL_MAP_NEXT_0(...)
- #define ASSERT_DETAIL_MAP(...)    ASSERT_DETAIL_EVAL(ASSERT_DETAIL_MAP_A(__VA_ARGS__))
+ #define LIBASSERT_MAP_A(...) LIBASSERT_PLUS_TEXT(LIBASSERT_MAP_NEXT_, \
+                                            LIBASSERT_MAP_SWITCH(0, __VA_ARGS__)) (LIBASSERT_MAP_B, __VA_ARGS__)
+ #define LIBASSERT_MAP_B(...) LIBASSERT_PLUS_TEXT(LIBASSERT_MAP_NEXT_, \
+                                            LIBASSERT_MAP_SWITCH(0, __VA_ARGS__)) (LIBASSERT_MAP_A, __VA_ARGS__)
+ #define LIBASSERT_MAP_CALL(fn, Value) LIBASSERT_EXPAND(fn(Value))
+ #define LIBASSERT_MAP_OUT
+ #define LIBASSERT_MAP_NEXT_2(...)\
+     LIBASSERT_MAP_CALL(LIBASSERT_EXPAND(LIBASSERT_ARG_2(__VA_ARGS__)), \
+     LIBASSERT_EXPAND(LIBASSERT_ARG_3(__VA_ARGS__))) \
+     LIBASSERT_EXPAND(LIBASSERT_ARG_1(__VA_ARGS__)) \
+     LIBASSERT_MAP_OUT \
+     (LIBASSERT_EXPAND(LIBASSERT_ARG_2(__VA_ARGS__)), LIBASSERT_EXPAND(LIBASSERT_OTHER_3(__VA_ARGS__)))
+ #define LIBASSERT_MAP_NEXT_0(...)
+ #define LIBASSERT_MAP(...)    LIBASSERT_EVAL(LIBASSERT_MAP_A(__VA_ARGS__))
 #endif
 
-#define ASSERT_DETAIL_STRINGIFY(x) #x,
-#define ASSERT_DETAIL_COMMA ,
+#define LIBASSERT_STRINGIFY(x) #x,
+#define LIBASSERT_COMMA ,
 
 // Church boolean
-#define ASSERT_DETAIL_IF(b) ASSERT_DETAIL_IF_##b
-#define ASSERT_DETAIL_IF_true(t,...) t
-#define ASSERT_DETAIL_IF_false(t,f,...) f
+#define LIBASSERT_IF(b) LIBASSERT_IF_##b
+#define LIBASSERT_IF_true(t,...) t
+#define LIBASSERT_IF_false(t,f,...) f
 
-#if ASSERT_DETAIL_IS_CLANG || ASSERT_DETAIL_IS_GCC
+#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  // Extra set of parentheses here because clang treats __extension__ as a low-precedence unary operator which interferes
  // with decltype(auto) in an expression like decltype(auto) x = __extension__ ({...}).y;
- #define ASSERT_DETAIL_STMTEXPR(B, R) (__extension__ ({ B R }))
- #define ASSERT_DETAIL_WARNING_PRAGMA _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
- #define ASSERT_DETAIL_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
+ #define LIBASSERT_STMTEXPR(B, R) (__extension__ ({ B R }))
+ #define LIBASSERT_WARNING_PRAGMA _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
+ #define LIBASSERT_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
 #else
- #define ASSERT_DETAIL_STMTEXPR(B, R) [&](const char* assert_detail_msvc_pfunc) { B return R }(ASSERT_DETAIL_PFUNC)
- #define ASSERT_DETAIL_WARNING_PRAGMA
- #define ASSERT_DETAIL_STATIC_CAST_TO_BOOL(x) asserts::detail::static_cast_to_bool(x)
+ #define LIBASSERT_STMTEXPR(B, R) [&](const char* libassert_msvc_pfunc) { B return R }(LIBASSERT_PFUNC)
+ #define LIBASSERT_WARNING_PRAGMA
+ #define LIBASSERT_STATIC_CAST_TO_BOOL(x) asserts::detail::static_cast_to_bool(x)
  namespace asserts::detail {
      template<typename T> constexpr bool static_cast_to_bool(T&& t) {
          return static_cast<bool>(t);
@@ -1073,32 +1073,32 @@ using asserts::ASSERTION;
  }
 #endif
 
-#if ASSERT_DETAIL_IS_GCC
+#if LIBASSERT_IS_GCC
  // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
- #define ASSERT_DETAIL_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
+ #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
 #else
  // clang properly eats the comma with ##__VA_ARGS__
- #define ASSERT_DETAIL_VA_ARGS(...) , ##__VA_ARGS__
+ #define LIBASSERT_VA_ARGS(...) , ##__VA_ARGS__
 #endif
 
 // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
 // name, not signature
-#define ASSERT_DETAIL_STATIC_DATA(name, type, expr_str, ...) \
+#define LIBASSERT_STATIC_DATA(name, type, expr_str, ...) \
                                 /* extra string here because of extra comma from map, also serves as terminator */ \
-                                /* ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS because msvc */ \
+                                /* LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS because msvc */ \
                                 /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
-                                const asserts::detail::assert_static_parameters* assert_detail_params = []() { \
-                                  static constexpr const char* const assert_detail_arg_strings[] = { \
-                                    ASSERT_DETAIL_MAP(ASSERT_DETAIL_STRINGIFY ASSERT_DETAIL_VA_ARGS(__VA_ARGS__)) "" \
+                                const asserts::detail::assert_static_parameters* libassert_params = []() { \
+                                  static constexpr const char* const libassert_arg_strings[] = { \
+                                    LIBASSERT_MAP(LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS(__VA_ARGS__)) "" \
                                   }; \
-                                  static constexpr asserts::detail::assert_static_parameters _assert_detail_params = { \
-                                    name ASSERT_DETAIL_COMMA \
-                                    type ASSERT_DETAIL_COMMA \
-                                    expr_str ASSERT_DETAIL_COMMA \
-                                    {} ASSERT_DETAIL_COMMA \
-                                    assert_detail_arg_strings ASSERT_DETAIL_COMMA \
+                                  static constexpr asserts::detail::assert_static_parameters _libassert_params = { \
+                                    name LIBASSERT_COMMA \
+                                    type LIBASSERT_COMMA \
+                                    expr_str LIBASSERT_COMMA \
+                                    {} LIBASSERT_COMMA \
+                                    libassert_arg_strings LIBASSERT_COMMA \
                                   }; \
-                                  return &_assert_detail_params; \
+                                  return &_libassert_params; \
                                 }();
 
 // Note about statement expressions: These are needed for two reasons. The first is putting the arg string array and
@@ -1113,57 +1113,57 @@ using asserts::ASSERTION;
 // Note: There is a current issue with tarnaries: auto x = assert(b ? y : y); must copy y. This can be fixed with
 // lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
 // Note: asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr) done for ternary
-#if ASSERT_DETAIL_IS_MSVC
- #define ASSERT_DETAIL_PRETTY_FUNCTION_ARG ,asserts::detail::pretty_function_name_wrapper{assert_detail_msvc_pfunc}
+#if LIBASSERT_IS_MSVC
+ #define LIBASSERT_PRETTY_FUNCTION_ARG ,asserts::detail::pretty_function_name_wrapper{libassert_msvc_pfunc}
 #else
- #define ASSERT_DETAIL_PRETTY_FUNCTION_ARG ,asserts::detail::pretty_function_name_wrapper{ASSERT_DETAIL_PFUNC}
+ #define LIBASSERT_PRETTY_FUNCTION_ARG ,asserts::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
 #endif
-#if ASSERT_DETAIL_IS_CLANG // -Wall in clang
- #define ASSERT_DETAIL_IGNORE_UNUSED_VALUE _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
+#if LIBASSERT_IS_CLANG // -Wall in clang
+ #define LIBASSERT_IGNORE_UNUSED_VALUE _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
 #else
- #define ASSERT_DETAIL_IGNORE_UNUSED_VALUE
+ #define LIBASSERT_IGNORE_UNUSED_VALUE
 #endif
 #define ASSERT_INVOKE(expr, doreturn, check_expression, name, type, failaction, ...) \
-        ASSERT_DETAIL_IGNORE_UNUSED_VALUE \
-        ASSERT_DETAIL_STMTEXPR( \
-          ASSERT_DETAIL_WARNING_PRAGMA \
-          auto assert_detail_decomposer = \
+        LIBASSERT_IGNORE_UNUSED_VALUE \
+        LIBASSERT_STMTEXPR( \
+          LIBASSERT_WARNING_PRAGMA \
+          auto libassert_decomposer = \
                              asserts::detail::expression_decomposer(asserts::detail::expression_decomposer{} << expr); \
-          decltype(auto) assert_detail_value = assert_detail_decomposer.get_value(); \
-          constexpr bool assert_detail_ret_lhs = assert_detail_decomposer.ret_lhs(); \
+          decltype(auto) libassert_value = libassert_decomposer.get_value(); \
+          constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
           if constexpr(check_expression) { \
             /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
             /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
             /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
-            if(ASSERT_DETAIL_STRONG_EXPECT(!ASSERT_DETAIL_STATIC_CAST_TO_BOOL(assert_detail_value), 0)) { \
+            if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
               ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
               failaction \
-              ASSERT_DETAIL_STATIC_DATA(name, asserts::assert_type::type, #expr, __VA_ARGS__) \
-              if constexpr(sizeof assert_detail_decomposer > 32) { \
-                process_assert_fail(assert_detail_decomposer, assert_detail_params \
-                                           ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) ASSERT_DETAIL_PRETTY_FUNCTION_ARG); \
+              LIBASSERT_STATIC_DATA(name, asserts::assert_type::type, #expr, __VA_ARGS__) \
+              if constexpr(sizeof libassert_decomposer > 32) { \
+                process_assert_fail(libassert_decomposer, libassert_params \
+                                           LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
               } else { \
                 /* std::move it to assert_fail_m, will be moved back to r */ \
-                auto assert_detail_r = process_assert_fail_m(std::move(assert_detail_decomposer), assert_detail_params \
-                                           ASSERT_DETAIL_VA_ARGS(__VA_ARGS__) ASSERT_DETAIL_PRETTY_FUNCTION_ARG); \
+                auto libassert_r = process_assert_fail_m(std::move(libassert_decomposer), libassert_params \
+                                           LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
                 /* can't move-assign back to decomposer if it holds reference members */ \
-                assert_detail_decomposer.compl expression_decomposer(); /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */ \
-                new (&assert_detail_decomposer) asserts::detail::expression_decomposer(std::move(assert_detail_r)); \
+                libassert_decomposer.compl expression_decomposer(); /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */ \
+                new (&libassert_decomposer) asserts::detail::expression_decomposer(std::move(libassert_r)); \
               } \
             } \
           }, \
           /* Note: std::launder needed in 17 in case of placement new / move shenanigans above */ \
           /* https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3 */ \
           /* Note: Somewhat relying on this call being inlined so inefficiency is eliminated */ \
-          asserts::detail::get_expression_return_value <doreturn ASSERT_DETAIL_COMMA \
-            assert_detail_ret_lhs ASSERT_DETAIL_COMMA std::is_lvalue_reference<decltype(assert_detail_value)>::value> \
-              (assert_detail_value, *std::launder(&assert_detail_decomposer)); \
-        ) ASSERT_DETAIL_IF(doreturn)(.value,)
+          asserts::detail::get_expression_return_value <doreturn LIBASSERT_COMMA \
+            libassert_ret_lhs LIBASSERT_COMMA std::is_lvalue_reference<decltype(libassert_value)>::value> \
+              (libassert_value, *std::launder(&libassert_decomposer)); \
+        ) LIBASSERT_IF(doreturn)(.value,)
 
 #ifdef NDEBUG
- #define ASSERT_DETAIL_ASSUME_ACTION ASSERT_DETAIL_UNREACHABLE;
+ #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE;
 #else
- #define ASSERT_DETAIL_ASSUME_ACTION
+ #define LIBASSERT_ASSUME_ACTION
 #endif
 
 #ifndef NDEBUG
@@ -1204,17 +1204,17 @@ using asserts::ASSERTION;
  #endif
 #endif
 
-#define ASSUME(expr, ...) ASSERT_INVOKE(expr, true, true, "ASSUME", assumption, ASSERT_DETAIL_ASSUME_ACTION, __VA_ARGS__)
+#define ASSUME(expr, ...) ASSERT_INVOKE(expr, true, true, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
 
 #define VERIFY(expr, ...) ASSERT_INVOKE(expr, true, true, "VERIFY", verification, , __VA_ARGS__)
 
-#ifndef ASSERT_DETAIL_IS_CPP // keep macros for the .cpp
- #undef ASSERT_DETAIL_IS_CLANG
- #undef ASSERT_DETAIL_IS_GCC
- #undef ASSERT_DETAIL_IS_MSVC
- #undef ASSERT_DETAIL_ATTR_COLD
- #undef ASSERT_DETAIL_ATTR_NOINLINE
- #undef ASSERT_DETAIL_PRIMITIVE_ASSERT
+#ifndef LIBASSERT_IS_CPP // keep macros for the .cpp
+ #undef LIBASSERT_IS_CLANG
+ #undef LIBASSERT_IS_GCC
+ #undef LIBASSERT_IS_MSVC
+ #undef LIBASSERT_ATTR_COLD
+ #undef LIBASSERT_ATTR_NOINLINE
+ #undef LIBASSERT_PRIMITIVE_ASSERT
 #endif
 
 #endif

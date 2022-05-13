@@ -479,8 +479,8 @@ namespace asserts {
 using asserts::ASSERTION;
 ```
 
-This library defines macros of the form `ASSERT_DETAIL_*`. In macro expansion variables of the form
-`assert_detail_*` are created. The user shouldn't define variables of this form to prevent shadowing
+This library defines macros of the form `LIBASSERT_*`. In macro expansion variables of the form
+`libassert_*` are created. The user shouldn't define variables of this form to prevent shadowing
 issues.
 
 ## How To Use This Library

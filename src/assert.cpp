@@ -1,4 +1,4 @@
-#define ASSERT_DETAIL_IS_CPP
+#define LIBASSERT_IS_CPP
 #define _CRT_SECURE_NO_WARNINGS // done only for strerror
 #include "assert.hpp"
 
@@ -50,7 +50,7 @@
  #error "no"
 #endif
 
-#if ASSERT_DETAIL_IS_MSVC
+#if LIBASSERT_IS_MSVC
  // wchar -> char string warning
  #pragma warning(disable : 4244)
 #endif
@@ -81,7 +81,7 @@ public:
     constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
         if(needle == option) { return result; }
         if constexpr (sizeof...(Rest) > 0) { return lookup(rest...); }
-        else { ASSERT_DETAIL_PRIMITIVE_ASSERT(false); ASSERT_DETAIL_UNREACHABLE; }
+        else { LIBASSERT_PRIMITIVE_ASSERT(false); LIBASSERT_UNREACHABLE; }
     }
     constexpr bool is_in() { return false; }
     template<typename T, typename... Rest>
@@ -92,14 +92,14 @@ public:
 };
 
 namespace asserts::utility {
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     std::string strip_colors(const std::string& str) {
         static std::regex ansi_escape_re("\033\\[[^m]+m");
         return std::regex_replace(str, ansi_escape_re, "");
     }
 
     // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-    ASSERT_DETAIL_ATTR_COLD int terminal_width(int fd) {
+    LIBASSERT_ATTR_COLD int terminal_width(int fd) {
         if(fd < 0) {
             return 0;
         }
@@ -125,13 +125,13 @@ namespace asserts::utility {
 namespace asserts::config {
     static std::atomic_bool output_colors = true;
 
-    ASSERT_DETAIL_ATTR_COLD void set_color_output(bool enable) {
+    LIBASSERT_ATTR_COLD void set_color_output(bool enable) {
         output_colors = enable;
     }
 }
 
 namespace asserts::detail {
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     void primitive_assert_impl(bool condition, bool verify, const char* expression,
                                const char* signature, source_location location, const char* message) {
         if(!condition) {
@@ -150,31 +150,31 @@ namespace asserts::detail {
     }
 
     // Still present in release mode, nonfatal
-    #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, ASSERT_DETAIL_PFUNC, {}, ##__VA_ARGS__)
+    #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
 
     /*
      * string utilities
      */
 
     template<typename... T>
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     std::string stringf(T... args) {
         int length = snprintf(nullptr, 0, args...);
-        if(length < 0) { ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
+        if(length < 0) { LIBASSERT_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
         std::string str(length, 0);
         snprintf(str.data(), length + 1, args...);
         return str;
     }
 
     // to save template instantiation work in TUs a variadic stringf is used
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     std::string bstringf(const char* format, ...) {
         va_list args1;
         va_list args2;
         va_start(args1, format);
         va_start(args2, format);
         int length = vsnprintf(nullptr, 0, format, args1);
-        if(length < 0) { ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
+        if(length < 0) { LIBASSERT_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
         std::string str(length, 0);
         vsnprintf(str.data(), length + 1, format, args2);
         va_end(args1);
@@ -182,7 +182,7 @@ namespace asserts::detail {
         return str;
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::vector<std::string> split(std::string_view s, std::string_view delims) {
         std::vector<std::string> vec;
         size_t old_pos = 0;
@@ -196,7 +196,7 @@ namespace asserts::detail {
     }
 
     template<typename C>
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::string join(const C& container, const std::string_view delim) {
         auto iter = std::begin(container);
         auto end = std::end(container);
@@ -213,14 +213,14 @@ namespace asserts::detail {
 
     constexpr const char * const ws = " \t\n\r\f\v";
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::string_view trim(const std::string_view s) {
         size_t l = s.find_first_not_of(ws);
         size_t r = s.find_last_not_of(ws) + 1;
         return s.substr(l, r - l);
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static void replace_all_dynamic(std::string& str, std::string_view text, std::string_view replacement) {
         std::string::size_type pos = 0;
         while((pos = str.find(text.data(), pos, text.length())) != std::string::npos) {
@@ -231,7 +231,7 @@ namespace asserts::detail {
         }
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static void replace_all(std::string& str, const std::regex& re, std::string_view replacement) {
         std::smatch match;
         std::size_t i = 0;
@@ -241,7 +241,7 @@ namespace asserts::detail {
         }
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static void replace_all_template(std::string& str, const std::pair<std::regex, std::string_view>& rule) {
         const auto& [re, replacement] = rule;
         std::smatch match;
@@ -263,7 +263,7 @@ namespace asserts::detail {
         }
     };
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false) {
         size_t i = 0;
         size_t j;
@@ -279,7 +279,7 @@ namespace asserts::detail {
     }
 
     template<size_t N>
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     std::optional<std::array<std::string, N>> match(const std::string& s, const std::regex& r) {
         std::smatch match;
         if(std::regex_match(s, match, r)) {
@@ -297,7 +297,7 @@ namespace asserts::detail {
      * system wrappers
      */
 
-    ASSERT_DETAIL_ATTR_COLD void enable_virtual_terminal_processing_if_needed() {
+    LIBASSERT_ATTR_COLD void enable_virtual_terminal_processing_if_needed() {
         // enable colors / ansi processing if necessary
         #ifdef _WIN32
          // https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing
@@ -313,7 +313,7 @@ namespace asserts::detail {
         #endif
     }
 
-    ASSERT_DETAIL_ATTR_COLD static bool isatty(int fd) {
+    LIBASSERT_ATTR_COLD static bool isatty(int fd) {
         #ifdef _WIN32
          return _isatty(fd);
         #else
@@ -321,22 +321,22 @@ namespace asserts::detail {
         #endif
     }
 
-    ASSERT_DETAIL_ATTR_COLD std::string get_executable_path() {
+    LIBASSERT_ATTR_COLD std::string get_executable_path() {
         #ifdef _WIN32
          char buffer[MAX_PATH + 1];
          int s = GetModuleFileNameA(NULL, buffer, sizeof(buffer));
-         ASSERT_DETAIL_PRIMITIVE_ASSERT(s != 0);
+         LIBASSERT_PRIMITIVE_ASSERT(s != 0);
          return buffer;
         #else
          char buffer[PATH_MAX + 1];
          ssize_t s = readlink("/proc/self/exe", buffer, PATH_MAX);
-         ASSERT_DETAIL_PRIMITIVE_ASSERT(s != -1);
+         LIBASSERT_PRIMITIVE_ASSERT(s != -1);
          buffer[s] = 0;
          return buffer;
         #endif
     }
 
-    ASSERT_DETAIL_ATTR_COLD std::string strerror_wrapper(int e) {
+    LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {
         return strerror(e);
     }
 
@@ -358,10 +358,10 @@ namespace asserts::detail {
         std::string source_path;
         std::string signature;
         unsigned line = 0;
-        ASSERT_DETAIL_ATTR_COLD bool operator==(const stacktrace_entry& other) const {
+        LIBASSERT_ATTR_COLD bool operator==(const stacktrace_entry& other) const {
             return line == other.line && signature == other.signature && source_path == other.source_path;
         }
-        ASSERT_DETAIL_ATTR_COLD bool operator!=(const stacktrace_entry& other) const {
+        LIBASSERT_ATTR_COLD bool operator!=(const stacktrace_entry& other) const {
             return !operator==(other);
         }
     };
@@ -374,8 +374,8 @@ namespace asserts::detail {
     constexpr size_t n_skip   = 0;
 
     #ifdef USE_DBG_HELP_H
-    #if ASSERT_DETAIL_IS_GCC
-    ASSERT_DETAIL_ATTR_COLD
+    #if LIBASSERT_IS_GCC
+    LIBASSERT_ATTR_COLD
     static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
         // TODO: Popen is a hack. Implement properly with CreateProcess and pipes later.
         FILE* p = popen(("addr2line -e " + executable + " -fC " + addresses).c_str(), "r");
@@ -431,14 +431,14 @@ namespace asserts::detail {
 
     // SymGetTypeInfo utility
     template<typename T, IMAGEHLP_SYMBOL_TYPE_INFO SymType, bool FAILABLE = false>
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     auto get_info(ULONG type_index, HANDLE proc, ULONG64 modbase) {
         T info;
         if(!SymGetTypeInfo(proc, modbase, type_index, static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(SymType), &info)) {
             if constexpr(FAILABLE) {
                 return (T)-1;
             } else {
-                ASSERT_DETAIL_PRIMITIVE_ASSERT(false, ("SymGetTypeInfo failed: "s +
+                LIBASSERT_PRIMITIVE_ASSERT(false, ("SymGetTypeInfo failed: "s +
                                            std::system_error(GetLastError(), std::system_category()).what()).c_str());
             }
         }
@@ -454,7 +454,7 @@ namespace asserts::detail {
     }
 
     // Translate basic types to string
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::string_view get_basic_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
         auto basic_type = get_info<BasicType, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_BASETYPE>(type_index, proc, modbase);
         //auto length = get_info<ULONG64, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_LENGTH>(type_index, proc, modbase);
@@ -485,7 +485,7 @@ namespace asserts::detail {
     }
 
     // Resolve more complex types
-    ASSERT_DETAIL_ATTR_COLD static std::string lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+    LIBASSERT_ATTR_COLD static std::string lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
         auto tag = get_info<SymTagEnum, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMTAG>(type_index, proc, modbase);
         switch(tag) {
             case SymTagEnum::SymTagBaseType:
@@ -515,7 +515,7 @@ namespace asserts::detail {
         std::string str;
     };
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static BOOL __stdcall enumerator_callback(PSYMBOL_INFO symbol_info, [[maybe_unused]] ULONG symbol_size, PVOID data) {
         function_info* ctx = (function_info*)data;
         if(ctx->counter++ >= ctx->n_children) {
@@ -532,7 +532,7 @@ namespace asserts::detail {
     }
 
     [[maybe_unused]]
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::optional<trace_t> get_stacktrace() {
         SymSetOptions(SYMOPT_ALLOW_ABSOLUTE_SYMBOLS);
         HANDLE proc = GetCurrentProcess();
@@ -541,7 +541,7 @@ namespace asserts::detail {
         int frames = CaptureStackBackTrace(n_skip, n_frames, addrs, NULL);
         trace_t trace;
         trace.reserve(frames);
-        #if ASSERT_DETAIL_IS_GCC
+        #if LIBASSERT_IS_GCC
          std::string executable = get_executable_path();
          std::vector<std::pair<PVOID, size_t>> deferred;
         #endif
@@ -582,13 +582,13 @@ namespace asserts::detail {
                 }
             } else {
                 trace.push_back({"", "", 0});
-                #if ASSERT_DETAIL_IS_GCC
+                #if LIBASSERT_IS_GCC
                  deferred.push_back({addrs[i], trace.size() - 1});
                 #endif
             }
         }
         internal_verify(SymCleanup(proc));
-        #if ASSERT_DETAIL_IS_GCC
+        #if LIBASSERT_IS_GCC
          // If we're compiling with gcc on windows, the debug symbols will be embedded in the
          // executable and retrievable with addr2line (this is provided by mingw).
          // The executable will not be PIE. TODO: I don't know if PIE gcc on windows is a
@@ -600,7 +600,7 @@ namespace asserts::detail {
          std::string addresses = "";
          for(auto& [address, _] : deferred) addresses += stringf("%#tx ", address);
          auto output = split(trim(resolve_addresses(addresses, executable)), "\n");
-         ASSERT_DETAIL_PRIMITIVE_ASSERT(output.size() == 2 * deferred.size());
+         LIBASSERT_PRIMITIVE_ASSERT(output.size() == 2 * deferred.size());
          for(size_t i = 0; i < deferred.size(); i++) {
              // line info is one of the following:
              // path:line (descriminator number)
@@ -610,7 +610,7 @@ namespace asserts::detail {
              // Regex modified from the linux version to eat the C:\\ at the beginning
              static std::regex location_re(R"(^((?:\w:[\\/])?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
              auto m = match<2>(output[i * 2 + 1], location_re);
-             ASSERT_DETAIL_PRIMITIVE_ASSERT(m.has_value());
+             LIBASSERT_PRIMITIVE_ASSERT(m.has_value());
              auto [path, line] = *m;
              if(path != "??") {
                  trace[deferred[i].second].source_path = path;
@@ -625,7 +625,7 @@ namespace asserts::detail {
     }
     #endif
     #ifdef USE_EXECINFO_H
-    ASSERT_DETAIL_ATTR_COLD static bool has_addr2line() {
+    LIBASSERT_ATTR_COLD static bool has_addr2line() {
         // Detects if addr2line exists by trying to invoke addr2line --help
         constexpr int magic = 42;
         pid_t pid = fork();
@@ -641,7 +641,7 @@ namespace asserts::detail {
     }
 
     // returns 1 for little endian, 2 for big endien, matches elf
-    ASSERT_DETAIL_ATTR_COLD static int endianness() {
+    LIBASSERT_ATTR_COLD static int endianness() {
         int n = 1;
         if(*reinterpret_cast<char*>(&n) == 1) {
             return 1; // little
@@ -669,20 +669,20 @@ namespace asserts::detail {
         ET_DYN = 0x03
     };
 
-    ASSERT_DETAIL_ATTR_COLD static uint16_t get_executable_e_type(const std::string& path) {
+    LIBASSERT_ATTR_COLD static uint16_t get_executable_e_type(const std::string& path) {
         FILE* f = fopen(path.c_str(), "rb");
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(f != nullptr);
+        LIBASSERT_PRIMITIVE_ASSERT(f != nullptr);
         partial_elf_file_header h;
         internal_verify(fread(&h, sizeof(partial_elf_file_header), 1, f) == 1, "error while reading file");
         char magic[] = {0x7F, 'E', 'L', 'F'};
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(memcmp(h.magic, magic, 4) == 0);
+        LIBASSERT_PRIMITIVE_ASSERT(memcmp(h.magic, magic, 4) == 0);
         if(h.e_data != endianness()) {
             h.e_type = (h.e_type & 0x00ff) << 8 | (h.e_type & 0xff00) >> 8;
         }
         return h.e_type;
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static bool paths_refer_to_same(const std::string& path_a, const std::string& path_b) {
         struct stat a, b;
         stat(path_a.c_str(), &a);
@@ -701,7 +701,7 @@ namespace asserts::detail {
 
     // This is a custom replacement for backtrace_symbols, which makes getting the information we
     // need impossible in some situations.
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::vector<frame> backtrace_frames(void * const * array, size_t size, size_t skip) {
         // reference: https://github.com/bminor/glibc/blob/master/debug/backtracesyms.c
         std::vector<frame> frames;
@@ -711,7 +711,7 @@ namespace asserts::detail {
             frame frame;
             frame.raw_address = array[i];
             if(dladdr(array[i], &info)) {
-                ASSERT_DETAIL_PRIMITIVE_ASSERT(info.dli_fname != nullptr);
+                LIBASSERT_PRIMITIVE_ASSERT(info.dli_fname != nullptr);
                 // dli_sname and dli_saddr are only present with -rdynamic, sname will be included
                 // but we don't really need dli_saddr
                 frame.obj_path = info.dli_fname;
@@ -720,7 +720,7 @@ namespace asserts::detail {
             }
             frames.push_back(frame);
         }
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(frames.size() == size - skip);
+        LIBASSERT_PRIMITIVE_ASSERT(frames.size() == size - skip);
         return frames;
     }
 
@@ -735,7 +735,7 @@ namespace asserts::detail {
     };
     static_assert(sizeof(pipe_t) == 2 * sizeof(int));
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
         pipe_t output_pipe;
         pipe_t input_pipe;
@@ -769,7 +769,7 @@ namespace asserts::detail {
         return output;
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::optional<trace_t> get_stacktrace() {
         void* bt[n_frames];
         int bt_size = backtrace(bt, n_frames);
@@ -785,7 +785,7 @@ namespace asserts::detail {
             std::optional<std::string> dladdr_name_of_executable;
             for(size_t i = 0; i < frames.size(); i++) {
                 auto& entry = frames[i];
-                ASSERT_DETAIL_PRIMITIVE_ASSERT(entry.raw_address >= entry.obj_base);
+                LIBASSERT_PRIMITIVE_ASSERT(entry.raw_address >= entry.obj_base);
                 // There is a bug with dladdr for non-PIE objects
                 if(!dladdr_name_of_executable.has_value()) {
                     if(paths_refer_to_same(entry.obj_path, binary_path)) {
@@ -817,7 +817,7 @@ namespace asserts::detail {
                 auto output = split(trim(resolve_addresses(join(addresses, "\n"), file)), "\n");
                 // Cannot wait until we can write ^ that as:
                 // join(addresses, "\n") |> resolve_addresses(file) |> trim() |> split("\n");
-                ASSERT_DETAIL_PRIMITIVE_ASSERT(output.size() == 2 * target.size());
+                LIBASSERT_PRIMITIVE_ASSERT(output.size() == 2 * target.size());
                 for(size_t i = 0; i < target.size(); i++) {
                     // line info is one of the following:
                     // path:line (descriminator number)
@@ -826,7 +826,7 @@ namespace asserts::detail {
                     // ??:?
                     static std::regex location_re(R"(^([^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
                     auto m = match<2>(output[i * 2 + 1], location_re);
-                    ASSERT_DETAIL_PRIMITIVE_ASSERT(m.has_value());
+                    LIBASSERT_PRIMITIVE_ASSERT(m.has_value());
                     auto [path, line] = *m;
                     if(path != "??") {
                         target[i]->source_path = path;
@@ -842,7 +842,7 @@ namespace asserts::detail {
     }
     #endif
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     void* get_stacktrace_opaque() {
         auto trace = get_stacktrace();
         if(trace) {
@@ -860,16 +860,16 @@ namespace asserts::detail {
         std::string_view color;
         std::string content;
         // Get as much code into the .cpp as possible
-        ASSERT_DETAIL_ATTR_COLD highlight_block(std::string_view _color, std::string _content)
+        LIBASSERT_ATTR_COLD highlight_block(std::string_view _color, std::string _content)
                                                          : color(_color), content(std::move(_content)) { }
-        ASSERT_DETAIL_ATTR_COLD highlight_block(const highlight_block&) = default;
-        ASSERT_DETAIL_ATTR_COLD highlight_block(highlight_block&&) = default;
-        ASSERT_DETAIL_ATTR_COLD ~highlight_block() = default;
-        ASSERT_DETAIL_ATTR_COLD highlight_block& operator=(const highlight_block&) = default;
-        ASSERT_DETAIL_ATTR_COLD highlight_block& operator=(highlight_block&&) = default;
+        LIBASSERT_ATTR_COLD highlight_block(const highlight_block&) = default;
+        LIBASSERT_ATTR_COLD highlight_block(highlight_block&&) = default;
+        LIBASSERT_ATTR_COLD ~highlight_block() = default;
+        LIBASSERT_ATTR_COLD highlight_block& operator=(const highlight_block&) = default;
+        LIBASSERT_ATTR_COLD highlight_block& operator=(highlight_block&&) = default;
     };
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     std::string union_regexes(std::initializer_list<std::string_view> regexes) {
         std::string composite;
         for(const std::string_view str : regexes) {
@@ -881,7 +881,7 @@ namespace asserts::detail {
         return composite;
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     std::string prettify_type(std::string type) {
         // > > -> >> replacement
         // could put in analysis:: but the replacement is basic and this is more convenient for
@@ -973,7 +973,7 @@ namespace asserts::detail {
         std::vector<std::pair<std::regex, literal_format>> literal_formats;
 
     private:
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         analysis() {
             // https://eel.is/c++draft/gram.lex
             // generate regular expressions
@@ -1115,7 +1115,7 @@ namespace asserts::detail {
         }
 
     public:
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         std::string_view normalize_op(const std::string_view op) {
             // Operators need to be normalized to support alternative operators like and and bitand
             // Normalization instead of just adding to the precedence table because target operators
@@ -1127,7 +1127,7 @@ namespace asserts::detail {
             }
         }
 
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         std::string_view normalize_brace(const std::string_view brace) {
             // Operators need to be normalized to support alternative operators like and and bitand
             // Normalization instead of just adding to the precedence table because target operators
@@ -1139,7 +1139,7 @@ namespace asserts::detail {
             }
         }
 
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         std::vector<token_t> tokenize(const std::string& expression, bool decompose_shr = false) {
             std::vector<token_t> tokens;
             size_t i = 0;
@@ -1170,7 +1170,7 @@ namespace asserts::detail {
             return tokens;
         }
 
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         std::vector<highlight_block> highlight(const std::string& expression) try {
             const auto tokens = tokenize(expression);
             std::vector<highlight_block> output;
@@ -1185,7 +1185,7 @@ namespace asserts::detail {
                             }
                         }
                     }
-                    ASSERT_DETAIL_PRIMITIVE_ASSERT(j != 0);
+                    LIBASSERT_PRIMITIVE_ASSERT(j != 0);
                     return token_t { token_e::whitespace, "" };
                 };
                 switch(token.token_type) {
@@ -1228,7 +1228,7 @@ namespace asserts::detail {
             return {{"", expression}};
         }
 
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         literal_format get_literal_format(const std::string& expression) {
             for(auto& [ re, type ] : literal_formats) {
                 if(std::regex_match(expression, re)) {
@@ -1238,7 +1238,7 @@ namespace asserts::detail {
             return literal_format::none; // not a literal
         }
 
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         static token_t find_last_non_ws(const std::vector<token_t>& tokens, size_t i) {
             // returns empty token_e::whitespace on failure
             while(i--) {
@@ -1249,7 +1249,7 @@ namespace asserts::detail {
             return {token_e::whitespace, ""};
         }
 
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         static std::string_view get_real_op(const std::vector<token_t>& tokens, const size_t i) {
             // re-coalesce >> if necessary
             bool is_shr = tokens[i].str == ">" && i < tokens.size() - 1 && tokens[i + 1].str == ">";
@@ -1262,7 +1262,7 @@ namespace asserts::detail {
         // always be small.
         // Returns true if parse tree traversal was a success, false if depth was exceeded
         static constexpr int max_depth = 10;
-        ASSERT_DETAIL_ATTR_COLD bool pseudoparse(
+        LIBASSERT_ATTR_COLD bool pseudoparse(
             const std::vector<token_t>& tokens,
             const std::string_view target_op,
             size_t i,
@@ -1304,7 +1304,7 @@ namespace asserts::detail {
                         }
                     }
                     if(i == tokens.size() && count != -1) {
-                        ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "ill-formed expression input");
+                        LIBASSERT_PRIMITIVE_ASSERT(false, "ill-formed expression input");
                     }
                     return empty;
                 };
@@ -1327,7 +1327,7 @@ namespace asserts::detail {
                                 } else if(token.str == "<" && normalize_brace(find_last_non_ws(tokens, i).str) == "]") {
                                     // this must be a template parameter list, part of a generic lambda
                                     bool empty = scan_forward("<", ">");
-                                    ASSERT_DETAIL_PRIMITIVE_ASSERT(!empty);
+                                    LIBASSERT_PRIMITIVE_ASSERT(!empty);
                                     state = expecting_operator;
                                     continue;
                                 }
@@ -1380,7 +1380,7 @@ namespace asserts::detail {
                             }
                             state = expecting_operator;
                         } else {
-                            ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "unhandled punctuation?");
+                            LIBASSERT_PRIMITIVE_ASSERT(false, "unhandled punctuation?");
                         }
                         break;
                     case token_e::keyword:
@@ -1404,7 +1404,7 @@ namespace asserts::detail {
             return true;
         }
 
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         std::pair<std::string, std::string> decompose_expression(const std::string& expression,
                 const std::string_view target_op) {
             // While automatic decomposition allows something like `assert(foo(n) == bar<n> + n);`
@@ -1488,7 +1488,7 @@ namespace asserts::detail {
     analysis* analysis::analysis_singleton;
 
     // public static wrappers
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     std::string highlight(const std::string& expression) {
         #ifdef NCOLOR
         return expression;
@@ -1506,7 +1506,7 @@ namespace asserts::detail {
         #endif
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     std::vector<highlight_block> highlight_blocks(const std::string& expression) {
         #ifdef NCOLOR
         return expression;
@@ -1515,19 +1515,19 @@ namespace asserts::detail {
         #endif
     }
 
-    ASSERT_DETAIL_ATTR_COLD literal_format get_literal_format(const std::string& expression) {
+    LIBASSERT_ATTR_COLD literal_format get_literal_format(const std::string& expression) {
         return analysis::get().get_literal_format(expression);
     }
 
-    ASSERT_DETAIL_ATTR_COLD std::string trim_suffix(const std::string& expression) {
+    LIBASSERT_ATTR_COLD std::string trim_suffix(const std::string& expression) {
         return expression.substr(0, expression.find_last_not_of("FfUuLlZz") + 1);
     }
 
-    ASSERT_DETAIL_ATTR_COLD bool is_bitwise(std::string_view op) {
+    LIBASSERT_ATTR_COLD bool is_bitwise(std::string_view op) {
         return analysis::get().bitwise_operators.count(op);
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op) {
         return analysis::get().decompose_expression(expression, target_op);
     }
@@ -1536,7 +1536,7 @@ namespace asserts::detail {
      * stringification
      */
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::string escape_string(const std::string_view str, char quote) {
         std::string escaped;
         escaped += quote;
@@ -1557,19 +1557,19 @@ namespace asserts::detail {
     }
 
     namespace stringification {
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(const std::string& value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(const std::string& value, literal_format) {
             return escape_string(value, '"');
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(const std::string_view& value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(const std::string_view& value, literal_format) {
             return escape_string(value, '"');
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(std::nullptr_t, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(std::nullptr_t, literal_format) {
             return "nullptr";
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(char value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(char value, literal_format fmt) {
             if(fmt == literal_format::character) {
                 return escape_string({&value, 1}, '\'');
             } else {
@@ -1577,12 +1577,12 @@ namespace asserts::detail {
             }
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(bool value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(bool value, literal_format) {
                 return value ? "true" : "false";
         }
 
         template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>
-        ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+        LIBASSERT_ATTR_COLD [[nodiscard]]
         static std::string stringify_integral(T value, literal_format fmt) {
             std::ostringstream oss;
             switch(fmt) {
@@ -1605,46 +1605,46 @@ namespace asserts::detail {
                     oss<<"0b"<<std::bitset<sizeof(value) * 8>(value);
                     goto r;
                 default:
-                    ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
+                    LIBASSERT_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
             }
             oss<<value;
             r: return std::move(oss).str();
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(short value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(short value, literal_format fmt) {
             return stringify_integral(value, fmt);
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(int value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(int value, literal_format fmt) {
             return stringify_integral(value, fmt);
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(long value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(long value, literal_format fmt) {
             return stringify_integral(value, fmt);
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(long long value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(long long value, literal_format fmt) {
             return stringify_integral(value, fmt);
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned short value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(unsigned short value, literal_format fmt) {
             return stringify_integral(value, fmt);
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned int value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(unsigned int value, literal_format fmt) {
             return stringify_integral(value, fmt);
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned long value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(unsigned long value, literal_format fmt) {
             return stringify_integral(value, fmt);
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(unsigned long long value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(unsigned long long value, literal_format fmt) {
             return stringify_integral(value, fmt);
         }
 
         template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
-        ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+        LIBASSERT_ATTR_COLD [[nodiscard]]
         static std::string stringify_floating_point(T value, literal_format fmt) {
             std::ostringstream oss;
             switch(fmt) {
@@ -1660,7 +1660,7 @@ namespace asserts::detail {
                 case literal_format::binary:
                     return "";
                 default:
-                    ASSERT_DETAIL_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
+                    LIBASSERT_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
             }
             oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<value;
             std::string s = std::move(oss).str();
@@ -1671,33 +1671,33 @@ namespace asserts::detail {
             return s;
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(float value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(float value, literal_format fmt) {
             return stringify_floating_point(value, fmt);
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(double value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(double value, literal_format fmt) {
             return stringify_floating_point(value, fmt);
         }
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(long double value, literal_format fmt) {
+        LIBASSERT_ATTR_COLD std::string stringify(long double value, literal_format fmt) {
             return stringify_floating_point(value, fmt);
         }
 
         #if __cplusplus >= 202002L
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(std::strong_ordering value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(std::strong_ordering value, literal_format) {
                 if(value == std::strong_ordering::less)       return "std::strong_ordering::less";
                 if(value == std::strong_ordering::equivalent) return "std::strong_ordering::equivalent";
                 if(value == std::strong_ordering::equal)      return "std::strong_ordering::equal";
                 if(value == std::strong_ordering::greater)    return "std::strong_ordering::greater";
                 return "Unknown std::strong_ordering value";
         }
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(std::weak_ordering value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(std::weak_ordering value, literal_format) {
                 if(value == std::weak_ordering::less)       return "std::weak_ordering::less";
                 if(value == std::weak_ordering::equivalent) return "std::weak_ordering::equivalent";
                 if(value == std::weak_ordering::greater)    return "std::weak_ordering::greater";
                 return "Unknown std::weak_ordering value";
         }
-        ASSERT_DETAIL_ATTR_COLD std::string stringify(std::partial_ordering value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(std::partial_ordering value, literal_format) {
                 if(value == std::partial_ordering::less)       return "std::partial_ordering::less";
                 if(value == std::partial_ordering::equivalent) return "std::partial_ordering::equivalent";
                 if(value == std::partial_ordering::greater)    return "std::partial_ordering::greater";
@@ -1706,7 +1706,7 @@ namespace asserts::detail {
         }
         #endif
 
-        ASSERT_DETAIL_ATTR_COLD std::string stringify_ptr(const void* value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify_ptr(const void* value, literal_format) {
             if(value == nullptr) {
                 return "nullptr";
             }
@@ -1727,16 +1727,16 @@ namespace asserts::detail {
         size_t width;
         std::vector<highlight_block> blocks;
         bool right_align = false;
-        ASSERT_DETAIL_ATTR_COLD column_t(size_t _width, std::vector<highlight_block> _blocks, bool _right_align = false)
+        LIBASSERT_ATTR_COLD column_t(size_t _width, std::vector<highlight_block> _blocks, bool _right_align = false)
                                                : width(_width), blocks(std::move(_blocks)), right_align(_right_align) {}
-        ASSERT_DETAIL_ATTR_COLD column_t(const column_t&) = default;
-        ASSERT_DETAIL_ATTR_COLD column_t(column_t&&) = default;
-        ASSERT_DETAIL_ATTR_COLD ~column_t() = default;
-        ASSERT_DETAIL_ATTR_COLD column_t& operator=(const column_t&) = default;
-        ASSERT_DETAIL_ATTR_COLD column_t& operator=(column_t&&) = default;
+        LIBASSERT_ATTR_COLD column_t(const column_t&) = default;
+        LIBASSERT_ATTR_COLD column_t(column_t&&) = default;
+        LIBASSERT_ATTR_COLD ~column_t() = default;
+        LIBASSERT_ATTR_COLD column_t& operator=(const column_t&) = default;
+        LIBASSERT_ATTR_COLD column_t& operator=(column_t&&) = default;
     };
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static constexpr unsigned log10(unsigned n) {
         if(n <= 1) {
             return 1;
@@ -1765,7 +1765,7 @@ namespace asserts::detail {
 
     using path_components = std::vector<std::string>;
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static path_components parse_path(const std::string_view path) {
         #ifdef _WIN32
          constexpr std::string_view path_delim = "/\\";
@@ -1802,8 +1802,8 @@ namespace asserts::detail {
                 }
             }
         }
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(!parts.empty());
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(parts.back() != "." && parts.back() != "..");
+        LIBASSERT_PRIMITIVE_ASSERT(!parts.empty());
+        LIBASSERT_PRIMITIVE_ASSERT(parts.back() != "." && parts.back() != "..");
         return parts;
     }
 
@@ -1821,16 +1821,16 @@ namespace asserts::detail {
         std::string root;
         std::unordered_map<std::string, path_trie*> edges;
     public:
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         path_trie(std::string _root) : root(std::move(_root)) {};
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         compl path_trie() {
             for(auto& [k, trie] : edges) {
                 delete trie;
             }
         }
         path_trie(const path_trie&) = delete;
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         path_trie(path_trie&& other) noexcept { // needed for std::vector
             downstream_branches = other.downstream_branches;
             root = other.root;
@@ -1841,24 +1841,24 @@ namespace asserts::detail {
         }
         path_trie& operator=(const path_trie&) = delete;
         path_trie& operator=(path_trie&&) = delete;
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         void insert(const path_components& path) {
-            ASSERT_DETAIL_PRIMITIVE_ASSERT(path.back() == root);
+            LIBASSERT_PRIMITIVE_ASSERT(path.back() == root);
             insert(path, (int)path.size() - 2);
         }
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         path_components disambiguate(const path_components& path) {
             path_components result;
             path_trie* current = this;
-            ASSERT_DETAIL_PRIMITIVE_ASSERT(path.back() == root);
+            LIBASSERT_PRIMITIVE_ASSERT(path.back() == root);
             result.push_back(current->root);
             for(size_t i = path.size() - 2; i >= 1; i--) {
-                ASSERT_DETAIL_PRIMITIVE_ASSERT(current->downstream_branches >= 1);
+                LIBASSERT_PRIMITIVE_ASSERT(current->downstream_branches >= 1);
                 if(current->downstream_branches == 1) {
                     break;
                 }
                 const std::string& component = path[i];
-                ASSERT_DETAIL_PRIMITIVE_ASSERT(current->edges.count(component));
+                LIBASSERT_PRIMITIVE_ASSERT(current->edges.count(component));
                 current = current->edges.at(component);
                 result.push_back(current->root);
             }
@@ -1866,7 +1866,7 @@ namespace asserts::detail {
             return result;
         }
     private:
-        ASSERT_DETAIL_ATTR_COLD
+        LIBASSERT_ATTR_COLD
         void insert(const path_components& path, int i) {
             if(i < 0) {
                 return;
@@ -1883,7 +1883,7 @@ namespace asserts::detail {
         }
     };
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::string wrapped_print(const std::vector<column_t>& columns) {
         // 2d array rows/columns
         struct line_content {
@@ -1905,7 +1905,7 @@ namespace asserts::detail {
                     }
                     // number of characters we can extract from the block
                     size_t extract = std::min(width - lines[current_line][i].length, block.content.size() - block_i);
-                    ASSERT_DETAIL_PRIMITIVE_ASSERT(block_i + extract <= block.content.size());
+                    LIBASSERT_PRIMITIVE_ASSERT(block_i + extract <= block.content.size());
                     auto substr = std::string_view(block.content).substr(block_i, extract);
                     // handle newlines
                     if(auto x = substr.find('\n'); x != std::string_view::npos) {
@@ -1956,7 +1956,7 @@ namespace asserts::detail {
         return output;
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     auto get_trace_window(const trace_t& trace) {
         // Two boundaries: assert_detail and main
         // Both are found here, nothing is filtered currently at stack trace generation
@@ -1971,7 +1971,7 @@ namespace asserts::detail {
                 end = i;
             }
         }
-        #if !ASSERT_DETAIL_IS_MSVC
+        #if !LIBASSERT_IS_MSVC
          int start_offset = 0;
         #else
          int start_offset = 1; // accommodate for lambda being used as statement expression
@@ -1979,7 +1979,7 @@ namespace asserts::detail {
         return std::pair(start + start_offset, end);
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     auto process_paths(const trace_t& trace, size_t start, size_t end) {
         // raw full path -> components
         std::unordered_map<std::string, path_components> parsed_paths;
@@ -2010,7 +2010,7 @@ namespace asserts::detail {
         return std::pair(files, std::min(longest_file_width, size_t(50)));
     }
 
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_stacktrace(trace_t* raw_trace, int term_width) {
         std::string stacktrace;
         if(raw_trace) {
@@ -2055,7 +2055,7 @@ namespace asserts::detail {
                     size_t left = 2 + max_frame_width;
                     size_t middle = std::max(line_number.size(), max_line_number_width); // todo: is this looking right...?
                     size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
-                    ASSERT_DETAIL_PRIMITIVE_ASSERT(remaining_width >= 2);
+                    LIBASSERT_PRIMITIVE_ASSERT(remaining_width >= 2);
                     size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
                     size_t sig_width = remaining_width - file_width;
                     stacktrace += wrapped_print({
@@ -2090,22 +2090,22 @@ namespace asserts::detail {
         return stacktrace;
     }
 
-    ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
-    ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
+    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
+    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
                                     std::vector<std::string>& _lstrings, std::vector<std::string>& _rstrings,
                                     std::string _a_str, std::string _b_str, bool _multiple_formats):
                                     lstrings(_lstrings), rstrings(_rstrings),
                                     a_str(std::move(_a_str)), b_str(std::move(_b_str)),
                                     multiple_formats(_multiple_formats), present(true) {}
-    ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
+    LIBASSERT_ATTR_COLD
     binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
-    ASSERT_DETAIL_ATTR_COLD binary_diagnostics_descriptor&
+    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor&
     binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept = default;
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::string print_values(const std::vector<std::string>& vec, size_t lw) {
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(!vec.empty());
+        LIBASSERT_PRIMITIVE_ASSERT(!vec.empty());
         std::string values;
         if(vec.size() == 1) {
             values += stringf("%s\n", indent(highlight(vec[0]), 8 + lw + 4, ' ', true).c_str());
@@ -2124,9 +2124,9 @@ namespace asserts::detail {
         return values;
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     static std::vector<highlight_block> get_values(const std::vector<std::string>& vec) {
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(!vec.empty());
+        LIBASSERT_PRIMITIVE_ASSERT(!vec.empty());
         if(vec.size() == 1) {
             return highlight_blocks(vec[0]);
         } else {
@@ -2149,12 +2149,12 @@ namespace asserts::detail {
     constexpr size_t arrow_width = " => "sv.size();
     constexpr size_t where_indent = 8;
 
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
         auto& [ lstrings, rstrings, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;
         const char* a_str = a_sstr.c_str(), *b_str = b_sstr.c_str();
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(!lstrings.empty());
-        ASSERT_DETAIL_PRIMITIVE_ASSERT(!rstrings.empty());
+        LIBASSERT_PRIMITIVE_ASSERT(!lstrings.empty());
+        LIBASSERT_PRIMITIVE_ASSERT(!rstrings.empty());
         // pad all columns where there is overlap
         // TODO: Use column printer instead of manual padding.
         for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()); i++) {
@@ -2206,7 +2206,7 @@ namespace asserts::detail {
         return where;
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     void sort_and_dedup(literal_format (&formats)[format_arr_length]) {
         std::sort(std::begin(formats), std::end(formats));
         size_t write_index = 1, read_index = 1;
@@ -2220,7 +2220,7 @@ namespace asserts::detail {
         }
     }
 
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]]
+    LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_extra_diagnostics(size_t term_width,
                                         const decltype(extra_diagnostics::entries)& extra_diagnostics) {
         std::string output = "    Extra diagnostics:\n";
@@ -2245,32 +2245,32 @@ namespace asserts::detail {
         return output;
     }
 
-    ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics() = default;
-    ASSERT_DETAIL_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
-    ASSERT_DETAIL_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) noexcept = default;
+    LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics() = default;
+    LIBASSERT_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
+    LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) noexcept = default;
 
-    #if ASSERT_DETAIL_IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
+    #if LIBASSERT_IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
      CRITICAL_SECTION CriticalSection;
-     [[gnu::constructor]] ASSERT_DETAIL_ATTR_COLD static void initialize_critical_section() {
+     [[gnu::constructor]] LIBASSERT_ATTR_COLD static void initialize_critical_section() {
          InitializeCriticalSectionAndSpinCount(&CriticalSection, 10);
      }
-     ASSERT_DETAIL_ATTR_COLD lock::lock() {
+     LIBASSERT_ATTR_COLD lock::lock() {
          EnterCriticalSection(&CriticalSection);
      }
-     ASSERT_DETAIL_ATTR_COLD lock::~lock() {
+     LIBASSERT_ATTR_COLD lock::~lock() {
          EnterCriticalSection(&CriticalSection);
      }
     #else
      std::mutex global_thread_lock;
-     ASSERT_DETAIL_ATTR_COLD lock::lock() {
+     LIBASSERT_ATTR_COLD lock::lock() {
          global_thread_lock.lock();
      }
-     ASSERT_DETAIL_ATTR_COLD lock::~lock() {
+     LIBASSERT_ATTR_COLD lock::~lock() {
          global_thread_lock.unlock();
      }
     #endif
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     const char* assert_type_name(assert_type t) {
         switch(t) {
             case assert_type::debug_assertion: return "Debug Assertion";
@@ -2278,12 +2278,12 @@ namespace asserts::detail {
             case assert_type::assumption:      return "Assumption";
             case assert_type::verification:    return "Verification";
             default:
-                ASSERT_DETAIL_PRIMITIVE_ASSERT(false);
+                LIBASSERT_PRIMITIVE_ASSERT(false);
                 return "";
         }
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     size_t count_args_strings(const char* const* const arr) {
         size_t c = 0;
         for(size_t i = 0; *arr[i] != 0; i++) {
@@ -2300,19 +2300,19 @@ namespace asserts {
         return "VERIFY() call failed";
     }
 
-    ASSERT_DETAIL_ATTR_COLD assertion_printer::assertion_printer(
+    LIBASSERT_ATTR_COLD assertion_printer::assertion_printer(
                                 const assert_static_parameters* _params, const extra_diagnostics& _processed_args,
                                 binary_diagnostics_descriptor& _binary_diagnostics, void* _raw_trace,
                                 size_t _sizeof_args): params(_params), processed_args(_processed_args),
                                 binary_diagnostics(_binary_diagnostics), raw_trace(_raw_trace),
                                 sizeof_args(_sizeof_args) {}
 
-    ASSERT_DETAIL_ATTR_COLD assertion_printer::~assertion_printer() {
+    LIBASSERT_ATTR_COLD assertion_printer::~assertion_printer() {
         auto* trace = static_cast<trace_t*>(raw_trace);
         delete trace;
     }
 
-    ASSERT_DETAIL_ATTR_COLD std::string assertion_printer::operator()(int width) const {
+    LIBASSERT_ATTR_COLD std::string assertion_printer::operator()(int width) const {
         const auto& [ name, type, expr_str, location, args_strings ] = *params;
         const auto& [ fatal, message, extra_diagnostics, pretty_function ] = processed_args;
         std::string output;
@@ -2342,7 +2342,7 @@ namespace asserts {
         return output;
     }
 
-    ASSERT_DETAIL_ATTR_COLD
+    LIBASSERT_ATTR_COLD
     std::tuple<const char*, int, std::string, const char*> assertion_printer::get_assertion_info() const {
         const auto& location = params->location;
         auto function = prettify_type(processed_args.pretty_function);
@@ -2351,7 +2351,7 @@ namespace asserts {
 }
 
 namespace asserts::utility {
-    ASSERT_DETAIL_ATTR_COLD [[nodiscard]] std::string stacktrace(int width) {
+    LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int width) {
         auto trace = get_stacktrace();
         if(trace) {
             return print_stacktrace(&*trace, width);
@@ -2363,8 +2363,8 @@ namespace asserts::utility {
 
 // Default handler
 
-ASSERT_DETAIL_ATTR_COLD
-void assert_detail_default_fail_action(asserts::assert_type type, ASSERTION fatal,
+LIBASSERT_ATTR_COLD
+void libassert_default_fail_action(asserts::assert_type type, ASSERTION fatal,
                                        const asserts::assertion_printer& printer) {
     asserts::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
     std::string message = printer(asserts::utility::terminal_width(STDERR_FILENO));
@@ -2389,6 +2389,6 @@ void assert_detail_default_fail_action(asserts::assert_type type, ASSERTION fata
             }
             break;
         default:
-            ASSERT_DETAIL_PRIMITIVE_ASSERT(false);
+            LIBASSERT_PRIMITIVE_ASSERT(false);
     }
 }
