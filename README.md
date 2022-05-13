@@ -21,6 +21,8 @@
     - [Return value](#return-value)
     - [Failure](#failure)
     - [Configuration](#configuration)
+    - [Debug Stringification](#debug-stringification)
+      - [User-Defined Types](#user-defined-types)
     - [Utilities](#utilities)
     - [Namespace synopsis](#namespace-synopsis)
   - [How To Use This Library](#how-to-use-this-library)
