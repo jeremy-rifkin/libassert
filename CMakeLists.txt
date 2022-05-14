@@ -48,6 +48,7 @@ target_link_libraries(
   assert
   PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:dbghelp>
+  ${CMAKE_DL_LIBS}
 )
 
 if(ASSERT_DECOMPOSE_BINARY_LOGICAL)
