@@ -11,7 +11,6 @@ option(ASSERT_LOWERCASE "Enables assert alias for ASSERT" OFF)
 option(ASSERT_USE_MAGIC_ENUM "Use the MagicEnum library to print better diagnostics for enum classes" ON)
 set(ASSERT_FAIL "" CACHE STRING "ASSERT_FAIL")
 
-
 # libassert uses relocs, -fpic has to be used to allow shared libs to link libassert as a static library.
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -66,6 +65,20 @@ endif()
 if(NOT "${ASSERT_FAIL}" STREQUAL "")
   target_compile_definitions(assert PUBLIC ASSERT_FAIL=${ASSERT_FAIL})
 endif()
+
+
+if(CMAKE_BUILD_TYPE STREQUAL "")
+  message(FATAL_ERROR "Setting CMAKE_BUILD_TYPE is required")
+endif()
+
+include(CTest)
+add_test(
+  NAME run-tests.py
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
+  COMMAND
+  python3 run-tests.py --build --build_type=${CMAKE_BUILD_TYPE} --compiler=${CMAKE_CXX_COMPILER_ID}
+)
+
 
 if(NOT CMAKE_SKIP_INSTALL_RULES)
   include(CMakePackageConfigHelpers)

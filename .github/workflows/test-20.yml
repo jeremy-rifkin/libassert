@@ -30,7 +30,7 @@ jobs:
            dos2unix *.txt
     - name: run tests
       working-directory: tests
-      run: python3 run-tests.py ${{matrix.compiler}} ${{matrix.target}}
+      run: python3 run-tests.py --compiler=${{matrix.compiler}} --build_type=${{matrix.target}} --integration
   test-msvc:
     runs-on: windows-2019
     strategy:
@@ -55,7 +55,7 @@ jobs:
       run: dos2unix *.txt
     - name: run tests
       working-directory: tests
-      run: python3 run-tests.py msvc ${{matrix.target}}
+      run: python3 run-tests.py --compiler=msvc --build_type=${{matrix.target}} --integration
   # TODO: Not currently testing g++ or clang release on windows
   #test-gcc-windows-cpp20: # currently addr2line is not working, not sure why
   #  runs-on: windows-2019
@@ -105,4 +105,4 @@ jobs:
       run: dos2unix *.txt
     - name: run tests
       working-directory: tests
-      run: python3 run-tests.py clang_windows
+      run: python3 run-tests.py --compiler=clang_windows --integration
