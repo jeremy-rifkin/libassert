@@ -107,7 +107,6 @@ def main():
     parser.add_argument(
         "--compiler",
         type= str.lower,
-        choices=["g++", "gcc", "clang", "clang++", "msvc", "gnu", "self"],
         required=True
     )
 
@@ -129,13 +128,18 @@ def main():
 
     if args.compiler.startswith("g"):
         target_file = "gcc" + ("_windows" if args.windows else "")
+        if args.compiler == "gnu":
+            args.compiler = "g++"
     elif args.compiler.startswith("c"):
         target_file = "clang" + ("_windows" if args.windows else "")
-    else:
+    elif args.compiler == "msvc":
         target_file = "msvc"
+        args.windows = True
+    elif args.compiler != "self":
+        print("compiler ({args.compiler}) not supported", file=sys.stderr)
+        exit(2)
 
-    if args.compiler == "gnu":
-        args.compiler = "g++"
+
 
     print(f"Running tests for {args.compiler}")
     if args.compiler == "self":
@@ -161,7 +165,9 @@ def main():
 
     if args.integration:
         run_integration("integration/expected/{}.txt".format(target_file), opt)
-        run_command("sh", "cmake.sh")
+
+        if not args.windows:
+            run_command("sh", "cmake.sh")
 
     global ok
     print("Tests " + ("passed 🟢" if ok else "failed 🔴"), flush=True)

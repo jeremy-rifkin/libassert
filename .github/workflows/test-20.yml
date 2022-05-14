@@ -105,4 +105,4 @@ jobs:
       run: dos2unix *.txt
     - name: run tests
       working-directory: tests
-      run: python3 run-tests.py --compiler=clang_windows --integration
+      run: python3 run-tests.py --compiler=clang_windows --integration --windows
