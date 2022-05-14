@@ -1,4 +1,15 @@
 /*
+ * Modified custom copy of CTRE
+ * Original repository: https://github.com/hanickadot/compile-time-regular-expressions
+ * Modified for https://github.com/jeremy-rifkin/libassert by Jeremy Rifkin, 2022
+ *
+ * Changes:
+ *  + Added ability to concatenate fixed_strings
+ *  + Added default constructor for fixed_string
+ *
+ */
+
+/*
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -272,6 +283,16 @@ template <size_t N> struct fixed_string {
 	char32_t content[N] = {};
 	size_t real_size{0};
 	bool correct_flag{true};
+    constexpr fixed_string() noexcept {}
+    template <size_t M> constexpr fixed_string(const fixed_string<M>& a, const fixed_string<N - M>& b) noexcept {
+        for (size_t i = 0; i < M; i++) {
+            content[i] = a.content[i];
+        }
+        for (size_t i = M; i < N; i++) {
+            content[i] = b.content[i - M];
+        }
+        real_size = a.real_size + b.real_size;
+    }
 	template <typename T> constexpr fixed_string(const T (&input)[N+1]) noexcept {
 		if constexpr (std::is_same_v<T, char>) {
 			#ifdef CTRE_STRING_IS_UTF8
@@ -402,6 +423,13 @@ template <size_t N> struct fixed_string {
 	constexpr operator std::basic_string_view<char32_t>() const noexcept {
 		return std::basic_string_view<char32_t>{content, size()};
 	}
+    template<size_t M> constexpr fixed_string<N + M> operator+(const fixed_string<M>& other) const {
+        return fixed_string<N + M>(*this, other);
+    }
+    template<typename T, size_t M> constexpr fixed_string<N + M - 1> operator+(const T (&other)[M]) const {
+        fixed_string<M - 1> other_fs = other;
+        return *this + other_fs;
+    }
 };
 
 template <> class fixed_string<0> {
@@ -439,6 +467,14 @@ public:
 template <typename CharT, size_t N> fixed_string(const CharT (&)[N]) -> fixed_string<N-1>;
 template <size_t N> fixed_string(fixed_string<N>) -> fixed_string<N>;
 
+template <size_t M, size_t N> fixed_string(const fixed_string<M>&, const fixed_string<N>&) -> fixed_string<M + N>;
+
+}
+
+template<typename T, size_t M0, size_t M1>
+constexpr ctll::fixed_string<M0 - 1 + M1> operator+(const T (&a)[M0], const ctll::fixed_string<M1>& b) {
+    ctll::fixed_string a_fs = a;
+    return a_fs + b;
 }
 
 #endif

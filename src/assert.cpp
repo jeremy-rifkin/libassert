@@ -96,7 +96,7 @@ public:
 // CTRE regex replace utility
 template<const auto& Pattern>
 ASSERT_DETAIL_ATTR_COLD
-[[nodiscard]] constexpr std::string ctre_replace(std::string_view str, std::string_view replacement) {
+[[nodiscard]] std::string ctre_replace(std::string_view str, std::string_view replacement) {
     std::string result;
     auto searcher = ctre::search<Pattern>;
     // NOLINTNEXTLINE(readability-qualified-auto)
@@ -113,6 +113,80 @@ ASSERT_DETAIL_ATTR_COLD
     }
     return result;
 }
+
+template<std::size_t N>
+struct static_string {
+	char content[N] = {};
+    size_t size = 0;
+    constexpr static_string() noexcept = default;
+    constexpr static_string(const char* data) noexcept {
+        for(int i = 0; data[i] != 0; i++) {
+            content[i] = data[i];
+            size++;
+        }
+    }
+    template<const auto& Other> static constexpr static_string from() {
+        /// ... TODO
+        return static_string();
+    }
+    constexpr const char* begin() const noexcept {
+        return content;
+    }
+    constexpr const char* end() const noexcept {
+        return content + size;
+    }
+    template<typename T> constexpr void append(const T& begin, const T& end) {
+        for(auto it = begin; it != end; it++) {
+            content[size++] = *it;
+        }
+    }
+    template<typename SV_Like> constexpr void append(const SV_Like& sv) {
+        append(std::begin(sv), std::end(sv));
+    }
+    void operator=(std::string_view sv) {
+        size = 0;
+        for(char c : sv) {
+            content[size++] = c;
+        }
+    }
+};
+
+// Replacing with things like $& ends up being a bit of a nightmare in CTRE, so this is a dumbed down implementation
+// that does what I need here
+// Every use here just replaces -> <prefix>$&
+template<const auto& Pattern, std::size_t N, typename S>
+ASSERT_DETAIL_ATTR_COLD
+[[nodiscard]] constexpr auto ctre_replace_prefixer(T str, std::string_view prefix) {
+    constexpr auto searcher = ctre::search<Pattern>;
+    static_string<N> result;
+    // NOLINTNEXTLINE(readability-qualified-auto)
+    auto cursor = str.begin();
+    while(cursor != str.end()) {
+        if(auto search_result = searcher(cursor, str.end())) {
+            //result.append();
+            result.append(cursor, search_result.begin());
+            result.append(prefix.begin(), prefix.end());
+            result.append(search_result.begin(), search_result.end());
+            cursor = search_result.end();
+        } else {
+            result.append(cursor, search_result.end());
+            break;
+        }
+    }
+    return result;
+}
+
+// std::array helper
+template<typename T, typename... Args>
+constexpr std::array<T, sizeof...(Args) + 1> make_array(T&& t, Args&&... args) {
+    return {std::forward<T>(t), std::forward<Args>(args)...};
+}
+
+// CTRE helper
+
+template<const auto& Pattern> constexpr auto ctre_lambda_match = [](std::string_view sv) {
+    return ctre::match<Pattern>(sv);
+};
 
 namespace asserts::utility {
     ASSERT_DETAIL_ATTR_COLD
@@ -612,7 +686,7 @@ namespace asserts::detail {
              // path:?
              // ??:?
              // Regex modified from the linux version to eat the C:\\ at the beginning
-             constexpr static ctll::fixed_string location_pattern
+             static constexpr ctll::fixed_string location_pattern
                                                     = R"(^((?:\w:[\\/])?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)";
              auto [match, path, line] = ctre::match<location_pattern>(output[i * 2 + 1]);
              ASSERT_DETAIL_PRIMITIVE_ASSERT(match);
@@ -828,7 +902,7 @@ namespace asserts::detail {
                     // path:line
                     // path:?
                     // ??:?
-                    constexpr static ctll::fixed_string location_pattern =
+                    static constexpr ctll::fixed_string location_pattern =
                                                                    R"(^([^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)";
                     auto match = ctre::match<location_pattern>(output[i * 2 + 1]);
                     ASSERT_DETAIL_PRIMITIVE_ASSERT(match);
@@ -875,7 +949,7 @@ namespace asserts::detail {
         ASSERT_DETAIL_ATTR_COLD highlight_block& operator=(highlight_block&&) = default;
     };
 
-    ASSERT_DETAIL_ATTR_COLD
+    /*ASSERT_DETAIL_ATTR_COLD
     std::string union_regexes(std::initializer_list<std::string_view> regexes) {
         std::string composite;
         for(const std::string_view str : regexes) {
@@ -885,6 +959,72 @@ namespace asserts::detail {
             composite += "(?:" + std::string(str) + ")";
         }
         return composite;
+    }*/
+    
+    template<std::size_t N, typename C>
+    ASSERT_DETAIL_ATTR_COLD
+    constexpr void constexpr_string_view_sort(std::string_view (&arr)[N], C comparator) {
+        // Insertionsort is the fastest for small arrays, though I haven't benchmarked the constexpr interpreter
+        static_assert(N < 100);
+        for(std::size_t i = 1; i < N; i++) {
+            for(std::size_t j = i; j > 0; j--) {
+                if(comparator(arr[j], arr[j - 1])) { // j < j - 1
+                    arr[j - 1].swap(arr[j]);
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    template<std::size_t N>
+    ASSERT_DETAIL_ATTR_COLD
+    constexpr std::size_t fixed_string_size(const ctll::fixed_string<N>&) {
+        return N;
+    }
+
+    template<std::size_t N, typename C = void>
+    ASSERT_DETAIL_ATTR_COLD
+    constexpr size_t total_transformed_size(const std::string_view (&arr)[N], C transformer) {
+        size_t s = 0;
+        for(auto& item : arr) {
+            s += fixed_string_size(transformer(item));
+        }
+        return s;
+    }
+
+    static constexpr ctll::fixed_string regex_special_characters_pattern = R"([-[\]{}()*+?.,\^$|#\s])";
+
+    /*template<std::size_t N>
+    ASSERT_DETAIL_ATTR_COLD
+    constexpr auto longest_string_view(const std::string_view (&arr)[N]) {
+        return std::max_element(std::begin(arr), std::end(arr),
+                                    [](const std::string_view& a, const std::string_view& b) constexpr {
+                                        return a.size() < b.size();
+                                    })->size();
+    }*/
+
+    ASSERT_DETAIL_ATTR_COLD
+    constexpr bool isalpha(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+    }
+
+    template<std::size_t N>
+    ASSERT_DETAIL_ATTR_COLD
+    constexpr auto pattern_for_exact_of(const std::string_view (&arr)[N]) {
+        // room to replace into
+        //static_string<longest_string_view(arr) * 2> strings[N];
+        static_string<20> strings[N];
+        for(std::size_t i = 0; i < N; i++) {
+            strings[i] = arr[i];
+        }
+        for(auto str& : strings) {
+            ctre_replace_prefixer<regex_special_characters_pattern, 20>("\\");
+            if(isalpha(*(str.end() - 1))) {
+                str.append();
+            }
+        }
+        return 2;
     }
 
     ASSERT_DETAIL_ATTR_COLD
@@ -938,8 +1078,6 @@ namespace asserts::detail {
         }
 
         // could all be const but I don't want to try to pack everything into an init list
-        std::vector<std::pair<token_e, std::regex>> rules; // could be std::array but I don't want to hard-code a size
-        std::regex escapes_re;
         std::unordered_map<std::string_view, int> precedence;
         std::unordered_map<std::string_view, std::string_view> braces = {
             // template angle brackets excluded from this analysis
@@ -970,14 +1108,48 @@ namespace asserts::detail {
         std::unordered_set<std::string_view> bitwise_operators = {
             "^", "&", "|", "^=", "&=", "|=", "xor", "bitand", "bitor", "and_eq", "or_eq", "xor_eq"
         };
-        std::vector<std::pair<std::regex, literal_format>> literal_formats;
 
-    private:
-        ASSERT_DETAIL_ATTR_COLD
-        analysis() {
-            // https://eel.is/c++draft/gram.lex
-            // generate regular expressions
-            std::string keywords[] = { "alignas", "constinit", "public", "alignof", "const_cast",
+        // regex patterns
+        // numeric literals
+        static constexpr ctll::fixed_string optional_integer_suffix = "(?:[Uu](?:LL?|ll?|Z|z)?|(?:LL?|ll?|Z|z)[Uu]?)?";
+        static constexpr auto int_binary = "0[Bb][01](?:'?[01])*" + optional_integer_suffix;
+        // slightly modified from grammar so 0 is lexed as a decimal literal instead of octal
+        static constexpr auto int_octal   = "0(?:'?[0-7])+" + optional_integer_suffix;
+        static constexpr auto int_decimal = "(?:0|[1-9](?:'?\\d)*)" + optional_integer_suffix;
+        static constexpr auto int_hex     = "0[Xx](?!')(?:'?[\\da-fA-F])+" + optional_integer_suffix;
+        static constexpr ctll::fixed_string digit_sequence = "\\d(?:'?\\d)*";
+            // "(?:(?:%s)?\\.%s|%s\\.)", digit_sequence, digit_sequence, digit_sequence
+        static constexpr auto fractional_constant = "(?:(?:" + digit_sequence + ")?\\."
+                                                       + digit_sequence + "|" + digit_sequence + "\\.)";
+        static constexpr auto exponent_part = "(?:[Ee][\\+\\-]?" + digit_sequence + ")";
+        static constexpr ctll::fixed_string suffix = "[FfLl]";
+            // "(?:%s%s?|%s%s)%s?", fractional_constant, exponent_part, digit_sequence, exponent_part, suffix
+        static constexpr auto float_decimal = "(?:" + fractional_constant + exponent_part + "?|"
+                                                       + digit_sequence + exponent_part + ")" + suffix + "?";
+        static constexpr ctll::fixed_string hex_digit_sequence = "[\\da-fA-F](?:'?[\\da-fA-F])*";
+            // "(?:(?:%s)?\\.%s|%s\\.)", hex_digit_sequence, hex_digit_sequence, hex_digit_sequence
+        static constexpr auto hex_frac_const = "(?:(?:" + hex_digit_sequence + ")?\\." + hex_digit_sequence + "|"
+                                                       + hex_digit_sequence + "\\.)";
+        static constexpr auto binary_exp = "[Pp][\\+\\-]?" + digit_sequence;
+            // "0[Xx](?:%s|%s)%s%s?", hex_frac_const, hex_digit_sequence, binary_exp, suffix
+        static constexpr auto float_hex = "0[Xx](?:" + hex_frac_const + "|" + hex_digit_sequence + ")"
+                                                       + binary_exp + suffix + "?";
+        // char and string literals
+        static constexpr ctll::fixed_string escapes_pattern = R"(\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.)";
+        static constexpr auto char_literal = R"((?:u8|[UuL])?'(?:)" + escapes_pattern + R"(|[^\n'])*')";
+        static constexpr auto string_literal = R"((?:u8|[UuL])?"(?:)" + escapes_pattern + R"(|[^\n"])*")";
+                                // \2 because the first capture is the match without the rest of the file
+        static constexpr ctll::fixed_string raw_string_literal =
+                                                R"((?:u8|[UuL])?R"([^ ()\\t\r\v\n]*)\((?:(?!\)\2\").)*\)\2")";
+        // helper comparator for below
+        static constexpr auto longest_match_comparator = [](const std::string_view a, const std::string_view b) {
+            if(a.length() > b.length()) { return true; }
+            else if(a.length() == b.length()) { return a < b; }
+            else { return false; }
+        };
+        // other language stuff
+        static constexpr auto keywords_pattern = []() constexpr {
+            std::string_view keywords[] = { "alignas", "constinit", "public", "alignof", "const_cast",
                 "float", "register", "try", "asm", "continue", "for", "reinterpret_cast", "typedef",
                 "auto", "co_await", "friend", "requires", "typeid", "bool", "co_return", "goto",
                 "return", "typename", "break", "co_yield", "if", "short", "union", "case",
@@ -988,59 +1160,58 @@ namespace asserts::detail {
                 "noexcept", "switch", "while", "concept", "enum", "template", "const", "explicit",
                 "operator", "this", "consteval", "export", "private", "thread_local", "constexpr",
                 "extern", "protected", "throw" };
-            std::string punctuators[] = { "{", "}", "[", "]", "(", ")", "<:", ":>", "<%",
+            // sort to get longest match
+            constexpr_string_view_sort(keywords, longest_match_comparator);
+            // final patterns
+            //std::transform(std::begin(punctuators), std::end(punctuators), std::begin(punctuators),
+            //    [&special_chars](const std::string& str) {
+            //        return std::regex_replace(str + (isalpha(str[0]) ? "\\b" : ""), special_chars, "\\$&");
+            //    });
+            //exact_of(keywords, [](const std::string_view& str) {
+            //    return ctre_replace<special_chars>(str, "\\$&") + "\\b";
+            //});
+            return pattern_for_exact_of(keywords);
+        }();
+        static constexpr auto punctuators_pattern = []() constexpr {
+            /*std::string_view punctuators[] = { "{", "}", "[", "]", "(", ")", "<:", ":>", "<%",
                 "%>", ";", ":", "...", "?", "::", ".", ".*", "->", "->*", "~", "!", "+", "-", "*",
                 "/", "%", "^", "&", "|", "=", "+=", "-=", "*=", "/=", "%=", "^=", "&=", "|=", "==",
                 "!=", "<", ">", "<=", ">=", "<=>", "&&", "||", "<<", ">>", "<<=", ">>=", "++", "--",
                 ",", "and", "or", "xor", "not", "bitand", "bitor", "compl", "and_eq", "or_eq",
                 "xor_eq", "not_eq", "#" }; // # appears in some lambda signatures
-            // Sort longest -> shortest (secondarily A->Z)
-            const auto cmp = [](const std::string_view a, const std::string_view b) {
-                if(a.length() > b.length()) { return true; }
-                else if(a.length() == b.length()) { return a < b; }
-                else { return false; }
-            };
-            std::sort(std::begin(keywords), std::end(keywords), cmp);
-            std::sort(std::begin(punctuators), std::end(punctuators), cmp);
+            // sort to get longest match
+            constexpr_string_view_sort(punctuators, longest_match_comparator);
+            // final patterns
+            const std::regex special_chars { R"([-[\]{}()*+?.,\^$|#\s])" };*/
+            
+            return 2;
+        }();
+
+        // rules
+        static constexpr auto literal_formats = make_array(
+            std::make_pair(+ctre_lambda_match<int_binary>,    literal_format::binary),
+            std::make_pair(+ctre_lambda_match<int_octal>,     literal_format::octal),
+            std::make_pair(+ctre_lambda_match<int_decimal>,   literal_format::dec),
+            std::make_pair(+ctre_lambda_match<int_hex>,       literal_format::hex),
+            std::make_pair(+ctre_lambda_match<float_decimal>, literal_format::dec),
+            std::make_pair(+ctre_lambda_match<float_hex>,     literal_format::hex),
+            std::make_pair(+ctre_lambda_match<char_literal>,  literal_format::character)
+        );
+
+    private:
+        ASSERT_DETAIL_ATTR_COLD
+        analysis() {
+            // https://eel.is/c++draft/gram.lex
+            // generate regular expressions
+            /*
             // Escape special characters and add wordbreaks
-            const std::regex special_chars { R"([-[\]{}()*+?.,\^$|#\s])" };
-            std::transform(std::begin(punctuators), std::end(punctuators), std::begin(punctuators),
-                [&special_chars](const std::string& str) {
-                    return std::regex_replace(str + (isalpha(str[0]) ? "\\b" : ""), special_chars, "\\$&");
-                });
+            
             // https://eel.is/c++draft/lex.pptoken#3.2
             *std::find(std::begin(punctuators), std::end(punctuators), "<:") += "(?!:[^:>])";
             // regular expressions
             std::string keywords_re    = "(?:" + join(keywords, "|") + ")\\b";
             std::string punctuators_re = join(punctuators, "|");
-            // numeric literals
-            std::string optional_integer_suffix = "(?:[Uu](?:LL?|ll?|Z|z)?|(?:LL?|ll?|Z|z)[Uu]?)?";
-            std::string int_binary  = "0[Bb][01](?:'?[01])*" + optional_integer_suffix;
-            // slightly modified from grammar so 0 is lexed as a decimal literal instead of octal
-            std::string int_octal   = "0(?:'?[0-7])+" + optional_integer_suffix;
-            std::string int_decimal = "(?:0|[1-9](?:'?\\d)*)" + optional_integer_suffix;
-            std::string int_hex        = "0[Xx](?!')(?:'?[\\da-fA-F])+" + optional_integer_suffix;
-            std::string digit_sequence = "\\d(?:'?\\d)*";
-            std::string fractional_constant = stringf("(?:(?:%s)?\\.%s|%s\\.)",
-                                                digit_sequence.c_str(), digit_sequence.c_str(), digit_sequence.c_str());
-            std::string exponent_part = "(?:[Ee][\\+-]?" + digit_sequence + ")";
-            std::string suffix = "[FfLl]";
-            std::string float_decimal = stringf("(?:%s%s?|%s%s)%s?",
-                                fractional_constant.c_str(), exponent_part.c_str(),
-                                digit_sequence.c_str(), exponent_part.c_str(), suffix.c_str());
-            std::string hex_digit_sequence = "[\\da-fA-F](?:'?[\\da-fA-F])*";
-            std::string hex_frac_const = stringf("(?:(?:%s)?\\.%s|%s\\.)",
-            hex_digit_sequence.c_str(), hex_digit_sequence.c_str(), hex_digit_sequence.c_str());
-            std::string binary_exp = "[Pp][\\+-]?" + digit_sequence;
-            std::string float_hex = stringf("0[Xx](?:%s|%s)%s%s?",
-                                hex_frac_const.c_str(), hex_digit_sequence.c_str(), binary_exp.c_str(), suffix.c_str());
-            // char and string literals
-            std::string escapes = R"(\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.)";
-            std::string char_literal = R"((?:u8|[UuL])?'(?:)" + escapes + R"(|[^\n'])*')";
-            std::string string_literal = R"((?:u8|[UuL])?"(?:)" + escapes + R"(|[^\n"])*")";
-                                 // \2 because the first capture is the match without the rest of the file
-            std::string raw_string_literal = R"((?:u8|[UuL])?R"([^ ()\\t\r\v\n]*)\((?:(?!\)\2\").)*\)\2")";
-            escapes_re = std::regex(escapes);
+            
             // final rule set
             // rules must be sequenced as a topological sort adhering to:
             // keyword > identifier
@@ -1072,23 +1243,9 @@ namespace asserts::detail {
             };
             rules.resize(std::size(rules_raw));
             for(size_t i = 0; i < std::size(rules_raw); i++) {
-                                // [^] instead of . because . does not match newlines
-                std::string str = stringf("^(%s)[^]*", rules_raw[i].second.c_str());
-                #ifdef _0_DEBUG_ASSERT_LEXER_RULES
-                fprintf(stderr, "%s : %s\n", rules_raw[i].first.c_str(), str.c_str());
-                #endif
+                std::string str = stringf("^(%s)(?s:.)*", rules_raw[i].second.c_str());
                 rules[i] = { rules_raw[i].first, std::regex(str) };
-            }
-            // setup literal format rules
-            literal_formats = {
-                { std::regex(int_binary),    literal_format::binary },
-                { std::regex(int_octal),     literal_format::octal },
-                { std::regex(int_decimal),   literal_format::dec },
-                { std::regex(int_hex),       literal_format::hex },
-                { std::regex(float_decimal), literal_format::dec },
-                { std::regex(float_hex),     literal_format::hex },
-                { std::regex(char_literal),  literal_format::character }
-            };
+            }*/
             // generate precedence table
             // bottom few rows of the precedence table:
             const std::unordered_map<int, std::vector<std::string_view>> precedences = {
@@ -1141,13 +1298,13 @@ namespace asserts::detail {
 
         ASSERT_DETAIL_ATTR_COLD
         std::vector<token_t> tokenize(const std::string& expression, bool decompose_shr = false) {
+            (void) decompose_shr;
             std::vector<token_t> tokens;
             size_t i = 0;
             while(i < expression.length()) {
-                std::smatch match;
-                bool at_least_one_matched = false;
-                for(const auto& [ type, re ] : rules) {
-                    if(std::regex_match(std::begin(expression) + i, std::end(expression), match, re)) {
+                /*bool at_least_one_matched = false;
+                for(const auto& [ matcher, type ] : rules) {
+                    if(auto match = matcher(std::begin(expression) + i, std::end(expression))) {
                         #ifdef _0_DEBUG_ASSERT_TOKENIZATION
                         fprintf(stderr, "%s\n", match[1].str().c_str());
                         fflush(stdout);
@@ -1165,7 +1322,7 @@ namespace asserts::detail {
                 }
                 if(!at_least_one_matched) {
                     throw "error: invalid token";
-                }
+                }*/
             }
             return tokens;
         }
@@ -1206,7 +1363,7 @@ namespace asserts::detail {
                         output.emplace_back(CYAN, token.str);
                         break;
                     case token_e::string:
-                        output.emplace_back(GREEN, std::regex_replace(token.str, escapes_re, BLUE "$&" GREEN));
+                        output.emplace_back(GREEN, ctre_replace<escapes_pattern>(token.str, BLUE "$&" GREEN));
                         break;
                     case token_e::identifier:
                         // NOLINTNEXTLINE(bugprone-branch-clone)
@@ -1230,8 +1387,8 @@ namespace asserts::detail {
 
         ASSERT_DETAIL_ATTR_COLD
         literal_format get_literal_format(const std::string& expression) {
-            for(auto& [ re, type ] : literal_formats) {
-                if(std::regex_match(expression, re)) {
+            for(auto& [ matcher, type ] : literal_formats) {
+                if(matcher(expression)) {
                     return type;
                 }
             }
@@ -1531,6 +1688,16 @@ namespace asserts::detail {
     std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op) {
         return analysis::get().decompose_expression(expression, target_op);
     }
+
+    /*[[gnu::constructor]] void fuckoff() {
+        std::string s;
+        for(char c : analysis::float_decimal.content) {
+            s += c;
+        }
+        //std::cerr<<"FUCK: "<<s<<std::endl;
+        auto v = write(2, s.data(), s.size());
+        (void)v;
+    }*/
 
     /*
      * stringification
