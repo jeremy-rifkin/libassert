@@ -750,8 +750,7 @@ namespace libassert::detail {
     void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, const T& t) {
         if constexpr(isa<T, ASSERTION>) {
             entry.fatality = t;
-        }
-        if constexpr(isa<T, pretty_function_name_wrapper>) {
+        } else if constexpr(isa<T, pretty_function_name_wrapper>) {
             entry.pretty_function = t.pretty_function;
         } else {
             // three cases to handle: assert message, errno, and regular diagnostics
