@@ -161,6 +161,7 @@ def main():
 
     if args.integration:
         run_integration("integration/expected/{}.txt".format(target_file), opt)
+        run_command("sh", "cmake.sh")
 
     global ok
     print("Tests " + ("passed 🟢" if ok else "failed 🔴"), flush=True)
