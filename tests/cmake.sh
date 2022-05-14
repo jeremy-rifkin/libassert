@@ -12,8 +12,8 @@ cmake -S .. -B build_static -DCMAKE_INSTALL_PREFIX=./install_static -DCMAKE_BUIL
 cmake --build build_shared --target install
 cmake --build build_static --target install
 
-cmake -S cmake_client -B cmake_client/build_shared -DCMAKE_PREFIX_PATH=../install_shared -DCMAKE_EXPORT_COMPILE_COMMANDS=TRUE
-cmake -S cmake_client -B cmake_client/build_static -DCMAKE_PREFIX_PATH=../install_static -DCMAKE_EXPORT_COMPILE_COMMANDS=TRUE
+cmake -S cmake_client -B cmake_client/build_shared -DCMAKE_PREFIX_PATH=../install_shared -DCMAKE_EXPORT_COMPILE_COMMANDS=TRUE -DCMAKE_BUILD_TYPE=Release
+cmake -S cmake_client -B cmake_client/build_static -DCMAKE_PREFIX_PATH=../install_static -DCMAKE_EXPORT_COMPILE_COMMANDS=TRUE -DCMAKE_BUILD_TYPE=Release
 
 cmake --build cmake_client/build_shared
 cmake --build cmake_client/build_static
