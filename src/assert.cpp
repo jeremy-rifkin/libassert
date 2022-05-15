@@ -46,6 +46,19 @@
  #include <unistd.h>
  #include <dlfcn.h>
  #define USE_EXECINFO_H
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h> // _NSGetExecutablePath
+#include <mach-o/loader.h> // Loading Mach-O executables
+#include <execinfo.h>
+#include <climits>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <termios.h>
+#include <unistd.h>
+#include <dlfcn.h>
+#define USE_EXECINFO_H
 #else
  #error "no"
 #endif
@@ -326,6 +339,12 @@ namespace libassert::detail {
          char buffer[MAX_PATH + 1];
          int s = GetModuleFileNameA(NULL, buffer, sizeof(buffer));
          LIBASSERT_PRIMITIVE_ASSERT(s != 0);
+         return buffer;
+        #elif defined(__APPLE__)
+         char buffer[PATH_MAX + 1];
+         uint32_t size = sizeof(buffer);
+         // Might return 0 if buffer isn't big enough.
+         _NSGetExecutablePath(buffer, &size);
          return buffer;
         #else
          char buffer[PATH_MAX + 1];
@@ -640,6 +659,21 @@ namespace libassert::detail {
         return WEXITSTATUS(status) == 0;
     }
 
+    #ifdef __APPLE__
+    enum macho_object_types {
+        MT_EXEC = MH_EXECUTE,
+        MT_DYN = MH_DYLIB
+    };
+
+    LIBASSERT_ATTR_COLD static uint32_t get_executable_mach_type(const std::string& path) {
+        FILE* f = fopen(path.c_str(), "rb");
+        LIBASSERT_PRIMITIVE_ASSERT(f != nullptr);
+        mach_header_64 h; // Support 32-bit?
+        internal_verify(fread(&h, sizeof(mach_header_64), 1, f) == 1, "error while reading file");
+        LIBASSERT_PRIMITIVE_ASSERT(h.magic == MH_MAGIC_64);
+        return h.filetype;
+    }
+    #else
     // returns 1 for little endian, 2 for big endien, matches elf
     LIBASSERT_ATTR_COLD static int endianness() {
         int n = 1;
@@ -681,6 +715,7 @@ namespace libassert::detail {
         }
         return h.e_type;
     }
+    #endif
 
     LIBASSERT_ATTR_COLD
     static bool paths_refer_to_same(const std::string& path_a, const std::string& path_b) {
@@ -781,7 +816,11 @@ namespace libassert::detail {
             std::unordered_map<std::string,
                 std::pair<std::vector<std::string>, std::vector<stacktrace_entry*>>> entries;
             std::string binary_path = get_executable_path();
+    #if defined(__APPLE__)
+            bool is_pie = get_executable_mach_type(binary_path) == MT_DYN;
+    #else
             bool is_pie = get_executable_e_type(binary_path) == ET_DYN;
+    #endif
             std::optional<std::string> dladdr_name_of_executable;
             for(size_t i = 0; i < frames.size(); i++) {
                 auto& entry = frames[i];
@@ -811,7 +850,11 @@ namespace libassert::detail {
             }
             // perform translations
             for(auto& [file, pair] : entries) {
+                if (file.empty()) {
+                    continue;
+                }
                 auto& [addresses, target] = pair;
+
                 // Always two lines per entry?
                 // https://kernel.googlesource.com/pub/scm/linux/kernel/git/hjl/binutils/+/hjl/secondary/binutils/addr2line.c
                 auto output = split(trim(resolve_addresses(join(addresses, "\n"), file)), "\n");
