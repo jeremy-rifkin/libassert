@@ -14,7 +14,13 @@
 #include <utility>
 #include <vector>
 
-#if __cplusplus >= 202002L
+#if defined(_MSVC_LANG) && _MSVC_LANG < 201703L
+#error "libassert requires C++17"
+#elif !defined(_MSVC_LANG) && __cplusplus < 201703L
+#pragma error "libassert requires C++17"
+#endif
+
+#if __cplusplus >= 202002L || _MSVC_LANG >= 202002L
  #include <compare>
 #endif
 
