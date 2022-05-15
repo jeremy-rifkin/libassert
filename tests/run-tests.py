@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import sys
+import argparse
 from typing import List
 
 sys.stdout.reconfigure(encoding='utf-8') # for windows gh runner
@@ -88,41 +89,69 @@ def run_command(*args: List[str]):
         sys.exit(1)
 
 def main():
-    assert(len(sys.argv) >= 2)
-    # usage: python3 run-tests.py [release|opt] [build] <compiler name>
-    # in any order
-    opt = False
-    build_and_run = False
-    for arg in sys.argv:
-        if arg == "release" or arg == "opt":
-            opt = True
-        elif arg == "debug":
-            pass
-        elif arg == "build":
-            build_and_run = True
-        else:
-            target = arg
-    print(f"Running tests for {target}")
-    if target == "self":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--build_type',
+        type = str.lower,
+        choices=["release", "debug", "opt"],
+        default="opt"
+    )
+
+    parser.add_argument(
+        "--build",
+        action="store_true",
+        default=False
+    )
+
+    parser.add_argument(
+        "--compiler",
+        type= str.lower,
+        required=True
+    )
+
+    parser.add_argument(
+        "--windows",
+        action="store_true",
+        default=False
+    )
+
+    parser.add_argument(
+        "--integration",
+        action="store_true",
+        default=False
+    )
+
+    args = parser.parse_args()
+
+    opt = args.build_type.lower() in ("release", "opt")
+
+    if args.compiler.startswith("g"):
+        target_file = "gcc" + ("_windows" if args.windows else "")
+        if args.compiler == "gnu":
+            args.compiler = "g++"
+    elif args.compiler.startswith("c"):
+        target_file = "clang" + ("_windows" if args.windows else "")
+    elif args.compiler == "msvc":
+        target_file = "msvc"
+        args.windows = True
+    elif args.compiler != "self":
+        print("compiler ({args.compiler}) not supported", file=sys.stderr)
+        exit(2)
+
+
+
+    print(f"Running tests for {args.compiler}")
+    if args.compiler == "self":
         test_critical_difference()
         return
-    # canonicalize
-    if target.startswith("g++") or target.startswith("gcc"):
-        target_file = "gcc" + ("_windows" if target.endswith("_windows") else "")
-        compiler_name = target
-    elif target.startswith("clang"):
-        target_file = "clang" + ("_windows" if target.endswith("_windows") else "")
-        compiler_name = target
-    else:
-        assert(target == "msvc")
-        target_file = "msvc"
-        compiler_name = target
-    # build if needed
-    if build_and_run:
+
+    if args.build:
         run_command("make", "-C", "..", "clean")
-        run_command("make", "-C", "..", f"COMPILER={compiler_name}", "-j")
+        run_command("make", "-C", "..", f"COMPILER={args.compiler}", "-j")
         run_command("make", "clean")
-        run_command("make", f"COMPILER={compiler_name}", "-j")
+        run_command("make", f"COMPILER={args.compiler}", "-j")
+
     # run everything
     run_unit_tests([
         "basic_test",
@@ -133,7 +162,13 @@ def main():
         "test_type_prettier",
         "type_handling"
     ])
-    run_integration("integration/expected/{}.txt".format(target_file), opt)
+
+    if args.integration:
+        run_integration("integration/expected/{}.txt".format(target_file), opt)
+
+        if not args.windows:
+            run_command("sh", "cmake.sh")
+
     global ok
     print("Tests " + ("passed 🟢" if ok else "failed 🔴"), flush=True)
     sys.exit(not ok)
