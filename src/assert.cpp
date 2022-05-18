@@ -61,13 +61,22 @@
 // Slightly modified one dark pro colors
 // Original: https://coolors.co/e06b74-d19a66-e5c07a-98c379-62aeef-55b6c2-c678dd
 // Modified: https://coolors.co/e06b74-d19a66-e5c07a-90cc66-62aeef-56c2c0-c678dd
-#define RED ANSIRGB(224, 107, 116)
+#define RED    ANSIRGB(224, 107, 116)
 #define ORANGE ANSIRGB(209, 154, 102)
 #define YELLOW ANSIRGB(229, 192, 122)
-#define GREEN ANSIRGB(150, 205, 112) // modified
-#define BLUE ANSIRGB(98, 174, 239)
-#define CYAN ANSIRGB(86, 194, 192) // modified
-#define PURPL ANSIRGB(198, 120, 221)
+#define GREEN  ANSIRGB(150, 205, 112) // modified
+#define BLUE   ANSIRGB(98,  174, 239)
+#define CYAN   ANSIRGB(86,  194, 192) // modified
+#define PURPL  ANSIRGB(198, 120, 221)
+
+// TODO
+#define RED_ALT    ESC "31m"
+#define ORANGE_ALT ESC "33m" // using yellow as orange
+#define YELLOW_ALT ESC "34m" // based off use (identifiers in scope res) it's better to color as blue here
+#define GREEN_ALT  ESC "32m"
+#define BLUE_ALT   ESC "34m"
+#define CYAN_ALT   ESC "36m"
+#define PURPL_ALT  ESC "35m"
 
 using namespace std::string_literals;
 using namespace std::string_view_literals;
@@ -91,11 +100,33 @@ public:
     }
 };
 
+// Needed forward declaration
+// TODO: Maybe just move all of this stuff out of the namespace
+namespace libassert::detail {
+    static void replace_all(std::string& str, std::string_view substr, std::string_view replacement);
+}
+
 namespace libassert::utility {
     LIBASSERT_ATTR_COLD
     std::string strip_colors(const std::string& str) {
         static std::regex ansi_escape_re("\033\\[[^m]+m");
         return std::regex_replace(str, ansi_escape_re, "");
+    }
+
+    LIBASSERT_ATTR_COLD
+    std::string replace_rgb(std::string str) {
+        for(const auto& [rgb, alt] : std::initializer_list<std::pair<std::string_view, std::string_view>>{
+            { RED, RED_ALT },
+            { ORANGE, ORANGE_ALT },
+            { YELLOW, YELLOW_ALT },
+            { GREEN, GREEN_ALT },
+            { BLUE, BLUE_ALT },
+            { CYAN, CYAN_ALT },
+            { PURPL, PURPL_ALT }
+        }) {
+            detail::replace_all(str, rgb, alt);
+        }
+        return str;
     }
 
     // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
@@ -127,6 +158,12 @@ namespace libassert::config {
 
     LIBASSERT_ATTR_COLD void set_color_output(bool enable) {
         output_colors = enable;
+    }
+
+    static std::atomic_bool output_rgb = true;
+
+    LIBASSERT_ATTR_COLD void set_rgb_output(bool enable) {
+        output_rgb = enable;
     }
 }
 
@@ -238,6 +275,15 @@ namespace libassert::detail {
         while(std::regex_search(str.cbegin() + i, str.cend(), match, re)) {
             str.replace(i + match.position(), match.length(), replacement);
             i += match.position() + replacement.length();
+        }
+    }
+
+    LIBASSERT_ATTR_COLD
+    static void replace_all(std::string& str, std::string_view substr, std::string_view replacement) {
+        std::string::size_type pos = 0;
+        while((pos = str.find(substr.data(), pos, substr.length())) != std::string::npos) {
+            str.replace(pos, substr.length(), replacement.data(), replacement.length());
+            pos += replacement.length();
         }
     }
 
@@ -2369,6 +2415,9 @@ void libassert_default_fail_action(libassert::assert_type type, ASSERTION fatal,
     libassert::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
     std::string message = printer(libassert::utility::terminal_width(STDERR_FILENO));
     if(libassert::detail::isatty(STDERR_FILENO) && libassert::config::output_colors) {
+        if(!libassert::config::output_rgb) {
+            message = libassert::utility::replace_rgb(std::move(message));
+        }
         std::cerr << message << std::endl;
     } else {
         std::cerr << libassert::utility::strip_colors(message) << std::endl;

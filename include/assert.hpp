@@ -868,6 +868,9 @@ namespace libassert::utility {
     // strip ansi escape sequences from a string
     [[nodiscard]] std::string strip_colors(const std::string& str);
 
+    // replace 24-bit rgb ansi color sequences with traditional color sequences
+    [[nodiscard]] std::string replace_rgb(std::string str);
+
     // returns the width of the terminal represented by fd, will be 0 on error
     [[nodiscard]] int terminal_width(int fd);
 
@@ -902,6 +905,8 @@ namespace libassert::utility {
 namespace libassert::config {
     // configures whether the default assertion handler prints in color or not to tty devices
     void set_color_output(bool);
+    // configure whether to use 24-bit rgb ansi color sequences or traditional ansi color sequences
+    void set_rgb_output(bool);
 }
 
 /*

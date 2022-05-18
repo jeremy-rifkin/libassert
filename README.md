@@ -335,7 +335,12 @@ behaviors are:
 The following can be used to set application-wide settings:
 
 - `libassert::config::set_color_output(bool)` Enables or disables colored assertion messages on TTY outputs by the default
-  assertion handler. This is thread-safe, not that it should ever matter.
+  assertion handler.
+- `libassert::config::set_rgb_output(bool)` Enables or disables 24-bit rgb ansi color sequences in assertion
+  diagnostics. Default is true. This is here for terminal compatibility, in the relatively rare case your terminal does
+  not support rgb sequences.
+
+These are both thread-safe, not that it should ever matter.
 
 The following configurations can be applied on a per-TU basis:
 
@@ -429,6 +434,7 @@ std::string stringify(const S& s, libassert::detail::literal_format) {
 
 The following utilities are made public in `libassert::utility::`, as they are immensely useful:
 - `std::string strip_colors(const std::string& str)` Strips ansi sequences from a string
+- `std::string replace_rgb(std::string str)` Replaces 24-bit rgb ansi color sequences with traditional color sequences
 - `int terminal_width(int fd)` Returns the width of the TTY referenced by the given file descriptor,
   or 0 on error
 - `std::string stacktrace(int width)` Generates a stack trace, formatted for the given width (0 for
@@ -465,6 +471,7 @@ namespace libassert {
     enum class assert_type { debug_assertion, assertion, assumption, verification };
     namespace utility {
         [[nodiscard]] std::string strip_colors(const std::string& str);
+        [[nodiscard]] std::string replace_rgb(std::string str);
         [[nodiscard]] int terminal_width(int fd);
         [[nodiscard]] std::string stacktrace(int width);
         [[nodiscard]] std::string_view type_name<T>() noexcept;
