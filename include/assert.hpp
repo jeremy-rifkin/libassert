@@ -1139,8 +1139,10 @@ using libassert::ASSERTION;
         LIBASSERT_IGNORE_UNUSED_VALUE \
         LIBASSERT_STMTEXPR( \
           LIBASSERT_WARNING_PRAGMA \
-          auto libassert_decomposer = \
-                             libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
+          /* decltype(everything) decomposer = everything; is a workaround for gcc bug 105734 / libassert #24 */ \
+          decltype(libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr)) \
+                  libassert_decomposer = \
+                         libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
           decltype(auto) libassert_value = libassert_decomposer.get_value(); \
           constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
           if constexpr(check_expression) { \
