@@ -1,5 +1,5 @@
-#ifndef ASSERT_HPP
-#define ASSERT_HPP
+#ifndef LIBASSERT_HPP
+#define LIBASSERT_HPP
 
 // Copyright (c) 2021-2022 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
