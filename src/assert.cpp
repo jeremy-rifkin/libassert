@@ -2,7 +2,7 @@
 #define _CRT_SECURE_NO_WARNINGS // done only for strerror
 #include "assert.hpp"
 
-// Copyright 2022 Jeremy Rifkin
+// Copyright (c) 2021-2022 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
 #include <array>

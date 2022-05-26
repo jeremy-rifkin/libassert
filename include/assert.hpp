@@ -1,7 +1,7 @@
 #ifndef ASSERT_HPP
 #define ASSERT_HPP
 
-// Copyright (c) 2022 Jeremy Rifkin under the MIT license
+// Copyright (c) 2021-2022 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
 #include <cstdio>
