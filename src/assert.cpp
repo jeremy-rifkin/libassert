@@ -530,26 +530,106 @@ namespace libassert::detail {
         }
     }
 
+    static std::string resolve_type(ULONG type_index, HANDLE proc, ULONG64 modbase);
+
+    // Helper for member pointers
+    LIBASSERT_ATTR_COLD
+    static std::optional<std::string> lookup_class_name(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+        DWORD class_parent_id =
+                get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_CLASSPARENTID, true>(type_index, proc, modbase);
+        if(class_parent_id == (DWORD)-1) {
+            return {};
+        } else {
+            return resolve_type(class_parent_id, proc, modbase);
+        }
+    }
+
     // Resolve more complex types
-    LIBASSERT_ATTR_COLD static std::string lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+    LIBASSERT_ATTR_COLD // returns [base, extent]
+    static std::pair<std::string, std::string> lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
         auto tag = get_info<SymTagEnum, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMTAG>(type_index, proc, modbase);
         switch(tag) {
             case SymTagEnum::SymTagBaseType:
-                return std::string(get_basic_type(type_index, proc, modbase));
+                return {std::string(get_basic_type(type_index, proc, modbase)), ""};
             case SymTagEnum::SymTagPointerType: {
                 DWORD underlying_type_id =
                     get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
                 bool is_ref = get_info<BOOL, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_IS_REFERENCE>(type_index, proc, modbase);
-                return std::string(lookup_type(underlying_type_id, proc, modbase)) + (is_ref ? "&" : "*");
+                std::string pp = is_ref ? "&" : "*"; // pointer punctuator
+                if(auto class_name = lookup_class_name(type_index, proc, modbase)) {
+                    pp = *class_name + "::" + pp;
+                }
+                const auto [base, extent] = lookup_type(underlying_type_id, proc, modbase);
+                if(extent.empty()) {
+                    return {base + (pp.size() > 1 ? " " : "") + pp, ""};
+                } else {
+                    return {base + "(" + pp, ")" + extent};
+                }
+            }
+            case SymTagEnum::SymTagArrayType: {
+                DWORD underlying_type_id =
+                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
+                DWORD length =
+                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT>(type_index, proc, modbase);
+                const auto [base, extent] = lookup_type(underlying_type_id, proc, modbase);
+                return {base, "[" + std::to_string(length) + "]" + extent};
+            }
+            case SymTagEnum::SymTagFunctionType: {
+                DWORD return_type_id =
+                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
+                DWORD n_children =
+                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT, true>(type_index, proc, modbase);
+                DWORD class_parent_id =
+                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_CLASSPARENTID, true>(type_index, proc, modbase);
+                int n_ignore = class_parent_id != (DWORD)-1; // ignore this param
+                n_children -= n_ignore; // this must be ignored before TI_FINDCHILDREN_PARAMS::Count is set, else error
+                // return type
+                const auto return_type = lookup_type(return_type_id, proc, modbase);
+                if(n_children == 0) {
+                    return {return_type.first, "()" + return_type.second};
+                } else {
+                    // alignment should be fine
+                    size_t sz = sizeof(TI_FINDCHILDREN_PARAMS) +
+                                    (n_children) * sizeof(TI_FINDCHILDREN_PARAMS::ChildId[0]);
+                    TI_FINDCHILDREN_PARAMS* children = (TI_FINDCHILDREN_PARAMS*) new char[sz];
+                    children->Start = 0;
+                    children->Count = n_children;
+                    if(!SymGetTypeInfo(proc, modbase, type_index,
+                            static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(IMAGEHLP_SYMBOL_TYPE_INFO::TI_FINDCHILDREN),
+                            children)) {
+                        LIBASSERT_PRIMITIVE_ASSERT(false, ("SymGetTypeInfo failed: "s +
+                                             std::system_error(GetLastError(), std::system_category()).what()).c_str());
+                    }
+                    // get children type
+                    std::string extent = "(";
+                    LIBASSERT_PRIMITIVE_ASSERT(children->Start == 0);
+                    for(std::size_t i = 0; i < n_children; i++) {
+                        extent += (i == 0 ? "" : ", ") + resolve_type(children->ChildId[i], proc, modbase);
+                    }
+                    extent += ")";
+                    delete[] (char*) children;
+                    return {return_type.first, extent + return_type.second};
+                }
+            }
+            case SymTagEnum::SymTagFunctionArgType: {
+                DWORD underlying_type_id =
+                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
+                return {resolve_type(underlying_type_id, proc, modbase), ""};
             }
             case SymTagEnum::SymTagTypedef:
             case SymTagEnum::SymTagEnum:
             case SymTagEnum::SymTagUDT:
             case SymTagEnum::SymTagBaseClass:
-                return get_info<WCHAR*, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMNAME>(type_index, proc, modbase);
+                return {get_info<WCHAR*, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMNAME>(type_index, proc, modbase), ""};
             default:
-                return "<unknown type>";
+                return {"<unknown type " +
+                            std::to_string(static_cast<std::underlying_type<SymTagEnum>::type>(tag)) + ">", ""};
         };
+    }
+
+    LIBASSERT_ATTR_COLD static std::string resolve_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
+        const auto [type, extent] = lookup_type(type_index, proc, modbase);
+        return type + extent;
     }
 
     struct function_info {
@@ -561,6 +641,7 @@ namespace libassert::detail {
         std::string str;
     };
 
+    // Enumerates function parameters
     LIBASSERT_ATTR_COLD
     static BOOL __stdcall enumerator_callback(PSYMBOL_INFO symbol_info, [[maybe_unused]] ULONG symbol_size, PVOID data) {
         function_info* ctx = (function_info*)data;
@@ -570,7 +651,7 @@ namespace libassert::detail {
         if(ctx->n_ignore-- > 0) {
             return true; // just skip
         }
-        ctx->str += lookup_type(symbol_info->TypeIndex, ctx->proc, ctx->modbase);
+        ctx->str += resolve_type(symbol_info->TypeIndex, ctx->proc, ctx->modbase);
         if(ctx->counter < ctx->n_children) {
             ctx->str += ", ";
         }

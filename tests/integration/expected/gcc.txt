@@ -1206,7 +1206,7 @@ Stack trace:
 
 
 ===================== [Debug stringification customization point] =====================
-Assertion failed at integration/integration.cpp:3302: void test_class<T>::something_else() [with T = int]:
+Assertion failed at integration/integration.cpp:3402: void test_class<T>::something_else() [with T = int]:
     assert(x == y, ...);
     Where:
         x => (debug_print_customization = 2)
@@ -1217,10 +1217,25 @@ Assertion failed at integration/integration.cpp:3302: void test_class<T>::someth
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:3302
+      at integration.cpp:3402
 # 2 void test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main
+      at integration.cpp:403
+
+
+===================== [Complex type resolution] =====================
+Assertion failed at integration/integration.cpp:3602: void test_class<T>::test_complex_typing(const volatile std::vector<std::string>* const&, int*, const char (&)[4], void (complex_typing::S::*)(int, std::string, void***, void* (*)(int), void (* (*)(int))(), void (* (* (*)(int))[5])()), int complex_typing::S::*) [with T = int; std::string = std::string]:
+    assert(false);
+
+Stack trace:
+# 1 test_class<int>::test_complex_typing(std::vector<std::string> const volatile* const&, int*, char const (&) [4], void (complex_typing::S::*)(int, std::string, void***, void* (*)(int), void (*(*)(int))(), void (* (*(*)(int)) [5])()), int complex_typing::S::*)
+      at integration.cpp:3602
+# 2 test_class<int>::something_else()
+      at integration.cpp:3502
+# 3 void test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 4 main
       at integration.cpp:403
 
 

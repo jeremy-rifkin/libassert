@@ -109,6 +109,12 @@ std::ostream& operator<<(std::ostream& stream, const logger_type& lt) {
     return stream<<"logger_type [n = "<<lt.n<<"]";
 }
 
+namespace complex_typing {
+    struct S {
+        void foo(int, std::string, void***, void* (*)(int), void(*(*)(int))(), void(*(*(*)(int))[5])());
+    };
+}
+
 #line 500
 void rec(int n) {
     if(n == 0) assert(false);
@@ -398,10 +404,17 @@ public:
         }
 
         SECTION("Debug stringification customization point");
-        #line 3300
+        #line 3400
         {
             debug_print_customization x = 2, y = 1;
             assert(x == y, x, y);
+        }
+
+        SECTION("Complex type resolution");
+        #line 3500
+        {
+            const volatile std::vector<std::string>* ptr = nullptr;
+            test_complex_typing(ptr, nullptr, "foo", nullptr, nullptr);
         }
     }
 
@@ -421,6 +434,12 @@ public:
             {"bar", {"b1", "b3", "b5"}}
         };
         assert(map == other);
+    }
+
+    #line 3600
+    void test_complex_typing(const volatile std::vector<std::string>* const &, int[], const char(&)[4],
+                             decltype(&complex_typing::S::foo), int complex_typing::S::*) {
+        assert(false);
     }
 };
 
