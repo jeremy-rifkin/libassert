@@ -1135,6 +1135,19 @@ using libassert::ASSERTION;
 #else
  #define LIBASSERT_IGNORE_UNUSED_VALUE
 #endif
+// Workaround for gcc bug 105734 / libassert bug #24
+#define LIBASSERT_DESTROY_DECOMPOSER libassert_decomposer.compl expression_decomposer() /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */
+#if LIBASSERT_IS_GCC
+ #if __GNUC__ == 12 && __GNUC_MINOR__ == 1
+  namespace libassert::detail {
+      template<typename T> constexpr void destroy(T& t) {
+          t.compl T();
+      }
+  }
+  #undef LIBASSERT_DESTROY_DECOMPOSER
+  #define LIBASSERT_DESTROY_DECOMPOSER libassert::detail::destroy(libassert_decomposer)
+ #endif
+#endif
 #define ASSERT_INVOKE(expr, doreturn, check_expression, name, type, failaction, ...) \
         LIBASSERT_IGNORE_UNUSED_VALUE \
         LIBASSERT_STMTEXPR( \
@@ -1159,7 +1172,7 @@ using libassert::ASSERTION;
                 auto libassert_r = process_assert_fail_m(std::move(libassert_decomposer), libassert_params \
                                            LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
                 /* can't move-assign back to decomposer if it holds reference members */ \
-                libassert_decomposer.compl expression_decomposer(); /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */ \
+                LIBASSERT_DESTROY_DECOMPOSER; \
                 new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \
               } \
             } \
