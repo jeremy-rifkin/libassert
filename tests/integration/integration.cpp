@@ -245,6 +245,7 @@ public:
         #line 1900
         {
             assert(false, "foo", false, 2 * foo(), "foobar"sv, bar(), printable{2.55});
+            assert([] { return false; } ());
         }
         // safe comparisons
         SECTION("safe comparisons");

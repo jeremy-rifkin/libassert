@@ -473,7 +473,19 @@ Assertion failed at integration/integration.cpp:1901: void __cdecl test_class<in
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:1904
+      at integration.cpp:1902
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:1902: void __cdecl test_class<int>::something_else(void):
+    assert([] { return false; } ());
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:1905
 # 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main()
