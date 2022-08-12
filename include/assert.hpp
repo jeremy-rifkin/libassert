@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <system_error>
 
 #if defined(_MSVC_LANG) && _MSVC_LANG < 201703L
 #error "libassert requires C++17"
@@ -524,6 +525,8 @@ namespace libassert::detail {
         [[nodiscard]] std::string stringify(float, literal_format = literal_format::none);
         [[nodiscard]] std::string stringify(double, literal_format = literal_format::none);
         [[nodiscard]] std::string stringify(long double, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(std::error_code ec, literal_format = literal_format::none);
+        [[nodiscard]] std::string stringify(std::error_condition ec, literal_format = literal_format::none);
         #if __cplusplus >= 202002L
         [[nodiscard]] std::string stringify(std::strong_ordering, literal_format = literal_format::none);
         [[nodiscard]] std::string stringify(std::weak_ordering, literal_format = literal_format::none);
