@@ -548,6 +548,8 @@ Stack trace:
 
 Assertion failed at integration/integration.cpp:2104: void test_class<int>::something_else() [T = int]:
     assert(0 + 0 + 0);
+    Where:
+        0 + 0 + 0 => 0
 
 Stack trace:
 # 1 test_class<int>::something_else()
