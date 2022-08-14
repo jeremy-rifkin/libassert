@@ -1188,7 +1188,7 @@ Stack trace:
 Assertion failed at integration/integration.cpp:3120: void test_class<int>::something_else() [T = int]:
     assert(false, ...);
     Extra diagnostics:
-        carr => int [5] [size: 5]: [5, 4, 3, 2, 1]
+        carr => int[5] [size: 5]: [5, 4, 3, 2, 1]
 
 Stack trace:
 # 1 test_class<int>::something_else()

@@ -19,10 +19,12 @@ ifeq ($(OS),Windows_NT)
     STATIC_LIB = ../$(BIN)/assert.lib
     SHARED_LIB = ../$(BIN)/assert.dll
     E = .exe
+    GFLAG = -g
 else
     STATIC_LIB = ../$(BIN)/libassert.a
     SHARED_LIB = ../$(BIN)/libassert.so
     E =
+    GFLAG = -g -gdwarf-4
 endif
 
 HPP = ../include/assert.hpp
@@ -44,9 +46,9 @@ ifneq ($(COMPILER),msvc)
     override DFLAGS += -MMD -MP
     override CPPFLAGS += -std=$(STD) -I../include
     override GENERAL_FLAGS += -DASSERT_USE_MAGIC_ENUM -DASSERT_FAIL=custom_fail -DASSERT_LOWERCASE
-    override LDFLAGS += -g -L../bin -lassert
+    override LDFLAGS += $(GFLAG) -L../bin -lassert
     ifeq ($(TARGET),debug)
-        override CPPFLAGS += -O0 -g
+        override CPPFLAGS += -O0 $(GFLAG)
         ifneq ($(OS),Windows_NT)
             override CPPFLAGS += -fsanitize=address
             override LDFLAGS += -fsanitize=address

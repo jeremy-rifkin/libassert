@@ -10,15 +10,21 @@ MKDIR_P ?= mkdir -p
 
 .PHONY: _all clean
 
+ifeq ($(OS),Windows_NT)
+    GFLAG = -g
+else
+    GFLAG = -g -gdwarf-4
+endif
+
 ifneq ($(COMPILER),msvc)
     # GCC / Clang
     CPP = $(COMPILER)
     LD = $(COMPILER)
     override WFLAGS += -Wall -Wextra -Wvla -Wshadow -Werror
-    override FLAGS += -std=$(STD) -g -Iinclude
+    override FLAGS += -std=$(STD) $(GFLAG) -Iinclude
     override LDFLAGS += -Wl,--whole-archive -Wl,--no-whole-archive
     ifeq ($(TARGET), debug)
-        override FLAGS += -g
+        override FLAGS += $(GFLAG)
     else
         override FLAGS += -O2
     endif

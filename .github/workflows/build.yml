@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-gcc:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v2
     - name: make
@@ -15,14 +15,16 @@ jobs:
       working-directory: tests
       run: make basic_test
   build-clang:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v2
+    - name: dependencies
+      run: sudo apt install clang-14
     - name: make
-      run: make COMPILER=clang++
+      run: make COMPILER=clang++-14
     - name: build basic test
       working-directory: tests
-      run: make basic_test COMPILER=clang++
+      run: make basic_test COMPILER=clang++-14
   build-msvc:
     runs-on: windows-2019
     steps:
