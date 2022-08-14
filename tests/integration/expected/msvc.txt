@@ -649,7 +649,21 @@ Assertion failed at integration/integration.cpp:2114: void __cdecl test_class<in
 
 Stack trace:
 # 1 test_class<int>::something_else()
-      at integration.cpp:2117
+      at integration.cpp:2115
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
+Assertion failed at integration/integration.cpp:2116: void __cdecl test_class<int>::something_else(void):
+    assert(a >> 1);
+    Where:
+        a => 1
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:2119
 # 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1005
 # 3 main()

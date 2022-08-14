@@ -274,6 +274,8 @@ public:
             x = 2;
             assert(x -= x -= x -= 1); // TODO: double check....
             assert(true ? false : true, "pffft"); // NOLINT(readability-simplify-boolean-expr)
+            int a = 1; // regression test for #26
+            assert(a >> 1);
         }
         // ensure values are only computed once
         SECTION("ensure values are only computed once");

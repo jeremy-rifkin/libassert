@@ -656,6 +656,20 @@ Stack trace:
       at integration.cpp:403
 
 
+Assertion failed at integration/integration.cpp:2116: void test_class<int>::something_else() [T = int]:
+    assert(a >> 1);
+    Where:
+        a => 1
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:2116
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1005
+# 3 main()
+      at integration.cpp:403
+
+
 ===================== [ensure values are only computed once] =====================
 foo() called
 bar() called

@@ -1037,6 +1037,10 @@ namespace libassert::detail {
         return type;
     }
 
+    // forward declaration so this can be used in some printbugging
+    LIBASSERT_ATTR_COLD
+    std::string highlight(const std::string& expression);
+
     class analysis {
         enum class token_e {
             keyword,
@@ -1587,8 +1591,9 @@ namespace libassert::detail {
                 std::vector<std::string> right_strings;
                 for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
                 for(size_t i = m + 1; i < tokens.size(); i++) right_strings.push_back(tokens[i].str);
-                fprintf(stderr, "left:  %s\n", highlight(std::string(trim(join(left_strings, "")))).c_str());
-                fprintf(stderr, "right: %s\n", highlight(std::string(trim(join(right_strings, "")))).c_str());
+                fprintf(stderr, "left:  %s\n", libassert::detail::highlight(std::string(trim(join(left_strings, "")))).c_str());
+                fprintf(stderr, "right: %s\n", libassert::detail::highlight(std::string(trim(join(right_strings, "")))).c_str());
+                fprintf(stderr, "target_op: %s\n", target_op.data()); // should be null terminated
                 fprintf(stderr, "---\n");
             }
             #endif
@@ -1599,7 +1604,8 @@ namespace libassert::detail {
                 for(size_t i = 0; i < m; i++) {
                     left_strings.push_back(tokens[i].str);
                 }
-                for(size_t i = m + 1; i < tokens.size(); i++) {
+                // >> is decomposed and requires special handling (m will be the index of the first > token)
+                for(size_t i = m + 1 + (target_op == ">>" ? 1 : 0); i < tokens.size(); i++) {
                     right_strings.push_back(tokens[i].str);
                 }
                 return {
