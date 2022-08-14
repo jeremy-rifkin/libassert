@@ -37,6 +37,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [debug, release]
+        cppflags: ["", "/Zc:preprocessor"]
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
@@ -46,10 +47,10 @@ jobs:
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
     - name: build library
-      run: make COMPILER=msvc STD=c++20
+      run: make COMPILER=msvc STD=c++20 "CPPFLAGS=${{matrix.cppflags}}"
     - name: build tests
       working-directory: tests
-      run: make tests COMPILER=msvc STD=c++20
+      run: make tests COMPILER=msvc STD=c++20 "CPPFLAGS=${{matrix.cppflags}}"
     - name: dos2unix
       working-directory: tests/integration/expected
       run: dos2unix *.txt

@@ -992,7 +992,7 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {}
 // NOLINTNEXTLINE(misc-unused-using-decls)
 using libassert::ASSERTION;
 
-#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
+#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || (defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL == 0)
  // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
  #define LIBASSERT_EVAL0(...) __VA_ARGS__
  #define LIBASSERT_EVAL1(...) LIBASSERT_EVAL0(LIBASSERT_EVAL0(LIBASSERT_EVAL0(__VA_ARGS__)))
