@@ -1810,6 +1810,14 @@ namespace libassert::detail {
             return stringify_floating_point(value, fmt);
         }
 
+        LIBASSERT_ATTR_COLD std::string stringify(std::error_code ec, literal_format) {
+            return ec.category().name() + (':' + std::to_string(ec.value())) + ' ' + ec.message();
+        }
+
+        LIBASSERT_ATTR_COLD std::string stringify(std::error_condition ec, literal_format) {
+            return ec.category().name() + (':' + std::to_string(ec.value())) + ' ' + ec.message();
+        }
+
         #if __cplusplus >= 202002L
         LIBASSERT_ATTR_COLD std::string stringify(std::strong_ordering value, literal_format) {
                 if(value == std::strong_ordering::less)       return "std::strong_ordering::less";
