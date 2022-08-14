@@ -18,8 +18,6 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v2
-    - name: dependencies
-      run: sudo apt install clang-14
     - name: make
       run: make COMPILER=clang++-14
     - name: build basic test

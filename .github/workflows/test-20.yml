@@ -18,7 +18,6 @@ jobs:
       run: |
            python3 -m pip install --upgrade pip
            python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
-           sudo apt install clang-14
     - name: build library
       run: make COMPILER=${{matrix.compiler}} TARGET=${{matrix.target}} STD=c++20
     - name: build tests
