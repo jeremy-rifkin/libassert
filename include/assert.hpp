@@ -544,7 +544,7 @@ namespace libassert::detail {
 
         template<typename T, typename E>
         [[nodiscard]] std::string stringify(const std::expected<T, E>& x, literal_format fmt = literal_format::none) {
-            if (x.has_value()) {
+            if(x.has_value()) {
                 if constexpr(std::is_void_v<T>) {
                     return "expected void";
                 } else {
