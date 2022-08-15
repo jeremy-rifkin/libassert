@@ -14,6 +14,9 @@
 #include <utility>
 #include <vector>
 #include <system_error>
+#ifdef __cpp_lib_expected
+#include <expected>
+#endif
 
 #if defined(_MSVC_LANG) && _MSVC_LANG < 201703L
 #error "libassert requires C++17"
@@ -531,6 +534,26 @@ namespace libassert::detail {
         [[nodiscard]] std::string stringify(std::strong_ordering, literal_format = literal_format::none);
         [[nodiscard]] std::string stringify(std::weak_ordering, literal_format = literal_format::none);
         [[nodiscard]] std::string stringify(std::partial_ordering, literal_format = literal_format::none);
+        #endif
+
+        #ifdef __cpp_lib_expected
+        template<typename E>
+        [[nodiscard]] std::string stringify(const std::unexpected<E>& x, literal_format fmt = literal_format::none) {
+            return "unexpected " + stringify(x.error(), fmt == literal_format::none ? literal_format::dec : fmt);
+        }
+
+        template<typename T, typename E>
+        [[nodiscard]] std::string stringify(const std::expected<T, E>& x, literal_format fmt = literal_format::none) {
+            if(x.has_value()) {
+                if constexpr(std::is_void_v<T>) {
+                    return "expected void";
+                } else {
+                    return "expected " + stringify(*x, fmt == literal_format::none ? literal_format::dec : fmt);
+                }
+            } else {
+                return "unexpected " + stringify(x.error(), fmt == literal_format::none ? literal_format::dec : fmt);
+            }
+        }
         #endif
 
         [[nodiscard]] std::string stringify_ptr(const void*, literal_format = literal_format::none);
