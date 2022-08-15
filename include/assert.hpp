@@ -939,7 +939,7 @@ namespace libassert::detail {
         // generate binary diagnostics
         if constexpr(is_nothing<C>) {
             static_assert(is_nothing<B> && !is_nothing<A>);
-            if constexpr (isa<A, bool>) {
+            if constexpr(isa<A, bool>) {
                 (void)decomposer; // suppress warning in msvc
             } else {
                 binary_diagnostics = generate_binary_diagnostic(decomposer.a, true,
