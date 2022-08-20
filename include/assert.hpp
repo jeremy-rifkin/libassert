@@ -45,6 +45,20 @@
  #error "Unsupported compiler"
 #endif
 
+#if defined(_WIN32) || defined(__CYGWIN__)
+ #define LIBASSERT_IMPORT __declspec(dllimport)
+ #define LIBASSERT_EXPORT __declspec(dllexport)
+#else
+ #define LIBASSERT_IMPORT __attribute__((visibility("default")))
+ #define LIBASSERT_EXPORT __attribute__((visibility("default")))
+#endif
+
+#if defined(LIBASSERT_EXPORTS)
+ #define LIBASSERT_API LIBASSERT_EXPORT
+#elif !defined(LIBASSERT_API)
+ #define LIBASSERT_API
+#endif
+
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  #define LIBASSERT_PFUNC __extension__ __PRETTY_FUNCTION__
  #define LIBASSERT_ATTR_COLD     [[gnu::cold]]
@@ -80,11 +94,14 @@ namespace libassert {
     class assertion_printer;
 }
 
+LIBASSERT_API void libassert_default_fail_action(libassert::assert_type type, libassert::ASSERTION fatal,
+                                                 const libassert::assertion_printer& printer);
+
 #ifndef ASSERT_FAIL
  #define ASSERT_FAIL libassert_default_fail_action
-#endif
-
+#else
 void ASSERT_FAIL(libassert::assert_type type, libassert::ASSERTION fatal, const libassert::assertion_printer& printer);
+#endif
 
 // always_false is just convenient to use here
 #define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
@@ -111,8 +128,9 @@ namespace libassert::detail {
     };
 
     // bootstrap with primitive implementations
-    void primitive_assert_impl(bool condition, bool verify, const char* expression,
-                               const char* signature, source_location location, const char* message = nullptr);
+    LIBASSERT_API void primitive_assert_impl(bool condition, bool verify, const char* expression,
+                                             const char* signature, source_location location,
+                                             const char* message = nullptr);
 
     #ifndef NDEBUG
      #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) libassert::detail::primitive_assert_impl(c, false, #c, \
@@ -125,13 +143,13 @@ namespace libassert::detail {
      * String utilities
      */
 
-    [[nodiscard]] std::string bstringf(const char* format, ...);
+    [[nodiscard]] LIBASSERT_API std::string bstringf(const char* format, ...);
 
     /*
      * System wrappers
      */
 
-    [[nodiscard]] std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
+    [[nodiscard]] LIBASSERT_API std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
 
     /*
      * Stacktrace implementation
@@ -139,7 +157,7 @@ namespace libassert::detail {
 
     // All in the .cpp
 
-    void* get_stacktrace_opaque();
+    LIBASSERT_API void* get_stacktrace_opaque();
 
     /*
      * metaprogramming utilities
@@ -472,14 +490,15 @@ namespace libassert::detail {
         none // needs to be at the end for sorting reasons
     };
 
-    [[nodiscard]] std::string prettify_type(std::string type);
 
-    [[nodiscard]] literal_format get_literal_format(const std::string& expression);
+    [[nodiscard]] LIBASSERT_API std::string prettify_type(std::string type);
 
-    [[nodiscard]] bool is_bitwise(std::string_view op);
+    [[nodiscard]] LIBASSERT_API literal_format get_literal_format(const std::string& expression);
 
-    [[nodiscard]] std::pair<std::string, std::string> decompose_expression(const std::string& expression,
-                                                                           std::string_view target_op);
+    [[nodiscard]] LIBASSERT_API bool is_bitwise(std::string_view op);
+
+    [[nodiscard]] LIBASSERT_API std::pair<std::string, std::string> decompose_expression(const std::string& expression,
+                                                                                         std::string_view target_op);
 
     /*
      * stringification
@@ -511,29 +530,29 @@ namespace libassert::detail {
     }
 
     namespace stringification {
-        [[nodiscard]] std::string stringify(const std::string&, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(const std::string_view&, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(const std::string&, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(const std::string_view&, literal_format = literal_format::none);
         // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
-        [[nodiscard]] std::string stringify(std::nullptr_t, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(char, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(bool, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(short, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(int, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(long, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(long long, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(unsigned short, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(unsigned int, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(unsigned long, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(unsigned long long, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(float, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(double, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(long double, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(std::error_code ec, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(std::error_condition ec, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(std::nullptr_t, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(char, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(bool, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(short, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(int, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(long, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(long long, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(unsigned short, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(unsigned int, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(unsigned long, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(unsigned long long, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(float, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(double, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(long double, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(std::error_code ec, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(std::error_condition ec, literal_format = literal_format::none);
         #if __cplusplus >= 202002L
-        [[nodiscard]] std::string stringify(std::strong_ordering, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(std::weak_ordering, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(std::partial_ordering, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(std::strong_ordering, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(std::weak_ordering, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify(std::partial_ordering, literal_format = literal_format::none);
         #endif
 
         #ifdef __cpp_lib_expected
@@ -556,7 +575,7 @@ namespace libassert::detail {
         }
         #endif
 
-        [[nodiscard]] std::string stringify_ptr(const void*, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_API std::string stringify_ptr(const void*, literal_format = literal_format::none);
 
         template<typename T, typename = void> class can_basic_stringify : public std::false_type {};
         template<typename T> class can_basic_stringify<
@@ -667,7 +686,7 @@ namespace libassert::detail {
      * assert diagnostics generation
      */
 
-    constexpr size_t format_arr_length = 5;
+    inline constexpr size_t format_arr_length = 5;
 
     // TODO: Not yet happy with the naming of this function / how it's used
     template<typename T>
@@ -705,7 +724,7 @@ namespace libassert::detail {
         }
     }
 
-    struct binary_diagnostics_descriptor {
+    struct LIBASSERT_API binary_diagnostics_descriptor {
         std::vector<std::string> lstrings;
         std::vector<std::string> rstrings;
         std::string a_str;
@@ -722,7 +741,7 @@ namespace libassert::detail {
         binary_diagnostics_descriptor& operator=(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
     };
 
-    void sort_and_dedup(literal_format(&)[format_arr_length]);
+    LIBASSERT_API void sort_and_dedup(literal_format(&)[format_arr_length]);
 
     template<typename A, typename B>
     LIBASSERT_ATTR_COLD [[nodiscard]]
@@ -756,11 +775,11 @@ namespace libassert::detail {
 
     #define LIBASSERT_X(x) #x
     #define LIBASSERT_Y(x) LIBASSERT_X(x)
-    constexpr const std::string_view errno_expansion = LIBASSERT_Y(errno);
+    inline constexpr std::string_view errno_expansion = LIBASSERT_Y(errno);
     #undef LIBASSERT_Y
     #undef LIBASSERT_X
 
-    struct extra_diagnostics {
+    struct LIBASSERT_API extra_diagnostics {
         ASSERTION fatality = ASSERTION::FATAL;
         std::string message;
         std::vector<std::pair<std::string, std::string>> entries;
@@ -833,7 +852,7 @@ namespace libassert::detail {
      * actual assertion handling, finally
      */
 
-    struct lock {
+    struct LIBASSERT_API lock {
         lock();
         compl lock();
         lock(const lock&) = delete;
@@ -863,7 +882,7 @@ namespace libassert {
         [[nodiscard]] virtual const char* what() const noexcept final override;
     };
 
-    class assertion_printer {
+    class LIBASSERT_API assertion_printer {
         const detail::assert_static_parameters* params;
         const detail::extra_diagnostics& processed_args;
         detail::binary_diagnostics_descriptor& binary_diagnostics;
@@ -892,16 +911,16 @@ namespace libassert {
 
 namespace libassert::utility {
     // strip ansi escape sequences from a string
-    [[nodiscard]] std::string strip_colors(const std::string& str);
+    [[nodiscard]] LIBASSERT_API std::string strip_colors(const std::string& str);
 
     // replace 24-bit rgb ansi color sequences with traditional color sequences
-    [[nodiscard]] std::string replace_rgb(std::string str);
+    [[nodiscard]] LIBASSERT_API std::string replace_rgb(std::string str);
 
     // returns the width of the terminal represented by fd, will be 0 on error
-    [[nodiscard]] int terminal_width(int fd);
+    [[nodiscard]] LIBASSERT_API int terminal_width(int fd);
 
     // generates a stack trace, formats to the given width
-    [[nodiscard]] std::string stacktrace(int width);
+    [[nodiscard]] LIBASSERT_API std::string stacktrace(int width);
 
     // returns the type name of T
     template<typename T>
@@ -930,9 +949,9 @@ namespace libassert::utility {
 
 namespace libassert::config {
     // configures whether the default assertion handler prints in color or not to tty devices
-    void set_color_output(bool);
+    LIBASSERT_API void set_color_output(bool);
     // configure whether to use 24-bit rgb ansi color sequences or traditional ansi color sequences
-    void set_rgb_output(bool);
+    LIBASSERT_API void set_rgb_output(bool);
 }
 
 /*
@@ -940,7 +959,7 @@ namespace libassert::config {
  */
 
 namespace libassert::detail {
-    size_t count_args_strings(const char* const*);
+    LIBASSERT_API size_t count_args_strings(const char* const*);
 
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
