@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(cmake_find_package_test)
+project(cmake_find_package_test LANGUAGES CXX)
 
 find_package(
   assert
@@ -21,4 +21,8 @@ target_link_libraries(
   main
   PUBLIC
   assert::assert
+)
+
+add_custom_command(TARGET main POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:assert::assert> $<TARGET_FILE_DIR:main>
 )

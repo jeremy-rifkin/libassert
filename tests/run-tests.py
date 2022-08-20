@@ -166,8 +166,14 @@ def main():
     if args.integration:
         run_integration("integration/expected/{}.txt".format(target_file), opt)
 
+        env["CMAKE_BUILD_TYPE"] = "release" if args.build_type == "opt" else args.build_type
+
         if not args.windows:
+            env["CXX"] = args.compiler
             run_command("sh", "cmake.sh")
+        elif args.compiler == "msvc":
+            env["CMAKE_GENERATOR"] = "Ninja"
+            run_command("C:\\Program Files\\Git\\bin\\bash.exe", "cmake.sh")
 
     global ok
     print("Tests " + ("passed 🟢" if ok else "failed 🔴"), flush=True)
