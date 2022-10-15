@@ -1302,6 +1302,26 @@ namespace libassert::detail {
         }
 
         LIBASSERT_ATTR_COLD
+        std::vector<highlight_block> highlight_string(const std::string& str) {
+            std::vector<highlight_block> output;
+            std::smatch match;
+            std::size_t i = 0;
+            while(std::regex_search(str.cbegin() + i, str.cend(), match, escapes_re)) {
+                // add string part
+                LIBASSERT_PRIMITIVE_ASSERT(match.position() > 0);
+                if(match.position() > 0) {
+                    output.emplace_back(GREEN, str.substr(i, match.position()));
+                }
+                output.emplace_back(BLUE, str.substr(i + match.position(), match.length()));
+                i += match.position() + match.length();
+            }
+            if(i < str.length() - 1) {
+                output.emplace_back(GREEN, str.substr(i));
+            }
+            return output;
+        }
+
+        LIBASSERT_ATTR_COLD
         std::vector<highlight_block> highlight(const std::string& expression) try {
             const auto tokens = tokenize(expression);
             std::vector<highlight_block> output;
@@ -1337,7 +1357,10 @@ namespace libassert::detail {
                         output.emplace_back(CYAN, token.str);
                         break;
                     case token_e::string:
-                        output.emplace_back(GREEN, std::regex_replace(token.str, escapes_re, BLUE "$&" GREEN));
+                        {
+                            auto string_tokens = highlight_string(token.str);
+                            output.insert(output.end(), string_tokens.begin(), string_tokens.end());
+                        }
                         break;
                     case token_e::identifier:
                         // NOLINTNEXTLINE(bugprone-branch-clone)
