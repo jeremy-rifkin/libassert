@@ -94,22 +94,18 @@ ifneq ($(COMPILER),msvc)
 
     $(BIN)/o/unit/basic_test.cpp.o: unit/basic_test.cpp $(HPP)
 		$(MKDIR_P) $(dir $@)
-		echo "$(TARGET)"
 		$(CPP) $(CPPFLAGS) -c $< -o $@
 
     $(BIN)/o/unit/constexpr_contexts.cpp.o: unit/constexpr_contexts.cpp $(HPP)
 		$(MKDIR_P) $(dir $@)
-		echo "$(TARGET)"
 		$(CPP) $(CPPFLAGS) -c $< -o $@
 
     $(BIN)/o/unit/test_public_utilities.cpp.o: unit/test_public_utilities.cpp $(HPP)
 		$(MKDIR_P) $(dir $@)
-		echo "$(TARGET)"
 		$(CPP) $(CPPFLAGS) -c $< -o $@
 
     $(BIN)/o/%.cpp.o: %.cpp $(HPP)
 		$(MKDIR_P) $(dir $@)
-		echo "$(TARGET)"
 		$(CPP) $(CPPFLAGS) $(GENERAL_FLAGS) -c $< -o $@
 else
     CPP = cl
