@@ -1302,7 +1302,7 @@ namespace libassert::detail {
         }
 
         LIBASSERT_ATTR_COLD
-        std::vector<highlight_block> highlight_string(const std::string& str) {
+        std::vector<highlight_block> highlight_string(const std::string& str) const {
             std::vector<highlight_block> output;
             std::smatch match;
             std::size_t i = 0;
@@ -1315,7 +1315,7 @@ namespace libassert::detail {
                 output.emplace_back(BLUE, str.substr(i + match.position(), match.length()));
                 i += match.position() + match.length();
             }
-            if(i < str.length() - 1) {
+            if(i < str.length()) {
                 output.emplace_back(GREEN, str.substr(i));
             }
             return output;
