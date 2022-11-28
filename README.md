@@ -26,6 +26,7 @@
     - [Utilities](#utilities)
     - [Namespace synopsis](#namespace-synopsis)
   - [How To Use This Library](#how-to-use-this-library)
+    - [With CMake FetchContent](#with-cmake-fetchcontent)
     - [1. Build](#1-build)
     - [2. Install](#2-install)
     - [3. Use](#3-use)
@@ -505,6 +506,30 @@ compatible with `-pedantic`.
      variable.
    - If static linking, additionally link with dbghelp (`-ldbghelp`) on windows or lib dl (`-ldl`)
      on linux.
+
+
+### With CMake FetchContent
+
+```cmake
+project(my_project)
+
+include(FetchContent)
+FetchContent_Declare(
+    libassert
+    GIT_REPOSITORY "https://github.com/jeremy-rifkin/libassert"
+    GIT_TAG "v1.1"
+)
+FetchContent_MakeAvailable(libassert)
+
+add_executable(my_executable main.cpp)
+target_link_libraries(my_executable
+    PRIVATE
+        assert
+        # On Linux, libdl is required for stacktrace generation
+        # On Windows, dbghelp is required for stacktrace generation
+        dl OR dbghelp
+)
+```
 
 ### 1. Build
 
