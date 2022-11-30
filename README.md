@@ -26,9 +26,11 @@
     - [Utilities](#utilities)
     - [Namespace synopsis](#namespace-synopsis)
   - [How To Use This Library](#how-to-use-this-library)
-    - [1. Build](#1-build)
-    - [2. Install](#2-install)
-    - [3. Use](#3-use)
+    - [A) With CMake `FetchContent`](#a-with-cmake-fetchcontent)
+    - [B) Manual Build](#b-manual-build)
+      - [1. Build](#1-build)
+      - [2. Install](#2-install)
+      - [3. Use](#3-use)
   - [Replacing &lt;cassert&gt;](#replacing-cassert)
   - [Comparison With Other Languages](#comparison-with-other-languages)
 
@@ -497,14 +499,50 @@ This library targets >=C++17 and supports gcc, clang, and msvc.
 Note: The library does rely on some compiler extensions and compiler specific features so it is not
 compatible with `-pedantic`.
 
+### A) With CMake `FetchContent`
+
+Follow the below example to use this library with CMake's `FetchContent` module.
+
+```cmake
+project(my_project)
+
+include(FetchContent)
+FetchContent_Declare(
+    libassert
+    GIT_REPOSITORY "https://github.com/jeremy-rifkin/libassert"
+    GIT_TAG "v1.1"
+)
+FetchContent_MakeAvailable(libassert)
+
+add_executable(my_executable main.cpp)
+target_link_libraries(my_executable
+    PRIVATE
+        assert
+        # Link a library for stacktrace generation ("dl" on Linux/OSx, "dbghelp" on Windows)
+        dl OR dbghelp
+)
+```
+
+You should then be able to use the library in your code like this:
+
+```cpp
+#include <assert.hpp>
+
+int main() {
+    DEBUG_ASSERT(1 == 2); // prints a stack trace and aborts
+}
+```
+
+### B) Manual Build
+
 1. Run `make` to compile static and shared libraries
 2. Copy the static or shared library where you want it.
 3. Copy [`include/assert.hpp`](include/assert.hpp) where you want it.
 4. Add a `-I` path if needed, add a `-L` path if needed, link with the library (`-lassert`)
-   - For the shared library you may need to add a path to your `LD_LIBRARY_PATH` environment
-     variable.
-   - If static linking, additionally link with dbghelp (`-ldbghelp`) on windows or lib dl (`-ldl`)
-     on linux.
+    - For the shared library you may need to add a path to your `LD_LIBRARY_PATH` environment
+      variable.
+    - If static linking, additionally link with dbghelp (`-ldbghelp`) on windows or lib dl (`-ldl`)
+      on linux.
 
 ### 1. Build
 
