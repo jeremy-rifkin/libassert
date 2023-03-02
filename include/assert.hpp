@@ -15,13 +15,13 @@
 #include <vector>
 #include <system_error>
 #ifdef __cpp_lib_expected
-#include <expected>
+ #include <expected>
 #endif
 
 #if defined(_MSVC_LANG) && _MSVC_LANG < 201703L
-#error "libassert requires C++17"
+ #error "libassert requires C++17 or newer"
 #elif !defined(_MSVC_LANG) && __cplusplus < 201703L
-#pragma error "libassert requires C++17"
+ #pragma error "libassert requires C++17 or newer"
 #endif
 
 #if __cplusplus >= 202002L || _MSVC_LANG >= 202002L
@@ -111,12 +111,18 @@ namespace libassert::detail {
     };
 
     // bootstrap with primitive implementations
-    void primitive_assert_impl(bool condition, bool verify, const char* expression,
-                               const char* signature, source_location location, const char* message = nullptr);
+    void primitive_assert_impl(
+        bool condition,
+        bool verify,
+        const char* expression,
+        const char* signature,
+        source_location location,
+        const char* message = nullptr
+    );
 
     #ifndef NDEBUG
-     #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) libassert::detail::primitive_assert_impl(c, false, #c, \
-                                                                                 LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
+     #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) \
+        libassert::detail::primitive_assert_impl(c, false, #c, LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
     #else
      #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) LIBASSERT_PHONY_USE(c)
     #endif
@@ -408,7 +414,10 @@ namespace libassert::detail {
                 return expression_decomposer<A, Q, ops::shl>(std::forward<A>(a), std::forward<O>(operand));
             } else {
                 static_assert(!is_nothing<C>);
-                return expression_decomposer<decltype(get_value()), O, ops::shl>(std::forward<A>(get_value()), std::forward<O>(operand));
+                return expression_decomposer<decltype(get_value()), O, ops::shl>(
+                    std::forward<A>(get_value()),
+                    std::forward<O>(operand)
+                );
             }
         }
         #define LIBASSERT_GEN_OP_BOILERPLATE(functor, op) \
@@ -478,16 +487,21 @@ namespace libassert::detail {
 
     [[nodiscard]] bool is_bitwise(std::string_view op);
 
-    [[nodiscard]] std::pair<std::string, std::string> decompose_expression(const std::string& expression,
-                                                                           std::string_view target_op);
+    [[nodiscard]] std::pair<std::string, std::string> decompose_expression(
+        const std::string& expression,
+        std::string_view target_op
+    );
 
     /*
      * stringification
      */
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
-    constexpr std::string_view substring_bounded_by(std::string_view sig, std::string_view l, std::string_view r)
-                                                                                                              noexcept {
+    constexpr std::string_view substring_bounded_by(
+        std::string_view sig,
+        std::string_view l,
+        std::string_view r
+    ) noexcept {
         auto i = sig.find(l) + l.length();
         return sig.substr(i, sig.rfind(r) - i);
     }
@@ -609,24 +623,29 @@ namespace libassert::detail {
                                                     || !can_basic_stringify<T>::value, int>::type = 0>
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
-            if constexpr(has_stream_overload<T>::value && !is_string_type<T>
-                      && !std::is_pointer<strip<typename std::decay<T>::type>>::value) {
+            if constexpr(
+                has_stream_overload<T>::value && !is_string_type<T>
+                && !std::is_pointer<strip<typename std::decay<T>::type>>::value
+            ) {
                 std::ostringstream oss;
                 oss<<t;
                 return std::move(oss).str();
             } else if constexpr(adl::is_printable_container<T>::value && !is_c_string<T>) {
                 using std::begin, std::end; // ADL
                 std::string str = "[";
-                for(auto it = begin(t); it != end(t); it++) {
-                    if(it != begin(t)) {
+                const auto begin_it = begin(t);
+                for(auto it = begin_it; it != end(t); it++) {
+                    if(it != begin_it) {
                         str += ", ";
                     }
                     str += stringify(*it, literal_format::dec);
                 }
                 str += "]";
                 return str;
-            } else if constexpr(std::is_pointer<strip<typename std::decay<T>::type>>::value
-                             || std::is_function<strip<T>>::value) {
+            } else if constexpr(
+                std::is_pointer<strip<typename std::decay<T>::type>>::value
+                || std::is_function<strip<T>>::value
+            ) {
                 if constexpr(isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char>) { // strings
                     const void* v = t; // circumvent -Wnonnull-compare
                     if(v != nullptr) {
@@ -657,8 +676,8 @@ namespace libassert::detail {
         template<typename T, size_t... I> std::string stringify_tuple_like(const T& t, std::index_sequence<I...>) {
             using lf = literal_format;
             using stringification::stringify; // ADL
-            return "[" +
-                        (stringify(std::get<0>(t), lf::dec) + ... + (", " + stringify(std::get<I + 1>(t), lf::dec)))
+            return "["
+                    + (stringify(std::get<0>(t), lf::dec) + ... + (", " + stringify(std::get<I + 1>(t), lf::dec)))
                     + "]";
         }
     }
@@ -696,8 +715,7 @@ namespace libassert::detail {
                 // TODO: consider pushing empty fillers to keep columns aligned later on? Does not
                 // matter at the moment because floats only have decimal and hex literals but could
                 // if more formats are added.
-                std::string str = stringify(v, fmt);
-                vec.push_back(std::move(str));
+                vec.push_back(stringify(v, fmt));
             }
             return vec;
         } else {
@@ -713,8 +731,13 @@ namespace libassert::detail {
         bool multiple_formats;
         bool present = false;
         binary_diagnostics_descriptor(); // = default; in the .cpp
-        binary_diagnostics_descriptor(std::vector<std::string>& lstrings, std::vector<std::string>& rstrings,
-                                      std::string a_str, std::string b_str, bool multiple_formats);
+        binary_diagnostics_descriptor(
+            std::vector<std::string>& lstrings,
+            std::vector<std::string>& rstrings,
+            std::string a_str,
+            std::string b_str,
+            bool multiple_formats
+        );
         compl binary_diagnostics_descriptor(); // = default; in the .cpp
         binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = delete;
         binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
@@ -726,9 +749,13 @@ namespace libassert::detail {
 
     template<typename A, typename B>
     LIBASSERT_ATTR_COLD [[nodiscard]]
-    binary_diagnostics_descriptor generate_binary_diagnostic(const A& a, const B& b,
-                                                             const char* a_str, const char* b_str,
-                                                             std::string_view op) {
+    binary_diagnostics_descriptor generate_binary_diagnostic(
+        const A& a,
+        const B& b,
+        const char* a_str,
+        const char* b_str,
+        std::string_view op
+    ) {
         using lf = literal_format;
         // Note: op
         // figure out what information we need to print in the where clause
@@ -871,10 +898,12 @@ namespace libassert {
         size_t sizeof_args;
     public:
         assertion_printer() = delete;
-        assertion_printer(const detail::assert_static_parameters* params,
-                          const detail::extra_diagnostics& processed_args,
-                          detail::binary_diagnostics_descriptor& binary_diagnostics,
-                          void* raw_trace, size_t sizeof_args);
+        assertion_printer(
+            const detail::assert_static_parameters* params,
+            const detail::extra_diagnostics& processed_args,
+            detail::binary_diagnostics_descriptor& binary_diagnostics,
+            void* raw_trace, size_t sizeof_args
+        );
         compl assertion_printer();
         assertion_printer(const assertion_printer&) = delete;
         assertion_printer(assertion_printer&&) = delete;
@@ -944,14 +973,18 @@ namespace libassert::detail {
 
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
-    void process_assert_fail(expression_decomposer<A, B, C>& decomposer,
-                                const assert_static_parameters* params, Args&&... args) {
+    void process_assert_fail(
+        expression_decomposer<A, B, C>& decomposer,
+        const assert_static_parameters* params,
+        Args&&... args
+    ) {
         lock l;
         const auto* args_strings = params->args_strings;
         size_t args_strings_count = count_args_strings(args_strings);
         size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
-        LIBASSERT_PRIMITIVE_ASSERT((sizeof...(args) == 1 && args_strings_count == 2)
-                                       || args_strings_count == sizeof_extra_diagnostics + 1);
+        LIBASSERT_PRIMITIVE_ASSERT(
+            (sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
+        );
         // process_args needs to be called as soon as possible in case errno needs to be read
         const auto processed_args = process_args(args_strings, args...);
         const auto fatal = processed_args.fatality;
@@ -965,13 +998,23 @@ namespace libassert::detail {
             if constexpr(isa<A, bool>) {
                 (void)decomposer; // suppress warning in msvc
             } else {
-                binary_diagnostics = generate_binary_diagnostic(decomposer.a, true,
-                                                                params->expr_str, "true", "==");
+                binary_diagnostics = generate_binary_diagnostic(
+                    decomposer.a,
+                    true,
+                    params->expr_str,
+                    "true",
+                    "=="
+                );
             }
         } else {
             auto [a_str, b_str] = decompose_expression(params->expr_str, C::op_string);
-            binary_diagnostics = generate_binary_diagnostic(decomposer.a, decomposer.b,
-                                                            a_str.c_str(), b_str.c_str(), C::op_string);
+            binary_diagnostics = generate_binary_diagnostic(
+                decomposer.a,
+                decomposer.b,
+                a_str.c_str(),
+                b_str.c_str(),
+                C::op_string
+            );
         }
         // send off
         assertion_printer printer {
@@ -986,8 +1029,11 @@ namespace libassert::detail {
 
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE [[nodiscard]]
-    expression_decomposer<A, B, C> process_assert_fail_m(expression_decomposer<A, B, C> decomposer,
-                                           const assert_static_parameters* params, Args&&... args) {
+    expression_decomposer<A, B, C> process_assert_fail_m(
+        expression_decomposer<A, B, C> decomposer,
+        const assert_static_parameters* params,
+        Args&&... args
+    ) {
         process_assert_fail(decomposer, params, std::forward<Args>(args)...);
         return decomposer;
     }
@@ -997,8 +1043,10 @@ namespace libassert::detail {
         T value;
     };
 
-    template<bool R, bool ret_lhs, bool value_is_lval_ref,
-             typename T, typename A, typename B, typename C>
+    template<
+        bool R, bool ret_lhs, bool value_is_lval_ref,
+        typename T, typename A, typename B, typename C
+    >
     constexpr auto get_expression_return_value(T& value, expression_decomposer<A, B, C>& decomposer) {
         if constexpr(R) {
             if constexpr(ret_lhs) {
@@ -1184,7 +1232,7 @@ using libassert::ASSERTION;
         LIBASSERT_STMTEXPR( \
           LIBASSERT_WARNING_PRAGMA \
           auto libassert_decomposer = \
-                             libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
+                         libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
           decltype(auto) libassert_value = libassert_decomposer.get_value(); \
           constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
           if constexpr(check_expression) { \
