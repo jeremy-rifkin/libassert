@@ -89,7 +89,7 @@ public:
     template<typename K, typename V, typename... Rest>
     constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
         if(needle == option) { return result; }
-        if constexpr (sizeof...(Rest) > 0) { return lookup(rest...); }
+        if constexpr(sizeof...(Rest) > 0) { return lookup(rest...); }
         else { LIBASSERT_PRIMITIVE_ASSERT(false); LIBASSERT_UNREACHABLE; }
     }
     constexpr bool is_in() { return false; }
@@ -169,8 +169,14 @@ namespace libassert::config {
 
 namespace libassert::detail {
     LIBASSERT_ATTR_COLD
-    void primitive_assert_impl(bool condition, bool verify, const char* expression,
-                               const char* signature, source_location location, const char* message) {
+    void primitive_assert_impl(
+        bool condition,
+        bool verify,
+        const char* expression,
+        const char* signature,
+        source_location location,
+        const char* message
+    ) {
         if(!condition) {
             const char* action = verify ? "Verification" : "Assertion";
             const char* name   = verify ? "verify"       : "assert";
@@ -484,8 +490,12 @@ namespace libassert::detail {
             if constexpr(FAILABLE) {
                 return (T)-1;
             } else {
-                LIBASSERT_PRIMITIVE_ASSERT(false, ("SymGetTypeInfo failed: "s +
-                                           std::system_error(GetLastError(), std::system_category()).what()).c_str());
+                LIBASSERT_PRIMITIVE_ASSERT(
+                    false,
+                    (
+                        "SymGetTypeInfo failed: "s + std::system_error(GetLastError(), std::system_category()).what()
+                    ).c_str()
+                );
             }
         }
         if constexpr(std::is_same_v<T, WCHAR*>) {
@@ -594,11 +604,20 @@ namespace libassert::detail {
                     TI_FINDCHILDREN_PARAMS* children = (TI_FINDCHILDREN_PARAMS*) new char[sz];
                     children->Start = 0;
                     children->Count = n_children;
-                    if(!SymGetTypeInfo(proc, modbase, type_index,
+                    if(
+                        !SymGetTypeInfo(
+                            proc, modbase, type_index,
                             static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(IMAGEHLP_SYMBOL_TYPE_INFO::TI_FINDCHILDREN),
-                            children)) {
-                        LIBASSERT_PRIMITIVE_ASSERT(false, ("SymGetTypeInfo failed: "s +
-                                             std::system_error(GetLastError(), std::system_category()).what()).c_str());
+                            children
+                        )
+                    ) {
+                        LIBASSERT_PRIMITIVE_ASSERT(
+                            false,
+                            (
+                                "SymGetTypeInfo failed: "s
+                                + std::system_error(GetLastError(), std::system_category()).what()
+                            ).c_str()
+                        );
                     }
                     // get children type
                     std::string extent = "(";
@@ -622,8 +641,10 @@ namespace libassert::detail {
             case SymTagEnum::SymTagBaseClass:
                 return {get_info<WCHAR*, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMNAME>(type_index, proc, modbase), ""};
             default:
-                return {"<unknown type " +
-                            std::to_string(static_cast<std::underlying_type<SymTagEnum>::type>(tag)) + ">", ""};
+                return {
+                    "<unknown type " + std::to_string(static_cast<std::underlying_type<SymTagEnum>::type>(tag)) + ">",
+                    ""
+                };
         };
     }
 
@@ -643,7 +664,11 @@ namespace libassert::detail {
 
     // Enumerates function parameters
     LIBASSERT_ATTR_COLD
-    static BOOL __stdcall enumerator_callback(PSYMBOL_INFO symbol_info, [[maybe_unused]] ULONG symbol_size, PVOID data) {
+    static BOOL __stdcall enumerator_callback(
+        PSYMBOL_INFO symbol_info,
+        [[maybe_unused]] ULONG symbol_size,
+        PVOID data
+    ) {
         function_info* ctx = (function_info*)data;
         if(ctx->counter++ >= ctx->n_children) {
             return false;
@@ -693,10 +718,16 @@ namespace libassert::detail {
                         trace.push_back({line.FileName, symbol->Name, (unsigned)line.LineNumber});
                         continue;
                     }
-                    DWORD n_children = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT, true>
-                        (symbol->TypeIndex, proc, symbol->ModBase);
-                    DWORD class_parent_id = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_CLASSPARENTID, true>
-                        (symbol->TypeIndex, proc, symbol->ModBase);
+                    DWORD n_children = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT, true>(
+                        symbol->TypeIndex,
+                        proc,
+                        symbol->ModBase
+                    );
+                    DWORD class_parent_id = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_CLASSPARENTID, true>(
+                        symbol->TypeIndex,
+                        proc,
+                        symbol->ModBase
+                    );
                     function_info fi { proc, symbol->ModBase, 0, int(n_children), class_parent_id != (DWORD)-1, "" };
                     SymEnumSymbols(proc, 0, nullptr, enumerator_callback, &fi);
                     std::string signature = symbol->Name + "("s + fi.str + ")";
@@ -905,8 +936,10 @@ namespace libassert::detail {
         if(has_addr2line()) {
             // group addresses to resolve by the module name they're from
             // obj path -> { addresses, targets }
-            std::unordered_map<std::string,
-                std::pair<std::vector<std::string>, std::vector<stacktrace_entry*>>> entries;
+            std::unordered_map<
+                std::string,
+                std::pair<std::vector<std::string>, std::vector<stacktrace_entry*>>
+            > entries;
             std::string binary_path = get_executable_path();
             bool is_pie = get_executable_e_type(binary_path) == ET_DYN;
             std::optional<std::string> dladdr_name_of_executable;
@@ -922,9 +955,11 @@ namespace libassert::detail {
                 uintptr_t addr;
                 // if this symbol is in the executable and the executable is not pie use raw address
                 // otherwise compute offset
-                if(dladdr_name_of_executable.has_value()
-                && dladdr_name_of_executable.value() == entry.obj_path
-                && !is_pie) {
+                if(
+                    dladdr_name_of_executable.has_value()
+                    && dladdr_name_of_executable.value() == entry.obj_path
+                    && !is_pie
+                ) {
                     addr = (uintptr_t)entry.raw_address;
                 } else {
                     addr = (uintptr_t)entry.raw_address - (uintptr_t)entry.obj_base;
@@ -1206,7 +1241,7 @@ namespace libassert::detail {
                                 // [^] instead of . because . does not match newlines
                 std::string str = stringf("^(%s)[^]*", rules_raw[i].second.c_str());
                 #ifdef _0_DEBUG_ASSERT_LEXER_RULES
-                fprintf(stderr, "%s : %s\n", rules_raw[i].first.c_str(), str.c_str());
+                 fprintf(stderr, "%s : %s\n", rules_raw[i].first.c_str(), str.c_str());
                 #endif
                 rules[i] = { rules_raw[i].first, std::regex(str) };
             }
@@ -1280,8 +1315,8 @@ namespace libassert::detail {
                 for(const auto& [ type, re ] : rules) {
                     if(std::regex_match(std::begin(expression) + i, std::end(expression), match, re)) {
                         #ifdef _0_DEBUG_ASSERT_TOKENIZATION
-                        fprintf(stderr, "%s\n", match[1].str().c_str());
-                        fflush(stdout);
+                         fprintf(stderr, "%s\n", match[1].str().c_str());
+                         fflush(stdout);
                         #endif
                         if(decompose_shr && match[1].str() == ">>") { // Do >> decomposition now for templates
                             tokens.push_back({ type, ">" });
@@ -1443,7 +1478,10 @@ namespace libassert::detail {
                 const token_t& token = tokens[i];
                 // scan forward to matching brace
                 // can assume braces are balanced
-                const auto scan_forward = [this, &i, &tokens](const std::string_view open, const std::string_view close) {
+                const auto scan_forward = [this, &i, &tokens](
+                    const std::string_view open,
+                    const std::string_view close)
+                {
                     bool empty = true;
                     int count = 0;
                     while(++i < tokens.size()) {
@@ -1472,8 +1510,15 @@ namespace libassert::detail {
                                 // also must be preceeded by an identifier
                                 if(token.str == "<" && find_last_non_ws(tokens, i).token_type == token_e::identifier) {
                                     // branch 1: this is a template opening
-                                    bool success = pseudoparse(tokens, target_op, i + 1, current_lowest_precedence,
-                                                               template_depth + 1, middle_index, depth + 1, output);
+                                    bool success = pseudoparse(
+                                        tokens,
+                                        target_op,
+                                        i + 1,
+                                        current_lowest_precedence,
+                                        template_depth + 1,
+                                        middle_index, depth + 1,
+                                        output
+                                    );
                                     if(!success) { // early exit if we have to discard
                                         return false;
                                     }
@@ -1547,10 +1592,12 @@ namespace libassert::detail {
                         break;
                 }
             }
-            if(middle_index != -1
-            && normalize_op(get_real_op(tokens, middle_index)) == target_op
-            && template_depth == 0
-            && state == expecting_operator) {
+            if(
+                middle_index != -1
+                && normalize_op(get_real_op(tokens, middle_index)) == target_op
+                && template_depth == 0
+                && state == expecting_operator
+            ) {
                 output.insert(middle_index);
             } else {
                 // failed parse tree, ignore
@@ -1559,8 +1606,10 @@ namespace libassert::detail {
         }
 
         LIBASSERT_ATTR_COLD
-        std::pair<std::string, std::string> decompose_expression(const std::string& expression,
-                const std::string_view target_op) {
+        std::pair<std::string, std::string> decompose_expression(
+            const std::string& expression,
+            const std::string_view target_op
+        ) {
             // While automatic decomposition allows something like `assert(foo(n) == bar<n> + n);`
             // treated as `assert_eq(foo(n), bar<n> + n);` we only get the full expression's string
             // representation.
@@ -1608,17 +1657,17 @@ namespace libassert::detail {
             std::set<int> candidates;
             bool success = pseudoparse(tokens, target_op, 0, 0, 0, -1, 0, candidates);
             #ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
-            fprintf(stderr, "\n%d %d\n", (int)candidates.size(), success);
-            for(size_t m : candidates) {
-                std::vector<std::string> left_strings;
-                std::vector<std::string> right_strings;
-                for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
-                for(size_t i = m + 1; i < tokens.size(); i++) right_strings.push_back(tokens[i].str);
-                fprintf(stderr, "left:  %s\n", libassert::detail::highlight(std::string(trim(join(left_strings, "")))).c_str());
-                fprintf(stderr, "right: %s\n", libassert::detail::highlight(std::string(trim(join(right_strings, "")))).c_str());
-                fprintf(stderr, "target_op: %s\n", target_op.data()); // should be null terminated
-                fprintf(stderr, "---\n");
-            }
+             fprintf(stderr, "\n%d %d\n", (int)candidates.size(), success);
+             for(size_t m : candidates) {
+                 std::vector<std::string> left_strings;
+                 std::vector<std::string> right_strings;
+                 for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
+                 for(size_t i = m + 1; i < tokens.size(); i++) right_strings.push_back(tokens[i].str);
+                 fprintf(stderr, "left:  %s\n", libassert::detail::highlight(std::string(trim(join(left_strings, "")))).c_str());
+                 fprintf(stderr, "right: %s\n", libassert::detail::highlight(std::string(trim(join(right_strings, "")))).c_str());
+                 fprintf(stderr, "target_op: %s\n", target_op.data()); // should be null terminated
+                 fprintf(stderr, "---\n");
+             }
             #endif
             if(success && candidates.size() == 1) {
                 std::vector<std::string> left_strings;
@@ -1684,7 +1733,10 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
-    std::pair<std::string, std::string> decompose_expression(const std::string& expression, const std::string_view target_op) {
+    std::pair<std::string, std::string> decompose_expression(
+        const std::string& expression,
+        const std::string_view target_op
+    ) {
         return analysis::get().decompose_expression(expression, target_op);
     }
 
@@ -2188,20 +2240,17 @@ namespace libassert::detail {
             // path preprocessing
             constexpr size_t max_file_length = 50;
             auto [files, longest_file_width] = process_paths(trace, start, end);
-            
+            // figure out column widths
             const auto max_line_number =
-                std::max_element(std::next(trace.begin(), start),
-                                 std::next(trace.begin(), end + 1),
-                                [](const libassert::detail::stacktrace_entry& a,
-                                    const libassert::detail::stacktrace_entry& b) {
-                                return std::to_string(a.line).size() <
-                                        std::to_string(b.line).size();
-                                })
-                ->line;
-
+                std::max_element(
+                    trace.begin() + start,
+                    trace.begin() + end + 1,
+                    [](const libassert::detail::stacktrace_entry& a, const libassert::detail::stacktrace_entry& b) {
+                        return a.line < b.line;
+                    }
+                )->line;
             // +1 for indices starting at 0, +1 again for log
-            const size_t max_line_number_width = log10(max_line_number + 1 + 1); 
-            
+            const size_t max_line_number_width = log10(max_line_number + 1 + 1);
             size_t max_frame_width = log10(end - start + 1 + 1); // ^
             // do the actual trace
             for(size_t i = start; i <= end; i++) {
@@ -2266,11 +2315,18 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
-                                    std::vector<std::string>& _lstrings, std::vector<std::string>& _rstrings,
-                                    std::string _a_str, std::string _b_str, bool _multiple_formats):
-                                    lstrings(_lstrings), rstrings(_rstrings),
-                                    a_str(std::move(_a_str)), b_str(std::move(_b_str)),
-                                    multiple_formats(_multiple_formats), present(true) {}
+            std::vector<std::string>& _lstrings,
+            std::vector<std::string>& _rstrings,
+            std::string _a_str,
+            std::string _b_str,
+            bool _multiple_formats
+        ):
+            lstrings(_lstrings),
+            rstrings(_rstrings),
+            a_str(std::move(_a_str)),
+            b_str(std::move(_b_str)),
+            multiple_formats(_multiple_formats),
+            present(true) {}
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
     LIBASSERT_ATTR_COLD
     binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
@@ -2395,8 +2451,10 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
-    std::string print_extra_diagnostics(size_t term_width,
-                                        const decltype(extra_diagnostics::entries)& extra_diagnostics) {
+    std::string print_extra_diagnostics(
+        size_t term_width,
+        const decltype(extra_diagnostics::entries)& extra_diagnostics
+    ) {
         std::string output = "    Extra diagnostics:\n";
         size_t lw = 0;
         for(const auto& entry : extra_diagnostics) {
@@ -2538,8 +2596,11 @@ namespace libassert::utility {
 // Default handler
 
 LIBASSERT_ATTR_COLD
-void libassert_default_fail_action(libassert::assert_type type, ASSERTION fatal,
-                                       const libassert::assertion_printer& printer) {
+void libassert_default_fail_action(
+    libassert::assert_type type,
+    ASSERTION fatal,
+    const libassert::assertion_printer& printer
+) {
     libassert::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
     std::string message = printer(libassert::utility::terminal_width(STDERR_FILENO));
     if(libassert::detail::isatty(STDERR_FILENO) && libassert::config::output_colors) {
