@@ -2188,10 +2188,20 @@ namespace libassert::detail {
             // path preprocessing
             constexpr size_t max_file_length = 50;
             auto [files, longest_file_width] = process_paths(trace, start, end);
-            size_t max_line_number_width = log10(std::max_element(trace.begin(), trace.begin() + end + 1,
-                [](const libassert::detail::stacktrace_entry& a, const libassert::detail::stacktrace_entry& b) {
-                    return std::to_string(a.line).size() < std::to_string(b.line).size();
-                })->line - start + 1 + 1); // +1 for indices starting at 0, +1 again for log
+            
+            const auto max_line_number =
+                std::max_element(std::next(trace.begin(), start),
+                                 std::next(trace.begin(), end + 1),
+                                [](const libassert::detail::stacktrace_entry& a,
+                                    const libassert::detail::stacktrace_entry& b) {
+                                return std::to_string(a.line).size() <
+                                        std::to_string(b.line).size();
+                                })
+                ->line;
+
+            // +1 for indices starting at 0, +1 again for log
+            const size_t max_line_number_width = log10(max_line_number + 1 + 1); 
+            
             size_t max_frame_width = log10(end - start + 1 + 1); // ^
             // do the actual trace
             for(size_t i = start; i <= end; i++) {
