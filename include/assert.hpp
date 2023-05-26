@@ -65,6 +65,16 @@
  #define LIBASSERT_STRONG_EXPECT(expr, value) __builtin_expect((expr), (value))
 #endif
 
+// deal with gcc shenanigans
+// at one point their std::string's move assignment was not noexcept even in c++17
+// https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
+#if defined(_GLIBCXX_USE_CXX11_ABI)
+ #define GCC_ISNT_STUPID _GLIBCXX_USE_CXX11_ABI
+#else
+ // assume others target new abi by default - homework
+ #define GCC_ISNT_STUPID 1
+#endif
+
 namespace libassert {
     enum class ASSERTION {
         NONFATAL, FATAL
@@ -742,7 +752,8 @@ namespace libassert::detail {
         binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = delete;
         binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
         binary_diagnostics_descriptor& operator=(const binary_diagnostics_descriptor&) = delete;
-        binary_diagnostics_descriptor& operator=(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
+        binary_diagnostics_descriptor&
+        operator=(binary_diagnostics_descriptor&&) noexcept(GCC_ISNT_STUPID); // = default; in the .cpp
     };
 
     void sort_and_dedup(literal_format(&)[format_arr_length]);
