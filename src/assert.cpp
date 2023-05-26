@@ -2,7 +2,7 @@
 #define _CRT_SECURE_NO_WARNINGS // done only for strerror
 #include "assert.hpp"
 
-// Copyright (c) 2021-2022 Jeremy Rifkin under the MIT license
+// Copyright (c) 2021-2023 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
 #include <array>
@@ -2616,6 +2616,7 @@ void libassert_default_fail_action(
         case libassert::assert_type::assertion:
             if(fatal == ASSERTION::FATAL) {
                 case libassert::assert_type::assumption: // switch-if-case, cursed!
+                fflush(stderr);
                 abort();
             }
             // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of

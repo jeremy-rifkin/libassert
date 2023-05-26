@@ -12,6 +12,8 @@ option(ASSERT_LOWERCASE "Enables assert alias for ASSERT" OFF)
 option(ASSERT_USE_MAGIC_ENUM "Use the MagicEnum library to print better diagnostics for enum classes" ON)
 set(ASSERT_FAIL "" CACHE STRING "ASSERT_FAIL")
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 # libassert uses relocs, -fpic has to be used to allow shared libs to link libassert as a static library.
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -92,6 +94,7 @@ if(NOT CMAKE_SKIP_INSTALL_RULES)
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 
   install(
