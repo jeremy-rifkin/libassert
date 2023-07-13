@@ -75,14 +75,16 @@ if(CMAKE_BUILD_TYPE STREQUAL "")
   message(FATAL_ERROR "Setting CMAKE_BUILD_TYPE is required")
 endif()
 
-if(ASSERT_BUILD_TESTS)
-  include(CTest)
-  add_test(
-    NAME run-tests.py
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
-    COMMAND
-    python3 run-tests.py --build --build_type=${CMAKE_BUILD_TYPE} --compiler=${CMAKE_CXX_COMPILER_ID}
-  )
+if (PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  if(ASSERT_BUILD_TESTS)
+    include(CTest)
+    add_test(
+      NAME run-tests.py
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
+      COMMAND
+      python3 run-tests.py --build --build_type=${CMAKE_BUILD_TYPE} --compiler=${CMAKE_CXX_COMPILER_ID}
+    )
+  endif()
 endif()
 
 if(NOT CMAKE_SKIP_INSTALL_RULES)
