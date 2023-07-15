@@ -19,7 +19,11 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#define IS_WINDOWS 0
+#define IS_LINUX 0
+
 #if defined(_WIN32)
+ #undef IS_WINDOWS
  #define IS_WINDOWS 1
  #ifndef STDIN_FILENO
   #define STDIN_FILENO _fileno(stdin)
@@ -35,6 +39,7 @@
  #undef max
  #define USE_DBG_HELP_H
 #elif defined(__linux)
+ #undef IS_LINUX
  #define IS_LINUX 1
  #include <execinfo.h>
  #include <climits>

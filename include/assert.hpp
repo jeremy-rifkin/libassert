@@ -24,7 +24,7 @@
  #pragma error "libassert requires C++17 or newer"
 #endif
 
-#if __cplusplus >= 202002L || _MSVC_LANG >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002L)
  #include <compare>
 #endif
 
@@ -34,11 +34,18 @@
  "../third_party/magic_enum.hpp"
 #endif
 
+#define LIBASSERT_IS_CLANG 0
+#define LIBASSERT_IS_GCC 0
+#define LIBASSERT_IS_MSVC 0
+
 #if defined(__clang__)
+ #undef LIBASSERT_IS_CLANG
  #define LIBASSERT_IS_CLANG 1
 #elif defined(__GNUC__) || defined(__GNUG__)
+ #undef LIBASSERT_IS_GCC
  #define LIBASSERT_IS_GCC 1
 #elif defined(_MSC_VER)
+ #undef LIBASSERT_IS_MSVC
  #define LIBASSERT_IS_MSVC 1
  #include <iso646.h> // alternative operator tokens are standard but msvc requires the include or /permissive- or /Za
 #else

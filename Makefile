@@ -20,7 +20,7 @@ ifneq ($(COMPILER),msvc)
     # GCC / Clang
     CPP = $(COMPILER)
     LD = $(COMPILER)
-    override WFLAGS += -Wall -Wextra -Wvla -Wshadow -Werror
+    override WFLAGS += -Wall -Wextra -Wvla -Wshadow -Werror -Wundef
     override FLAGS += -std=$(STD) $(GFLAG) -Iinclude
     override LDFLAGS += -Wl,--whole-archive -Wl,--no-whole-archive
     ifeq ($(TARGET), debug)
@@ -60,7 +60,7 @@ else
     CPP = cl
     LD = link
     SHELL = powershell
-    override WFLAGS += /W4 /WX
+    override WFLAGS += /W4 /WX /wd4668
     override FLAGS += /std:$(STD) /EHsc
     override LDFLAGS += /WHOLEARCHIVE # /PDB /OPT:ICF /OPT:REF
     ifeq ($(TARGET), debug)
