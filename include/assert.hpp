@@ -1170,10 +1170,14 @@ using libassert::ASSERTION;
  // with decltype(auto) in an expression like decltype(auto) x = __extension__ ({...}).y;
  #define LIBASSERT_STMTEXPR(B, R) (__extension__ ({ B R }))
  #define LIBASSERT_WARNING_PRAGMA_PUSH _Pragma("GCC diagnostic push")
- #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
-    _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-    _Pragma("GCC diagnostic ignored \"-Wunknown-warning-option\"") /* TODO: Awful */ \
-    _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
+ #if LIBASSERT_IS_GCC
+  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
+     _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+     _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
+ #else
+  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
+     _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
+ #endif
  #define LIBASSERT_WARNING_PRAGMA_POP _Pragma("GCC diagnostic pop")
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
 #else
