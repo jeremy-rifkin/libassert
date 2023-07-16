@@ -1287,7 +1287,6 @@ using libassert::ASSERTION;
                 new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \
               } \
             } \
-        LIBASSERT_WARNING_PRAGMA_POP \
           }, \
           /* Note: std::launder needed in 17 in case of placement new / move shenanigans above */ \
           /* https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3 */ \
@@ -1295,7 +1294,8 @@ using libassert::ASSERTION;
           libassert::detail::get_expression_return_value <doreturn LIBASSERT_COMMA \
             libassert_ret_lhs LIBASSERT_COMMA std::is_lvalue_reference<decltype(libassert_value)>::value> \
               (libassert_value, *std::launder(&libassert_decomposer)); \
-        ) LIBASSERT_IF(doreturn)(.value,)
+        ) LIBASSERT_IF(doreturn)(.value,) \
+        LIBASSERT_WARNING_PRAGMA_POP
 
 #ifdef NDEBUG
  #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE;
