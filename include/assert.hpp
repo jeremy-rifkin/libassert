@@ -1176,7 +1176,8 @@ using libassert::ASSERTION;
      _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
  #else
   #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
-     _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
+     _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+     _Pragma("GCC diagnostic ignored \"-Woverloaded-shift-op-parentheses\"")
  #endif
  #define LIBASSERT_WARNING_PRAGMA_POP _Pragma("GCC diagnostic pop")
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
