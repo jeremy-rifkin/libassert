@@ -222,7 +222,7 @@ public:
         qux();
 
         {
-            M() < 2;
+            M() < 2; // NOLINT(clang-diagnostic-unused-comparison)
             puts("----");
             assert(M() < 2);
             puts("----");
