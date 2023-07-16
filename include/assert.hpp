@@ -1169,23 +1169,31 @@ using libassert::ASSERTION;
  // Extra set of parentheses here because clang treats __extension__ as a low-precedence unary operator which interferes
  // with decltype(auto) in an expression like decltype(auto) x = __extension__ ({...}).y;
  #define LIBASSERT_STMTEXPR(B, R) (__extension__ ({ B R }))
- #define LIBASSERT_WARNING_PRAGMA_PUSH _Pragma("GCC diagnostic push")
  #if LIBASSERT_IS_GCC
   #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
      _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
+  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC _Pragma("GCC diagnostic push")
+  #define LIBASSERT_WARNING_PRAGMA_POP_GCC _Pragma("GCC diagnostic pop")
+  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
+  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
  #else
   #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
      _Pragma("GCC diagnostic ignored \"-Woverloaded-shift-op-parentheses\"")
+  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
+  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
+  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG _Pragma("GCC diagnostic push")
+  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG _Pragma("GCC diagnostic pop")
  #endif
- #define LIBASSERT_WARNING_PRAGMA_POP _Pragma("GCC diagnostic pop")
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
 #else
  #define LIBASSERT_STMTEXPR(B, R) [&](const char* libassert_msvc_pfunc) { B return R }(LIBASSERT_PFUNC)
- #define LIBASSERT_WARNING_PRAGMA_PUSH
+ #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
+ #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
+ #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
+ #define LIBASSERT_WARNING_PRAGMA_POP_GCC
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA
- #define LIBASSERT_WARNING_PRAGMA_POP
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) libassert::detail::static_cast_to_bool(x)
  namespace libassert::detail {
      template<typename T> constexpr bool static_cast_to_bool(T&& t) {
@@ -1259,12 +1267,14 @@ using libassert::ASSERTION;
 #endif
 #define ASSERT_INVOKE(expr, doreturn, check_expression, name, type, failaction, ...) \
         /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
-        LIBASSERT_WARNING_PRAGMA_PUSH \
-        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
+        LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
+        LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
         LIBASSERT_IGNORE_UNUSED_VALUE \
+        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
         LIBASSERT_STMTEXPR( \
           auto libassert_decomposer = \
                          libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
+          LIBASSERT_WARNING_PRAGMA_POP_GCC \
           decltype(auto) libassert_value = libassert_decomposer.get_value(); \
           constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
           if constexpr(check_expression) { \
@@ -1295,7 +1305,7 @@ using libassert::ASSERTION;
             libassert_ret_lhs LIBASSERT_COMMA std::is_lvalue_reference<decltype(libassert_value)>::value> \
               (libassert_value, *std::launder(&libassert_decomposer)); \
         ) LIBASSERT_IF(doreturn)(.value,) \
-        LIBASSERT_WARNING_PRAGMA_POP
+        LIBASSERT_WARNING_PRAGMA_POP_CLANG
 
 #ifdef NDEBUG
  #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE;
