@@ -1170,17 +1170,19 @@ using libassert::ASSERTION;
  // with decltype(auto) in an expression like decltype(auto) x = __extension__ ({...}).y;
  #define LIBASSERT_STMTEXPR(B, R) (__extension__ ({ B R }))
  #if LIBASSERT_IS_GCC
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
+  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
      _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
+  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
   #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC _Pragma("GCC diagnostic push")
   #define LIBASSERT_WARNING_PRAGMA_POP_GCC _Pragma("GCC diagnostic pop")
   #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
   #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
  #else
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
+  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
      _Pragma("GCC diagnostic ignored \"-Woverloaded-shift-op-parentheses\"")
+  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
   #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
   #define LIBASSERT_WARNING_PRAGMA_POP_GCC
   #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG _Pragma("GCC diagnostic push")
@@ -1193,7 +1195,8 @@ using libassert::ASSERTION;
  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
- #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) libassert::detail::static_cast_to_bool(x)
  namespace libassert::detail {
      template<typename T> constexpr bool static_cast_to_bool(T&& t) {
@@ -1267,11 +1270,13 @@ using libassert::ASSERTION;
 #endif
 #define ASSERT_INVOKE(expr, doreturn, check_expression, name, type, failaction, ...) \
         /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
+        /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
         LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
-        LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
         LIBASSERT_IGNORE_UNUSED_VALUE \
-        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
+        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
         LIBASSERT_STMTEXPR( \
+          LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
+          LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
           auto libassert_decomposer = \
                          libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
           LIBASSERT_WARNING_PRAGMA_POP_GCC \
