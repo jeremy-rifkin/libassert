@@ -30,10 +30,10 @@
   - [How To Use This Library](#how-to-use-this-library)
     - [A) With CMake `FetchContent`](#a-with-cmake-fetchcontent)
     - [B) Manual Build](#b-manual-build)
-      - [1. Build](#1-build)
-      - [2. Install](#2-install)
-      - [3. Use](#3-use)
-  - [Replacing &lt;cassert&gt;](#replacing-cassert)
+    - [1. Build](#1-build)
+    - [2. Install](#2-install)
+    - [3. Use](#3-use)
+  - [Replacing \<cassert\>](#replacing-cassert)
   - [Comparison With Other Languages](#comparison-with-other-languages)
 
 # 30-Second Overview
@@ -93,8 +93,7 @@ Me too, you can enable the lowercase `debug_assert` and `assert` aliases with `-
 
 This library is for C++17 and newer.
 
-Use `make` or cmake to build library. Link with it either statically or dynamically. Additionally link with libdl on
-linux and dbghelp on windows. More details [below](#how-to-use-this-library).
+Build the library with cmake. Both static and dynamic linking are supported. More details [below](#how-to-use-this-library).
 
 ---
 
@@ -119,12 +118,12 @@ packed into assertions while also providing a quick and easy interface for the d
 Different types of assumptions call for different handling and different behavior. This library implements a tiered
 assertion system:
 
-| Name           | When to Use                 | Effect |
-| -------------- | --------------------------- | ------ |
-| `DEBUG_ASSERT` | Core assumptions that potentially can't be optimized away (e.g. calls to `std::unordered_map::at`) | Checked in debug, no codegen in release |
-| `ASSERT`       | Core assumptions | Checked in debug, still evaluated and returned in release (usually elided by the optimizer if appropriate) |
-| `ASSUME`       | Assumptions that can serve as hints to the optimizer | Checked in debug, `if(!expr) { __builtin_unreachable(); }` in release |
-| `VERIFY`       | Checks that are good to have even in release | Checked in both debug and release builds |
+| Name           | When to Use                                                                                        | Effect                                                                                                     |
+| -------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `DEBUG_ASSERT` | Core assumptions that potentially can't be optimized away (e.g. calls to `std::unordered_map::at`) | Checked in debug, no codegen in release                                                                    |
+| `ASSERT`       | Core assumptions                                                                                   | Checked in debug, still evaluated and returned in release (usually elided by the optimizer if appropriate) |
+| `ASSUME`       | Assumptions that can serve as hints to the optimizer                                               | Checked in debug, `if(!expr) { __builtin_unreachable(); }` in release                                      |
+| `VERIFY`       | Checks that are good to have even in release                                                       | Checked in both debug and release builds                                                                   |
 
 All assertions except `DEBUG_ASSERT` return a value from the assertion expression so checks can be seamlessly integrated
 into a program's structure. Because an expression's result may still be relevant even in a release build the expression
@@ -327,12 +326,12 @@ After the assertion handler processes the failure and prints diagnostic informat
 an assert failure action. These may be overridden by the user on a per-TU basis, the default
 behaviors are:
 
-| Name           | Failure |
-| -------------- | ------- |
-| `DEBUG_ASSERT` | `abort()` is called in debug, nothing happens in release |
-| `ASSERT`       | `abort()` is called in debug, nothing happens in release |
+| Name           | Failure                                                                  |
+| -------------- | ------------------------------------------------------------------------ |
+| `DEBUG_ASSERT` | `abort()` is called in debug, nothing happens in release                 |
+| `ASSERT`       | `abort()` is called in debug, nothing happens in release                 |
 | `ASSUME`       | `abort()` is called in debug, fail path is marked unreachable in release |
-| `VERIFY`       | `libassert::verification_failure` is thrown |
+| `VERIFY`       | `libassert::verification_failure` is thrown                              |
 
 ### Configuration
 
@@ -496,7 +495,8 @@ issues.
 
 ## How To Use This Library
 
-This library targets >=C++17 and supports gcc, clang, and msvc.
+This library targets >=C++17 and supports all major compilers and all major platforms (linux, macos, windows, and
+mingw).
 
 Note: The library does rely on some compiler extensions and compiler specific features so it is not
 compatible with `-pedantic`.
@@ -517,12 +517,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(libassert)
 
 add_executable(my_executable main.cpp)
-target_link_libraries(my_executable
-    PRIVATE
-        assert
-        # Link a library for stacktrace generation ("dl" on Linux/OSx, "dbghelp" on Windows)
-        dl OR dbghelp
-)
+target_link_libraries(my_executable PRIVATE assert)
 ```
 
 You should then be able to use the library in your code like this:
@@ -546,19 +541,6 @@ int main() {
     - If static linking, additionally link with dbghelp (`-ldbghelp`) on windows or lib dl (`-ldl`)
       on linux.
 
-### 1. Build
-
-Option 1: `make`. Parameters:
-- `TARGET`: `release` (default) or `debug`
-- `COMPILER`: `g++` by default, you can specify any path / binary name or `msvc`.
-- `STD`: `c++17` by default, set to `c++20` if you plan to use with C++20 features
-
-Option 2: `cmake`
-
-### 2. Install
-
-Put the header (`include/assert.hpp`) and library files (in `bin/`) in a location of your choice.
-
 ### 3. Use
 
 - Setup include / library paths appropriately
@@ -569,11 +551,11 @@ Special notes for generating debug symbols:
 
 Note: MSVC may require /Z7 for generating debug symbols.
 
-| Compiler | Linux | Windows |
-|--|--|--|
-| GCC | - | - |
-| Clang | - | .pdb needed, pass -g to the linker |
-| MSVC | N/A| .pdb needed, pass /DEBUG to the linker |
+| Compiler | Linux | Windows                                |
+| -------- | ----- | -------------------------------------- |
+| GCC      | -     | -                                      |
+| Clang    | -     | .pdb needed, pass -g to the linker     |
+| MSVC     | N/A   | .pdb needed, pass /DEBUG to the linker |
 
 ## Replacing &lt;cassert&gt;
 
@@ -607,27 +589,27 @@ This is not as helpful as it could be.
 
 Functionality other languages / their standard libraries provide:
 
-|                        | C/C++ | Rust | C# | Java | Python | JavaScript | This Library |
-|:--                     |:--:   |:--:  |:--:|:--:  |:--:    |:--:        |:--:|
-| Expression string      | ✔️   | ❌   | ❌ | ❌  | ❌    | ❌         | ✔️ |
-| Location               | ✔️   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
-| Backtrace              | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
-| Assertion message      | ❌   | ✔️   | ✔️ | ✔️  | ✔️    | ✔️         | ✔️ |
-| Extra diagnostics      | ❌   | ❌*  | ❌*| ❌  | ❌*   | ❌*        | ✔️ |
-| Binary specializations | ❌   | ✔️   | ❌ | ❌  | ❌    | ✔️         | ✔️ |
-| Automatic expression decomposition | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
+|                                    | C/C++ | Rust |  C#  | Java | Python | JavaScript | This Library |
+| :--------------------------------- | :---: | :--: | :--: | :--: | :----: | :--------: | :----------: |
+| Expression string                  | ✔️  |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
+| Location                           | ✔️  | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |     ✔️     |
+| Backtrace                          |  ❌   | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |     ✔️     |
+| Assertion message                  |  ❌   | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |     ✔️     |
+| Extra diagnostics                  |  ❌   | ❌*  | ❌*  |  ❌  |  ❌*   |    ❌*     |     ✔️     |
+| Binary specializations             |  ❌   | ✔️ |  ❌  |  ❌  |   ❌   |    ✔️    |     ✔️     |
+| Automatic expression decomposition |  ❌   |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
 
 `*`: Possible through string formatting but that is sub-ideal.
 
 Extras:
 
-|                 | C/C++ | Rust | C# | Java | Python | JavaScript | This Library |
-|:--              |:--:  |:--:  |:--: |:--:  |:--:    |:--:        |:--:|
-| Syntax Highlighting   | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
-| Non-Fatal Assertions  | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
-| Format Consistency    | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
-| Expression strings and expression values everywhere | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
-| Safe signed-unsigned comparison | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
-| Return values from the assert to allow asserts to be integrated into expressions inline | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✔️ |
+|                                                                                         | C/C++ | Rust | C#  | Java | Python | JavaScript | This Library |
+| :-------------------------------------------------------------------------------------- | :---: | :--: | :-: | :--: | :----: | :--------: | :----------: |
+| Syntax Highlighting                                                                     |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
+| Non-Fatal Assertions                                                                    |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
+| Format Consistency                                                                      |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
+| Expression strings and expression values everywhere                                     |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
+| Safe signed-unsigned comparison                                                         |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
+| Return values from the assert to allow asserts to be integrated into expressions inline |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
 
 [16.4.5.3.3]: https://eel.is/c++draft/reserved.names#macro.names-1

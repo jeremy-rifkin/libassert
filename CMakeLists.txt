@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.8...3.23)
 
+if(${CMAKE_VERSION} VERSION_LESS 3.12)
+    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif()
+
 project(
   libassert
-  VERSION 1.0.0
+  VERSION 1.1.0
   LANGUAGES CXX
 )
 
@@ -18,7 +22,7 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(GNUInstallDirs)
-add_library(assert src/assert.cpp)
+add_library(assert src/assert.cpp include/assert.hpp)
 
 target_include_directories(
   assert
@@ -52,6 +56,20 @@ target_link_libraries(
   PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:dbghelp>
   ${CMAKE_DL_LIBS}
+)
+
+include(FetchContent)
+FetchContent_Declare(
+  cpptrace
+  GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
+  GIT_TAG        2d867703486443d0cc50970481147fa907ec3d73
+)
+FetchContent_MakeAvailable(cpptrace)
+
+target_link_libraries(
+  assert
+  PRIVATE
+  cpptrace
 )
 
 if(ASSERT_DECOMPOSE_BINARY_LOGICAL)
@@ -125,6 +143,7 @@ if(NOT CMAKE_SKIP_INSTALL_RULES)
 
   write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/assert/assert-config-version.cmake
+    VERSION ${PACKAGE_VERSION}
     COMPATIBILITY SameMajorVersion
   )
 
