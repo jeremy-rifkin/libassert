@@ -1258,13 +1258,13 @@ using libassert::ASSERTION;
  #endif
 #endif
 #define ASSERT_INVOKE(expr, doreturn, check_expression, name, type, failaction, ...) \
+        /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
+        LIBASSERT_WARNING_PRAGMA_PUSH \
+        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
         LIBASSERT_IGNORE_UNUSED_VALUE \
         LIBASSERT_STMTEXPR( \
-          LIBASSERT_WARNING_PRAGMA_PUSH \
-          LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
           auto libassert_decomposer = \
                          libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
-          LIBASSERT_WARNING_PRAGMA_POP \
           decltype(auto) libassert_value = libassert_decomposer.get_value(); \
           constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
           if constexpr(check_expression) { \
@@ -1294,7 +1294,8 @@ using libassert::ASSERTION;
           libassert::detail::get_expression_return_value <doreturn LIBASSERT_COMMA \
             libassert_ret_lhs LIBASSERT_COMMA std::is_lvalue_reference<decltype(libassert_value)>::value> \
               (libassert_value, *std::launder(&libassert_decomposer)); \
-        ) LIBASSERT_IF(doreturn)(.value,)
+        ) LIBASSERT_IF(doreturn)(.value,) \
+        LIBASSERT_WARNING_PRAGMA_POP
 
 #ifdef NDEBUG
  #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE;
