@@ -1169,11 +1169,17 @@ using libassert::ASSERTION;
  // Extra set of parentheses here because clang treats __extension__ as a low-precedence unary operator which interferes
  // with decltype(auto) in an expression like decltype(auto) x = __extension__ ({...}).y;
  #define LIBASSERT_STMTEXPR(B, R) (__extension__ ({ B R }))
- #define LIBASSERT_WARNING_PRAGMA _Pragma("GCC diagnostic ignored \"-Wparentheses\"")
+ #define LIBASSERT_WARNING_PRAGMA_PUSH _Pragma("GCC diagnostic push")
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
+    _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+    _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
+ #define LIBASSERT_WARNING_PRAGMA_POP _Pragma("GCC diagnostic pop")
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
 #else
  #define LIBASSERT_STMTEXPR(B, R) [&](const char* libassert_msvc_pfunc) { B return R }(LIBASSERT_PFUNC)
- #define LIBASSERT_WARNING_PRAGMA
+ #define LIBASSERT_WARNING_PRAGMA_PUSH
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA
+ #define LIBASSERT_WARNING_PRAGMA_POP
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) libassert::detail::static_cast_to_bool(x)
  namespace libassert::detail {
      template<typename T> constexpr bool static_cast_to_bool(T&& t) {
@@ -1248,9 +1254,11 @@ using libassert::ASSERTION;
 #define ASSERT_INVOKE(expr, doreturn, check_expression, name, type, failaction, ...) \
         LIBASSERT_IGNORE_UNUSED_VALUE \
         LIBASSERT_STMTEXPR( \
-          LIBASSERT_WARNING_PRAGMA \
+          LIBASSERT_WARNING_PRAGMA_PUSH \
+          LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
           auto libassert_decomposer = \
                          libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
+          LIBASSERT_WARNING_PRAGMA_POP \
           decltype(auto) libassert_value = libassert_decomposer.get_value(); \
           constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
           if constexpr(check_expression) { \
