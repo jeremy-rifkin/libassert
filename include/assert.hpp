@@ -1294,8 +1294,8 @@ using libassert::ASSERTION;
           libassert::detail::get_expression_return_value <doreturn LIBASSERT_COMMA \
             libassert_ret_lhs LIBASSERT_COMMA std::is_lvalue_reference<decltype(libassert_value)>::value> \
               (libassert_value, *std::launder(&libassert_decomposer)); \
-        ) LIBASSERT_IF(doreturn)(.value,) \
-        LIBASSERT_WARNING_PRAGMA_POP
+        LIBASSERT_WARNING_PRAGMA_POP \
+        ) LIBASSERT_IF(doreturn)(.value,)
 
 #ifdef NDEBUG
  #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE;
