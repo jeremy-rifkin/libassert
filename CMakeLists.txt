@@ -12,13 +12,13 @@ project(
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-# libassert uses relocs, -fpic has to be used to allow shared libs to link libassert as a static library.
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+### libassert uses relocs, -fpic has to be used to allow shared libs to link libassert as a static library.
+##set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(GNUInstallDirs)
 include(FetchContent)
 
-add_library(assert src/assert.cpp include/assert.hpp)
+add_library(assert SHARED src/assert.cpp include/assert.hpp)
 
 target_include_directories(
   assert
@@ -66,7 +66,8 @@ option(ASSERT_LOWERCASE "Enables assert alias for ASSERT" OFF)
 option(ASSERT_USE_MAGIC_ENUM "Use the MagicEnum library to print better diagnostics for enum classes" ON)
 set(ASSERT_FAIL "" CACHE STRING "ASSERT_FAIL")
 
-option(ASSERT_BUILD_TESTS "Enables tests" OFF)
+option(ASSERT_BUILD_TESTS "Build tests" OFF)
+option(ASSERT_BUILD_BASIC_TEST "Build basic tests" OFF)
 
 if(ASSERT_DECOMPOSE_BINARY_LOGICAL)
   target_compile_definitions(assert PUBLIC ASSERT_DECOMPOSE_BINARY_LOGICAL)
@@ -188,5 +189,9 @@ if (PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       #  PRIVATE
       #)
     endforeach(test_file ${test_sources})
+  endif()
+  if(ASSERT_BUILD_BASIC_TEST)
+    add_executable(basic tests/basic/basic_test.cpp)
+    target_link_libraries(basic PRIVATE assert)
   endif()
 endif()

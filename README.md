@@ -4,9 +4,6 @@
 [![tests](https://github.com/jeremy-rifkin/libassert/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/tests.yml)
 [![clang-tidy](https://github.com/jeremy-rifkin/libassert/actions/workflows/clang-tidy.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/clang-tidy.yml)
 <br/>
-[![build c++20](https://github.com/jeremy-rifkin/libassert/actions/workflows/build-20.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/build-20.yml)
-[![tests c++20](https://github.com/jeremy-rifkin/libassert/actions/workflows/test-20.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/test-20.yml)
-<br/>
 [![Community Discord Link](https://img.shields.io/badge/Chat%20on%20(the%20very%20small)-Community%20Discord-blue?labelColor=2C3239&color=7289DA&style=flat&logo=discord&logoColor=959DA5)](https://discord.gg/P8kvSU6xJJ)
 
 <p align="center">The most over-engineered C++ assertion library</p>
