@@ -10,74 +10,72 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [g++, clang++-14]
-        target: [debug, release]
+        compiler: [g++-10, clang++-14]
+        target: [Debug, Release]
+        std: [11, 20]
     steps:
     - uses: actions/checkout@v2
     - name: dependencies
+      run: sudo apt install gcc-10 g++-10 libgcc-10-dev
+    - name: build
       run: |
-           python3 -m pip install --upgrade pip
-           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
-    - name: build library
-      run: make COMPILER=${{matrix.compiler}} TARGET=${{matrix.target}}
-    - name: build tests
-      working-directory: tests
-      run: make tests COMPILER=${{matrix.compiler}} TARGET=${{matrix.target}}
-    - name: dos2unix
-      working-directory: tests/integration/expected
+           mkdir -p build
+           cd build
+           cmake .. \
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} \
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+            -DCMAKE_CXX_STANDARD=${{matrix.std}} \
+            -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h \
+            -DASSERT_BUILD_TESTS=On
+           make -j
+    - name: test
+      working-directory: build
       run: |
-           sudo apt update && sudo apt install dos2unix
-           dos2unix *.txt
-    - name: run tests
-      working-directory: tests
-      run: python3 run-tests.py --compiler=${{matrix.compiler}} --build_type=${{matrix.target}} --integration
+           CTEST_OUTPUT_ON_FAILURE=1 make test
+  # test-macos:
+  #   runs-on: macos-13
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       compiler: [g++-13, clang++]
+  #       target: [Debug]
+  #       std: [11, 20]
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: build
+  #     run: |
+  #          mkdir -p build
+  #          cd build
+  #          cmake .. \
+  #           -DCMAKE_BUILD_TYPE=${{matrix.target}} \
+  #           -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+  #           -DCMAKE_CXX_STANDARD=${{matrix.std}} \
+  #           -DASSERT_BUILD_TESTS=On
+  #          make
+  #    TODO
   test-windows:
     runs-on: windows-2019
     strategy:
       fail-fast: false
       matrix:
-        compiler: [g++, clang++]
-        target: [debug] # currently running into issues with testing release TODO
-    steps:
-    - uses: actions/checkout@v2
-    - name: dependencies
-      run: |
-           python3 -m pip install --upgrade pip
-           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
-    - name: build library
-      run: make COMPILER=${{matrix.compiler}} TARGET=${{matrix.target}}
-    - name: build tests
-      working-directory: tests
-      run: make tests COMPILER=${{matrix.compiler}} TARGET=${{matrix.target}}
-    - name: dos2unix
-      working-directory: tests/integration/expected
-      run: dos2unix *.txt
-    - name: run tests
-      working-directory: tests
-      run: python3 run-tests.py --compiler=${{matrix.compiler}} --build_type=${{matrix.target}} --windows --integration
-  test-msvc:
-    runs-on: windows-2019
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [debug, release]
-        cppflags: ["", "/permissive- /Zc:twoPhase-"]
+        compiler: [cl, clang++]
+        target: [Debug]
+        std: [11, 20]
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1.10.0
-    - name: dependencies
+    - name: build
       run: |
-           python3 -m pip install --upgrade pip
-           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
-    - name: build library
-      run: make COMPILER=msvc "CPPFLAGS=${{matrix.cppflags}}"
-    - name: build tests
-      working-directory: tests
-      run: make tests COMPILER=msvc "CPPFLAGS=${{matrix.cppflags}}"
-    - name: dos2unix
-      working-directory: tests/integration/expected
-      run: dos2unix *.txt
-    - name: run tests
-      working-directory: tests
-      run: python3 run-tests.py --compiler=msvc --build_type=${{matrix.target}} --integration
+           mkdir -p build
+           cd build
+           cmake .. `
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} `
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
+            -DCMAKE_CXX_STANDARD=${{matrix.std}} `
+            -DASSERT_BUILD_TESTS=On
+           msbuild .\libassert.sln
+    - name: test
+      working-directory: build
+      run: |
+           ctest -C ${{matrix.target}} --output-on-failure

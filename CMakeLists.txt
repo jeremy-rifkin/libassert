@@ -147,15 +147,9 @@ if(NOT CMAKE_SKIP_INSTALL_RULES)
 endif()
 
 # Don't run tests when library is used with add_subdirectory
-if (PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   if(ASSERT_BUILD_TESTS)
-    #include(CTest)
-    #add_test(
-    #  NAME run-tests.py
-    #  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
-    #  COMMAND
-    #  python3 run-tests.py --build --build_type=${CMAKE_BUILD_TYPE} --compiler=${CMAKE_CXX_COMPILER_ID}
-    #)
+    include(CTest)
 
     file(GLOB_RECURSE demo_sources tests/demo/*.cpp)
     add_executable(demo ${demo_sources})
@@ -178,16 +172,19 @@ if (PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       "-DASSERT_FAIL=custom_fail"
       "-DASSERT_LOWERCASE"
     )
+    add_test(
+      NAME integration
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
+      COMMAND
+      python3 run-tests.py $<TARGET_FILE:integration> ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_STANDARD}
+    )
 
     file(GLOB test_sources tests/unit/*.cpp)
     foreach(test_file ${test_sources})
       get_filename_component(test_name ${test_file} NAME_WE)
       add_executable(${test_name} ${test_file})
       target_link_libraries(${test_name} assert)
-      #target_compile_options(
-      #  ${test_name}
-      #  PRIVATE
-      #)
+      add_test(NAME ${test_name} COMMAND ${test_name})
     endforeach(test_file ${test_sources})
   endif()
   if(ASSERT_BUILD_BASIC_TEST)

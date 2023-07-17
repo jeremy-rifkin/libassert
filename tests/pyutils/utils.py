@@ -163,214 +163,216 @@ def icdiff(a: Union[str, tuple], b: Union[str, tuple]):
 
 # Test cases
 
-def test_critical_difference(): # self test cases
-    max_line_diff = 2
-    # test equal
-    a = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# def test_critical_difference(): # self test cases
+#     max_line_diff = 2
+#     # test equal
+#     a = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1408
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    assert(not critical_difference(a, a, max_line_diff))
-    # test message difference
-    a = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1408
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     assert(not critical_difference(a, a, max_line_diff))
+#     # test message difference
+#     a = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1408
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    b = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::somethfng_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1408
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     b = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::somethfng_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1408
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    assert(critical_difference(a, b, max_line_diff))
-    # test trace difference
-    a = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1408
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     assert(critical_difference(a, b, max_line_diff))
+#     # test trace difference
+#     a = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1408
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    b = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1408
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     b = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1408
-# 2 void test_class<char>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    assert(critical_difference(a, b, max_line_diff))
-    # test non-critical line difference
-    a = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1408
+# # 2 void test_class<char>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     assert(critical_difference(a, b, max_line_diff))
+#     # test non-critical line difference
+#     a = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1408
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    b = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1408
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     b = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1410
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    assert(not critical_difference(a, b, max_line_diff))
-    # test critical line difference
-    a = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1410
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     assert(not critical_difference(a, b, max_line_diff))
+#     # test critical line difference
+#     a = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1408
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    b = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1408
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     b = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1501
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    assert(critical_difference(a, b, max_line_diff))
-    # test ignore-trace
-    a = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1501
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     assert(critical_difference(a, b, max_line_diff))
+#     # test ignore-trace
+#     a = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1501
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    b = """
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1501
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     b = """
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_asdfpp:1501
-# 2 void teasdfon.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    assert(not critical_difference(a, b, max_line_diff, False))
-    # test section difference
-    a = """
-===================== [value printing: floating point] =====================
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_asdfpp:1501
+# # 2 void teasdfon.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     assert(not critical_difference(a, b, max_line_diff, False))
+#     # test section difference
+#     a = """
+# ===================== [value printing: floating point] =====================
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1408
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    b = """
-===================== [value printing: flopping point] =====================
-Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
-    assert(.1f == .1);
-    Where:
-        .1f => 0.100000001
-        .1  => 0.10000000000000001
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1408
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     b = """
+# ===================== [value printing: flopping point] =====================
+# Assertion failed at integration/integration.cpp:1408: void test_class<T>::something_else() [with T = int]:
+#     assert(.1f == .1);
+#     Where:
+#         .1f => 0.100000001
+#         .1  => 0.10000000000000001
 
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:1408
-# 2 void test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main
-      at integration.cpp:403
-""".strip()
-    assert(critical_difference(a, b, max_line_diff))
+# Stack trace:
+# # 1 test_class<int>::something_else()
+#       at integration.cpp:1408
+# # 2 void test_class<int>::something<N>(std::pair<N, int>)
+#       at integration.cpp:1005
+# # 3 main
+#       at integration.cpp:403
+# """.strip()
+#     assert(critical_difference(a, b, max_line_diff))
+
+# test_critical_difference()

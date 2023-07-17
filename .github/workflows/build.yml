@@ -69,4 +69,4 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
             -DCMAKE_CXX_STANDARD=${{matrix.std}} `
             -DASSERT_BUILD_BASIC_TEST=On
-           msbuild .\cpptrace.sln
+           msbuild .\libassert.sln
