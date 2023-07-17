@@ -514,7 +514,7 @@ FetchContent_Declare(
     GIT_REPOSITORY "https://github.com/jeremy-rifkin/libassert"
     GIT_TAG "v1.1"
 )
-FetchContent_MakeAvailable(libassert)
+FetchContent_MakeAvailable(assert)
 
 add_executable(my_executable main.cpp)
 target_link_libraries(my_executable PRIVATE assert)
