@@ -111,7 +111,7 @@ def main():
     file = files[0]
     print(f"Reading from {file}")
 
-    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "expected/", file), "r") as f:
+    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "integration/expected/", file), "r") as f:
         expected = f.read()
 
     if run_integration(integration_binary, expected, "debug" not in target):
