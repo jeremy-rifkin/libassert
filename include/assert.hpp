@@ -197,6 +197,12 @@ namespace libassert::detail {
         || isa<T, std::string_view>
         || is_c_string<T>;
 
+    // char(&)[20], const char(&)[20], const char(&)[]
+    template<typename T> inline constexpr bool is_string_literal =
+           std::is_lvalue_reference<T>::value
+        && std::is_array<typename std::remove_reference<T>::type>::value
+        && isa<typename std::remove_extent<typename std::remove_reference<T>::type>::type, char>;
+
     template<typename T> typename std::add_lvalue_reference<T>::type decllval() noexcept;
 
     /*
@@ -292,7 +298,26 @@ namespace libassert::detail {
         LIBASSERT_GEN_OP_BOILERPLATE(bxor,   ^);
         LIBASSERT_GEN_OP_BOILERPLATE(bor,    |);
         #ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
-         LIBASSERT_GEN_OP_BOILERPLATE(land,   &&);
+        struct land {
+            static constexpr std::string_view op_string = "&&";
+            template<typename A, typename B>
+            LIBASSERT_ATTR_COLD [[nodiscard]]
+            constexpr decltype(auto) operator()(A&& lhs, B&& rhs) const {
+                // Go out of the way to support old-style ASSERT(foo && "Message")
+                #if LIBASSERT_IS_GCC
+                if constexpr(is_string_literal<B>) {
+                    #pragma GCC diagnostic push
+                    #pragma GCC diagnostic ignored "-Wnonnull-compare"
+                    return std::forward<A>(lhs) == std::forward<B>(rhs);
+                    #pragma GCC diagnostic pop
+                } else {
+                    return std::forward<A>(lhs) == std::forward<B>(rhs);
+                }
+                #else
+                return std::forward<A>(lhs) == std::forward<B>(rhs);
+                #endif
+            }
+        };
          LIBASSERT_GEN_OP_BOILERPLATE(lor,    ||);
         #endif
         LIBASSERT_GEN_OP_BOILERPLATE(assign, =);
