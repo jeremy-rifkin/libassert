@@ -424,14 +424,6 @@ namespace libassert::detail {
     struct highlight_block {
         std::string_view color;
         std::string content;
-        // Get as much code into the .cpp as possible
-        LIBASSERT_ATTR_COLD highlight_block(std::string_view _color, std::string _content)
-                                                         : color(_color), content(std::move(_content)) { }
-        LIBASSERT_ATTR_COLD highlight_block(const highlight_block&) = default;
-        LIBASSERT_ATTR_COLD highlight_block(highlight_block&&) = default;
-        LIBASSERT_ATTR_COLD ~highlight_block() = default;
-        LIBASSERT_ATTR_COLD highlight_block& operator=(const highlight_block&) = default;
-        LIBASSERT_ATTR_COLD highlight_block& operator=(highlight_block&&) = default;
     };
 
     LIBASSERT_ATTR_COLD
@@ -748,13 +740,13 @@ namespace libassert::detail {
                 // add string part
                 LIBASSERT_PRIMITIVE_ASSERT(match.position() > 0);
                 if(match.position() > 0) {
-                    output.emplace_back(GREEN, str.substr(i, match.position()));
+                    output.push_back({GREEN, str.substr(i, match.position())});
                 }
-                output.emplace_back(BLUE, str.substr(i + match.position(), match.length()));
+                output.push_back({BLUE, str.substr(i + match.position(), match.length())});
                 i += match.position() + match.length();
             }
             if(i < str.length()) {
-                output.emplace_back(GREEN, str.substr(i));
+                output.push_back({GREEN, str.substr(i)});
             }
             return output;
         }
@@ -779,20 +771,20 @@ namespace libassert::detail {
                 };
                 switch(token.token_type) {
                     case token_e::keyword:
-                        output.emplace_back(PURPL, token.str);
+                        output.push_back({PURPL, token.str});
                         break;
                     case token_e::punctuation:
                         if(highlight_ops.count(token.str)) {
-                            output.emplace_back(PURPL, token.str);
+                            output.push_back({PURPL, token.str});
                         } else {
-                            output.emplace_back("", token.str);
+                            output.push_back({"", token.str});
                         }
                         break;
                     case token_e::named_literal:
-                        output.emplace_back(ORANGE, token.str);
+                        output.push_back({ORANGE, token.str});
                         break;
                     case token_e::number:
-                        output.emplace_back(CYAN, token.str);
+                        output.push_back({CYAN, token.str});
                         break;
                     case token_e::string:
                         {
@@ -803,15 +795,15 @@ namespace libassert::detail {
                     case token_e::identifier:
                         // NOLINTNEXTLINE(bugprone-branch-clone)
                         if(peek().str == "(") {
-                            output.emplace_back(BLUE, token.str);
+                            output.push_back({BLUE, token.str});
                         } else if(peek().str == "::") {
-                            output.emplace_back(YELLOW, token.str);
+                            output.push_back({YELLOW, token.str});
                         } else {
-                            output.emplace_back(BLUE, token.str);
+                            output.push_back({BLUE, token.str});
                         }
                         break;
                     case token_e::whitespace:
-                        output.emplace_back("", token.str);
+                        output.push_back({"", token.str});
                         break;
                 }
             }
@@ -1766,12 +1758,12 @@ namespace libassert::detail {
             std::vector<highlight_block> blocks;
             // spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
             // no indentation done here for multiple value printing
-            blocks.emplace_back("", " ");
+            blocks.push_back({"", " "});
             for(const auto& str : vec) {
                 auto h = highlight_blocks(str);
                 blocks.insert(blocks.end(), h.begin(), h.end());
                 if(&str != &*--vec.end()) {
-                    blocks.emplace_back("", "  ");
+                    blocks.push_back({"", "  "});
                 }
             }
             return blocks;
