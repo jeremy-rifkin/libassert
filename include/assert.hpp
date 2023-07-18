@@ -308,13 +308,13 @@ namespace libassert::detail {
                   if constexpr(is_string_literal<B>) {
                       #pragma GCC diagnostic push
                       #pragma GCC diagnostic ignored "-Wnonnull-compare"
-                      return std::forward<A>(lhs) == std::forward<B>(rhs);
+                      return std::forward<A>(lhs) && std::forward<B>(rhs);
                       #pragma GCC diagnostic pop
                   } else {
-                      return std::forward<A>(lhs) == std::forward<B>(rhs);
+                      return std::forward<A>(lhs) && std::forward<B>(rhs);
                   }
                  #else
-                  return std::forward<A>(lhs) == std::forward<B>(rhs);
+                  return std::forward<A>(lhs) && std::forward<B>(rhs);
                  #endif
              }
          };
