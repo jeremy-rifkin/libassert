@@ -29,7 +29,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
             -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h \
             -DASSERT_BUILD_TESTS=On
-           make -j
+           make -j VERBOSE=1
     - name: test
       working-directory: build
       run: |
