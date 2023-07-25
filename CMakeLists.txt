@@ -153,7 +153,13 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   if(ASSERT_BUILD_TESTS)
     include(CTest)
 
-    file(GLOB_RECURSE demo_sources tests/demo/*.cpp)
+    set(
+      demo_sources
+      tests/demo/bar.cpp
+      tests/demo/baz/demo.cpp
+      tests/demo/demo.cpp
+      tests/demo/foo.cpp
+    )
     add_executable(demo ${demo_sources})
     target_link_libraries(demo PRIVATE assert)
     target_compile_options(
@@ -164,8 +170,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       "-DASSERT_LOWERCASE"
     )
 
-    file(GLOB_RECURSE integration_sources tests/integration/*.cpp)
-    add_executable(integration ${integration_sources})
+    add_executable(integration tests/integration/integration.cpp tests/integration/a.cpp tests/integration/x/a.cpp)
     target_link_libraries(integration PRIVATE assert)
     target_compile_options(
       integration
@@ -181,13 +186,22 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       python3 run-tests.py $<TARGET_FILE:integration> ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_STANDARD}
     )
 
-    file(GLOB test_sources tests/unit/*.cpp)
-    foreach(test_file ${test_sources})
+    set(
+      unit_test_sources
+      tests/unit/constexpr_contexts.cpp
+      tests/unit/disambiguation.cpp
+      tests/unit/literals.cpp
+      tests/unit/test_public_utilities.cpp
+      tests/unit/test_type_prettier.cpp
+      tests/unit/tokens_and_highlighting.cpp
+      tests/unit/type_handling.cpp
+    )
+    foreach(test_file ${unit_test_sources})
       get_filename_component(test_name ${test_file} NAME_WE)
       add_executable(${test_name} ${test_file})
       target_link_libraries(${test_name} assert)
       add_test(NAME ${test_name} COMMAND ${test_name})
-    endforeach(test_file ${test_sources})
+    endforeach(test_file ${unit_test_sources})
   endif()
   if(ASSERT_BUILD_BASIC_TEST)
     add_executable(basic tests/basic/basic_test.cpp)
