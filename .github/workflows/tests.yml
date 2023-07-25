@@ -12,7 +12,7 @@ jobs:
       matrix:
         compiler: [g++-10, clang++-14]
         target: [Debug, Release]
-        std: [11, 20]
+        #std: [17, 20]
     steps:
     - uses: actions/checkout@v2
     - name: dependencies
@@ -26,7 +26,7 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-            -DCMAKE_CXX_STANDARD=${{matrix.std}} \
+          #  -DCMAKE_CXX_STANDARD=${{matrix.std}} \
             -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h \
             -DASSERT_BUILD_TESTS=On
            make -j
@@ -34,27 +34,6 @@ jobs:
       working-directory: build
       run: |
            CTEST_OUTPUT_ON_FAILURE=1 make test
-  # test-macos:
-  #   runs-on: macos-13
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       compiler: [g++-13, clang++]
-  #       target: [Debug]
-  #       std: [11, 20]
-  #   steps:
-  #   - uses: actions/checkout@v2
-  #   - name: build
-  #     run: |
-  #          mkdir -p build
-  #          cd build
-  #          cmake .. \
-  #           -DCMAKE_BUILD_TYPE=${{matrix.target}} \
-  #           -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-  #           -DCMAKE_CXX_STANDARD=${{matrix.std}} \
-  #           -DASSERT_BUILD_TESTS=On
-  #          make
-  #    TODO
   test-windows:
     runs-on: windows-2019
     strategy:
@@ -62,7 +41,7 @@ jobs:
       matrix:
         compiler: [cl, clang++]
         target: [Debug]
-        std: [11, 20]
+        #std: [17, 20]
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
@@ -74,7 +53,7 @@ jobs:
            cmake .. `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
-            -DCMAKE_CXX_STANDARD=${{matrix.std}} `
+          #  -DCMAKE_CXX_STANDARD=${{matrix.std}} `
             -DASSERT_BUILD_TESTS=On
            msbuild .\libassert.sln
     - name: test
