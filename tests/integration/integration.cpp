@@ -1,7 +1,3 @@
-#ifdef NDEBUG // Workaround cmake setting this in release
-#undef NDEBUG
-#endif
-
 #include "assert.hpp"
 
 #include <algorithm>

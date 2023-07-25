@@ -27,6 +27,8 @@ target_include_directories(
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/assert/assert>
 )
 
+set(CMAKE_CXX_FLAGS_REL_WITH_ASSERTS "-O3")
+
 # TODO
 target_compile_features(
   assert

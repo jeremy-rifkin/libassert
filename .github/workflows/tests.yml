@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [g++-10, clang++-14]
-        target: [Debug, Release]
+        target: [Debug, REL_WITH_ASSERTS]
     steps:
     - uses: actions/checkout@v2
     - name: dependencies
