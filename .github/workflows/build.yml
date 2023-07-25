@@ -4,6 +4,8 @@ on:
   push:
   pull_request:
 
+# TODO: Check different standards?
+
 jobs:
   build-linux:
     runs-on: ubuntu-22.04
@@ -12,7 +14,6 @@ jobs:
       matrix:
         compiler: [g++-10, clang++-14]
         target: [Debug, Release]
-        #std: [17, 20]
     steps:
     - uses: actions/checkout@v2
     - name: dependencies
@@ -24,7 +25,6 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-          #  -DCMAKE_CXX_STANDARD=${{matrix.std}} \
             -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h \
             -DASSERT_BUILD_BASIC_TEST=On
            make -j
@@ -35,7 +35,6 @@ jobs:
       matrix:
         compiler: [cl, clang++]
         target: [Debug]
-        #std: [17, 20]
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
@@ -47,6 +46,5 @@ jobs:
            cmake .. `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
-          #  -DCMAKE_CXX_STANDARD=${{matrix.std}} `
             -DASSERT_BUILD_BASIC_TEST=On
            msbuild .\libassert.sln
