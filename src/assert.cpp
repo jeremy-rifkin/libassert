@@ -19,6 +19,20 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <cpptrace/cpptrace.hpp>
+
+bool operator==(const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_frame& b) {
+    return a.address == b.address
+        && a.line == b.line
+        && a.col == b.col
+        && a.filename == b.filename
+        && a.symbol == b.symbol;
+}
+
+bool operator!=(const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_frame& b) {
+    return !(a == b);
+}
+
 #define IS_WINDOWS 0
 #define IS_LINUX 0
 
@@ -32,7 +46,6 @@
  #endif
  #include <windows.h>
  #include <conio.h>
- #include <dbghelp.h>
  #include <io.h>
  #include <process.h>
  #undef min // fucking windows headers, man
@@ -397,626 +410,11 @@ namespace libassert::detail {
         return strerror(e);
     }
 
-    /*
-     * Stacktrace implementation
-     * Stack trace strategy:
-     *  Windows:
-     *   - Generate stack traces with CaptureStackBackTrace
-     *   - Resolve with SymFromAddr and SymGetLineFromAddr64 and SymEnumSymbols
-     *   - For gcc on windows use addr2line for symbols that couldn't be resolved with the previous
-     *     tools.
-     *  Linux:
-     *   - Generate stack traces with execinfo's backtrace
-     *   - Resolve symbol addresses with ldl
-     *   - Resolve symbol names and locations with addr2line
-     */
-
-    struct stacktrace_entry {
-        std::string source_path;
-        std::string signature;
-        unsigned line = 0;
-        LIBASSERT_ATTR_COLD bool operator==(const stacktrace_entry& other) const {
-            return line == other.line && signature == other.signature && source_path == other.source_path;
-        }
-        LIBASSERT_ATTR_COLD bool operator!=(const stacktrace_entry& other) const {
-            return !operator==(other);
-        }
-    };
-
-    using trace_t = std::vector<stacktrace_entry>;
-
-    // ... -> assert -> assert_fail -> assert_fail_generic -> print_stacktrace -> get_stacktrace
-    // get 100, can skip a few but inlining interferes so figure it out later
-    constexpr size_t n_frames = 100;
-    constexpr size_t n_skip   = 0;
-
-    #ifdef USE_DBG_HELP_H
-    #if LIBASSERT_IS_GCC
-    LIBASSERT_ATTR_COLD
-    static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
-        // TODO: Popen is a hack. Implement properly with CreateProcess and pipes later.
-        FILE* p = popen(("addr2line -e " + executable + " -fC " + addresses).c_str(), "r");
-        std::string output;
-        constexpr int buffer_size = 4096;
-        char buffer[buffer_size];
-        size_t count = 0;
-        while((count = fread(buffer, 1, buffer_size, p)) > 0) {
-            output.insert(output.end(), buffer, buffer + count);
-        }
-        pclose(p);
-        return output;
-    }
-    #endif
-
-    // SymFromAddr only returns the function's name. In order to get information about parameters,
-    // important for C++ stack traces where functions may be overloaded, we have to manually use
-    // Windows DIA to walk debug info structures. Resources:
-    // https://web.archive.org/web/20201027025750/http://www.debuginfo.com/articles/dbghelptypeinfo.html
-    // https://web.archive.org/web/20201203160805/http://www.debuginfo.com/articles/dbghelptypeinfofigures.html
-    // https://github.com/DynamoRIO/dynamorio/blob/master/ext/drsyms/drsyms_windows.c#L1370-L1439
-    // TODO: Currently unable to detect rvalue references
-    // TODO: Currently unable to detect const
-    enum class SymTagEnum {
-        SymTagNull, SymTagExe, SymTagCompiland, SymTagCompilandDetails, SymTagCompilandEnv,
-        SymTagFunction, SymTagBlock, SymTagData, SymTagAnnotation, SymTagLabel, SymTagPublicSymbol,
-        SymTagUDT, SymTagEnum, SymTagFunctionType, SymTagPointerType, SymTagArrayType,
-        SymTagBaseType, SymTagTypedef, SymTagBaseClass, SymTagFriend, SymTagFunctionArgType,
-        SymTagFuncDebugStart, SymTagFuncDebugEnd, SymTagUsingNamespace, SymTagVTableShape,
-        SymTagVTable, SymTagCustom, SymTagThunk, SymTagCustomType, SymTagManagedType,
-        SymTagDimension, SymTagCallSite, SymTagInlineSite, SymTagBaseInterface, SymTagVectorType,
-        SymTagMatrixType, SymTagHLSLType, SymTagCaller, SymTagCallee, SymTagExport,
-        SymTagHeapAllocationSite, SymTagCoffGroup, SymTagMax
-    };
-
-    enum class IMAGEHLP_SYMBOL_TYPE_INFO {
-        TI_GET_SYMTAG, TI_GET_SYMNAME, TI_GET_LENGTH, TI_GET_TYPE, TI_GET_TYPEID, TI_GET_BASETYPE,
-        TI_GET_ARRAYINDEXTYPEID, TI_FINDCHILDREN, TI_GET_DATAKIND, TI_GET_ADDRESSOFFSET,
-        TI_GET_OFFSET, TI_GET_VALUE, TI_GET_COUNT, TI_GET_CHILDRENCOUNT, TI_GET_BITPOSITION,
-        TI_GET_VIRTUALBASECLASS, TI_GET_VIRTUALTABLESHAPEID, TI_GET_VIRTUALBASEPOINTEROFFSET,
-        TI_GET_CLASSPARENTID, TI_GET_NESTED, TI_GET_SYMINDEX, TI_GET_LEXICALPARENT, TI_GET_ADDRESS,
-        TI_GET_THISADJUST, TI_GET_UDTKIND, TI_IS_EQUIV_TO, TI_GET_CALLING_CONVENTION,
-        TI_IS_CLOSE_EQUIV_TO, TI_GTIEX_REQS_VALID, TI_GET_VIRTUALBASEOFFSET,
-        TI_GET_VIRTUALBASEDISPINDEX, TI_GET_IS_REFERENCE, TI_GET_INDIRECTVIRTUALBASECLASS,
-        TI_GET_VIRTUALBASETABLETYPE, TI_GET_OBJECTPOINTERTYPE, IMAGEHLP_SYMBOL_TYPE_INFO_MAX
-    };
-
-    enum class BasicType {
-        btNoType = 0, btVoid = 1, btChar = 2, btWChar = 3, btInt = 6, btUInt = 7, btFloat = 8,
-        btBCD = 9, btBool = 10, btLong = 13, btULong = 14, btCurrency = 25, btDate = 26,
-        btVariant = 27, btComplex = 28, btBit = 29, btBSTR = 30, btHresult = 31
-    };
-
-    // SymGetTypeInfo utility
-    template<typename T, IMAGEHLP_SYMBOL_TYPE_INFO SymType, bool FAILABLE = false>
-    LIBASSERT_ATTR_COLD
-    auto get_info(ULONG type_index, HANDLE proc, ULONG64 modbase) {
-        T info;
-        if(!SymGetTypeInfo(proc, modbase, type_index, static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(SymType), &info)) {
-            if constexpr(FAILABLE) {
-                return (T)-1;
-            } else {
-                LIBASSERT_PRIMITIVE_ASSERT(
-                    false,
-                    (
-                        "SymGetTypeInfo failed: "s + std::system_error(GetLastError(), std::system_category()).what()
-                    ).c_str()
-                );
-            }
-        }
-        if constexpr(std::is_same_v<T, WCHAR*>) {
-            // special case to properly free a buffer and convert string to narrow chars, only used for TI_GET_SYMNAME
-            static_assert(SymType == IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMNAME);
-            std::string str(info, info + wcslen(info));
-            LocalFree(info);
-            return str;
-        } else {
-            return info;
-        }
-    }
-
-    // Translate basic types to string
-    LIBASSERT_ATTR_COLD
-    static std::string_view get_basic_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
-        auto basic_type = get_info<BasicType, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_BASETYPE>(type_index, proc, modbase);
-        //auto length = get_info<ULONG64, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_LENGTH>(type_index, proc, modbase);
-        switch(basic_type) {
-            case BasicType::btNoType:
-                return "<no basic type>";
-            case BasicType::btVoid:
-                return "void";
-            case BasicType::btChar:
-                return "char";
-            case BasicType::btWChar:
-                return "wchar_t";
-            case BasicType::btInt:
-                return "int";
-            case BasicType::btUInt:
-                return "unsigned int";
-            case BasicType::btFloat:
-                return "float";
-            case BasicType::btBool:
-                return "bool";
-            case BasicType::btLong:
-                return "long";
-            case BasicType::btULong:
-                return "unsigned long";
-            default:
-                return "<unknown basic type>";
-        }
-    }
-
-    static std::string resolve_type(ULONG type_index, HANDLE proc, ULONG64 modbase);
-
-    // Helper for member pointers
-    LIBASSERT_ATTR_COLD
-    static std::optional<std::string> lookup_class_name(ULONG type_index, HANDLE proc, ULONG64 modbase) {
-        DWORD class_parent_id =
-                get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_CLASSPARENTID, true>(type_index, proc, modbase);
-        if(class_parent_id == (DWORD)-1) {
-            return {};
-        } else {
-            return resolve_type(class_parent_id, proc, modbase);
-        }
-    }
-
-    // Resolve more complex types
-    LIBASSERT_ATTR_COLD // returns [base, extent]
-    static std::pair<std::string, std::string> lookup_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
-        auto tag = get_info<SymTagEnum, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMTAG>(type_index, proc, modbase);
-        switch(tag) {
-            case SymTagEnum::SymTagBaseType:
-                return {std::string(get_basic_type(type_index, proc, modbase)), ""};
-            case SymTagEnum::SymTagPointerType: {
-                DWORD underlying_type_id =
-                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
-                bool is_ref = get_info<BOOL, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_IS_REFERENCE>(type_index, proc, modbase);
-                std::string pp = is_ref ? "&" : "*"; // pointer punctuator
-                if(auto class_name = lookup_class_name(type_index, proc, modbase)) {
-                    pp = *class_name + "::" + pp;
-                }
-                const auto [base, extent] = lookup_type(underlying_type_id, proc, modbase);
-                if(extent.empty()) {
-                    return {base + (pp.size() > 1 ? " " : "") + pp, ""};
-                } else {
-                    return {base + "(" + pp, ")" + extent};
-                }
-            }
-            case SymTagEnum::SymTagArrayType: {
-                DWORD underlying_type_id =
-                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
-                DWORD length =
-                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT>(type_index, proc, modbase);
-                const auto [base, extent] = lookup_type(underlying_type_id, proc, modbase);
-                return {base, "[" + std::to_string(length) + "]" + extent};
-            }
-            case SymTagEnum::SymTagFunctionType: {
-                DWORD return_type_id =
-                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
-                DWORD n_children =
-                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT, true>(type_index, proc, modbase);
-                DWORD class_parent_id =
-                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_CLASSPARENTID, true>(type_index, proc, modbase);
-                int n_ignore = class_parent_id != (DWORD)-1; // ignore this param
-                n_children -= n_ignore; // this must be ignored before TI_FINDCHILDREN_PARAMS::Count is set, else error
-                // return type
-                const auto return_type = lookup_type(return_type_id, proc, modbase);
-                if(n_children == 0) {
-                    return {return_type.first, "()" + return_type.second};
-                } else {
-                    // alignment should be fine
-                    size_t sz = sizeof(TI_FINDCHILDREN_PARAMS) +
-                                    (n_children) * sizeof(TI_FINDCHILDREN_PARAMS::ChildId[0]);
-                    TI_FINDCHILDREN_PARAMS* children = (TI_FINDCHILDREN_PARAMS*) new char[sz];
-                    children->Start = 0;
-                    children->Count = n_children;
-                    if(
-                        !SymGetTypeInfo(
-                            proc, modbase, type_index,
-                            static_cast<::IMAGEHLP_SYMBOL_TYPE_INFO>(IMAGEHLP_SYMBOL_TYPE_INFO::TI_FINDCHILDREN),
-                            children
-                        )
-                    ) {
-                        LIBASSERT_PRIMITIVE_ASSERT(
-                            false,
-                            (
-                                "SymGetTypeInfo failed: "s
-                                + std::system_error(GetLastError(), std::system_category()).what()
-                            ).c_str()
-                        );
-                    }
-                    // get children type
-                    std::string extent = "(";
-                    LIBASSERT_PRIMITIVE_ASSERT(children->Start == 0);
-                    for(std::size_t i = 0; i < n_children; i++) {
-                        extent += (i == 0 ? "" : ", ") + resolve_type(children->ChildId[i], proc, modbase);
-                    }
-                    extent += ")";
-                    delete[] (char*) children;
-                    return {return_type.first, extent + return_type.second};
-                }
-            }
-            case SymTagEnum::SymTagFunctionArgType: {
-                DWORD underlying_type_id =
-                    get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_TYPEID>(type_index, proc, modbase);
-                return {resolve_type(underlying_type_id, proc, modbase), ""};
-            }
-            case SymTagEnum::SymTagTypedef:
-            case SymTagEnum::SymTagEnum:
-            case SymTagEnum::SymTagUDT:
-            case SymTagEnum::SymTagBaseClass:
-                return {get_info<WCHAR*, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_SYMNAME>(type_index, proc, modbase), ""};
-            default:
-                return {
-                    "<unknown type " + std::to_string(static_cast<std::underlying_type<SymTagEnum>::type>(tag)) + ">",
-                    ""
-                };
-        };
-    }
-
-    LIBASSERT_ATTR_COLD static std::string resolve_type(ULONG type_index, HANDLE proc, ULONG64 modbase) {
-        const auto [type, extent] = lookup_type(type_index, proc, modbase);
-        return type + extent;
-    }
-
-    struct function_info {
-        HANDLE proc;
-        ULONG64 modbase;
-        int counter;
-        int n_children;
-        int n_ignore;
-        std::string str;
-    };
-
-    // Enumerates function parameters
-    LIBASSERT_ATTR_COLD
-    static BOOL __stdcall enumerator_callback(
-        PSYMBOL_INFO symbol_info,
-        [[maybe_unused]] ULONG symbol_size,
-        PVOID data
-    ) {
-        function_info* ctx = (function_info*)data;
-        if(ctx->counter++ >= ctx->n_children) {
-            return false;
-        }
-        if(ctx->n_ignore-- > 0) {
-            return true; // just skip
-        }
-        ctx->str += resolve_type(symbol_info->TypeIndex, ctx->proc, ctx->modbase);
-        if(ctx->counter < ctx->n_children) {
-            ctx->str += ", ";
-        }
-        return true;
-    }
-
-    [[maybe_unused]]
-    LIBASSERT_ATTR_COLD
-    static std::optional<trace_t> get_stacktrace() {
-        SymSetOptions(SYMOPT_ALLOW_ABSOLUTE_SYMBOLS);
-        HANDLE proc = GetCurrentProcess();
-        if(!SymInitialize(proc, NULL, TRUE)) return {};
-        PVOID addrs[n_frames] = { 0 };
-        int frames = CaptureStackBackTrace(n_skip, n_frames, addrs, NULL);
-        trace_t trace;
-        trace.reserve(frames);
-        #if LIBASSERT_IS_GCC
-         std::string executable = get_executable_path();
-         std::vector<std::pair<PVOID, size_t>> deferred;
-        #endif
-        for(int i = 0; i < frames; i++) {
-            alignas(SYMBOL_INFO) char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
-            SYMBOL_INFO* symbol = (SYMBOL_INFO*)buffer;
-            symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
-            symbol->MaxNameLen = MAX_SYM_NAME;
-            union { DWORD64 a; DWORD b; } displacement;
-            IMAGEHLP_LINE64 line;
-            bool got_line = SymGetLineFromAddr64(proc, (DWORD64)addrs[i], &displacement.b, &line);
-            if(SymFromAddr(proc, (DWORD64)addrs[i], &displacement.a, symbol)) {
-                if(got_line) {
-                    IMAGEHLP_STACK_FRAME frame;
-                    frame.InstructionOffset = symbol->Address;
-                    // https://docs.microsoft.com/en-us/windows/win32/api/dbghelp/nf-dbghelp-symsetcontext
-                    // "If you call SymSetContext to set the context to its current value, the
-                    // function fails but GetLastError returns ERROR_SUCCESS."
-                    // This is the stupidest fucking api I've ever worked with.
-                    if(SymSetContext(proc, &frame, nullptr) == FALSE && GetLastError() != ERROR_SUCCESS) {
-                        fprintf(stderr, "Stack trace: Internal error while calling SymSetContext\n");
-                        trace.push_back({line.FileName, symbol->Name, (unsigned)line.LineNumber});
-                        continue;
-                    }
-                    DWORD n_children = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_COUNT, true>(
-                        symbol->TypeIndex,
-                        proc,
-                        symbol->ModBase
-                    );
-                    DWORD class_parent_id = get_info<DWORD, IMAGEHLP_SYMBOL_TYPE_INFO::TI_GET_CLASSPARENTID, true>(
-                        symbol->TypeIndex,
-                        proc,
-                        symbol->ModBase
-                    );
-                    function_info fi { proc, symbol->ModBase, 0, int(n_children), class_parent_id != (DWORD)-1, "" };
-                    SymEnumSymbols(proc, 0, nullptr, enumerator_callback, &fi);
-                    std::string signature = symbol->Name + "("s + fi.str + ")";
-                    // There's a phenomina with DIA not inserting commas after template parameters. Fix them here.
-                    static std::regex comma_re(R"(,(?=\S))");
-                    signature = std::regex_replace(signature, comma_re, ", ");
-                    trace.push_back({line.FileName, signature, (unsigned)line.LineNumber});
-                } else {
-                    trace.push_back({"", symbol->Name, 0});
-                }
-            } else {
-                trace.push_back({"", "", 0});
-                #if LIBASSERT_IS_GCC
-                 deferred.push_back({addrs[i], trace.size() - 1});
-                #endif
-            }
-        }
-        internal_verify(SymCleanup(proc));
-        #if LIBASSERT_IS_GCC
-         // If we're compiling with gcc on windows, the debug symbols will be embedded in the
-         // executable and retrievable with addr2line (this is provided by mingw).
-         // The executable will not be PIE. TODO: I don't know if PIE gcc on windows is a
-         // case that we need to worry about, can cross that bridge later.
-         // Currently not doing any file grouping like done in the linux version. Assuming
-         // the only unresolvable symbols are from this binary.
-         // Always two lines per entry?
-         // https://kernel.googlesource.com/pub/scm/linux/kernel/git/hjl/binutils/+/hjl/secondary/binutils/addr2line.c
-         std::string addresses = "";
-         for(auto& [address, _] : deferred) addresses += stringf("%#tx ", address);
-         auto output = split(trim(resolve_addresses(addresses, executable)), "\n");
-         LIBASSERT_PRIMITIVE_ASSERT(output.size() == 2 * deferred.size());
-         for(size_t i = 0; i < deferred.size(); i++) {
-             // line info is one of the following:
-             // path:line (descriminator number)
-             // path:line
-             // path:?
-             // ??:?
-             // Regex modified from the linux version to eat the C:\\ at the beginning
-             static std::regex location_re(R"(^((?:\w:[\\/])?[^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
-             auto m = match<2>(output[i * 2 + 1], location_re);
-             LIBASSERT_PRIMITIVE_ASSERT(m.has_value());
-             auto [path, line] = *m;
-             if(path != "??") {
-                 trace[deferred[i].second].source_path = path;
-             }
-             trace[deferred[i].second].line = line == "?" ? 0 : std::stoi(line);
-             // signature shouldn't require processing
-             // signature done after path so path can take signature, if needed
-             trace[deferred[i].second].signature = output[i * 2];
-         }
-        #endif
-        return trace;
-    }
-    #endif
-    #ifdef USE_EXECINFO_H
-    LIBASSERT_ATTR_COLD static bool has_addr2line() {
-        // Detects if addr2line exists by trying to invoke addr2line --help
-        constexpr int magic = 42;
-        pid_t pid = fork();
-        if(pid == -1) { return false; }
-        if(pid == 0) { // child
-            close(STDOUT_FILENO);
-            execlp("addr2line", "addr2line", "--help", nullptr);
-            exit(magic);
-        }
-        int status;
-        waitpid(pid, &status, 0);
-        return WEXITSTATUS(status) == 0;
-    }
-
-    // returns 1 for little endian, 2 for big endien, matches elf
-    LIBASSERT_ATTR_COLD static int endianness() {
-        int n = 1;
-        if(*reinterpret_cast<char*>(&n) == 1) {
-            return 1; // little
-        } else {
-            return 2; // big
-        }
-    }
-
-    // https://en.wikipedia.org/wiki/Executable_and_Linkable_Format#File_header
-    // file header is the same between 32 and 64-bit until offset 0x18
-    struct [[gnu::packed]] partial_elf_file_header {
-        char magic[4];
-        uint8_t e_class;
-        uint8_t e_data; // endianness: 1 for little, 2 for big
-        uint8_t e_version;
-        uint8_t e_osabi;
-        uint8_t e_abiver;
-        char e_unused[7];
-        uint16_t e_type;
-    };
-    static_assert(sizeof(partial_elf_file_header) == 0x12);
-
-    enum elf_obj_types {
-        ET_EXEC = 0x02,
-        ET_DYN = 0x03
-    };
-
-    LIBASSERT_ATTR_COLD static uint16_t get_executable_e_type(const std::string& path) {
-        FILE* f = fopen(path.c_str(), "rb");
-        LIBASSERT_PRIMITIVE_ASSERT(f != nullptr);
-        partial_elf_file_header h;
-        internal_verify(fread(&h, sizeof(partial_elf_file_header), 1, f) == 1, "error while reading file");
-        char magic[] = {0x7F, 'E', 'L', 'F'};
-        LIBASSERT_PRIMITIVE_ASSERT(memcmp(h.magic, magic, 4) == 0);
-        if(h.e_data != endianness()) {
-            h.e_type = (h.e_type & 0x00ff) << 8 | (h.e_type & 0xff00) >> 8;
-        }
-        return h.e_type;
-    }
-
-    LIBASSERT_ATTR_COLD
-    static bool paths_refer_to_same(const std::string& path_a, const std::string& path_b) {
-        struct stat a, b;
-        stat(path_a.c_str(), &a);
-        stat(path_b.c_str(), &b);
-        static_assert(std::is_integral_v<dev_t>);
-        static_assert(std::is_integral_v<ino_t>);
-        return a.st_dev == b.st_dev && a.st_ino == b.st_ino;
-    }
-
-    struct frame { // TODO: re-evaluate members here
-        std::string obj_path;
-        std::string symbol;
-        void* obj_base = nullptr;
-        void* raw_address = nullptr; // raw_address - obj_base -> addr2line
-    };
-
-    // This is a custom replacement for backtrace_symbols, which makes getting the information we
-    // need impossible in some situations.
-    LIBASSERT_ATTR_COLD
-    static std::vector<frame> backtrace_frames(void * const * array, size_t size, size_t skip) {
-        // reference: https://github.com/bminor/glibc/blob/master/debug/backtracesyms.c
-        std::vector<frame> frames;
-        frames.reserve(size - skip);
-        for(size_t i = skip; i < size; i++) {
-            Dl_info info;
-            frame frame;
-            frame.raw_address = array[i];
-            if(dladdr(array[i], &info)) {
-                LIBASSERT_PRIMITIVE_ASSERT(info.dli_fname != nullptr);
-                // dli_sname and dli_saddr are only present with -rdynamic, sname will be included
-                // but we don't really need dli_saddr
-                frame.obj_path = info.dli_fname;
-                frame.obj_base = info.dli_fbase;
-                frame.symbol = info.dli_sname ?: "?";
-            }
-            frames.push_back(frame);
-        }
-        LIBASSERT_PRIMITIVE_ASSERT(frames.size() == size - skip);
-        return frames;
-    }
-
-    struct pipe_t {
-        union {
-            struct {
-                int read_end;
-                int write_end;
-            };
-            int data[2];
-        };
-    };
-    static_assert(sizeof(pipe_t) == 2 * sizeof(int));
-
-    LIBASSERT_ATTR_COLD
-    static std::string resolve_addresses(const std::string& addresses, const std::string& executable) {
-        pipe_t output_pipe;
-        pipe_t input_pipe;
-        internal_verify(pipe(output_pipe.data) == 0);
-        internal_verify(pipe(input_pipe.data) == 0);
-        pid_t pid = fork();
-        if(pid == -1) { return ""; } // error? TODO: Diagnostic
-        if(pid == 0) { // child
-            dup2(output_pipe.write_end, STDOUT_FILENO);
-            dup2(input_pipe.read_end, STDIN_FILENO);
-            close(output_pipe.read_end);
-            close(output_pipe.write_end);
-            close(input_pipe.read_end);
-            close(input_pipe.write_end);
-            execlp("addr2line", "addr2line", "-e", executable.c_str(), "-f", "-C", nullptr);
-            exit(1); // TODO: Diagnostic?
-        }
-        internal_verify(write(input_pipe.write_end, addresses.data(), addresses.size()) != -1);
-        close(input_pipe.read_end);
-        close(input_pipe.write_end);
-        close(output_pipe.write_end);
-        std::string output;
-        constexpr int buffer_size = 4096;
-        char buffer[buffer_size];
-        size_t count = 0;
-        while((count = read(output_pipe.read_end, buffer, buffer_size)) > 0) {
-            output.insert(output.end(), buffer, buffer + count);
-        }
-        // TODO: check status from addr2line?
-        waitpid(pid, nullptr, 0);
-        return output;
-    }
-
-    LIBASSERT_ATTR_COLD
-    static std::optional<trace_t> get_stacktrace() {
-        void* bt[n_frames];
-        int bt_size = backtrace(bt, n_frames);
-        std::vector<frame> frames = backtrace_frames(bt, bt_size, n_skip);
-        trace_t trace(frames.size());
-        if(has_addr2line()) {
-            // group addresses to resolve by the module name they're from
-            // obj path -> { addresses, targets }
-            std::unordered_map<
-                std::string,
-                std::pair<std::vector<std::string>, std::vector<stacktrace_entry*>>
-            > entries;
-            std::string binary_path = get_executable_path();
-            bool is_pie = get_executable_e_type(binary_path) == ET_DYN;
-            std::optional<std::string> dladdr_name_of_executable;
-            for(size_t i = 0; i < frames.size(); i++) {
-                auto& entry = frames[i];
-                LIBASSERT_PRIMITIVE_ASSERT(entry.raw_address >= entry.obj_base);
-                // There is a bug with dladdr for non-PIE objects
-                if(!dladdr_name_of_executable.has_value()) {
-                    if(paths_refer_to_same(entry.obj_path, binary_path)) {
-                        dladdr_name_of_executable = entry.obj_path;
-                    }
-                }
-                uintptr_t addr;
-                // if this symbol is in the executable and the executable is not pie use raw address
-                // otherwise compute offset
-                if(
-                    dladdr_name_of_executable.has_value()
-                    && dladdr_name_of_executable.value() == entry.obj_path
-                    && !is_pie
-                ) {
-                    addr = (uintptr_t)entry.raw_address;
-                } else {
-                    addr = (uintptr_t)entry.raw_address - (uintptr_t)entry.obj_base;
-                }
-                ///printf("%s :: %p\n", entry.obj_path.c_str(), addr);
-                if(entries.count(entry.obj_path) == 0) { entries.insert({entry.obj_path, {{}, {}}}); }
-                auto& obj_entry = entries.at(entry.obj_path);
-                obj_entry.first.push_back(stringf("%#tx", addr));
-                obj_entry.second.push_back(&trace[i]);
-                trace[i].source_path = entry.obj_path;
-            }
-            // perform translations
-            for(auto& [file, pair] : entries) {
-                auto& [addresses, target] = pair;
-                // Always two lines per entry?
-                // https://kernel.googlesource.com/pub/scm/linux/kernel/git/hjl/binutils/+/hjl/secondary/binutils/addr2line.c
-                auto output = split(trim(resolve_addresses(join(addresses, "\n"), file)), "\n");
-                // Cannot wait until we can write ^ that as:
-                // join(addresses, "\n") |> resolve_addresses(file) |> trim() |> split("\n");
-                LIBASSERT_PRIMITIVE_ASSERT(output.size() == 2 * target.size());
-                for(size_t i = 0; i < target.size(); i++) {
-                    // line info is one of the following:
-                    // path:line (descriminator number)
-                    // path:line
-                    // path:?
-                    // ??:?
-                    static std::regex location_re(R"(^([^:]*):?([\d\?]*)(?: \(discriminator \d+\))?$)");
-                    auto m = match<2>(output[i * 2 + 1], location_re);
-                    LIBASSERT_PRIMITIVE_ASSERT(m.has_value());
-                    auto [path, line] = *m;
-                    if(path != "??") {
-                        target[i]->source_path = path;
-                    }
-                    target[i]->line = line == "?" ? 0 : std::stoi(line);
-                    // signature shouldn't require processing
-                    // signature done after path so path can take signature, if needed
-                    target[i]->signature = output[i * 2];
-                }
-            }
-        }
-        return trace;
-    }
-    #endif
+    using trace_t = std::vector<cpptrace::stacktrace_frame>;
 
     LIBASSERT_ATTR_COLD
     void* get_stacktrace_opaque() {
-        auto trace = get_stacktrace();
-        if(trace) {
-            return new trace_t(std::move(*trace));
-        } else {
-            return nullptr;
-        }
+        return new trace_t(cpptrace::generate_trace());
     }
 
     /*
@@ -1026,14 +424,6 @@ namespace libassert::detail {
     struct highlight_block {
         std::string_view color;
         std::string content;
-        // Get as much code into the .cpp as possible
-        LIBASSERT_ATTR_COLD highlight_block(std::string_view _color, std::string _content)
-                                                         : color(_color), content(std::move(_content)) { }
-        LIBASSERT_ATTR_COLD highlight_block(const highlight_block&) = default;
-        LIBASSERT_ATTR_COLD highlight_block(highlight_block&&) = default;
-        LIBASSERT_ATTR_COLD ~highlight_block() = default;
-        LIBASSERT_ATTR_COLD highlight_block& operator=(const highlight_block&) = default;
-        LIBASSERT_ATTR_COLD highlight_block& operator=(highlight_block&&) = default;
     };
 
     LIBASSERT_ATTR_COLD
@@ -1350,13 +740,13 @@ namespace libassert::detail {
                 // add string part
                 LIBASSERT_PRIMITIVE_ASSERT(match.position() > 0);
                 if(match.position() > 0) {
-                    output.emplace_back(GREEN, str.substr(i, match.position()));
+                    output.push_back({GREEN, str.substr(i, match.position())});
                 }
-                output.emplace_back(BLUE, str.substr(i + match.position(), match.length()));
+                output.push_back({BLUE, str.substr(i + match.position(), match.length())});
                 i += match.position() + match.length();
             }
             if(i < str.length()) {
-                output.emplace_back(GREEN, str.substr(i));
+                output.push_back({GREEN, str.substr(i)});
             }
             return output;
         }
@@ -1381,20 +771,20 @@ namespace libassert::detail {
                 };
                 switch(token.token_type) {
                     case token_e::keyword:
-                        output.emplace_back(PURPL, token.str);
+                        output.push_back({PURPL, token.str});
                         break;
                     case token_e::punctuation:
                         if(highlight_ops.count(token.str)) {
-                            output.emplace_back(PURPL, token.str);
+                            output.push_back({PURPL, token.str});
                         } else {
-                            output.emplace_back("", token.str);
+                            output.push_back({"", token.str});
                         }
                         break;
                     case token_e::named_literal:
-                        output.emplace_back(ORANGE, token.str);
+                        output.push_back({ORANGE, token.str});
                         break;
                     case token_e::number:
-                        output.emplace_back(CYAN, token.str);
+                        output.push_back({CYAN, token.str});
                         break;
                     case token_e::string:
                         {
@@ -1405,15 +795,15 @@ namespace libassert::detail {
                     case token_e::identifier:
                         // NOLINTNEXTLINE(bugprone-branch-clone)
                         if(peek().str == "(") {
-                            output.emplace_back(BLUE, token.str);
+                            output.push_back({BLUE, token.str});
                         } else if(peek().str == "::") {
-                            output.emplace_back(YELLOW, token.str);
+                            output.push_back({YELLOW, token.str});
                         } else {
-                            output.emplace_back(BLUE, token.str);
+                            output.push_back({BLUE, token.str});
                         }
                         break;
                     case token_e::whitespace:
-                        output.emplace_back("", token.str);
+                        output.push_back({"", token.str});
                         break;
                 }
             }
@@ -2185,10 +1575,10 @@ namespace libassert::detail {
         size_t start = 0;
         size_t end = trace.size() - 1;
         for(size_t i = 0; i < trace.size(); i++) {
-            if(trace[i].signature.find("libassert::detail::") != std::string::npos) {
+            if(trace[i].symbol.find("libassert::detail::") != std::string::npos) {
                 start = i + 1;
             }
-            if(trace[i].signature == "main" || trace[i].signature.find("main(") == 0) {
+            if(trace[i].symbol == "main" || trace[i].symbol.find("main(") == 0) {
                 end = i;
             }
         }
@@ -2207,7 +1597,7 @@ namespace libassert::detail {
         // base file name -> path trie
         std::unordered_map<std::string, path_trie> tries;
         for(size_t i = start; i <= end; i++) {
-            const auto& source_path = trace[i].source_path;
+            const auto& source_path = trace[i].filename;
             if(!parsed_paths.count(source_path)) {
                 auto parsed_path = parse_path(source_path);
                 auto& file_name = parsed_path.back();
@@ -2240,7 +1630,7 @@ namespace libassert::detail {
             auto [start, end] = get_trace_window(trace);
             // prettify signatures
             for(auto& frame : trace) {
-                frame.signature = prettify_type(frame.signature);
+                frame.symbol = prettify_type(frame.symbol);
             }
             // path preprocessing
             constexpr size_t max_file_length = 50;
@@ -2250,7 +1640,7 @@ namespace libassert::detail {
                 std::max_element(
                     trace.begin() + start,
                     trace.begin() + end + 1,
-                    [](const libassert::detail::stacktrace_entry& a, const libassert::detail::stacktrace_entry& b) {
+                    [](const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_frame& b) {
                         return a.line < b.line;
                     }
                 )->line;
@@ -2259,14 +1649,14 @@ namespace libassert::detail {
             size_t max_frame_width = log10(end - start + 1 + 1); // ^
             // do the actual trace
             for(size_t i = start; i <= end; i++) {
-                const auto& [source_path, signature, _line] = trace[i];
-                std::string line_number = _line == 0 ? "?" : std::to_string(_line);
+                const auto& [address, line, col, source_path, signature] = trace[i];
+                std::string line_number = line == 0 ? "?" : std::to_string(line);
                 // look for repeats, i.e. recursion we can fold
                 size_t recursion_folded = 0;
                 if(end - i >= 4) {
                     size_t j = 1;
                     for( ; i + j <= end; j++) {
-                        if(trace[i + j] != trace[i] || trace[i + j].signature == "??") {
+                        if(trace[i + j] != trace[i] || trace[i + j].symbol == "??") {
                             break;
                         }
                     }
@@ -2368,12 +1758,12 @@ namespace libassert::detail {
             std::vector<highlight_block> blocks;
             // spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
             // no indentation done here for multiple value printing
-            blocks.emplace_back("", " ");
+            blocks.push_back({"", " "});
             for(const auto& str : vec) {
                 auto h = highlight_blocks(str);
                 blocks.insert(blocks.end(), h.begin(), h.end());
                 if(&str != &*--vec.end()) {
-                    blocks.emplace_back("", "  ");
+                    blocks.push_back({"", "  "});
                 }
             }
             return blocks;
@@ -2589,12 +1979,8 @@ namespace libassert {
 
 namespace libassert::utility {
     LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int width) {
-        auto trace = get_stacktrace();
-        if(trace) {
-            return print_stacktrace(&*trace, width);
-        } else {
-            return "Error while generating stacktrace";
-        }
+        auto trace = cpptrace::generate_trace();
+        return print_stacktrace(&trace, width);
     }
 }
 

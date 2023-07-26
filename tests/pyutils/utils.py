@@ -40,7 +40,10 @@ def parse_output(output: str):
             }
             # read until blank line
             while i < len(output_lines) and output_lines[i] != "":
-                e["lines"].append(output_lines[i])
+                line = output_lines[i]
+                if re.match(r"^\w+ failed at .+\.cpp:\d+: .+$", line):
+                    line = re.sub(r"(?<= failed at ).+\.cpp(?=:\d+: .+$)", "integration/integration.cpp", line)
+                e["lines"].append(line)
                 i += 1
             # read until non blank line
             while i < len(output_lines) and output_lines[i] == "":
@@ -374,3 +377,5 @@ Stack trace:
       at integration.cpp:403
 """.strip()
     assert(critical_difference(a, b, max_line_diff))
+
+test_critical_difference()

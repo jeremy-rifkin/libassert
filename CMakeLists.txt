@@ -1,24 +1,24 @@
 cmake_minimum_required(VERSION 3.8...3.23)
 
+if(${CMAKE_VERSION} VERSION_LESS 3.12)
+    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif()
+
 project(
   libassert
-  VERSION 1.0.0
+  VERSION 1.1.0
   LANGUAGES CXX
 )
 
-option(ASSERT_BUILD_TESTS "Enables tests" OFF)
-option(ASSERT_DECOMPOSE_BINARY_LOGICAL "Enables expression decomposition of && and ||" OFF)
-option(ASSERT_LOWERCASE "Enables assert alias for ASSERT" OFF)
-option(ASSERT_USE_MAGIC_ENUM "Use the MagicEnum library to print better diagnostics for enum classes" ON)
-set(ASSERT_FAIL "" CACHE STRING "ASSERT_FAIL")
-
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-# libassert uses relocs, -fpic has to be used to allow shared libs to link libassert as a static library.
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+### libassert uses relocs, -fpic has to be used to allow shared libs to link libassert as a static library.
+##set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(GNUInstallDirs)
-add_library(assert src/assert.cpp)
+include(FetchContent)
+
+add_library(assert SHARED src/assert.cpp include/assert.hpp)
 
 target_include_directories(
   assert
@@ -27,6 +27,9 @@ target_include_directories(
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/assert/assert>
 )
 
+#set(CMAKE_CXX_FLAGS_REL_WITH_ASSERTS "-O3")
+
+# TODO
 target_compile_features(
   assert
   PUBLIC
@@ -43,16 +46,30 @@ set_target_properties(
 target_compile_options(
   assert
   PRIVATE
-  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror=return-type -Wshadow>
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror=return-type -Wshadow -Wundef -Wuseless-cast -Wnonnull-compare>
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive->
 )
+
+FetchContent_Declare(
+  cpptrace
+  GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
+  GIT_TAG        v0.1
+)
+FetchContent_MakeAvailable(cpptrace)
 
 target_link_libraries(
   assert
   PRIVATE
-  $<$<CXX_COMPILER_ID:MSVC>:dbghelp>
-  ${CMAKE_DL_LIBS}
+  cpptrace
 )
+
+option(ASSERT_DECOMPOSE_BINARY_LOGICAL "Enables expression decomposition of && and || (this prevents short circuiting)" OFF)
+option(ASSERT_LOWERCASE "Enables assert alias for ASSERT" OFF)
+option(ASSERT_USE_MAGIC_ENUM "Use the MagicEnum library to print better diagnostics for enum classes" ON)
+set(ASSERT_FAIL "" CACHE STRING "ASSERT_FAIL")
+
+option(ASSERT_BUILD_TESTS "Build tests" OFF)
+option(ASSERT_BUILD_BASIC_TEST "Build basic tests" OFF)
 
 if(ASSERT_DECOMPOSE_BINARY_LOGICAL)
   target_compile_definitions(assert PUBLIC ASSERT_DECOMPOSE_BINARY_LOGICAL)
@@ -70,21 +87,8 @@ if(NOT "${ASSERT_FAIL}" STREQUAL "")
   target_compile_definitions(assert PUBLIC ASSERT_FAIL=${ASSERT_FAIL})
 endif()
 
-
 if(CMAKE_BUILD_TYPE STREQUAL "")
   message(FATAL_ERROR "Setting CMAKE_BUILD_TYPE is required")
-endif()
-
-if (PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-  if(ASSERT_BUILD_TESTS)
-    include(CTest)
-    add_test(
-      NAME run-tests.py
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
-      COMMAND
-      python3 run-tests.py --build --build_type=${CMAKE_BUILD_TYPE} --compiler=${CMAKE_CXX_COMPILER_ID}
-    )
-  endif()
 endif()
 
 if(NOT CMAKE_SKIP_INSTALL_RULES)
@@ -125,6 +129,7 @@ if(NOT CMAKE_SKIP_INSTALL_RULES)
 
   write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/assert/assert-config-version.cmake
+    VERSION ${PACKAGE_VERSION}
     COMPATIBILITY SameMajorVersion
   )
 
@@ -141,4 +146,65 @@ if(NOT CMAKE_SKIP_INSTALL_RULES)
     ${CMAKE_CURRENT_BINARY_DIR}/assert/assert-config-version.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/assert
   )
+endif()
+
+# Don't run tests when library is used with add_subdirectory
+if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  if(ASSERT_BUILD_TESTS)
+    include(CTest)
+
+    set(
+      demo_sources
+      tests/demo/bar.cpp
+      tests/demo/baz/demo.cpp
+      tests/demo/demo.cpp
+      tests/demo/foo.cpp
+    )
+    add_executable(demo ${demo_sources})
+    target_link_libraries(demo PRIVATE assert)
+    target_compile_options(
+      demo
+      PRIVATE
+      "-DASSERT_USE_MAGIC_ENUM"
+      "-DASSERT_FAIL=custom_fail"
+      "-DASSERT_LOWERCASE"
+    )
+
+    add_executable(integration tests/integration/integration.cpp tests/integration/a.cpp tests/integration/x/a.cpp)
+    target_link_libraries(integration PRIVATE assert)
+    target_compile_options(
+      integration
+      PRIVATE
+      "-DASSERT_USE_MAGIC_ENUM"
+      "-DASSERT_FAIL=custom_fail"
+      "-DASSERT_LOWERCASE"
+    )
+    add_test(
+      NAME integration
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
+      COMMAND
+      python3 run-tests.py $<TARGET_FILE:integration> ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_STANDARD}
+    )
+
+    set(
+      unit_test_sources
+      tests/unit/constexpr_contexts.cpp
+      tests/unit/disambiguation.cpp
+      tests/unit/literals.cpp
+      tests/unit/test_public_utilities.cpp
+      tests/unit/test_type_prettier.cpp
+      tests/unit/tokens_and_highlighting.cpp
+      tests/unit/type_handling.cpp
+    )
+    foreach(test_file ${unit_test_sources})
+      get_filename_component(test_name ${test_file} NAME_WE)
+      add_executable(${test_name} ${test_file})
+      target_link_libraries(${test_name} assert)
+      add_test(NAME ${test_name} COMMAND ${test_name})
+    endforeach(test_file ${unit_test_sources})
+  endif()
+  if(ASSERT_BUILD_BASIC_TEST)
+    add_executable(basic tests/basic/basic_test.cpp)
+    target_link_libraries(basic PRIVATE assert)
+  endif()
 endif()

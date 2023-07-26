@@ -4,62 +4,47 @@ on:
   push:
   pull_request:
 
+# TODO: Check different standards?
+
 jobs:
-  build-gcc:
+  build-linux:
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++-10, clang++-14]
+        target: [Debug, Release]
     steps:
     - uses: actions/checkout@v2
-    - name: make
-      run: make
-    - name: build basic test
-      working-directory: tests
-      run: make basic_test
-  build-clang:
-    runs-on: ubuntu-22.04
-    steps:
-    - uses: actions/checkout@v2
-    - name: make
-      run: make COMPILER=clang++-14
-    - name: build basic test
-      working-directory: tests
-      run: make basic_test COMPILER=clang++-14
-  build-msvc:
+    - name: dependencies
+      run: sudo apt install gcc-10 g++-10 libgcc-10-dev
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. \
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} \
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+            -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h \
+            -DASSERT_BUILD_BASIC_TEST=On
+           make -j
+  build-windows:
     runs-on: windows-2019
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [cl, clang++]
+        target: [Debug]
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1.10.0
-    - name: make
-      run: make COMPILER=msvc
-    - name: build basic test
-      working-directory: tests
-      run: make basic_test COMPILER=msvc
-  build-msvc-permissive-:
-    runs-on: windows-2019
-    steps:
-    - uses: actions/checkout@v2
-    - name: Enable Developer Command Prompt
-      uses: ilammy/msvc-dev-cmd@v1.10.0
-    - name: make
-      run: make COMPILER=msvc "FLAGS=/permissive- /Zc:twoPhase-" # Annoying bug with two-phase lookup
-    - name: build basic test
-      working-directory: tests
-      run: make basic_test COMPILER=msvc "FLAGS=/permissive- /Zc:twoPhase-" # Annoying bug with two-phase lookup
-  build-gcc-windows:
-    runs-on: windows-2019
-    steps:
-    - uses: actions/checkout@v2
-    - name: make
-      run: make
-    - name: build basic test
-      working-directory: tests
-      run: make basic_test
-  build-clang-windows:
-    runs-on: windows-2019
-    steps:
-    - uses: actions/checkout@v2
-    - name: make
-      run: make COMPILER=clang++
-    - name: build basic test
-      working-directory: tests
-      run: make basic_test COMPILER=clang++
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. `
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} `
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
+            -DASSERT_BUILD_BASIC_TEST=On
+           msbuild .\libassert.sln

@@ -1,12 +1,8 @@
 .vs
 .vscode
 .cache
-bin
 scratch
-build/
+build*
 __pycache__
 compile_commands.json
 CMakeUserPresets.json
-tests/cmake_client/build*
-tests/build*
-tests/install*

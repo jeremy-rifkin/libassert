@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.8...3.23)
 
 project(cmake_find_package_test)
 
