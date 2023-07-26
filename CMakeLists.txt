@@ -53,7 +53,7 @@ target_compile_options(
 FetchContent_Declare(
   cpptrace
   GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-  GIT_TAG        02dda255d2626ea2ed3e5985b1a8b6cdc806ba1e
+  GIT_TAG        v0.1
 )
 FetchContent_MakeAvailable(cpptrace)
 
