@@ -28,13 +28,31 @@ jobs:
             -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h \
             -DASSERT_BUILD_BASIC_TEST=On
            make -j
+  build-macos:
+    runs-on: macos-13
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: g++-13, clang++]
+        target: [Debug, Release]
+    steps:
+    - uses: actions/checkout@v2
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. \
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} \
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+            -DASSERT_BUILD_BASIC_TEST=On
+           make -j
   build-windows:
     runs-on: windows-2019
     strategy:
       fail-fast: false
       matrix:
         compiler: [cl, clang++]
-        target: [Debug]
+        target: [Debug, Release]
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
@@ -47,4 +65,25 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
             -DASSERT_BUILD_BASIC_TEST=On
+           msbuild .\libassert.sln
+  build-mingw:
+    runs-on: windows-2019
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++]
+        target: [Debug, Release]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Enable Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. `
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} `
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
+            -DASSERT_BUILD_BASIC_TEST=On `
+            "-GUnix Makefiles"
            msbuild .\libassert.sln
