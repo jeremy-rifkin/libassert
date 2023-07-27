@@ -1252,12 +1252,15 @@ using libassert::ASSERTION;
 #define LIBASSERT_STATIC_DATA(name, type, expr_str, ...) \
                                 /* extra string here because of extra comma from map, also serves as terminator */ \
                                 /* LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS because msvc */ \
+                                /* Trailing return type here to work around a gcc <= 9.2 bug */ \
+                                /* Oddly only affecting builds under -DNDEBUG https://godbolt.org/z/5Treozc4q */ \
+                                using libassert_params_t = libassert::detail::assert_static_parameters; \
                                 /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
-                                const libassert::detail::assert_static_parameters* libassert_params = []() { \
+                                const libassert_params_t* libassert_params = []() -> const libassert_params_t* { \
                                   static constexpr const char* const libassert_arg_strings[] = { \
                                     LIBASSERT_MAP(LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS(__VA_ARGS__)) "" \
                                   }; \
-                                  static constexpr libassert::detail::assert_static_parameters _libassert_params = { \
+                                  static constexpr libassert_params_t _libassert_params = { \
                                     name LIBASSERT_COMMA \
                                     type LIBASSERT_COMMA \
                                     expr_str LIBASSERT_COMMA \

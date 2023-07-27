@@ -378,4 +378,5 @@ Stack trace:
 """.strip()
     assert(critical_difference(a, b, max_line_diff))
 
-test_critical_difference()
+if __name__ == "main":
+    test_critical_difference()

@@ -1,7 +1,7 @@
-#include "assert.hpp"
-
 #include <fstream>
 #include <iostream>
+
+#include "assert.hpp"
 
 namespace libassert::detail {
     [[nodiscard]] std::string highlight(const std::string& expression);

@@ -1,7 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS // for fopen
 
-#include "assert.hpp"
-
 #include <array>
 #include <algorithm>
 #include <fstream>
@@ -12,6 +10,8 @@
 #include <streambuf>
 #include <string_view>
 #include <string>
+
+#include "assert.hpp"
 
 #define ESC "\033["
 #define RED ESC "1;31m"

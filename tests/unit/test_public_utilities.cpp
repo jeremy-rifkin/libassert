@@ -1,8 +1,8 @@
-#include "assert.hpp"
-
 #include <map>
 #include <string>
 #include <utility>
+
+#include "assert.hpp"
 
 using namespace libassert::utility;
 

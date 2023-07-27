@@ -1,9 +1,9 @@
-#include "assert.hpp"
-
 #include <iostream>
 #include <string_view>
 #include <string>
 #include <tuple>
+
+#include "assert.hpp"
 
 #define ESC "\033["
 #define RED ESC "1;31m"
