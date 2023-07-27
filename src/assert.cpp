@@ -433,7 +433,7 @@ namespace libassert::detail {
         #endif
     }
 
-    // NOTE: Not thread-safe
+    // NOTE: Not thread-safe. Must be called in a thread-safe manner.
     LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {
         // NOLINTNEXTLINE(concurrency-mt-unsafe)
         return strerror(e);
