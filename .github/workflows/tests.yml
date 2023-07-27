@@ -42,6 +42,9 @@ jobs:
       matrix:
         compiler: [g++-13, clang++]
         target: [Debug]
+        exclude:
+          - compiler: clang++ # Disabled due to #15 TODO TODO TODO
+            target: Debug
     steps:
     - uses: actions/checkout@v2
     - name: dependencies
