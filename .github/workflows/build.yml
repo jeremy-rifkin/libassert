@@ -79,6 +79,7 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1.10.0
     - name: build
       run: |
+           g++ --version
            mkdir -p build
            cd build
            cmake .. `
