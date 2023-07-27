@@ -1,5 +1,3 @@
-#include "assert.hpp"
-
 #include <algorithm>
 #include <array>
 #include <fstream>
@@ -10,6 +8,8 @@
 #include <streambuf>
 #include <string_view>
 #include <string>
+
+#include "assert.hpp"
 
 using namespace std::literals;
 
