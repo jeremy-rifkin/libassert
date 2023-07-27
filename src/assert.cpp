@@ -53,7 +53,6 @@ bool operator!=(const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_
 }
 
 #define IS_WINDOWS 0
-#define IS_LINUX 0
 
 #if defined(_WIN32)
  #undef IS_WINDOWS
@@ -64,14 +63,10 @@ bool operator!=(const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_
   #define STDERR_FILENO _fileno(stderr)
  #endif
  #include <windows.h>
- #include <conio.h>
  #include <io.h>
- #include <process.h>
  #undef min // fucking windows headers, man
  #undef max
-#elif defined(__linux)
- #undef IS_LINUX
- #define IS_LINUX 1
+#elif defined(__linux) || defined(__APPLE__) || defined(__unix__)
  #include <sys/ioctl.h>
  #include <unistd.h>
  // NOLINTNEXTLINE(misc-include-cleaner)
@@ -166,7 +161,7 @@ namespace libassert::utility {
         if(fd < 0) {
             return 0;
         }
-        #ifdef _WIN32
+        #if IS_WINDOWS
          DWORD windows_handle = small_static_map(fd).lookup(
              STDIN_FILENO, STD_INPUT_HANDLE,
              STDOUT_FILENO, STD_OUTPUT_HANDLE,
@@ -403,7 +398,7 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD void enable_virtual_terminal_processing_if_needed() {
         // enable colors / ansi processing if necessary
-        #ifdef _WIN32
+        #if IS_WINDOWS
          // https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing
          #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
           constexpr DWORD ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4;
@@ -418,7 +413,7 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD static bool isatty(int fd) {
-        #ifdef _WIN32
+        #if IS_WINDOWS
          return _isatty(fd);
         #else
          return ::isatty(fd);
@@ -426,7 +421,7 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD std::string get_executable_path() {
-        #ifdef _WIN32
+        #if IS_WINDOWS
          char buffer[MAX_PATH + 1];
          int s = GetModuleFileNameA(NULL, buffer, sizeof(buffer));
          LIBASSERT_PRIMITIVE_ASSERT(s != 0);
@@ -1445,7 +1440,7 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD
     static path_components parse_path(const std::string_view path) {
-        #ifdef _WIN32
+        #if IS_WINDOWS
          constexpr std::string_view path_delim = "/\\";
         #else
          constexpr std::string_view path_delim = "/";
