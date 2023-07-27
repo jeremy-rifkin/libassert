@@ -231,8 +231,7 @@ namespace libassert::detail {
                 );
             }
             (void)fprintf(stderr, "    primitive_%s(%s);\n", name, expression);
-            // NOLINTNEXTLINE(misc-include-cleaner)
-            abort();
+            std::abort();
         }
     }
 
@@ -2081,8 +2080,7 @@ void libassert_default_fail_action(
             if(fatal == ASSERTION::FATAL) {
                 case libassert::assert_type::assumption: // switch-if-case, cursed!
                 (void)fflush(stderr);
-                // NOLINTNEXTLINE(misc-include-cleaner)
-                abort();
+                std::abort();
             }
             // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
             // this library (on top of preventing fallthrough from nonfatal libassert)
