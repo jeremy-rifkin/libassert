@@ -1253,7 +1253,7 @@ using libassert::ASSERTION;
                                 /* extra string here because of extra comma from map, also serves as terminator */ \
                                 /* LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS because msvc */ \
                                 /* Trailing return type here to work around a gcc <= 9.2 bug */ \
-                                /* https://godbolt.org/z/5Treozc4q */ \
+                                /* Oddly only affecting builds under -DNDEBUG https://godbolt.org/z/5Treozc4q */ \
                                 using libassert_params_t = libassert::detail::assert_static_parameters; \
                                 /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
                                 const libassert_params_t* libassert_params = []() -> const libassert_params_t* { \
