@@ -4,16 +4,19 @@
 // Copyright (c) 2021-2023 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
+#include <cerrno>
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <exception>
 #include <sstream>
 #include <string_view>
 #include <string>
+#include <system_error>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <system_error>
 #ifdef __cpp_lib_expected
  #include <expected>
 #endif
@@ -76,6 +79,7 @@
 // at one point their std::string's move assignment was not noexcept even in c++17
 // https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
 #if defined(_GLIBCXX_USE_CXX11_ABI)
+ // NOLINTNEXTLINE(misc-include-cleaner)
  #define GCC_ISNT_STUPID _GLIBCXX_USE_CXX11_ABI
 #else
  // assume others target new abi by default - homework
@@ -117,9 +121,9 @@ namespace libassert::detail {
     // targets C++17. Note: __builtin_FUNCTION only returns the name, so __PRETTY_FUNCTION__ is
     // still needed.
     struct source_location {
-        const char* const file;
-        //const char* const function; // disabled for now due to static constexpr restrictions
-        const int line;
+        const char* file;
+        //const char* function; // disabled for now due to static constexpr restrictions
+        int line;
         constexpr source_location(
             //const char* _function /*= __builtin_FUNCTION()*/,
             const char* _file     = __builtin_FILE(),
@@ -669,6 +673,8 @@ namespace libassert::detail {
                 has_stream_overload<T>::value && !is_string_type<T>
                 && !std::is_pointer<strip<typename std::decay<T>::type>>::value
             ) {
+                // clang-tidy bug here
+                // NOLINTNEXTLINE(misc-const-correctness)
                 std::ostringstream oss;
                 oss<<t;
                 return std::move(oss).str();
@@ -849,6 +855,8 @@ namespace libassert::detail {
 
     template<typename T>
     LIBASSERT_ATTR_COLD
+    // TODO
+    // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, const T& t) {
         if constexpr(isa<T, ASSERTION>) {
             entry.fatality = t;
@@ -1016,15 +1024,17 @@ namespace libassert::detail {
 
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
+    // TODO: Re-evaluate forwarding here.
     void process_assert_fail(
         expression_decomposer<A, B, C>& decomposer,
         const assert_static_parameters* params,
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         Args&&... args
     ) {
-        lock l;
+        const lock l;
         const auto* args_strings = params->args_strings;
-        size_t args_strings_count = count_args_strings(args_strings);
-        size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
+        const size_t args_strings_count = count_args_strings(args_strings);
+        const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
         LIBASSERT_PRIMITIVE_ASSERT(
             (sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
         );
@@ -1033,7 +1043,6 @@ namespace libassert::detail {
         const auto fatal = processed_args.fatality;
         void* raw_trace = get_stacktrace_opaque();
         // generate header
-        std::string output;
         binary_diagnostics_descriptor binary_diagnostics;
         // generate binary diagnostics
         if constexpr(is_nothing<C>) {

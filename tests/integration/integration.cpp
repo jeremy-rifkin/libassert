@@ -82,7 +82,7 @@ struct logger_type {
         other.n = -2;
         std::cout<<"logger_type::logger_type(logger_type&&) [n="<<n<<"]"<<std::endl;
     }
-    logger_type& operator=(const logger_type& other) { // NOLINT(cert-oop54-cpp)
+    logger_type& operator=(const logger_type& other) {
         n = other.n;
         std::cout<<"logger_type::operator=(const logger_type&) [n="<<n<<"]"<<std::endl;
         return *this;
@@ -119,19 +119,19 @@ namespace complex_typing {
 #line 500
 void rec(int n) {
     if(n == 0) assert(false);
-    else rec(n - 1); // NOLINT(readability-braces-around-statements)
+    else rec(n - 1);
 }
 
 void recursive_a(int), recursive_b(int);
 
 void recursive_a(int n) {
     if(n == 0) assert(false);
-    else recursive_b(n - 1); // NOLINT(readability-braces-around-statements)
+    else recursive_b(n - 1);
 }
 
 void recursive_b(int n) {
     if(n == 0) assert(false);
-    else recursive_a(n - 1); // NOLINT(readability-braces-around-statements)
+    else recursive_a(n - 1);
 }
 
 #define SECTION(s) std::cout<<"===================== ["<<(s)<<"] ====================="<<std::endl;
@@ -152,7 +152,7 @@ public:
         something_else();
     }
 
-    void something_else() { // NOLINT(readability-function-size)
+    void something_else() {
         // FIXME: Check all stack traces on msvc... Bug with __PRETTY_FUNCTION__ in lambdas.
         // value printing: strings
         SECTION("value printing: strings");
@@ -273,7 +273,7 @@ public:
             assert(x -= x -= 1); // TODO: double check....
             x = 2;
             assert(x -= x -= x -= 1); // TODO: double check....
-            assert(true ? false : true, "pffft"); // NOLINT(readability-simplify-boolean-expr)
+            assert(true ? false : true, "pffft");
             int a = 1; // regression test for #26
             assert(a >> 1);
         }

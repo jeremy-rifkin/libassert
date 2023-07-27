@@ -1,14 +1,25 @@
 #define LIBASSERT_IS_CPP
+#ifndef _CRT_SECURE_NO_WARNINGS
+// NOLINTNEXTLINE(bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp)
 #define _CRT_SECURE_NO_WARNINGS // done only for strerror
+#endif
 #include "assert.hpp"
 
 // Copyright (c) 2021-2023 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <bitset>
+#include <cctype>
 #include <cstdarg>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <initializer_list>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -16,8 +27,16 @@
 #include <optional>
 #include <regex>
 #include <set>
+#include <sstream>
+#include <string_view>
+#include <string>
+#include <system_error>
+#include <tuple>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include <cpptrace/cpptrace.hpp>
 
@@ -34,7 +53,6 @@ bool operator!=(const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_
 }
 
 #define IS_WINDOWS 0
-#define IS_LINUX 0
 
 #if defined(_WIN32)
  #undef IS_WINDOWS
@@ -45,25 +63,14 @@ bool operator!=(const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_
   #define STDERR_FILENO _fileno(stderr)
  #endif
  #include <windows.h>
- #include <conio.h>
  #include <io.h>
- #include <process.h>
  #undef min // fucking windows headers, man
  #undef max
- #define USE_DBG_HELP_H
-#elif defined(__linux)
- #undef IS_LINUX
- #define IS_LINUX 1
- #include <execinfo.h>
- #include <climits>
+#elif defined(__linux) || defined(__APPLE__) || defined(__unix__)
  #include <sys/ioctl.h>
- #include <sys/stat.h>
- #include <sys/types.h>
- #include <sys/wait.h>
- #include <termios.h>
  #include <unistd.h>
- #include <dlfcn.h>
- #define USE_EXECINFO_H
+ // NOLINTNEXTLINE(misc-include-cleaner)
+ #include <climits> // MAX_PATH
 #else
  #error "no"
 #endif
@@ -101,6 +108,7 @@ using namespace std::string_view_literals;
 
 // Container utility
 template<typename N> class small_static_map {
+    // TODO: Re-evaluate
     const N& needle;
 public:
     small_static_map(const N& n) : needle(n) {}
@@ -127,7 +135,7 @@ namespace libassert::detail {
 namespace libassert::utility {
     LIBASSERT_ATTR_COLD
     std::string strip_colors(const std::string& str) {
-        static std::regex ansi_escape_re("\033\\[[^m]+m");
+        static const std::regex ansi_escape_re("\033\\[[^m]+m");
         return std::regex_replace(str, ansi_escape_re, "");
     }
 
@@ -152,7 +160,7 @@ namespace libassert::utility {
         if(fd < 0) {
             return 0;
         }
-        #ifdef _WIN32
+        #if IS_WINDOWS
          DWORD windows_handle = small_static_map(fd).lookup(
              STDIN_FILENO, STD_INPUT_HANDLE,
              STDOUT_FILENO, STD_OUTPUT_HANDLE,
@@ -165,6 +173,7 @@ namespace libassert::utility {
          return csbi.srWindow.Right - csbi.srWindow.Left + 1;
         #else
          struct winsize w;
+         // NOLINTNEXTLINE(misc-include-cleaner)
          if(ioctl(fd, TIOCGWINSZ, &w) == -1) { return 0; }
          return w.ws_col;
         #endif
@@ -199,14 +208,27 @@ namespace libassert::detail {
             const char* action = verify ? "Verification" : "Assertion";
             const char* name   = verify ? "verify"       : "assert";
             if(message == nullptr) {
-                fprintf(stderr, "%s failed at %s:%d: %s\n",
-                    action, location.file, location.line, signature);
+                (void)fprintf(
+                    stderr,
+                    "%s failed at %s:%d: %s\n",
+                    action,
+                    location.file,
+                    location.line,
+                    signature
+                );
             } else {
-                fprintf(stderr, "%s failed at %s:%d: %s: %s\n",
-                    action, location.file, location.line, signature, message);
+                (void)fprintf(
+                    stderr,
+                    "%s failed at %s:%d: %s: %s\n",
+                    action,
+                    location.file,
+                    location.line,
+                    signature,
+                    message
+                );
             }
-            fprintf(stderr, "    primitive_%s(%s);\n", name, expression);
-            abort();
+            (void)fprintf(stderr, "    primitive_%s(%s);\n", name, expression);
+            std::abort();
         }
     }
 
@@ -220,10 +242,10 @@ namespace libassert::detail {
     template<typename... T>
     LIBASSERT_ATTR_COLD
     std::string stringf(T... args) {
-        int length = snprintf(nullptr, 0, args...);
+        const int length = snprintf(nullptr, 0, args...);
         if(length < 0) { LIBASSERT_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
         std::string str(length, 0);
-        snprintf(str.data(), length + 1, args...);
+        (void)snprintf(str.data(), length + 1, args...);
         return str;
     }
 
@@ -234,10 +256,10 @@ namespace libassert::detail {
         va_list args2;
         va_start(args1, format);
         va_start(args2, format);
-        int length = vsnprintf(nullptr, 0, format, args1);
+        const int length = vsnprintf(nullptr, 0, format, args1);
         if(length < 0) { LIBASSERT_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
         std::string str(length, 0);
-        vsnprintf(str.data(), length + 1, format, args2);
+        (void)vsnprintf(str.data(), length + 1, format, args2);
         va_end(args1);
         va_end(args2);
         return str;
@@ -252,7 +274,7 @@ namespace libassert::detail {
             vec.emplace_back(s.substr(old_pos, pos - old_pos));
             old_pos = pos + 1;
         }
-        vec.emplace_back(std::string(s.substr(old_pos)));
+        vec.emplace_back(s.substr(old_pos));
         return vec;
     }
 
@@ -276,8 +298,8 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD
     static std::string_view trim(const std::string_view s) {
-        size_t l = s.find_first_not_of(ws);
-        size_t r = s.find_last_not_of(ws) + 1;
+        const size_t l = s.find_first_not_of(ws);
+        const size_t r = s.find_last_not_of(ws) + 1;
         return s.substr(l, r - l);
     }
 
@@ -296,6 +318,7 @@ namespace libassert::detail {
     static void replace_all(std::string& str, const std::regex& re, std::string_view replacement) {
         std::smatch match;
         std::size_t i = 0;
+        // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
         while(std::regex_search(str.cbegin() + i, str.cend(), match, re)) {
             str.replace(i + match.position(), match.length(), replacement);
             i += match.position() + replacement.length();
@@ -305,6 +328,7 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     static void replace_all(std::string& str, std::string_view substr, std::string_view replacement) {
         std::string::size_type pos = 0;
+        // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
         while((pos = str.find(substr.data(), pos, substr.length())) != std::string::npos) {
             str.replace(pos, substr.length(), replacement.data(), replacement.length());
             pos += replacement.length();
@@ -316,9 +340,10 @@ namespace libassert::detail {
         const auto& [re, replacement] = rule;
         std::smatch match;
         std::size_t cursor = 0;
+        // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
         while(std::regex_search(str.cbegin() + cursor, str.cend(), match, re)) {
             // find matching >
-            std::size_t match_begin = cursor + match.position();
+            const std::size_t match_begin = cursor + match.position();
             std::size_t end = match_begin + match.length();
             for(int c = 1; end < str.size() && c > 0; end++) {
                 if(str[end] == '<') {
@@ -369,7 +394,7 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD void enable_virtual_terminal_processing_if_needed() {
         // enable colors / ansi processing if necessary
-        #ifdef _WIN32
+        #if IS_WINDOWS
          // https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing
          #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
           constexpr DWORD ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4;
@@ -384,7 +409,7 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD static bool isatty(int fd) {
-        #ifdef _WIN32
+        #if IS_WINDOWS
          return _isatty(fd);
         #else
          return ::isatty(fd);
@@ -392,21 +417,25 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD std::string get_executable_path() {
-        #ifdef _WIN32
+        #if IS_WINDOWS
          char buffer[MAX_PATH + 1];
          int s = GetModuleFileNameA(NULL, buffer, sizeof(buffer));
          LIBASSERT_PRIMITIVE_ASSERT(s != 0);
          return buffer;
         #else
+         // NOLINTNEXTLINE(misc-include-cleaner)
          char buffer[PATH_MAX + 1];
-         ssize_t s = readlink("/proc/self/exe", buffer, PATH_MAX);
+         // NOLINTNEXTLINE(misc-include-cleaner)
+         const ssize_t s = readlink("/proc/self/exe", buffer, PATH_MAX);
          LIBASSERT_PRIMITIVE_ASSERT(s != -1);
          buffer[s] = 0;
          return buffer;
         #endif
     }
 
+    // NOTE: Not thread-safe. Must be called in a thread-safe manner.
     LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         return strerror(e);
     }
 
@@ -575,32 +604,50 @@ namespace libassert::detail {
             std::string keywords_re    = "(?:" + join(keywords, "|") + ")\\b";
             std::string punctuators_re = join(punctuators, "|");
             // numeric literals
-            std::string optional_integer_suffix = "(?:[Uu](?:LL?|ll?|Z|z)?|(?:LL?|ll?|Z|z)[Uu]?)?";
-            std::string int_binary  = "0[Bb][01](?:'?[01])*" + optional_integer_suffix;
+            const std::string optional_integer_suffix = "(?:[Uu](?:LL?|ll?|Z|z)?|(?:LL?|ll?|Z|z)[Uu]?)?";
+            const std::string int_binary  = "0[Bb][01](?:'?[01])*" + optional_integer_suffix;
             // slightly modified from grammar so 0 is lexed as a decimal literal instead of octal
-            std::string int_octal   = "0(?:'?[0-7])+" + optional_integer_suffix;
-            std::string int_decimal = "(?:0|[1-9](?:'?\\d)*)" + optional_integer_suffix;
-            std::string int_hex        = "0[Xx](?!')(?:'?[\\da-fA-F])+" + optional_integer_suffix;
-            std::string digit_sequence = "\\d(?:'?\\d)*";
-            std::string fractional_constant = stringf("(?:(?:%s)?\\.%s|%s\\.)",
-                                                digit_sequence.c_str(), digit_sequence.c_str(), digit_sequence.c_str());
-            std::string exponent_part = "(?:[Ee][\\+-]?" + digit_sequence + ")";
-            std::string suffix = "[FfLl]";
-            std::string float_decimal = stringf("(?:%s%s?|%s%s)%s?",
-                                fractional_constant.c_str(), exponent_part.c_str(),
-                                digit_sequence.c_str(), exponent_part.c_str(), suffix.c_str());
-            std::string hex_digit_sequence = "[\\da-fA-F](?:'?[\\da-fA-F])*";
-            std::string hex_frac_const = stringf("(?:(?:%s)?\\.%s|%s\\.)",
-            hex_digit_sequence.c_str(), hex_digit_sequence.c_str(), hex_digit_sequence.c_str());
-            std::string binary_exp = "[Pp][\\+-]?" + digit_sequence;
-            std::string float_hex = stringf("0[Xx](?:%s|%s)%s%s?",
-                                hex_frac_const.c_str(), hex_digit_sequence.c_str(), binary_exp.c_str(), suffix.c_str());
+            const std::string int_octal   = "0(?:'?[0-7])+" + optional_integer_suffix;
+            const std::string int_decimal = "(?:0|[1-9](?:'?\\d)*)" + optional_integer_suffix;
+            const std::string int_hex        = "0[Xx](?!')(?:'?[\\da-fA-F])+" + optional_integer_suffix;
+            const std::string digit_sequence = "\\d(?:'?\\d)*";
+            const std::string fractional_constant = stringf(
+                "(?:(?:%s)?\\.%s|%s\\.)",
+                digit_sequence.c_str(),
+                digit_sequence.c_str(),
+                digit_sequence.c_str()
+            );
+            const std::string exponent_part = "(?:[Ee][\\+-]?" + digit_sequence + ")";
+            const std::string suffix = "[FfLl]";
+            const std::string float_decimal = stringf(
+                "(?:%s%s?|%s%s)%s?",
+                fractional_constant.c_str(),
+                exponent_part.c_str(),
+                digit_sequence.c_str(),
+                exponent_part.c_str(),
+                suffix.c_str()
+            );
+            const std::string hex_digit_sequence = "[\\da-fA-F](?:'?[\\da-fA-F])*";
+            const std::string hex_frac_const = stringf(
+                "(?:(?:%s)?\\.%s|%s\\.)",
+                hex_digit_sequence.c_str(),
+                hex_digit_sequence.c_str(),
+                hex_digit_sequence.c_str()
+            );
+            const std::string binary_exp = "[Pp][\\+-]?" + digit_sequence;
+            const std::string float_hex = stringf(
+                "0[Xx](?:%s|%s)%s%s?",
+                hex_frac_const.c_str(),
+                hex_digit_sequence.c_str(),
+                binary_exp.c_str(),
+                suffix.c_str()
+            );
             // char and string literals
-            std::string escapes = R"(\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.)";
-            std::string char_literal = R"((?:u8|[UuL])?'(?:)" + escapes + R"(|[^\n'])*')";
-            std::string string_literal = R"((?:u8|[UuL])?"(?:)" + escapes + R"(|[^\n"])*")";
+            const std::string escapes = R"(\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.)";
+            const std::string char_literal = R"((?:u8|[UuL])?'(?:)" + escapes + R"(|[^\n'])*')";
+            const std::string string_literal = R"((?:u8|[UuL])?"(?:)" + escapes + R"(|[^\n"])*")";
                                  // \2 because the first capture is the match without the rest of the file
-            std::string raw_string_literal = R"((?:u8|[UuL])?R"([^ ()\\t\r\v\n]*)\((?:(?!\)\2\").)*\)\2")";
+            const std::string raw_string_literal = R"((?:u8|[UuL])?R"([^ ()\\t\r\v\n]*)\((?:(?!\)\2\").)*\)\2")";
             escapes_re = std::regex(escapes);
             // final rule set
             // rules must be sequenced as a topological sort adhering to:
@@ -611,7 +658,7 @@ namespace libassert::detail {
             // named_literal > identifier
             // string > identifier (for R"(foobar)")
             // punctuation > identifier (for "not" and other alternative operators)
-            std::pair<token_e, std::string> rules_raw[] = {
+            const std::pair<token_e, std::string> rules_raw[] = {
                 { token_e::keyword    , keywords_re },
                 { token_e::number     , union_regexes({
                     float_decimal,
@@ -634,7 +681,7 @@ namespace libassert::detail {
             rules.resize(std::size(rules_raw));
             for(size_t i = 0; i < std::size(rules_raw); i++) {
                                 // [^] instead of . because . does not match newlines
-                std::string str = stringf("^(%s)[^]*", rules_raw[i].second.c_str());
+                const std::string str = stringf("^(%s)[^]*", rules_raw[i].second.c_str());
                 #ifdef _0_DEBUG_ASSERT_LEXER_RULES
                  fprintf(stderr, "%s : %s\n", rules_raw[i].first.c_str(), str.c_str());
                 #endif
@@ -708,6 +755,7 @@ namespace libassert::detail {
                 std::smatch match;
                 bool at_least_one_matched = false;
                 for(const auto& [ type, re ] : rules) {
+                    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
                     if(std::regex_match(std::begin(expression) + i, std::end(expression), match, re)) {
                         #ifdef _0_DEBUG_ASSERT_TOKENIZATION
                          fprintf(stderr, "%s\n", match[1].str().c_str());
@@ -736,6 +784,7 @@ namespace libassert::detail {
             std::vector<highlight_block> output;
             std::smatch match;
             std::size_t i = 0;
+            // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
             while(std::regex_search(str.cbegin() + i, str.cend(), match, escapes_re)) {
                 // add string part
                 LIBASSERT_PRIMITIVE_ASSERT(match.position() > 0);
@@ -752,6 +801,8 @@ namespace libassert::detail {
         }
 
         LIBASSERT_ATTR_COLD
+        // TODO: Refactor
+        // NOLINTNEXTLINE(readability-function-cognitive-complexity)
         std::vector<highlight_block> highlight(const std::string& expression) try {
             const auto tokens = tokenize(expression);
             std::vector<highlight_block> output;
@@ -793,7 +844,6 @@ namespace libassert::detail {
                         }
                         break;
                     case token_e::identifier:
-                        // NOLINTNEXTLINE(bugprone-branch-clone)
                         if(peek().str == "(") {
                             output.push_back({BLUE, token.str});
                         } else if(peek().str == "::") {
@@ -836,7 +886,7 @@ namespace libassert::detail {
         LIBASSERT_ATTR_COLD
         static std::string_view get_real_op(const std::vector<token_t>& tokens, const size_t i) {
             // re-coalesce >> if necessary
-            bool is_shr = tokens[i].str == ">" && i < tokens.size() - 1 && tokens[i + 1].str == ">";
+            const bool is_shr = tokens[i].str == ">" && i < tokens.size() - 1 && tokens[i + 1].str == ">";
             return is_shr ? std::string_view(">>") : std::string_view(tokens[i].str);
         }
 
@@ -846,6 +896,8 @@ namespace libassert::detail {
         // always be small.
         // Returns true if parse tree traversal was a success, false if depth was exceeded
         static constexpr int max_depth = 10;
+        // TODO
+        // NOLINTNEXTLINE(readability-function-cognitive-complexity)
         LIBASSERT_ATTR_COLD bool pseudoparse(
             const std::vector<token_t>& tokens,
             const std::string_view target_op,
@@ -857,10 +909,10 @@ namespace libassert::detail {
             std::set<int>& output
         ) {
             #ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
-            fprintf(stderr, "*");
+            (void)fprintf(stderr, "*");
             #endif
             if(depth > max_depth) {
-                fprintf(stderr, "Max depth exceeded\n");
+                (void)fprintf(stderr, "Max depth exceeded\n");
                 return false;
             }
             // precedence table is binary, unary operators have highest precedence
@@ -905,7 +957,7 @@ namespace libassert::detail {
                                 // also must be preceeded by an identifier
                                 if(token.str == "<" && find_last_non_ws(tokens, i).token_type == token_e::identifier) {
                                     // branch 1: this is a template opening
-                                    bool success = pseudoparse(
+                                    const bool success = pseudoparse(
                                         tokens,
                                         target_op,
                                         i + 1,
@@ -920,7 +972,7 @@ namespace libassert::detail {
                                     // branch 2: this is a binary operator // fallthrough
                                 } else if(token.str == "<" && normalize_brace(find_last_non_ws(tokens, i).str) == "]") {
                                     // this must be a template parameter list, part of a generic lambda
-                                    bool empty = scan_forward("<", ">");
+                                    const bool empty = scan_forward("<", ">");
                                     LIBASSERT_PRIMITIVE_ASSERT(!empty);
                                     state = expecting_operator;
                                     continue;
@@ -943,14 +995,21 @@ namespace libassert::detail {
                                 // binary
                                 if(template_depth == 0) { // ignore precedence in template parameter list
                                     // re-coalesce >> if necessary
-                                    std::string_view op = normalize_op(get_real_op(tokens, i));
-                                    if(precedence.count(op)) // NOLINT(readability-braces-around-statements)
-                                    if(precedence.at(op) < current_lowest_precedence
-                                    || (precedence.at(op) == current_lowest_precedence && precedence.at(op) != -10)) {
+                                    const std::string_view op = normalize_op(get_real_op(tokens, i));
+                                    if(
+                                        precedence.count(op)
+                                        && (
+                                            precedence.at(op) < current_lowest_precedence
+                                            || (
+                                                precedence.at(op) == current_lowest_precedence
+                                                && precedence.at(op) != -10
+                                            )
+                                        )
+                                    ) {
                                         middle_index = (int)i;
                                         current_lowest_precedence = precedence.at(op);
                                     }
-                                    if(op == ">>") {  // NOLINT(readability-misleading-indentation)
+                                    if(op == ">>") {
                                         i++;
                                     }
                                 }
@@ -963,7 +1022,7 @@ namespace libassert::detail {
                             // account other types of braces.
                             const std::string_view open = token.str;
                             const std::string_view close = braces.at(token.str);
-                            bool empty = scan_forward(open, close);
+                            const bool empty = scan_forward(open, close);
                             // Handle () and {} when they aren't a call/initializer
                             // [] may appear in lambdas when state == expecting_term
                             // [](){ ... }() is parsed fine because state == expecting_operator
@@ -1050,7 +1109,7 @@ namespace libassert::detail {
             // We're only looking for the split, we can just store a set of split indices. No need
             // to store a vector<pair<vector<token_t>, vector<token_t>>>
             std::set<int> candidates;
-            bool success = pseudoparse(tokens, target_op, 0, 0, 0, -1, 0, candidates);
+            const bool success = pseudoparse(tokens, target_op, 0, 0, 0, -1, 0, candidates);
             #ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
              fprintf(stderr, "\n%d %d\n", (int)candidates.size(), success);
              for(size_t m : candidates) {
@@ -1067,7 +1126,7 @@ namespace libassert::detail {
             if(success && candidates.size() == 1) {
                 std::vector<std::string> left_strings;
                 std::vector<std::string> right_strings;
-                size_t m = *candidates.begin();
+                const size_t m = *candidates.begin();
                 for(size_t i = 0; i < m; i++) {
                     left_strings.push_back(tokens[i].str);
                 }
@@ -1143,13 +1202,13 @@ namespace libassert::detail {
     static std::string escape_string(const std::string_view str, char quote) {
         std::string escaped;
         escaped += quote;
-        for(unsigned char c : str) {
-            if(c == '\\') escaped += "\\\\"; // NOLINT(readability-braces-around-statements)
-            else if(c == '\t') escaped += "\\t"; // NOLINT(readability-braces-around-statements)
-            else if(c == '\r') escaped += "\\r"; // NOLINT(readability-braces-around-statements)
-            else if(c == '\n') escaped += "\\n"; // NOLINT(readability-braces-around-statements)
-            else if(c == quote) escaped += "\\" + std::to_string(quote); // NOLINT(readability-braces-around-statements)
-            else if(c >= 32 && c <= 126) escaped += c; // NOLINT(readability-braces-around-statements) // printable
+        for(const char c : str) {
+            if(c == '\\') escaped += "\\\\";
+            else if(c == '\t') escaped += "\\t";
+            else if(c == '\r') escaped += "\\r";
+            else if(c == '\n') escaped += "\\n";
+            else if(c == quote) escaped += "\\" + std::to_string(quote);
+            else if(c >= 32 && c <= 126) escaped += c; // printable
             else {
                 constexpr const char * const hexdig = "0123456789abcdef";
                 escaped += std::string("\\x") + hexdig[c >> 4] + hexdig[c & 0xF];
@@ -1378,7 +1437,7 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD
     static path_components parse_path(const std::string_view path) {
-        #ifdef _WIN32
+        #if IS_WINDOWS
          constexpr std::string_view path_delim = "/\\";
         #else
          constexpr std::string_view path_delim = "/";
@@ -1392,12 +1451,12 @@ namespace libassert::detail {
         // /foo/./x                                foo        x
         // /foo//x                                 f          x
         path_components parts;
-        for(std::string& part : split(path, path_delim)) {
+        for(const std::string& part : split(path, path_delim)) {
             if(parts.empty()) {
                 // first gets added no matter what
                 parts.push_back(part);
             } else {
-                if(part.empty()) { // NOLINT(bugprone-branch-clone)
+                if(part.empty()) {
                     // nop
                 } else if(part == ".") {
                     // nop
@@ -1495,6 +1554,8 @@ namespace libassert::detail {
     };
 
     LIBASSERT_ATTR_COLD
+    // TODO
+    // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     static std::string wrapped_print(const std::vector<column_t>& columns) {
         // 2d array rows/columns
         struct line_content {
@@ -1526,7 +1587,7 @@ namespace libassert::detail {
                     // append
                     lines[current_line][i].content += block.color;
                     lines[current_line][i].content += substr;
-                    lines[current_line][i].content += block.color == "" ? "" : RESET;
+                    lines[current_line][i].content += block.color.empty() ? "" : RESET;
                     // advance
                     block_i += extract;
                     lines[current_line][i].length += extract;
@@ -1583,9 +1644,9 @@ namespace libassert::detail {
             }
         }
         #if !LIBASSERT_IS_MSVC
-         int start_offset = 0;
+         const int start_offset = 0;
         #else
-         int start_offset = 1; // accommodate for lambda being used as statement expression
+         const int start_offset = 1; // accommodate for lambda being used as statement expression
         #endif
         return std::pair(start + start_offset, end);
     }
@@ -1612,7 +1673,7 @@ namespace libassert::detail {
         std::unordered_map<std::string, std::string> files;
         size_t longest_file_width = 0;
         for(auto& [raw, parsed_path] : parsed_paths) {
-            std::string new_path = join(tries.at(parsed_path.back()).disambiguate(parsed_path), "/");
+            const std::string new_path = join(tries.at(parsed_path.back()).disambiguate(parsed_path), "/");
             internal_verify(files.insert({raw, new_path}).second);
             if(new_path.size() > longest_file_width) {
                 longest_file_width = new_path.size();
@@ -1622,6 +1683,8 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
+    // TODO
+    // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     std::string print_stacktrace(trace_t* raw_trace, int term_width) {
         std::string stacktrace;
         if(raw_trace) {
@@ -1638,7 +1701,9 @@ namespace libassert::detail {
             // figure out column widths
             const auto max_line_number =
                 std::max_element(
+                    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
                     trace.begin() + start,
+                    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
                     trace.begin() + end + 1,
                     [](const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_frame& b) {
                         return a.line < b.line;
@@ -1646,11 +1711,11 @@ namespace libassert::detail {
                 )->line;
             // +1 for indices starting at 0, +1 again for log
             const size_t max_line_number_width = log10(max_line_number + 1 + 1);
-            size_t max_frame_width = log10(end - start + 1 + 1); // ^
+            const size_t max_frame_width = log10(end - start + 1 + 1); // ^
             // do the actual trace
             for(size_t i = start; i <= end; i++) {
                 const auto& [address, line, col, source_path, signature] = trace[i];
-                std::string line_number = line == 0 ? "?" : std::to_string(line);
+                const std::string line_number = line == 0 ? "?" : std::to_string(line);
                 // look for repeats, i.e. recursion we can fold
                 size_t recursion_folded = 0;
                 if(end - i >= 4) {
@@ -1664,18 +1729,19 @@ namespace libassert::detail {
                         recursion_folded = j - 2;
                     }
                 }
-                size_t frame_number = i - start + 1;
+                const size_t frame_number = i - start + 1;
                 // pretty print with columns for wide terminals
                 // split printing for small terminals
                 if(term_width >= 50) {
                     auto sig = highlight_blocks(signature + "("); // hack for the highlighter
                     sig.pop_back();
-                    size_t left = 2 + max_frame_width;
-                    size_t middle = std::max(line_number.size(), max_line_number_width); // todo: is this looking right...?
-                    size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
+                    const size_t left = 2 + max_frame_width;
+                    // todo: is this looking right...?
+                    const size_t middle = std::max(line_number.size(), max_line_number_width);
+                    const size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
                     LIBASSERT_PRIMITIVE_ASSERT(remaining_width >= 2);
-                    size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
-                    size_t sig_width = remaining_width - file_width;
+                    const size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
+                    const size_t sig_width = remaining_width - file_width;
                     stacktrace += wrapped_print({
                         { 1,          {{"", "#"}} },
                         { left - 2,   highlight_blocks(std::to_string(frame_number)), true },
@@ -1696,7 +1762,7 @@ namespace libassert::detail {
                 }
                 if(recursion_folded) {
                     i += recursion_folded;
-                    std::string s = stringf("| %d layers of recursion were folded |", recursion_folded);
+                    const std::string s = stringf("| %d layers of recursion were folded |", recursion_folded);
                     stacktrace += stringf(BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
                     stacktrace += stringf(BLUE  "%s"   RESET "\n", s.c_str());
                     stacktrace += stringf(BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
@@ -1785,13 +1851,13 @@ namespace libassert::detail {
         for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()); i++) {
             // find which clause, left or right, we're padding (entry i)
             std::vector<std::string>& which = lstrings[i].length() < rstrings[i].length() ? lstrings : rstrings;
-            int difference = std::abs((int)lstrings[i].length() - (int)rstrings[i].length());
+            const int difference = std::abs((int)lstrings[i].length() - (int)rstrings[i].length());
             if(i != which.size() - 1) { // last column excluded as padding is not necessary at the end of the line
                 which[i].insert(which[i].end(), difference, ' ');
             }
         }
         // determine whether we actually gain anything from printing a where clause (e.g. exclude "1 => 1")
-        struct { bool left, right; } has_useful_where_clause = {
+        const struct { bool left, right; } has_useful_where_clause = {
             multiple_formats || lstrings.size() > 1 || (a_str != lstrings[0] && trim_suffix(a_str) != lstrings[0]),
             multiple_formats || rstrings.size() > 1 || (b_str != rstrings[0] && trim_suffix(b_str) != rstrings[0])
         };
@@ -1876,7 +1942,9 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
     LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) noexcept = default;
 
-    #if LIBASSERT_IS_GCC && IS_WINDOWS // mingw has threading/std::mutex problems
+    // mingw has threading/std::mutex problems
+    // TODO: This was for ancient mingw. Re-evaluate if this should still be done.
+    #if LIBASSERT_IS_GCC && IS_WINDOWS
      CRITICAL_SECTION CriticalSection;
      [[gnu::constructor]] LIBASSERT_ATTR_COLD static void initialize_critical_section() {
          InitializeCriticalSectionAndSpinCount(&CriticalSection, 10);
@@ -2007,8 +2075,8 @@ void libassert_default_fail_action(
         case libassert::assert_type::assertion:
             if(fatal == ASSERTION::FATAL) {
                 case libassert::assert_type::assumption: // switch-if-case, cursed!
-                fflush(stderr);
-                abort();
+                (void)fflush(stderr);
+                std::abort();
             }
             // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
             // this library (on top of preventing fallthrough from nonfatal libassert)
