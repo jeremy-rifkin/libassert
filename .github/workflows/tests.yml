@@ -84,7 +84,8 @@ jobs:
     - name: test
       working-directory: build
       run: |
-           CTEST_OUTPUT_ON_FAILURE=1 make test
+           $env:CTEST_OUTPUT_ON_FAILURE=1
+           make test
   test-mingw:
     runs-on: windows-2019
     strategy:
@@ -109,4 +110,5 @@ jobs:
     - name: test
       working-directory: build
       run: |
-           CTEST_OUTPUT_ON_FAILURE=1 make test
+           $env:CTEST_OUTPUT_ON_FAILURE=1
+           make test
