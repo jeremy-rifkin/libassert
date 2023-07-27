@@ -85,7 +85,7 @@ jobs:
       working-directory: build
       run: |
            CTEST_OUTPUT_ON_FAILURE=1 make test
-  test-windows:
+  test-mingw:
     runs-on: windows-2019
     strategy:
       fail-fast: false
