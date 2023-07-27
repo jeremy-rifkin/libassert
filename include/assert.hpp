@@ -1364,15 +1364,10 @@ using libassert::ASSERTION;
 #endif
 
 #ifdef ASSERT_LOWERCASE
- #ifdef assert
-  #undef assert
- #endif
  #ifndef NDEBUG
   #define debug_assert(expr, ...) ASSERT_INVOKE(expr, false, true, "debug_assert", debug_assertion, , __VA_ARGS__)
-  #define assert(expr, ...) ASSERT_INVOKE(expr, true, true, "assert", assertion, , __VA_ARGS__)
  #else
   #define debug_assert(expr, ...) (void)0
-  #define assert(expr, ...) ASSERT_INVOKE(expr, true, false, "assert", assertion, , __VA_ARGS__)
  #endif
 #endif
 
@@ -1406,4 +1401,17 @@ using libassert::ASSERTION;
  #undef LIBASSERT_PRIMITIVE_ASSERT
 #endif
 
+#endif
+
+// Intentionally done outside the include guard. Libc++ leaks `assert` (among other things), so the include for
+// assert.hpp should go after other includes when using -DASSERT_LOWERCASE.
+#ifdef ASSERT_LOWERCASE
+ #ifdef assert
+  #undef assert
+ #endif
+ #ifndef NDEBUG
+  #define assert(expr, ...) ASSERT_INVOKE(expr, true, true, "assert", assertion, , __VA_ARGS__)
+ #else
+  #define assert(expr, ...) ASSERT_INVOKE(expr, true, false, "assert", assertion, , __VA_ARGS__)
+ #endif
 #endif
