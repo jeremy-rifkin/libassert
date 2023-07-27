@@ -194,7 +194,9 @@ Note: Extra diagnostics are only evaluated in the failure path of an assertion.
 #### Stack Traces <!-- omit in toc -->
 
 A lot of work has been put into generating pretty stack traces and formatting them as nicely as
-possible.
+possible. [Cpptrace](https://github.com/jeremy-rifkin/cpptrace) is used to provide portable and
+zero-configuration-required stack traces. Optional configurations can be found on the library's
+page.
 
 One feature worth noting is that instead of always printing full paths, only the minimum number of
 directories needed to differentiate paths are printed.
