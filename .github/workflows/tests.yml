@@ -84,8 +84,7 @@ jobs:
     - name: test
       working-directory: build
       run: |
-           $env:CTEST_OUTPUT_ON_FAILURE=1
-           make test
+           ctest -C ${{matrix.target}} --output-on-failure
   test-mingw:
     runs-on: windows-2019
     strategy:
