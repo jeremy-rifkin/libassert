@@ -1,4 +1,4 @@
-name: clang-tidy
+name: lint
 
 on:
   push:
@@ -12,11 +12,10 @@ jobs:
     - name: dependencies
       run: |
            sudo apt install clang-tidy
-           wget https://raw.githubusercontent.com/jeremy-rifkin/cpptrace/master/include/cpptrace/cpptrace.hpp
-           mkdir include/cpptrace
-           mv -v cpptrace.hpp include/cpptrace
-           mkdir include/assert
-           cp -v include/assert.hpp include/assert
+           mkdir build
+           cd build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug
     - name: clang-tidy
       run: |
-           chmod +x lint.sh && ./lint.sh
+           chmod +x lint.sh
+           ./lint.sh
