@@ -30,7 +30,33 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
             -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h \
             -DASSERT_BUILD_TESTS=On
-           make -j VERBOSE=1
+           make -j
+    - name: test
+      working-directory: build
+      run: |
+           CTEST_OUTPUT_ON_FAILURE=1 make test
+  test-macos:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++-13, clang++]
+        target: [Debug]
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: |
+           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. \
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} \
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+            -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h \
+            -DASSERT_BUILD_TESTS=On
+           make -j
     - name: test
       working-directory: build
       run: |
@@ -58,4 +84,29 @@ jobs:
     - name: test
       working-directory: build
       run: |
-           ctest -C ${{matrix.target}} --output-on-failure
+           CTEST_OUTPUT_ON_FAILURE=1 make test
+  test-windows:
+    runs-on: windows-2019
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++]
+        target: [Debug]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Enable Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. `
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} `
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
+            -DASSERT_BUILD_TESTS=On `
+            "-GUnix Makefiles"
+           make -j
+    - name: test
+      working-directory: build
+      run: |
+           CTEST_OUTPUT_ON_FAILURE=1 make test

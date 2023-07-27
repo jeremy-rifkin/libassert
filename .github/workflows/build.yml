@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: g++-13, clang++]
+        compiler: [g++-13, clang++]
         target: [Debug, Release]
     steps:
     - uses: actions/checkout@v2
@@ -86,4 +86,4 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
             -DASSERT_BUILD_BASIC_TEST=On `
             "-GUnix Makefiles"
-           msbuild .\libassert.sln
+           make -j
