@@ -114,19 +114,19 @@ int garple() {
 
 void rec(int n) {
     if(n == 0) assert(false);
-    else rec(n - 1); // NOLINT(readability-braces-around-statements)
+    else rec(n - 1);
 }
 
 void recursive_a(int), recursive_b(int);
 
 void recursive_a(int n) {
     if(n == 0) assert(false);
-    else recursive_b(n - 1); // NOLINT(readability-braces-around-statements)
+    else recursive_b(n - 1);
 }
 
 void recursive_b(int n) {
     if(n == 0) assert(false);
-    else recursive_a(n - 1); // NOLINT(readability-braces-around-statements)
+    else recursive_a(n - 1);
 }
 
 auto min_items() {
@@ -166,7 +166,7 @@ public:
         baz();
     }
 
-    void baz() { // NOLINT(readability-convert-member-functions-to-static)
+    void baz() {
         puts("");
         // General demos
         {
@@ -188,7 +188,6 @@ public:
             assert(open(path, O_RDONLY) >= 0, "Internal error with foobars", errno, path);
         }
         {
-            // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
             FILE* f = VERIFY(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
             LIBASSERT_PHONY_USE(f);
         }
@@ -214,7 +213,6 @@ public:
              VERIFY(parameter);
              assert(get_param());
             #endif
-            // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
             auto x = [&] () -> decltype(auto) { return VERIFY(parameter); };
             static_assert(std::is_same<decltype(x()), std::optional<float>&>::value);
         }
@@ -222,7 +220,7 @@ public:
         qux();
 
         {
-            M() < 2; // NOLINT(clang-diagnostic-unused-comparison)
+            M() < 2;
             puts("----");
             assert(M() < 2);
             puts("----");
@@ -233,8 +231,8 @@ public:
         }
 
 
-        assert(true ? false : true == false); // NOLINT(readability-simplify-boolean-expr)
-        assert(true ? false : true, "pffft"); // NOLINT(readability-simplify-boolean-expr)
+        assert(true ? false : true == false);
+        assert(true ? false : true, "pffft");
 
         wubble();
 

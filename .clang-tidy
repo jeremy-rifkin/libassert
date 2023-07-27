@@ -41,7 +41,13 @@ Checks: '
     -bugprone-easily-swappable-parameters,
     -readability-identifier-length,
     -misc-use-anonymous-namespace
-    -performance-avoid-endl
+    -performance-avoid-endl,
+    -cppcoreguidelines-avoid-non-const-global-variables,
+    -cppcoreguidelines-avoid-const-or-ref-data-members,
+    -misc-no-recursion,
+    -bugprone-branch-clone,
+    -readability-braces-around-statements,
+    -cppcoreguidelines-prefer-member-initializer
 '
 WarningsAsErrors: '*'
 HeaderFilterRegex: ''

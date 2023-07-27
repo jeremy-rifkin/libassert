@@ -54,8 +54,8 @@ int main() {
     {
         decltype(auto) a = ASSERT(only_move_constructable(2) == 2);
         static_assert(std::is_same<decltype(a), only_move_constructable>::value);
-        assert(!is_lvalue(ASSERT(only_move_constructable(2) == 2))); // NOLINT(bugprone-assert-side-effect) // TODO
-        assert(ASSERT(only_move_constructable(2) == 2).x == 2); // NOLINT(bugprone-assert-side-effect) // TODO
+        assert(!is_lvalue(ASSERT(only_move_constructable(2) == 2)));
+        assert(ASSERT(only_move_constructable(2) == 2).x == 2);
         //assert(assert(only_move_constructable(2) == 2).x++ == 2); // not allowed
     }
 
@@ -64,7 +64,7 @@ int main() {
         only_move_constructable x(2);
         decltype(auto) b = ASSERT(x == 2);
         static_assert(std::is_same<decltype(b), only_move_constructable&>::value);
-        assert(is_lvalue(ASSERT(x == 2))); // NOLINT(bugprone-assert-side-effect) // TODO
+        assert(is_lvalue(ASSERT(x == 2)));
         ASSERT(x == 2).x++;
         VERIFY(x.x == 3);
     }

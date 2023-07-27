@@ -943,9 +943,7 @@ namespace libassert {
 
     class assertion_printer {
         const detail::assert_static_parameters* params;
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
         const detail::extra_diagnostics& processed_args;
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
         detail::binary_diagnostics_descriptor& binary_diagnostics;
         void* raw_trace;
         size_t sizeof_args;

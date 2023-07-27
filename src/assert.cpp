@@ -109,7 +109,6 @@ using namespace std::string_view_literals;
 // Container utility
 template<typename N> class small_static_map {
     // TODO: Re-evaluate
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     const N& needle;
 public:
     small_static_map(const N& n) : needle(n) {}
@@ -182,14 +181,12 @@ namespace libassert::utility {
 }
 
 namespace libassert::config {
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     static std::atomic_bool output_colors = true;
 
     LIBASSERT_ATTR_COLD void set_color_output(bool enable) {
         output_colors = enable;
     }
 
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     static std::atomic_bool output_rgb = true;
 
     LIBASSERT_ATTR_COLD void set_rgb_output(bool enable) {
@@ -522,7 +519,6 @@ namespace libassert::detail {
     public:
         // Analysis singleton, lazy-initialize all the regex nonsense
         // 8 BSS bytes and <512 bytes heap bytes not a problem
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
         static analysis* analysis_singleton;
         static analysis& get() {
             if(analysis_singleton == nullptr) {
@@ -848,7 +844,6 @@ namespace libassert::detail {
                         }
                         break;
                     case token_e::identifier:
-                        // NOLINTNEXTLINE(bugprone-branch-clone)
                         if(peek().str == "(") {
                             output.push_back({BLUE, token.str});
                         } else if(peek().str == "::") {
@@ -902,7 +897,7 @@ namespace libassert::detail {
         // Returns true if parse tree traversal was a success, false if depth was exceeded
         static constexpr int max_depth = 10;
         // TODO
-        // NOLINTNEXTLINE(misc-no-recursion, readability-function-cognitive-complexity)
+        // NOLINTNEXTLINE(readability-function-cognitive-complexity)
         LIBASSERT_ATTR_COLD bool pseudoparse(
             const std::vector<token_t>& tokens,
             const std::string_view target_op,
@@ -1001,13 +996,20 @@ namespace libassert::detail {
                                 if(template_depth == 0) { // ignore precedence in template parameter list
                                     // re-coalesce >> if necessary
                                     const std::string_view op = normalize_op(get_real_op(tokens, i));
-                                    if(precedence.count(op)) // NOLINT(readability-braces-around-statements)
-                                    if(precedence.at(op) < current_lowest_precedence
-                                    || (precedence.at(op) == current_lowest_precedence && precedence.at(op) != -10)) {
+                                    if(
+                                        precedence.count(op)
+                                        && (
+                                            precedence.at(op) < current_lowest_precedence
+                                            || (
+                                                precedence.at(op) == current_lowest_precedence
+                                                && precedence.at(op) != -10
+                                            )
+                                        )
+                                    ) {
                                         middle_index = (int)i;
                                         current_lowest_precedence = precedence.at(op);
                                     }
-                                    if(op == ">>") {  // NOLINT(readability-misleading-indentation)
+                                    if(op == ">>") {
                                         i++;
                                     }
                                 }
@@ -1142,7 +1144,6 @@ namespace libassert::detail {
         }
     };
 
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     analysis* analysis::analysis_singleton;
 
     // public static wrappers
@@ -1202,12 +1203,12 @@ namespace libassert::detail {
         std::string escaped;
         escaped += quote;
         for(const char c : str) {
-            if(c == '\\') escaped += "\\\\"; // NOLINT(readability-braces-around-statements)
-            else if(c == '\t') escaped += "\\t"; // NOLINT(readability-braces-around-statements)
-            else if(c == '\r') escaped += "\\r"; // NOLINT(readability-braces-around-statements)
-            else if(c == '\n') escaped += "\\n"; // NOLINT(readability-braces-around-statements)
-            else if(c == quote) escaped += "\\" + std::to_string(quote); // NOLINT(readability-braces-around-statements)
-            else if(c >= 32 && c <= 126) escaped += c; // NOLINT(readability-braces-around-statements) // printable
+            if(c == '\\') escaped += "\\\\";
+            else if(c == '\t') escaped += "\\t";
+            else if(c == '\r') escaped += "\\r";
+            else if(c == '\n') escaped += "\\n";
+            else if(c == quote) escaped += "\\" + std::to_string(quote);
+            else if(c >= 32 && c <= 126) escaped += c; // printable
             else {
                 constexpr const char * const hexdig = "0123456789abcdef";
                 escaped += std::string("\\x") + hexdig[c >> 4] + hexdig[c & 0xF];
@@ -1230,7 +1231,6 @@ namespace libassert::detail {
             return "nullptr";
         }
 
-        // NOLINTNEXTLINE(misc-no-recursion)
         LIBASSERT_ATTR_COLD std::string stringify(char value, literal_format fmt) {
             if(fmt == literal_format::character) {
                 return escape_string({&value, 1}, '\'');
@@ -1245,7 +1245,6 @@ namespace libassert::detail {
 
         template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>
         LIBASSERT_ATTR_COLD [[nodiscard]]
-        // NOLINTNEXTLINE(misc-no-recursion)
         static std::string stringify_integral(T value, literal_format fmt) {
             std::ostringstream oss;
             switch(fmt) {
@@ -1278,7 +1277,6 @@ namespace libassert::detail {
             return stringify_integral(value, fmt);
         }
 
-        // NOLINTNEXTLINE(misc-no-recursion)
         LIBASSERT_ATTR_COLD std::string stringify(int value, literal_format fmt) {
             return stringify_integral(value, fmt);
         }
@@ -1458,7 +1456,7 @@ namespace libassert::detail {
                 // first gets added no matter what
                 parts.push_back(part);
             } else {
-                if(part.empty()) { // NOLINT(bugprone-branch-clone)
+                if(part.empty()) {
                     // nop
                 } else if(part == ".") {
                     // nop
@@ -1504,12 +1502,12 @@ namespace libassert::detail {
         path_trie(const path_trie&) = delete;
         LIBASSERT_ATTR_COLD
         path_trie(path_trie&& other) noexcept { // needed for std::vector
-            downstream_branches = other.downstream_branches; // NOLINT(cppcoreguidelines-prefer-member-initializer)
-            root = other.root; // NOLINT(cppcoreguidelines-prefer-member-initializer)
+            downstream_branches = other.downstream_branches;
+            root = other.root;
             for(auto& [k, trie] : edges) {
                 delete trie;
             }
-            edges = std::move(other.edges); // NOLINT(cppcoreguidelines-prefer-member-initializer)
+            edges = std::move(other.edges);
         }
         path_trie& operator=(const path_trie&) = delete;
         path_trie& operator=(path_trie&&) = delete;
@@ -1539,7 +1537,6 @@ namespace libassert::detail {
         }
     private:
         LIBASSERT_ATTR_COLD
-        // NOLINTNEXTLINE(misc-no-recursion)
         void insert(const path_components& path, int i) {
             if(i < 0) {
                 return;
@@ -1959,7 +1956,6 @@ namespace libassert::detail {
          EnterCriticalSection(&CriticalSection);
      }
     #else
-     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
      std::mutex global_thread_lock;
      LIBASSERT_ATTR_COLD lock::lock() {
          global_thread_lock.lock();
