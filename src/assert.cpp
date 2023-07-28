@@ -1407,31 +1407,16 @@ namespace libassert::detail {
     };
 
     LIBASSERT_ATTR_COLD
-    static constexpr unsigned log10(unsigned n) {
-        if(n <= 1) {
-            return 1;
-        }
-        unsigned t = 1;
-        for(int i = 0; i < [] {
-                // was going to reuse `i` but https://bugs.llvm.org/show_bug.cgi?id=51986
-                int j = 0, v = std::numeric_limits<int>::max();
-                while(v /= 10) {
-                    j++;
-                }
-                return j;
-            } () - 1; i++) {
-            if(n <= t) {
-                return i;
-            }
-            t *= 10;
-        }
-        return t;
+    static constexpr unsigned n_digits(unsigned value) {
+        return value < 10 ? 1 : 1 + n_digits(value / 10);
     }
 
-    static_assert(log10(1) == 1);
-    static_assert(log10(9) == 1);
-    static_assert(log10(10) == 1);
-    static_assert(log10(11) == 2);
+    static_assert(n_digits(0) == 1);
+    static_assert(n_digits(1) == 1);
+    static_assert(n_digits(9) == 1);
+    static_assert(n_digits(10) == 2);
+    static_assert(n_digits(11) == 2);
+    static_assert(n_digits(1024) == 4);
 
     using path_components = std::vector<std::string>;
 
@@ -1709,9 +1694,8 @@ namespace libassert::detail {
                         return a.line < b.line;
                     }
                 )->line;
-            // +1 for indices starting at 0, +1 again for log
-            const size_t max_line_number_width = log10(max_line_number + 1 + 1);
-            const size_t max_frame_width = log10(end - start + 1 + 1); // ^
+            const size_t max_line_number_width = n_digits(max_line_number);
+            const size_t max_frame_width = n_digits(end - start);
             // do the actual trace
             for(size_t i = start; i <= end; i++) {
                 const auto& [address, line, col, source_path, signature] = trace[i];
