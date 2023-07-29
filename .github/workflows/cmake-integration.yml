@@ -1,0 +1,162 @@
+name: cmake-integration
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-linux-fetchcontent:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: test
+      run: |
+           tag=$(git rev-parse --abbrev-ref HEAD)
+           cd ..
+           cp -rv libassert/tests/fetchcontent-integration .
+           mkdir fetchcontent-integration/build
+           cd fetchcontent-integration/build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG=$tag
+           make
+           ./main
+  test-linux-findpackage:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: build
+      run: |
+           tag=$(git rev-parse --abbrev-ref HEAD)
+           mkdir build
+           cd build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           sudo make -j install
+           sudo /sbin/ldconfig
+           cd ../..
+           cp -rv libassert/tests/findpackage-integration .
+           mkdir findpackage-integration/build
+           cd findpackage-integration/build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           make
+           ./main
+  test-linux-add_subdirectory:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: build
+      run: |
+           cd ..
+           cp -rv libassert/tests/add_subdirectory-integration .
+           cp -rv libassert add_subdirectory-integration
+           mkdir add_subdirectory-integration/build
+           cd add_subdirectory-integration/build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           make
+           ./main
+
+  test-macos-fetchcontent:
+    runs-on: macos-13
+    steps:
+    - uses: actions/checkout@v2
+    - name: test
+      run: |
+           tag=$(git rev-parse --abbrev-ref HEAD)
+           cd ..
+           cp -rv libassert/tests/fetchcontent-integration .
+           mkdir fetchcontent-integration/build
+           cd fetchcontent-integration/build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG=$tag
+           make
+           ./main
+  test-macos-findpackage:
+    runs-on: macos-13
+    steps:
+    - uses: actions/checkout@v2
+    - name: build
+      run: |
+           tag=$(git rev-parse --abbrev-ref HEAD)
+           mkdir build
+           cd build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           sudo make -j install
+           cd ../..
+           cp -rv libassert/tests/findpackage-integration .
+           mkdir findpackage-integration/build
+           cd findpackage-integration/build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           make
+           ./main
+  test-macos-add_subdirectory:
+    runs-on: macos-13
+    steps:
+    - uses: actions/checkout@v2
+    - name: test
+      run: |
+           cd ..
+           cp -rv libassert/tests/add_subdirectory-integration .
+           cp -rv libassert add_subdirectory-integration
+           mkdir add_subdirectory-integration/build
+           cd add_subdirectory-integration/build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           make
+           ./main
+
+  test-mingw-fetchcontent:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: test
+      run: |
+           $tag=$(git rev-parse --abbrev-ref HEAD)
+           cd ..
+           cp -Recurse libassert/tests/fetchcontent-integration .
+           mkdir fetchcontent-integration/build
+           cd fetchcontent-integration/build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG="$tag" -DCMAKE_BUILD_TYPE=g++ "-GUnix Makefiles"
+           make
+           .\main.exe
+  test-mingw-add_subdirectory:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: test
+      run: |
+           cd ..
+           cp -Recurse libassert/tests/add_subdirectory-integration .
+           cp -Recurse libassert add_subdirectory-integration
+           mkdir add_subdirectory-integration/build
+           cd add_subdirectory-integration/build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_BUILD_TYPE=g++ "-GUnix Makefiles"
+           make
+           .\main.exe
+  test-windows-fetchcontent:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: Enable Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: test
+      run: |
+           $tag=$(git rev-parse --abbrev-ref HEAD)
+           cd ..
+           cp -Recurse libassert/tests/fetchcontent-integration .
+           mkdir fetchcontent-integration/build
+           cd fetchcontent-integration/build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG="$tag"
+           msbuild demo_project.sln
+           .\Debug\main.exe
+  test-windows-add_subdirectory:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: Enable Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: test
+      run: |
+           cd ..
+           cp -Recurse libassert/tests/add_subdirectory-integration .
+           cp -Recurse libassert add_subdirectory-integration
+           mkdir add_subdirectory-integration/build
+           cd add_subdirectory-integration/build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           msbuild demo_project.sln
+           .\Debug\main.exe
