@@ -30,6 +30,7 @@ jobs:
            cd build
            cmake .. -DCMAKE_BUILD_TYPE=Debug
            sudo make -j install
+           sudo /sbin/ldconfig
            cd ../..
            cp -rv libassert/tests/findpackage-integration .
            mkdir findpackage-integration/build
