@@ -509,9 +509,9 @@ project(my_project)
 
 include(FetchContent)
 FetchContent_Declare(
-    libassert
+    assert
     GIT_REPOSITORY "https://github.com/jeremy-rifkin/libassert"
-    GIT_TAG "v1.1"
+    GIT_TAG "v1.2"
 )
 FetchContent_MakeAvailable(assert)
 
