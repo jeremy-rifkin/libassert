@@ -517,6 +517,22 @@ FetchContent_MakeAvailable(assert)
 
 add_executable(my_executable main.cpp)
 target_link_libraries(my_executable PRIVATE assert)
+
+# On windows if dynamic linking the .dll will need to be copied to your binary's output folder
+if(WIN32)
+  add_custom_command(
+    TARGET my_executable POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:assert>
+    $<TARGET_FILE_DIR:my_executable>
+  )
+  add_custom_command(
+    TARGET my_executable POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:cpptrace>
+    $<TARGET_FILE_DIR:my_executable>
+  )
+endif()
 ```
 
 You should then be able to use the library in your code like this:

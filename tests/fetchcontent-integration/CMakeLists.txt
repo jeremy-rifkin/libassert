@@ -6,11 +6,6 @@ add_executable(main main.cpp)
 
 set(LIBASSERT_TAG "" CACHE STRING "libassert git tag")
 
-if(WIN32)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
-endif()
-
 include(FetchContent)
 FetchContent_Declare(
   assert
@@ -19,3 +14,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(assert)
 target_link_libraries(main assert)
+
+if(WIN32)
+  add_custom_command(
+    TARGET main POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:assert>
+    $<TARGET_FILE_DIR:main>
+  )
+  add_custom_command(
+    TARGET main POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:cpptrace>
+    $<TARGET_FILE_DIR:main>
+  )
+endif()
