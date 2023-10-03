@@ -18,7 +18,25 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 include(GNUInstallDirs)
 include(FetchContent)
 
-add_library(assert SHARED src/assert.cpp include/assert.hpp)
+option(ASSERT_DECOMPOSE_BINARY_LOGICAL "Enables expression decomposition of && and || (this prevents short circuiting)" OFF)
+option(ASSERT_LOWERCASE "Enables assert alias for ASSERT" OFF)
+option(ASSERT_USE_MAGIC_ENUM "Use the MagicEnum library to print better diagnostics for enum classes" ON)
+option(ASSERT_USE_EXTERNAL_CPPTRACE "Controls whether cpptrace is gathered with FetchContent or fina_package" OFF)
+option(ASSERT_STATIC "Specifies libassert as a static library" OFF)
+set(ASSERT_FAIL "" CACHE STRING "ASSERT_FAIL")
+
+option(ASSERT_BUILD_TESTS "Build tests" OFF)
+option(ASSERT_BUILD_BASIC_TEST "Build basic tests" OFF)
+mark_as_advanced(
+  ASSERT_BUILD_TESTS
+  ASSERT_BUILD_BASIC_TEST
+)
+
+if(ASSERT_STATIC)
+  add_library(assert STATIC src/assert.cpp include/assert.hpp)
+else()
+  add_library(assert SHARED src/assert.cpp include/assert.hpp)
+endif()
 
 target_include_directories(
   assert
@@ -51,26 +69,18 @@ target_compile_options(
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive->
 )
 
-FetchContent_Declare(
-  cpptrace
-  GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-  GIT_TAG        v0.1
-)
-FetchContent_MakeAvailable(cpptrace)
-
-target_link_libraries(
-  assert
-  PRIVATE
-  cpptrace
-)
-
-option(ASSERT_DECOMPOSE_BINARY_LOGICAL "Enables expression decomposition of && and || (this prevents short circuiting)" OFF)
-option(ASSERT_LOWERCASE "Enables assert alias for ASSERT" OFF)
-option(ASSERT_USE_MAGIC_ENUM "Use the MagicEnum library to print better diagnostics for enum classes" ON)
-set(ASSERT_FAIL "" CACHE STRING "ASSERT_FAIL")
-
-option(ASSERT_BUILD_TESTS "Build tests" OFF)
-option(ASSERT_BUILD_BASIC_TEST "Build basic tests" OFF)
+if(ASSERT_USE_EXTERNAL_CPPTRACE)
+  find_package(cpptrace REQUIRED)
+  target_link_libraries(assert PRIVATE cpptrace::cpptrace)
+else()
+  FetchContent_Declare(
+    cpptrace
+    GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
+    GIT_TAG        v0.2.0
+  )
+  FetchContent_MakeAvailable(cpptrace)
+  target_link_libraries(assert PRIVATE cpptrace)
+endif()
 
 if(ASSERT_DECOMPOSE_BINARY_LOGICAL)
   target_compile_definitions(assert PUBLIC ASSERT_DECOMPOSE_BINARY_LOGICAL)
@@ -151,6 +161,14 @@ endif()
 
 # Don't run tests when library is used with add_subdirectory
 if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  if(WIN32)
+    add_custom_command(
+      TARGET assert POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      $<TARGET_FILE:cpptrace>
+      $<TARGET_FILE_DIR:assert>
+    )
+  endif()
   if(ASSERT_BUILD_TESTS)
     include(CTest)
 

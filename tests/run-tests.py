@@ -46,10 +46,10 @@ def run_integration(integration_binary: str, expected: str, opt: bool):
             ("\n".join(map(lambda b: "\n".join(b["lines"]), expected_blocks)), "expected"),
             ("\n".join(map(lambda b: "\n".join(b["lines"]), output_blocks)), "output")
         )
-    elif p.returncode != 0:
+    if p.returncode != 0:
         print("p.retruncode = {}".format(p.returncode), flush=True)
         passed = False
-    elif len(err) != 0:
+    if len(err) != 0:
         print("Warning: Process stderr not empty:\n{}".format(err.decode("utf-8")), flush=True)
     print("[{}]".format("🟢 Passed" if passed else "🔴 Failed"), flush=True)
     return passed
