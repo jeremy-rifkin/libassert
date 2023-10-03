@@ -354,7 +354,9 @@ The following configurations can be applied on a per-TU basis:
 - `-DASSERT_LOWERCASE` Enables `assert` alias for `ASSERT`
 - `-DNO_ASSERT_RELEASE_EVAL` Makes `ASSERT` behave as `DEBUG_ASSERT` and traditional &lt;cassert&gt;
 - `-DASSERT_FAIL=fn` Allows a custom failure handler to be provided
-- `-DASSERT_USE_MAGIC_ENUM` use the MagicEnum library to print better diagnostics for enum classes
+- `-DASSERT_USE_MAGIC_ENUM` Use the MagicEnum library to print better diagnostics for enum classes
+- `-DASSERT_STATIC` Can be used to build and link libassert statically
+- `-DASSERT_USE_EXTERNAL_CPPTRACE` Can be used to use an external cpptrace installation rather than through FetchContent
 
 Custom failure actions: These are called when an assertion fails after diagnostic messages are
 printed. Set these macros to the name of the failure action function, signature is expected to be
