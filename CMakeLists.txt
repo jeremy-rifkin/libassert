@@ -161,6 +161,14 @@ endif()
 
 # Don't run tests when library is used with add_subdirectory
 if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  if(WIN32)
+    add_custom_command(
+      TARGET assert POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      $<TARGET_FILE:cpptrace>
+      ${CMAKE_CURRENT_BINARY_DIR}
+    )
+  endif()
   if(ASSERT_BUILD_TESTS)
     include(CTest)
 
