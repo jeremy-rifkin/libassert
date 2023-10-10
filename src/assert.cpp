@@ -99,7 +99,7 @@ template<typename N> class small_static_map {
     // TODO: Re-evaluate
     const N& needle;
 public:
-    small_static_map(const N& n) : needle(n) {}
+    explicit small_static_map(const N& n) : needle(n) {}
     template<typename K, typename V, typename... Rest>
     constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
         if(needle == option) { return result; }
@@ -411,8 +411,13 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
-    void* get_stacktrace_opaque() {
-        return new cpptrace::raw_trace(cpptrace::generate_raw_trace());
+    opaque_trace::~opaque_trace() {
+        delete static_cast<cpptrace::raw_trace*>(trace);
+    }
+
+    LIBASSERT_ATTR_COLD
+    opaque_trace get_stacktrace_opaque() {
+        return {new cpptrace::raw_trace(cpptrace::generate_raw_trace())};
     }
 
     /*
@@ -488,10 +493,10 @@ namespace libassert::detail {
     public:
         // Analysis singleton, lazy-initialize all the regex nonsense
         // 8 BSS bytes and <512 bytes heap bytes not a problem
-        static analysis* analysis_singleton;
+        static std::unique_ptr<analysis> analysis_singleton;
         static analysis& get() {
             if(analysis_singleton == nullptr) {
-                analysis_singleton = new analysis();
+                analysis_singleton = std::unique_ptr<analysis>(new analysis);
             }
             return *analysis_singleton;
         }
@@ -1113,7 +1118,7 @@ namespace libassert::detail {
         }
     };
 
-    analysis* analysis::analysis_singleton;
+    std::unique_ptr<analysis> analysis::analysis_singleton;
 
     // public static wrappers
     LIBASSERT_ATTR_COLD
@@ -1443,28 +1448,10 @@ namespace libassert::detail {
         // Nodes are marked with the number of downstream branches
         size_t downstream_branches = 1;
         std::string root;
-        std::unordered_map<std::string, path_trie*> edges;
+        std::unordered_map<std::string, std::unique_ptr<path_trie>> edges;
     public:
         LIBASSERT_ATTR_COLD
-        path_trie(std::string _root) : root(std::move(_root)) {};
-        LIBASSERT_ATTR_COLD
-        compl path_trie() {
-            for(auto& [k, trie] : edges) {
-                delete trie;
-            }
-        }
-        path_trie(const path_trie&) = delete;
-        LIBASSERT_ATTR_COLD
-        path_trie(path_trie&& other) noexcept { // needed for std::vector
-            downstream_branches = other.downstream_branches;
-            root = other.root;
-            for(auto& [k, trie] : edges) {
-                delete trie;
-            }
-            edges = std::move(other.edges);
-        }
-        path_trie& operator=(const path_trie&) = delete;
-        path_trie& operator=(path_trie&&) = delete;
+        explicit path_trie(std::string _root) : root(std::move(_root)) {};
         LIBASSERT_ATTR_COLD
         void insert(const path_components& path) {
             LIBASSERT_PRIMITIVE_ASSERT(path.back() == root);
@@ -1483,7 +1470,7 @@ namespace libassert::detail {
                 }
                 const std::string& component = path[i];
                 LIBASSERT_PRIMITIVE_ASSERT(current->edges.count(component));
-                current = current->edges.at(component);
+                current = current->edges.at(component).get();
                 result.push_back(current->root);
             }
             std::reverse(result.begin(), result.end());
@@ -1499,7 +1486,7 @@ namespace libassert::detail {
                 if(!edges.empty()) {
                     downstream_branches++; // this is to deal with making leaves have count 1
                 }
-                edges.insert({path[i], new path_trie(path[i])});
+                edges.insert({path[i], std::make_unique<path_trie>(path[i])});
             }
             downstream_branches -= edges.at(path[i])->downstream_branches;
             edges.at(path[i])->insert(path, i - 1);
@@ -1956,11 +1943,17 @@ namespace libassert {
     }
 
     LIBASSERT_ATTR_COLD assertion_printer::assertion_printer(
-                                const assert_static_parameters* _params, const extra_diagnostics& _processed_args,
-                                binary_diagnostics_descriptor& _binary_diagnostics, void* _raw_trace,
-                                size_t _sizeof_args): params(_params), processed_args(_processed_args),
-                                binary_diagnostics(_binary_diagnostics), raw_trace(_raw_trace),
-                                sizeof_args(_sizeof_args) {}
+        const assert_static_parameters* _params,
+        const extra_diagnostics& _processed_args,
+        binary_diagnostics_descriptor& _binary_diagnostics,
+        void* _raw_trace,
+        size_t _sizeof_args
+    ) :
+        params(_params),
+        processed_args(_processed_args),
+        binary_diagnostics(_binary_diagnostics),
+        raw_trace(_raw_trace),
+        sizeof_args(_sizeof_args) {}
 
     LIBASSERT_ATTR_COLD assertion_printer::~assertion_printer() {
         auto* trace = static_cast<cpptrace::raw_trace*>(raw_trace);

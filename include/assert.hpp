@@ -166,7 +166,12 @@ namespace libassert::detail {
 
     // All in the .cpp
 
-    void* get_stacktrace_opaque();
+    struct opaque_trace {
+        void* trace;
+        ~opaque_trace();
+    };
+
+    opaque_trace get_stacktrace_opaque();
 
     /*
      * metaprogramming utilities
@@ -953,7 +958,8 @@ namespace libassert {
             const detail::assert_static_parameters* params,
             const detail::extra_diagnostics& processed_args,
             detail::binary_diagnostics_descriptor& binary_diagnostics,
-            void* raw_trace, size_t sizeof_args
+            void* raw_trace,
+            size_t sizeof_args
         );
         compl assertion_printer();
         assertion_printer(const assertion_printer&) = delete;
@@ -1041,7 +1047,7 @@ namespace libassert::detail {
         // process_args needs to be called as soon as possible in case errno needs to be read
         const auto processed_args = process_args(args_strings, args...);
         const auto fatal = processed_args.fatality;
-        void* raw_trace = get_stacktrace_opaque();
+        opaque_trace raw_trace = get_stacktrace_opaque();
         // generate header
         binary_diagnostics_descriptor binary_diagnostics;
         // generate binary diagnostics
@@ -1069,11 +1075,13 @@ namespace libassert::detail {
             );
         }
         // send off
+        void* trace = raw_trace.trace;
+        raw_trace.trace = nullptr; // TODO: Feels ugly
         assertion_printer printer {
             params,
             processed_args,
             binary_diagnostics,
-            raw_trace,
+            trace,
             sizeof_extra_diagnostics
         };
         ::ASSERT_FAIL(params->type, fatal, printer);
@@ -1118,7 +1126,10 @@ namespace libassert::detail {
     }
 }
 
-inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {}
+inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
+    // This non-constexpr method is called from an assertion in a constexpr context if a failure occurs. It is
+    // intentionally a no-op.
+}
 
 // NOLINTNEXTLINE(misc-unused-using-decls)
 using libassert::ASSERTION;
