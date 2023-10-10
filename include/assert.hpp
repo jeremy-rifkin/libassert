@@ -169,6 +169,10 @@ namespace libassert::detail {
     struct opaque_trace {
         void* trace;
         ~opaque_trace();
+        opaque_trace(const opaque_trace&) = delete;
+        opaque_trace(opaque_trace&&) = delete;
+        opaque_trace& operator=(const opaque_trace&) = delete;
+        opaque_trace& operator=(opaque_trace&&) = delete;
     };
 
     opaque_trace get_stacktrace_opaque();
