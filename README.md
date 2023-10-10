@@ -4,7 +4,7 @@
 [![tests](https://github.com/jeremy-rifkin/libassert/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/tests.yml)
 [![clang-tidy](https://github.com/jeremy-rifkin/libassert/actions/workflows/clang-tidy.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/clang-tidy.yml)
 <br/>
-[![Community Discord Link](https://img.shields.io/badge/Chat%20on%20(the%20very%20small)-Community%20Discord-blue?labelColor=2C3239&color=7289DA&style=flat&logo=discord&logoColor=959DA5)](https://discord.gg/P8kvSU6xJJ)
+[![Community Discord Link](https://img.shields.io/badge/Chat%20on%20the%20(very%20small)-Community%20Discord-blue?labelColor=2C3239&color=7289DA&style=flat&logo=discord&logoColor=959DA5)](https://discord.gg/frjaAZvqUZ)
 
 <p align="center">The most over-engineered C++ assertion library</p>
 
@@ -194,9 +194,9 @@ Note: Extra diagnostics are only evaluated in the failure path of an assertion.
 #### Stack Traces <!-- omit in toc -->
 
 A lot of work has been put into generating pretty stack traces and formatting them as nicely as
-possible. [Cpptrace](https://github.com/jeremy-rifkin/cpptrace) is used to provide portable and
-zero-configuration-required stack traces. Optional configurations can be found on the library's
-page.
+possible. [Cpptrace](https://github.com/jeremy-rifkin/cpptrace) is used as a portable and
+self-contained solution for stacktraces pre-C++23. Optional configurations can be found on the
+library's page.
 
 One feature worth noting is that instead of always printing full paths, only the minimum number of
 directories needed to differentiate paths are printed.

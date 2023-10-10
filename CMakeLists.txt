@@ -76,7 +76,7 @@ else()
   FetchContent_Declare(
     cpptrace
     GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-    GIT_TAG        v0.2.0
+    GIT_TAG        v0.2.1
   )
   FetchContent_MakeAvailable(cpptrace)
   target_link_libraries(assert PRIVATE cpptrace)
