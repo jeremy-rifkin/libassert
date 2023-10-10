@@ -1380,8 +1380,9 @@ namespace libassert::detail {
         LIBASSERT_ATTR_COLD column_t& operator=(column_t&&) = default;
     };
 
+    template<typename T>
     LIBASSERT_ATTR_COLD
-    static constexpr unsigned n_digits(unsigned value) {
+    static constexpr T n_digits(T value) {
         return value < 10 ? 1 : 1 + n_digits(value / 10);
     }
 
@@ -1626,7 +1627,7 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD [[nodiscard]]
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    std::string print_stacktrace(cpptrace::raw_trace* raw_trace, int term_width) {
+    std::string print_stacktrace(const cpptrace::raw_trace* raw_trace, int term_width) {
         std::string stacktrace;
         if(raw_trace && !raw_trace->empty()) {
             auto trace = raw_trace->resolve();
@@ -1783,7 +1784,8 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
         auto& [ lstrings, rstrings, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;
-        const std::string& a_str = a_sstr, &b_str = b_sstr;
+        const std::string& a_str = a_sstr;
+        const std::string& b_str = b_sstr;
         LIBASSERT_PRIMITIVE_ASSERT(!lstrings.empty());
         LIBASSERT_PRIMITIVE_ASSERT(!rstrings.empty());
         // pad all columns where there is overlap
@@ -1815,7 +1817,7 @@ namespace libassert::detail {
             where += "    Where:\n";
             auto print_clause = [term_width, lw, &where](
                 const std::string& expr_str,
-                std::vector<std::string>& expr_strs
+                const std::vector<std::string>& expr_strs
             ) {
                 if(term_width >= min_term_width) {
                     where += wrapped_print({
