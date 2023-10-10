@@ -387,7 +387,7 @@ namespace libassert::detail {
          = default;
         constexpr expression_decomposer& operator=(expression_decomposer&&) = delete;
         // value constructors
-        template<typename U>
+        template<typename U, typename std::enable_if<!isa<U, expression_decomposer>, int>::type = 0>
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload) // TODO
         explicit constexpr expression_decomposer(U&& _a) : a(std::forward<U>(_a)) {}
         template<typename U, typename V>
