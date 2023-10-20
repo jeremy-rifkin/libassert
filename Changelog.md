@@ -1,6 +1,34 @@
+- [libassert 1.2.1](#libassert-121)
+- [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
 
+## libassert 1.2.1
+- More testing
+- Minor fixes and refactors
+- Added sonarcloud analysis
+- Bumped cpptrace to a much improved version 0.2.1
+
+## libassert 1.2
+- Added `libassert::config::set_rgb_output` to control whether 24-bit ansi color sequences are used for coloring
+- Added support for stringifying std::error_code, std::error_condition, std::expected, and std::unexpected
+- Added -Wundef support
+- Added support for old-style `ASSERT(foo && "Message")`
+- Massively reworked stack traces so they are now much more reliable, portable, and efficient with the help of [cpptrace](https://github.com/jeremy-rifkin/cpptrace)
+- Improved stack tracing on windows: Added support for more complex symbols in stack traces
+- Improved MSVC behavior under `/Zc:preprocessor`
+- Improved output for assertions that aren't currently decomposed into a left-hand / right-hand (e.g. `ASSERT(a + b);`)
+- Improved cmake
+- Improved automated build and test workflows
+- Removed Makefiles
+- Fixed bug with analysis of expressions containing `>>`
+- Fixed bug with highlighting of escape sequences in strings
+- Fixed bug with line number width calculations
+- Fixed issue with a gcc bug via a workaround
+- Fixed issue with gnu libstdc++ dual abi via a workaround
+- Fixed issue with -Wuseless-cast
+- General code cleanup and improvements
+-
 ## libassert 1.1
 
 Changelog:
