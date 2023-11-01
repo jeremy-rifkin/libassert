@@ -137,8 +137,8 @@ option(
 
 # ---- Use External CppTrace ----
 
-# Enables obtain the latest version of cpptrace from the official GitHub repo
-# instead of using find_package.
+# Enables obtain cpptrace from the official GitHub repo instead of using
+# find_package.
 option(
     ASSERT_USE_EXTERNAL_CPPTRACE
     "Obtain cpptrace via FetchContent instead of find_package"
