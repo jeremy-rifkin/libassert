@@ -13,7 +13,6 @@
 # |---------------------------------|---------------|-----------------------------------------------|
 # | ASSERT_BUILD_SHARED             | Always        | ${BUILD_SHARED_LIBS}                          |
 # | ASSERT_BUILD_TESTING            | Always        | ${BUILD_TESTING} AND ${PROJECT_IS_TOP_LEVEL}  |
-# | ASSERT_DECOMPOSE_BINARY_LOGICAL | Always        | OFF                                           |
 # | ASSERT_INCLUDES_WITH_SYSTEM     | Not Top-Level | ON                                            |
 # | ASSERT_INSTALL_CMAKEDIR         | Always        | ${CMAKE_INSTALL_LIBDIR}/cmake/${package_name} |
 # | ASSERT_USE_EXTERNAL_CPPTRACE    | Always        | OFF                                           |
@@ -122,17 +121,6 @@ set(
 )
 # depends on CMAKE_INSTALL_LIBDIR which is marked as advanced in GNUInstallDirs
 mark_as_advanced(ASSERT_INSTALL_CMAKEDIR)
-
-
-# ---- Decompose Binary Logical Operators ----
-
-# Enables expression decomposition of the logical operators && and ||.
-# Comes with the downside of preventing short circuiting.
-option(
-    ASSERT_DECOMPOSE_BINARY_LOGICAL
-    "Enables expression decomposition of && and || (this prevents short circuiting)"
-    OFF
-)
 
 
 # ---- Use External CppTrace ----

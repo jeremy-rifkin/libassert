@@ -128,7 +128,6 @@ target_compile_features(
 # add pre-processor definitions corresponding to CMake options
 target_compile_definitions(
     ${target_name} PUBLIC
-    $<$<BOOL:"${ASSERT_DECOMPOSE_BINARY_LOGICAL}">:ASSERT_DECOMPOSE_BINARY_LOGICAL>
     $<$<BOOL:"${ASSERT_USE_MAGIC_ENUM}">:ASSERT_USE_MAGIC_ENUM>
 )
 
