@@ -86,7 +86,8 @@ mark_as_advanced(ASSERT_BUILD_TESTING)
 # against the target, you get `<prefix>/include/<package-X.Y.Z` added to your
 # include paths rather than `<prefix>/include`.
 # This doesn't affect include paths used by consumers of this project, but helps
-# prevent headers from multiple versions affecting each other.
+# prevent consumers having access to other projects in the same include
+# directory (e.g. usr/include).
 # The variable type is STRING rather than PATH, because otherwise passing
 # -DCMAKE_INSTALL_INCLUDEDIR=include on the command line would expand to an
 # absolute path with the base being the current CMake directory, leading to
