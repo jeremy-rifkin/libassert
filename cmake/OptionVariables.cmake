@@ -125,11 +125,11 @@ mark_as_advanced(ASSERT_INSTALL_CMAKEDIR)
 
 # ---- Use External CppTrace ----
 
-# Enables obtain cpptrace from the official GitHub repo instead of using
-# find_package.
+# Enables obtaining cpptrace via find_package instead of using FetchContent to
+# obtain it from the official GitHub repo
 option(
     ASSERT_USE_EXTERNAL_CPPTRACE
-    "Obtain cpptrace via FetchContent instead of find_package"
+    "Obtain cpptrace via find_package instead of FetchContent"
     OFF
 )
 

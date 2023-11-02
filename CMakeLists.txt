@@ -149,6 +149,12 @@ if(ASSERT_BUILD_TESTING)
         enable_testing()
     endif()
 
-    # todo: add testing
+    # tell unit tests where our files are
+    set(ASSERT_BINARY_DIR "${PROJECT_BINARY_DIR}")
+    set(ASSERT_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
+
+    # include test project
+    # add_subdirectory(tests)
+    include(tests/CMakeLists.txt)
 
 endif()
