@@ -89,7 +89,7 @@ include(GenerateExportHeader)
 generate_export_header(
     ${target_name}
     BASE_NAME assert
-    EXPORT_FILE_NAME include/assert/assert_export.h
+    EXPORT_FILE_NAME include/assert/assert_export.hpp
 )
 
 
