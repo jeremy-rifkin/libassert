@@ -1,17 +1,22 @@
 include(CMakePackageConfigHelpers)
 
 # copy header files to CMAKE_INSTALL_INCLUDEDIR
+# don't include third party header files
 install(
     DIRECTORY
-    "${PROJECT_SOURCE_DIR}/include/"  # our header files
-    "${PROJECT_BINARY_DIR}/include/"  # generated header files
+    "${PROJECT_SOURCE_DIR}/include/"     # our header files
+    "${PROJECT_BINARY_DIR}/include/"     # generated header files
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT ${package_name}-development
+    PATTERN "**/third_party"    EXCLUDE  # skip third party directory
+    PATTERN "**/third_party/**" EXCLUDE  # skip third party files
 )
-# remove magic enum if not using it
-if(NOT ASSERT_USE_MAGIC_ENUM)
+
+# conditionally copy third party header files to CMAKE_INSTALL_INCLUDEDIR
+if(ASSERT_USE_MAGIC_ENUM)
     install(
-        CODE "file(REMOVE_RECURSIVE \"${CMAKE_INSTALL_INCLUDEDIR}/include/assert/third_party\")"
+        FILES "${PROJECT_SOURCE_DIR}/include/assert/third_party/magic_enum.hpp"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/assert/third_party"
         COMPONENT ${package_name}-development
     )
 endif()
