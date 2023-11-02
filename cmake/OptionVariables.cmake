@@ -80,7 +80,7 @@ set(build_testing )
 mark_as_advanced(ASSERT_BUILD_TESTING)
 
 
-# ---- Install Include Directory
+# ---- Install Include Directory ----
 
 # Adds an extra directory to the include path by default, so that when you link
 # against the target, you get `<prefix>/include/<package-X.Y.Z` added to your
