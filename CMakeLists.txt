@@ -126,10 +126,14 @@ target_compile_features(
 )
 
 # add pre-processor definitions corresponding to CMake options
-target_compile_definitions(
-    ${target_name} PUBLIC
-    $<$<BOOL:"${ASSERT_USE_MAGIC_ENUM}">:ASSERT_USE_MAGIC_ENUM>
-)
+# fixme: supposedly generator expressions should work for this
+if(ASSERT_USE_MAGIC_ENUM)
+    target_compile_definitions(
+        ${target_name} PUBLIC
+        # $<$<BOOL:"${ASSERT_USE_MAGIC_ENUM}">:ASSERT_USE_MAGIC_ENUM>
+        ASSERT_USE_MAGIC_ENUM
+    )
+endif()
 
 
 # ---- Install Rules ----
