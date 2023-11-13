@@ -68,6 +68,8 @@ target_sources(
     ${target_name} PRIVATE
     # src
     src/assert.cpp
+    src/analysis.cpp
+    src/utils.cpp
 )
 
 # link dependencies

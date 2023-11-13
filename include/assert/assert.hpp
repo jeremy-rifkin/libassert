@@ -1411,15 +1411,6 @@ using libassert::ASSERTION;
 
 #define VERIFY(expr, ...) ASSERT_INVOKE(expr, true, true, "VERIFY", verification, , __VA_ARGS__)
 
-#ifndef LIBASSERT_IS_CPP // keep macros for the .cpp
- #undef LIBASSERT_IS_CLANG
- #undef LIBASSERT_IS_GCC
- #undef LIBASSERT_IS_MSVC
- #undef LIBASSERT_ATTR_COLD
- #undef LIBASSERT_ATTR_NOINLINE
- #undef LIBASSERT_PRIMITIVE_ASSERT
-#endif
-
 #endif
 
 // Intentionally done outside the include guard. Libc++ leaks `assert` (among other things), so the include for
