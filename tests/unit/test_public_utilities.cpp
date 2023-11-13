@@ -2,7 +2,7 @@
 #include <string>
 #include <utility>
 
-#include "assert.hpp"
+#include <assert/assert.hpp>
 
 using namespace libassert::utility;
 

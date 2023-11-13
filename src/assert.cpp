@@ -3,7 +3,7 @@
 // NOLINTNEXTLINE(bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp)
 #define _CRT_SECURE_NO_WARNINGS // done only for strerror
 #endif
-#include "assert.hpp"
+#include <assert/assert.hpp>
 
 // Copyright (c) 2021-2023 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert

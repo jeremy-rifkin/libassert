@@ -37,7 +37,7 @@
 // dependency, then any library that consumes both will have both sets of include
 // paths. this isn't an issue for #include <assert.hpp> but becomes an issue
 // for includes within the library (libA might include from libB)
- #include "assert/third_party/magic_enum.hpp"
+ #include "third_party/magic_enum.hpp"
 #endif
 
 #define LIBASSERT_IS_CLANG 0

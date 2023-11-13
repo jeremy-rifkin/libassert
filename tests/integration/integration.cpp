@@ -9,7 +9,7 @@
 #include <string_view>
 #include <string>
 
-#include "assert.hpp"
+#include <assert/assert.hpp>
 
 using namespace std::literals;
 
