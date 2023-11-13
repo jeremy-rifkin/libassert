@@ -32,9 +32,12 @@
 #endif
 
 #ifdef ASSERT_USE_MAGIC_ENUM
- // this is a temporary hack to make testing thing in compiler explorer quicker (it disallows simple relative includes)
- #include \
- "../third_party/magic_enum.hpp"
+// relative include so that multiple library versions don't clash
+// e.g. if both libA and libB have different versions of libassert as a public
+// dependency, then any library that consumes both will have both sets of include
+// paths. this isn't an issue for #include <assert.hpp> but becomes an issue
+// for includes within the library (libA might include from libB)
+ #include "assert/third_party/magic_enum.hpp"
 #endif
 
 #define LIBASSERT_IS_CLANG 0
