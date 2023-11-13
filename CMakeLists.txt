@@ -32,7 +32,7 @@ else()
   FetchContent_Declare(
       cpptrace
       GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-      GIT_TAG        v0.2.1
+      GIT_TAG        8297d234f60127bec173af8fec87ba4b93975566
   )
   FetchContent_MakeAvailable(cpptrace)
 endif()
