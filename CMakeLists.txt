@@ -58,7 +58,7 @@ add_library(assert::assert ALIAS ${target_name})
 target_sources(
     ${target_name} PRIVATE
     # include
-    include/assert.hpp
+    include/assert/assert.hpp
     # third_party
     include/assert/third_party/magic_enum.hpp
 )
