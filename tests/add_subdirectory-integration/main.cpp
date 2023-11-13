@@ -1,4 +1,4 @@
-#include <assert.hpp>
+#include <assert/assert.hpp>
 
 int main() {
     VERIFY(true);
