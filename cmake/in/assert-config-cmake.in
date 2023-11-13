@@ -2,6 +2,7 @@
 @PACKAGE_INIT@
 
 # no dependencies or special setup
+find_package(cpptrace REQUIRED)
 
 # we cannot modify an existing IMPORT target
 if(NOT TARGET assert::assert)
