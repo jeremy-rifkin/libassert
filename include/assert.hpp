@@ -33,8 +33,11 @@
 
 #ifdef ASSERT_USE_MAGIC_ENUM
  // this is a temporary hack to make testing thing in compiler explorer quicker (it disallows simple relative includes)
- #include \
- "../third_party/magic_enum.hpp"
+ #if __has_include("magic_enum/magic_enum.hpp")
+    #include "magic_enum/magic_enum.hpp"
+ #else
+    #include "magic_enum.hpp"
+ #endif
 #endif
 
 #define LIBASSERT_IS_CLANG 0

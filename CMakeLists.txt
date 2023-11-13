@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8...3.23)
+cmake_minimum_required(VERSION 3.14...3.23)
 
 if(${CMAKE_VERSION} VERSION_LESS 3.12)
     cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
@@ -21,12 +21,20 @@ include(FetchContent)
 option(ASSERT_DECOMPOSE_BINARY_LOGICAL "Enables expression decomposition of && and || (this prevents short circuiting)" OFF)
 option(ASSERT_LOWERCASE "Enables assert alias for ASSERT" OFF)
 option(ASSERT_USE_MAGIC_ENUM "Use the MagicEnum library to print better diagnostics for enum classes" ON)
-option(ASSERT_USE_EXTERNAL_CPPTRACE "Controls whether cpptrace is gathered with FetchContent or fina_package" OFF)
+option(ASSERT_USE_EXTERNAL_MAGIC_ENUM "Controls whether magic_enum is gathered with FetchContent or find_package" OFF)
+option(ASSERT_USE_EXTERNAL_CPPTRACE "Controls whether cpptrace is gathered with FetchContent or find_package" OFF)
 option(ASSERT_STATIC "Specifies libassert as a static library" OFF)
 set(ASSERT_FAIL "" CACHE STRING "ASSERT_FAIL")
 
 option(ASSERT_BUILD_TESTS "Build tests" OFF)
 option(ASSERT_BUILD_BASIC_TEST "Build basic tests" OFF)
+
+set(ASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
+set(ASSERT_MAGIC_ENUM_TAG "v0.9.4")
+
+set(ASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
+set(ASSERT_CPPTRACE_TAG "v0.2.1")
+
 mark_as_advanced(
   ASSERT_BUILD_TESTS
   ASSERT_BUILD_BASIC_TEST
@@ -75,8 +83,8 @@ if(ASSERT_USE_EXTERNAL_CPPTRACE)
 else()
   FetchContent_Declare(
     cpptrace
-    GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-    GIT_TAG        v0.2.1
+    GIT_REPOSITORY "${ASSERT_CPPTRACE_REPO}"
+    GIT_TAG        "${ASSERT_CPPTRACE_TAG}"
   )
   FetchContent_MakeAvailable(cpptrace)
   set(ASSERT_CPPTRACE_TARGET_NAME cpptrace)
@@ -92,6 +100,15 @@ if(ASSERT_LOWERCASE)
 endif()
 
 if(ASSERT_USE_MAGIC_ENUM)
+  if(ASSERT_USE_EXTERNAL_MAGIC_ENUM)
+    find_package(magic_enum REQUIRED)
+  else()
+    FetchContent_Declare(magic_enum
+      GIT_REPOSITORY "${ASSERT_MAGIC_ENUM_REPO}"
+      GIT_TAG        "${ASSERT_MAGIC_ENUM_TAG}")
+    FetchContent_MakeAvailable(magic_enum)
+  endif()
+  target_link_libraries(assert PRIVATE magic_enum::magic_enum)
   target_compile_definitions(assert PUBLIC ASSERT_USE_MAGIC_ENUM)
 endif()
 
