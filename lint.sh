@@ -13,5 +13,5 @@ do
     if [ $ret -ne 0 ]; then
         status=1
     fi
-done <<< $(find include src -name "*.hpp" -o -name "*.cpp")
+done <<< $(echo include/assert.hpp && find src -name "*.hpp" -o -name "*.cpp")
 exit $status
