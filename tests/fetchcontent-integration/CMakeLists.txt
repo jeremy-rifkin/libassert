@@ -13,7 +13,7 @@ FetchContent_Declare(
   GIT_TAG        ${LIBASSERT_TAG}
 )
 FetchContent_MakeAvailable(assert)
-target_link_libraries(main assert)
+target_link_libraries(main assert::assert)
 
 if(WIN32)
   add_custom_command(

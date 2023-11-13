@@ -5,7 +5,7 @@ project(demo_project VERSION 0.0.1 LANGUAGES CXX)
 add_executable(main main.cpp)
 
 add_subdirectory(libassert)
-target_link_libraries(main assert)
+target_link_libraries(main assert::assert)
 
 if(WIN32)
   add_custom_command(
