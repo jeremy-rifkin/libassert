@@ -1,11 +1,16 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include <string>
-#include <cstdio>
+#include <array>
 #include <cstdarg>
-#include <regex>
+#include <cstdio>
+#include <iterator>
 #include <optional>
+#include <regex>
+#include <string_view>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include <assert/assert.hpp>
 

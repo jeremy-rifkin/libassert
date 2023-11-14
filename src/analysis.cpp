@@ -1,9 +1,13 @@
 #include <algorithm>
+#include <cstdio>
+#include <ctype.h>
 #include <initializer_list>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <regex>
 #include <set>
+#include <stdexcept>
 #include <string_view>
 #include <string>
 #include <unordered_map>

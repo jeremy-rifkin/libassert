@@ -7,35 +7,29 @@
 // Copyright (c) 2021-2023 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <bitset>
-#include <cctype>
-#include <cstdarg>
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <initializer_list>
-#include <iomanip>
-#include <iostream>
-#include <limits>
-#include <mutex>
-#include <optional>
-#include <regex>
-#include <set>
-#include <sstream>
-#include <string_view>
-#include <string>
-#include <system_error>
-#include <tuple>
-#include <type_traits>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-#include <vector>
+#include <algorithm>              // for max, min, max_element, reverse, sort
+#include <atomic>                 // for atomic_bool
+#include <bitset>                 // for operator<<, bitset
+#include <cstddef>                // for size_t
+#include <cstdint>                // for uintptr_t
+#include <cstdio>                 // for fflush, stderr
+#include <cstdlib>                // for abort, abs
+#include <cstring>                // for strerror
+#include <initializer_list>       // for initializer_list
+#include <iomanip>                // for operator<<, setprecision
+#include <iostream>               // for cerr
+#include <limits>                 // for numeric_limits
+#include <memory>                 // for unique_ptr, make_unique
+#include <regex>                  // for regex_replace, regex
+#include <sstream>                // for basic_ostream, basic_ostringstream
+#include <string_view>            // for basic_string_view, string_view, ope...
+#include <string>                 // for basic_string, string, allocator
+#include <system_error>           // for error_code, error_condition, error_...
+#include <tuple>                  // for tuple
+#include <type_traits>            // for enable_if, is_floating_point
+#include <unordered_map>          // for unordered_map, operator!=, _Node_it...
+#include <utility>                // for pair, move
+#include <vector>                 // for vector
 
 #include <cpptrace/cpptrace.hpp>
 

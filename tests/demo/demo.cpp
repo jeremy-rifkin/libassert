@@ -1,15 +1,21 @@
 #define _CRT_SECURE_NO_WARNINGS // for fopen
 
-#include <array>
 #include <algorithm>
-#include <fstream>
+#include <array>
+#include <cctype>
+#include <cerrno>
+#include <cstdio>
 #include <iostream>
 #include <map>
 #include <optional>
 #include <set>
-#include <streambuf>
+#include <sstream>
 #include <string_view>
 #include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <assert/assert.hpp>
 
