@@ -924,15 +924,6 @@ namespace libassert::detail {
      * actual assertion handling, finally
      */
 
-    struct lock {
-        lock();
-        compl lock();
-        lock(const lock&) = delete;
-        lock(lock&&) = delete;
-        lock& operator=(const lock&) = delete;
-        lock& operator=(lock&&) = delete;
-    };
-
     // collection of assertion data that can be put in static storage and all passed by a single pointer
     struct assert_static_parameters {
         const char* name;
@@ -1045,7 +1036,6 @@ namespace libassert::detail {
         // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         Args&&... args
     ) {
-        const lock l;
         const auto* args_strings = params->args_strings;
         const size_t args_strings_count = count_args_strings(args_strings);
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature

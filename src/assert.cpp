@@ -95,9 +95,10 @@ public:
 };
 
 namespace libassert::utility {
+    static const std::regex ansi_escape_re("\033\\[[^m]+m");
+
     LIBASSERT_ATTR_COLD
     std::string strip_colors(const std::string& str) {
-        static const std::regex ansi_escape_re("\033\\[[^m]+m");
         return std::regex_replace(str, ansi_escape_re, "");
     }
 
@@ -924,29 +925,6 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics() = default;
     LIBASSERT_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
     LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) noexcept = default;
-
-    // mingw has threading/std::mutex problems
-    // TODO: This was for ancient mingw. Re-evaluate if this should still be done.
-    #if LIBASSERT_IS_GCC && IS_WINDOWS
-     CRITICAL_SECTION CriticalSection;
-     [[gnu::constructor]] LIBASSERT_ATTR_COLD static void initialize_critical_section() {
-         InitializeCriticalSectionAndSpinCount(&CriticalSection, 10);
-     }
-     LIBASSERT_ATTR_COLD lock::lock() {
-         EnterCriticalSection(&CriticalSection);
-     }
-     LIBASSERT_ATTR_COLD lock::~lock() {
-         EnterCriticalSection(&CriticalSection);
-     }
-    #else
-     std::mutex global_thread_lock;
-     LIBASSERT_ATTR_COLD lock::lock() {
-         global_thread_lock.lock();
-     }
-     LIBASSERT_ATTR_COLD lock::~lock() {
-         global_thread_lock.unlock();
-     }
-    #endif
 
     LIBASSERT_ATTR_COLD
     const char* assert_type_name(assert_type t) {
