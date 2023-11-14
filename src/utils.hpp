@@ -62,7 +62,7 @@ namespace libassert::detail {
     void replace_all_template(std::string& str, const std::pair<std::regex, std::string_view>& rule);
 
     LIBASSERT_ATTR_COLD
-    std::string indent(const std::string_view, size_t depth, char c = ' ', bool ignore_first = false);
+    std::string indent(std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
 
     template<size_t N>
     LIBASSERT_ATTR_COLD
