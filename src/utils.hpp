@@ -10,16 +10,6 @@
 #include <assert/assert.hpp>
 
 namespace libassert::detail {
-    LIBASSERT_ATTR_COLD
-    void primitive_assert_impl(
-        bool condition,
-        bool verify,
-        const char* expression,
-        const char* signature,
-        source_location location,
-        const char* message
-    );
-
     // Still present in release mode, nonfatal
     #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
 
@@ -36,10 +26,6 @@ namespace libassert::detail {
         (void)snprintf(str.data(), length + 1, args...);
         return str;
     }
-
-    // to save template instantiation work in TUs a variadic stringf is used
-    LIBASSERT_ATTR_COLD
-    std::string bstringf(const char* format, ...);
 
     LIBASSERT_ATTR_COLD
     std::vector<std::string> split(std::string_view s, std::string_view delims);

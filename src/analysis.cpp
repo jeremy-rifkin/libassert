@@ -1,8 +1,10 @@
+#include <algorithm>
+#include <initializer_list>
 #include <memory>
 #include <regex>
 #include <set>
-#include <string>
 #include <string_view>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -59,9 +61,6 @@ namespace libassert::detail {
         replace_all_template(type, allocator);
         return type;
     }
-
-    LIBASSERT_ATTR_COLD
-    std::string highlight(const std::string& expression);
 
     class analysis {
         enum class token_e {

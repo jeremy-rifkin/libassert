@@ -1,3 +1,6 @@
+#ifndef COMMON_HPP
+#define COMMON_HPP
+
 #define ESC "\033["
 #define ANSIRGB(r, g, b) ESC "38;2;" #r ";" #g ";" #b "m"
 #define RESET ESC "0m"
@@ -20,3 +23,5 @@
 #define BLUE_ALT   ESC "34m"
 #define CYAN_ALT   ESC "36m"
 #define PURPL_ALT  ESC "35m"
+
+#endif
