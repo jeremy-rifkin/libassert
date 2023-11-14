@@ -8,18 +8,7 @@ install(
     "${PROJECT_BINARY_DIR}/include/"     # generated header files
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT ${package_name}-development
-    PATTERN "**/third_party"    EXCLUDE  # skip third party directory
-    PATTERN "**/third_party/**" EXCLUDE  # skip third party files
 )
-
-# conditionally copy third party header files to CMAKE_INSTALL_INCLUDEDIR
-if(ASSERT_USE_MAGIC_ENUM)
-    install(
-        FILES "${PROJECT_SOURCE_DIR}/include/assert/third_party/magic_enum.hpp"
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/assert/third_party"
-        COMPONENT ${package_name}-development
-    )
-endif()
 
 # copy target build output artifacts to OS dependent locations
 # (Except includes, that just sets a compiler flag with the path)

@@ -3,6 +3,9 @@
 
 # no dependencies or special setup
 find_package(cpptrace REQUIRED)
+if(ASSERT_USE_MAGIC_ENUM)
+  find_package(magic_enum REQUIRED)
+endif()
 
 # we cannot modify an existing IMPORT target
 if(NOT TARGET assert::assert)
