@@ -97,6 +97,11 @@ jobs:
         target: [Debug]
     steps:
     - uses: actions/checkout@v2
+    - name: Start SSH session
+      uses: luchihoratiu/debug-via-ssh@main
+      with:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+        SSH_PASS: ${{ secrets.SSH_PASS }}
     - name: Enable Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1.10.0
     - name: build
@@ -109,11 +114,6 @@ jobs:
             -DASSERT_BUILD_TESTING=On `
             "-GUnix Makefiles"
            make -j
-    - name: Start SSH session
-      uses: luchihoratiu/debug-via-ssh@main
-      with:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-        SSH_PASS: ${{ secrets.SSH_PASS }}
     - name: test
       working-directory: build
       run: |
