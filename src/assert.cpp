@@ -89,10 +89,9 @@ public:
 };
 
 namespace libassert::utility {
-    static const std::regex ansi_escape_re("\033\\[[^m]+m");
-
     LIBASSERT_ATTR_COLD
     std::string strip_colors(const std::string& str) {
+        static const std::regex ansi_escape_re("\033\\[[^m]+m");
         return std::regex_replace(str, ansi_escape_re, "");
     }
 

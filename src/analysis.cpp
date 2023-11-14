@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <cstdio>
-#include <ctype.h>
+#include <cctype>
 #include <initializer_list>
 #include <iterator>
 #include <memory>
@@ -38,18 +38,6 @@ namespace libassert::detail {
         return composite;
     }
 
-    static const std::regex comma_re(R"(\s*,\s*)");
-    static const std::regex class_re(R"(\b(class|struct)\s+)");
-    static const std::pair<std::regex, std::string_view> basic_string = {
-        std::regex(R"(std(::[a-zA-Z0-9_]+)?::basic_string<char)"), "std::string"
-    };
-    static const std::pair<std::regex, std::string_view> basic_string_view = {
-        std::regex(R"(std(::[a-zA-Z0-9_]+)?::basic_string_view<char)"), "std::string_view"
-    };
-    static const std::pair<std::regex, std::string_view> allocator = {
-        std::regex(R"(,\s*std(::[a-zA-Z0-9_]+)?::allocator<)"), ""
-    };
-
     LIBASSERT_ATTR_COLD
     std::string prettify_type(std::string type) {
         // > > -> >> replacement
@@ -57,13 +45,24 @@ namespace libassert::detail {
         // using in the stringifier too
         replace_all_dynamic(type, "> >", ">>");
         // "," -> ", " and " ," -> ", "
+        static const std::regex comma_re(R"(\s*,\s*)");
         replace_all(type, comma_re, ", ");
         // class C -> C for msvc
+        static const std::regex class_re(R"(\b(class|struct)\s+)");
         replace_all(type, class_re, "");
         // rules to replace std::basic_string -> std::string and std::basic_string_view -> std::string_view
         // rule to replace ", std::allocator<whatever>"
+        static const std::pair<std::regex, std::string_view> basic_string = {
+            std::regex(R"(std(::[a-zA-Z0-9_]+)?::basic_string<char)"), "std::string"
+        };
         replace_all_template(type, basic_string);
+        static const std::pair<std::regex, std::string_view> basic_string_view = {
+            std::regex(R"(std(::[a-zA-Z0-9_]+)?::basic_string_view<char)"), "std::string_view"
+        };
         replace_all_template(type, basic_string_view);
+        static const std::pair<std::regex, std::string_view> allocator = {
+            std::regex(R"(,\s*std(::[a-zA-Z0-9_]+)?::allocator<)"), ""
+        };
         replace_all_template(type, allocator);
         return type;
     }
@@ -90,7 +89,7 @@ namespace libassert::detail {
         static std::unique_ptr<analysis> analysis_singleton;
         static std::mutex singleton_mutex;
         static analysis& get() {
-            std::unique_lock lock(singleton_mutex);
+            const std::unique_lock lock(singleton_mutex);
             if(analysis_singleton == nullptr) {
                 analysis_singleton = std::unique_ptr<analysis>(new analysis);
             }
