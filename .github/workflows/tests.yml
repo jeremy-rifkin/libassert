@@ -65,7 +65,7 @@ jobs:
       run: |
            CTEST_OUTPUT_ON_FAILURE=1 make test
   test-windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
@@ -89,7 +89,7 @@ jobs:
       run: |
            ctest -C ${{matrix.target}} --output-on-failure
   test-mingw:
-    runs-on: windows-2019
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
