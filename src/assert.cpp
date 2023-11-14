@@ -7,29 +7,29 @@
 // Copyright (c) 2021-2023 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
-#include <algorithm>              // for max, min, max_element, reverse, sort
-#include <atomic>                 // for atomic_bool
-#include <bitset>                 // for operator<<, bitset
-#include <cstddef>                // for size_t
-#include <cstdint>                // for uintptr_t
-#include <cstdio>                 // for fflush, stderr
-#include <cstdlib>                // for abort, abs
-#include <cstring>                // for strerror
-#include <initializer_list>       // for initializer_list
-#include <iomanip>                // for operator<<, setprecision
-#include <iostream>               // for cerr
-#include <limits>                 // for numeric_limits
-#include <memory>                 // for unique_ptr, make_unique
-#include <regex>                  // for regex_replace, regex
-#include <sstream>                // for basic_ostream, basic_ostringstream
-#include <string_view>            // for basic_string_view, string_view, ope...
-#include <string>                 // for basic_string, string, allocator
-#include <system_error>           // for error_code, error_condition, error_...
-#include <tuple>                  // for tuple
-#include <type_traits>            // for enable_if, is_floating_point
-#include <unordered_map>          // for unordered_map, operator!=, _Node_it...
-#include <utility>                // for pair, move
-#include <vector>                 // for vector
+#include <algorithm>
+#include <atomic>
+#include <bitset>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <initializer_list>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <memory>
+#include <regex>
+#include <sstream>
+#include <string_view>
+#include <string>
+#include <system_error>
+#include <tuple>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <cpptrace/cpptrace.hpp>
 
@@ -745,18 +745,18 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
-            std::vector<std::string>& _lstrings,
-            std::vector<std::string>& _rstrings,
-            std::string _a_str,
-            std::string _b_str,
-            bool _multiple_formats
-        ):
-            lstrings(_lstrings),
-            rstrings(_rstrings),
-            a_str(std::move(_a_str)),
-            b_str(std::move(_b_str)),
-            multiple_formats(_multiple_formats),
-            present(true) {}
+        std::vector<std::string>& _lstrings,
+        std::vector<std::string>& _rstrings,
+        std::string _a_str,
+        std::string _b_str,
+        bool _multiple_formats
+    ):
+        lstrings(_lstrings),
+        rstrings(_rstrings),
+        a_str(std::move(_a_str)),
+        b_str(std::move(_b_str)),
+        multiple_formats(_multiple_formats),
+        present(true) {}
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
     LIBASSERT_ATTR_COLD
     binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
@@ -1020,6 +1020,7 @@ void libassert_default_fail_action(
     ASSERTION fatal,
     const libassert::assertion_printer& printer
 ) {
+    // TODO: Just throw instead of all of this?
     libassert::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
     std::string message = printer(libassert::utility::terminal_width(STDERR_FILENO));
     if(libassert::detail::isatty(STDERR_FILENO) && libassert::config::output_colors) {
