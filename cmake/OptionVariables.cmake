@@ -146,3 +146,4 @@ option(
     "Use magic_enum library to print better diagnostics for enum classes (will also be included in ${package_name} package installation)"
     ON
 )
+option(ASSERT_USE_EXTERNAL_MAGIC_ENUM "Obtain magic_enum via find_package instead of FetchContent" OFF)

@@ -24,6 +24,12 @@ include(cmake/OptionVariables.cmake)
 
 # ---- Project Dependencies ----
 
+set(ASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
+set(ASSERT_MAGIC_ENUM_TAG "v0.9.4")
+
+set(ASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
+set(ASSERT_CPPTRACE_TAG "8297d234f60127bec173af8fec87ba4b93975566")
+
 # obtain cpptrace
 if(ASSERT_USE_EXTERNAL_CPPTRACE)
   find_package(cpptrace REQUIRED)
@@ -31,8 +37,8 @@ else()
   include(FetchContent)
   FetchContent_Declare(
       cpptrace
-      GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-      GIT_TAG        8297d234f60127bec173af8fec87ba4b93975566
+      GIT_REPOSITORY "${ASSERT_CPPTRACE_REPO}"
+      GIT_TAG        "${ASSERT_CPPTRACE_TAG}"
   )
   FetchContent_MakeAvailable(cpptrace)
 endif()
@@ -59,8 +65,6 @@ target_sources(
     ${target_name} PRIVATE
     # include
     include/assert/assert.hpp
-    # third_party
-    include/assert/third_party/magic_enum.hpp
 )
 
 # add /src files to target
@@ -137,11 +141,20 @@ target_compile_features(
 # add pre-processor definitions corresponding to CMake options
 # fixme: supposedly generator expressions should work for this
 if(ASSERT_USE_MAGIC_ENUM)
-    target_compile_definitions(
-        ${target_name} PUBLIC
-        # $<$<BOOL:"${ASSERT_USE_MAGIC_ENUM}">:ASSERT_USE_MAGIC_ENUM>
-        ASSERT_USE_MAGIC_ENUM
-    )
+  if(ASSERT_USE_EXTERNAL_MAGIC_ENUM)
+    find_package(magic_enum REQUIRED)
+  else()
+    FetchContent_Declare(magic_enum
+      GIT_REPOSITORY "${ASSERT_MAGIC_ENUM_REPO}"
+      GIT_TAG        "${ASSERT_MAGIC_ENUM_TAG}")
+    FetchContent_MakeAvailable(magic_enum)
+  endif()
+  target_link_libraries(${target_name} PRIVATE magic_enum::magic_enum)
+  target_compile_definitions(
+    ${target_name} PUBLIC
+    # $<$<BOOL:"${ASSERT_USE_MAGIC_ENUM}">:ASSERT_USE_MAGIC_ENUM>
+    ASSERT_USE_MAGIC_ENUM
+  )
 endif()
 
 

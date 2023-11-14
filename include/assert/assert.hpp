@@ -31,12 +31,16 @@
 #endif
 
 #ifdef ASSERT_USE_MAGIC_ENUM
-// relative include so that multiple library versions don't clash
-// e.g. if both libA and libB have different versions of libassert as a public
-// dependency, then any library that consumes both will have both sets of include
-// paths. this isn't an issue for #include <assert.hpp> but becomes an issue
-// for includes within the library (libA might include from libB)
- #include "third_party/magic_enum.hpp"
+ // relative include so that multiple library versions don't clash
+ // e.g. if both libA and libB have different versions of libassert as a public
+ // dependency, then any library that consumes both will have both sets of include
+ // paths. this isn't an issue for #include <assert.hpp> but becomes an issue
+ // for includes within the library (libA might include from libB)
+ #if __has_include("magic_enum/magic_enum.hpp")
+    #include "magic_enum/magic_enum.hpp"
+ #else
+    #include "magic_enum.hpp"
+ #endif
 #endif
 
 #define LIBASSERT_IS_CLANG 0
