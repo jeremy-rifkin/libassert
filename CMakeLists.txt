@@ -151,7 +151,7 @@ if(ASSERT_USE_MAGIC_ENUM)
       GIT_TAG        "${ASSERT_MAGIC_ENUM_TAG}")
     FetchContent_MakeAvailable(magic_enum)
   endif()
-  target_link_libraries(assert PRIVATE magic_enum::magic_enum)
+  target_link_libraries(${target_name} PRIVATE magic_enum::magic_enum)
   target_compile_definitions(
     ${target_name} PUBLIC
     # $<$<BOOL:"${ASSERT_USE_MAGIC_ENUM}">:ASSERT_USE_MAGIC_ENUM>
