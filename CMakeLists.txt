@@ -65,8 +65,6 @@ target_sources(
     ${target_name} PRIVATE
     # include
     include/assert/assert.hpp
-    # third_party
-    include/assert/third_party/magic_enum.hpp
 )
 
 # add /src files to target
