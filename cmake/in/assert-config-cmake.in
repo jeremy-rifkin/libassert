@@ -1,13 +1,14 @@
 # init @ variables before doing anything else
 @PACKAGE_INIT@
 
-# no dependencies or special setup
-find_package(cpptrace REQUIRED)
+# Dependencies
+include(CMakeFindDependencyMacro)
+find_dependency(cpptrace REQUIRED)
 if(ASSERT_USE_MAGIC_ENUM)
-  find_package(magic_enum REQUIRED)
+  find_dependency(magic_enum REQUIRED)
 endif()
 
-# we cannot modify an existing IMPORT target
+# We cannot modify an existing IMPORT target
 if(NOT TARGET assert::assert)
 
     # import targets
