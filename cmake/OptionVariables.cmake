@@ -16,7 +16,7 @@
 # | ASSERT_INCLUDES_WITH_SYSTEM     | Not Top-Level | ON                                            |
 # | ASSERT_INSTALL_CMAKEDIR         | Always        | ${CMAKE_INSTALL_LIBDIR}/cmake/${package_name} |
 # | ASSERT_USE_EXTERNAL_CPPTRACE    | Always        | OFF                                           |
-# | ASSERT_USE_MAGIC_ENUM           | Always        | ON                                            |
+# | ASSERT_USE_MAGIC_ENUM           | Always        | OFF                                           |
 # ---------------------------------------------------------------------------------------------------
 
 
@@ -144,6 +144,6 @@ option(
 option(
     ASSERT_USE_MAGIC_ENUM
     "Use magic_enum library to print better diagnostics for enum classes (will also be included in ${package_name} package installation)"
-    ON
+    OFF
 )
 option(ASSERT_USE_EXTERNAL_MAGIC_ENUM "Obtain magic_enum via find_package instead of FetchContent" OFF)

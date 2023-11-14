@@ -141,10 +141,10 @@ target_compile_features(
 # add pre-processor definitions corresponding to CMake options
 # fixme: supposedly generator expressions should work for this
 if(ASSERT_USE_MAGIC_ENUM)
+  set(MAGIC_ENUM_OPT_INSTALL ON)
   if(ASSERT_USE_EXTERNAL_MAGIC_ENUM)
     find_package(magic_enum REQUIRED)
   else()
-    set(MAGIC_ENUM_OPT_INSTALL ON)
     FetchContent_Declare(magic_enum
       GIT_REPOSITORY "${ASSERT_MAGIC_ENUM_REPO}"
       GIT_TAG        "${ASSERT_MAGIC_ENUM_TAG}")
