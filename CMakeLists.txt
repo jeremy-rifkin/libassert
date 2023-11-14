@@ -138,6 +138,10 @@ target_compile_features(
     PUBLIC cxx_std_17
 )
 
+if(ASSERT_BUILD_TESTING) # TODO: Maybe remove
+  set(ASSERT_USE_MAGIC_ENUM ON)
+endif()
+
 # add pre-processor definitions corresponding to CMake options
 # fixme: supposedly generator expressions should work for this
 if(ASSERT_USE_MAGIC_ENUM)
