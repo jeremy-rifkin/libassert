@@ -25,7 +25,7 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-            -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h \
+            -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h
            make -j
   build-macos:
     runs-on: macos-13
@@ -42,7 +42,7 @@ jobs:
            cd build
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
-            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}}
            make -j
   build-windows:
     runs-on: windows-2019
