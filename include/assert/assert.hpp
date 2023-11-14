@@ -6,9 +6,8 @@
 
 #include <cerrno>
 #include <cstddef>
-#include <cstdio>
-#include <cstring>
 #include <exception>
+#include <iterator>
 #include <sstream>
 #include <string_view>
 #include <string>
@@ -32,7 +31,11 @@
 #endif
 
 #ifdef ASSERT_USE_MAGIC_ENUM
- // this is a temporary hack to make testing thing in compiler explorer quicker (it disallows simple relative includes)
+ // relative include so that multiple library versions don't clash
+ // e.g. if both libA and libB have different versions of libassert as a public
+ // dependency, then any library that consumes both will have both sets of include
+ // paths. this isn't an issue for #include <assert.hpp> but becomes an issue
+ // for includes within the library (libA might include from libB)
  #if __has_include("magic_enum/magic_enum.hpp")
     #include "magic_enum/magic_enum.hpp"
  #else
@@ -924,15 +927,6 @@ namespace libassert::detail {
      * actual assertion handling, finally
      */
 
-    struct lock {
-        lock();
-        compl lock();
-        lock(const lock&) = delete;
-        lock(lock&&) = delete;
-        lock& operator=(const lock&) = delete;
-        lock& operator=(lock&&) = delete;
-    };
-
     // collection of assertion data that can be put in static storage and all passed by a single pointer
     struct assert_static_parameters {
         const char* name;
@@ -1045,7 +1039,6 @@ namespace libassert::detail {
         // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         Args&&... args
     ) {
-        const lock l;
         const auto* args_strings = params->args_strings;
         const size_t args_strings_count = count_args_strings(args_strings);
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
@@ -1410,15 +1403,6 @@ using libassert::ASSERTION;
 #define ASSUME(expr, ...) ASSERT_INVOKE(expr, true, true, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
 
 #define VERIFY(expr, ...) ASSERT_INVOKE(expr, true, true, "VERIFY", verification, , __VA_ARGS__)
-
-#ifndef LIBASSERT_IS_CPP // keep macros for the .cpp
- #undef LIBASSERT_IS_CLANG
- #undef LIBASSERT_IS_GCC
- #undef LIBASSERT_IS_MSVC
- #undef LIBASSERT_ATTR_COLD
- #undef LIBASSERT_ATTR_NOINLINE
- #undef LIBASSERT_PRIMITIVE_ASSERT
-#endif
 
 #endif
 

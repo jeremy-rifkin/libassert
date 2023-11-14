@@ -1,0 +1,13 @@
+# init @ variables before doing anything else
+@PACKAGE_INIT@
+
+# no dependencies or special setup
+find_package(cpptrace REQUIRED)
+
+# we cannot modify an existing IMPORT target
+if(NOT TARGET assert::assert)
+
+    # import targets
+    include("${CMAKE_CURRENT_LIST_DIR}/@package_name@-targets.cmake")
+
+endif()

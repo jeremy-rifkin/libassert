@@ -1,17 +1,23 @@
 #define _CRT_SECURE_NO_WARNINGS // for fopen
 
-#include <array>
 #include <algorithm>
-#include <fstream>
+#include <array>
+#include <cctype>
+#include <cerrno>
+#include <cstdio>
 #include <iostream>
 #include <map>
 #include <optional>
 #include <set>
-#include <streambuf>
+#include <sstream>
 #include <string_view>
 #include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
-#include "assert.hpp"
+#include <assert/assert.hpp>
 
 #define ESC "\033["
 #define RED ESC "1;31m"
