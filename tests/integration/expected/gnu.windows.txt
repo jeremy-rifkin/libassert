@@ -1253,7 +1253,7 @@ Stack trace:
 
 
 ===================== [Complex type resolution] =====================
-Assertion failed at integration/integration.cpp:3602: void test_class<T>::test_complex_typing(const volatile std::vector<std::string>* const&, int*, const char (&)[4], void (complex_typing::S::*)(int, std::__cxx11::string, void***, void* (*)(int), void (* (*)(int))(), void (* (* (*)(int))[5])()), int complex_typing::S::*) [with T = int; std::__cxx11::string = std::string]:
+Assertion failed at integration/integration.cpp:3602: void test_class<T>::test_complex_typing(const volatile std::vector<std::string>* const&, int*, const char (&)[4], void (complex_typing::S::*)(int, std::string, void***, void* (*)(int), void (* (*)(int))(), void (* (* (*)(int))[5])()), int complex_typing::S::*) [with T = int; std::string = std::string]:
     assert(false);
 
 Stack trace:

@@ -66,7 +66,7 @@ namespace libassert::detail {
         replace_all_template(type, allocator);
         // replace std::__cxx11 -> std:: for gcc dual abi
         // https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
-        replace_all_dynamic(type, "std::__cxx11", "std::");
+        replace_all_dynamic(type, "std::__cxx11::", "std::");
         return type;
     }
 
