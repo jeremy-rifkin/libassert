@@ -25,17 +25,17 @@
 # Sometimes it's useful to be able to single out a dependency to be built as
 # static or shared, even if obtained from source
 if(PROJECT_IS_TOP_LEVEL)
-    option(BUILD_SHARED_LIBS "Build shared libs" OFF)
+  option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 endif()
 option(
-    ASSERT_BUILD_SHARED
-    "Override BUILD_SHARED_LIBS for ${package_name} library"
-    ${BUILD_SHARED_LIBS}
+  ASSERT_BUILD_SHARED
+  "Override BUILD_SHARED_LIBS for ${package_name} library"
+  ${BUILD_SHARED_LIBS}
 )
 mark_as_advanced(ASSERT_BUILD_SHARED)
 set(build_type STATIC)
 if(ASSERT_BUILD_SHARED)
-    set(build_type SHARED)
+  set(build_type SHARED)
 endif()
 
 
@@ -47,15 +47,15 @@ endif()
 # add_subdirectory or FetchContent is used to consume this project.
 set(warning_guard )
 if(NOT PROJECT_IS_TOP_LEVEL)
-    option(
-        ASSERT_INCLUDES_WITH_SYSTEM
-        "Use SYSTEM modifier for ${package_name}'s includes, disabling warnings"
-        ON
-    )
-    mark_as_advanced(ASSERT_INCLUDES_WITH_SYSTEM)
-    if(ASSERT_INCLUDES_WITH_SYSTEM)
-        set(warning_guard SYSTEM)
-    endif()
+  option(
+    ASSERT_INCLUDES_WITH_SYSTEM
+    "Use SYSTEM modifier for ${package_name}'s includes, disabling warnings"
+    ON
+  )
+  mark_as_advanced(ASSERT_INCLUDES_WITH_SYSTEM)
+  if(ASSERT_INCLUDES_WITH_SYSTEM)
+    set(warning_guard SYSTEM)
+  endif()
 endif()
 
 
@@ -66,15 +66,15 @@ endif()
 # This is in order to cut down on unnecessary compile times, since it's unlikely
 # for users to want to run the tests of their dependencies.
 if(PROJECT_IS_TOP_LEVEL)
-    option(BUILD_TESTING "Build tests" OFF)
+  option(BUILD_TESTING "Build tests" OFF)
 endif()
 if(PROJECT_IS_TOP_LEVEL AND BUILD_TESTING)
-    set(build_testing ON)
+  set(build_testing ON)
 endif()
 option(
-    ASSERT_BUILD_TESTING
-    "Override BUILD_TESTING for ${package_name} library"
-    ${build_testing}
+  ASSERT_BUILD_TESTING
+  "Override BUILD_TESTING for ${package_name} library"
+  ${build_testing}
 )
 set(build_testing )
 mark_as_advanced(ASSERT_BUILD_TESTING)
@@ -93,12 +93,12 @@ mark_as_advanced(ASSERT_BUILD_TESTING)
 # absolute path with the base being the current CMake directory, leading to
 # unexpected errors.
 if(PROJECT_IS_TOP_LEVEL)
-    set(
-        CMAKE_INSTALL_INCLUDEDIR "include/${package_name}-${PROJECT_VERSION}"
-        CACHE STRING ""
-    )
-    # marked as advanced in GNUInstallDirs version, so we follow their lead
-    mark_as_advanced(CMAKE_INSTALL_INCLUDEDIR)
+  set(
+    CMAKE_INSTALL_INCLUDEDIR "include/${package_name}-${PROJECT_VERSION}"
+    CACHE STRING ""
+  )
+  # marked as advanced in GNUInstallDirs version, so we follow their lead
+  mark_as_advanced(CMAKE_INSTALL_INCLUDEDIR)
 endif()
 
 
@@ -117,8 +117,8 @@ include(GNUInstallDirs)
 # absolute path with the base being the current CMake directory, leading to
 # unexpected errors.
 set(
-    ASSERT_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/${package_name}"
-    CACHE STRING "CMake package config location relative to the install prefix"
+  ASSERT_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/${package_name}"
+  CACHE STRING "CMake package config location relative to the install prefix"
 )
 # depends on CMAKE_INSTALL_LIBDIR which is marked as advanced in GNUInstallDirs
 mark_as_advanced(ASSERT_INSTALL_CMAKEDIR)
@@ -129,9 +129,9 @@ mark_as_advanced(ASSERT_INSTALL_CMAKEDIR)
 # Enables obtaining cpptrace via find_package instead of using FetchContent to
 # obtain it from the official GitHub repo
 option(
-    ASSERT_USE_EXTERNAL_CPPTRACE
-    "Obtain cpptrace via find_package instead of FetchContent"
-    OFF
+  ASSERT_USE_EXTERNAL_CPPTRACE
+  "Obtain cpptrace via find_package instead of FetchContent"
+  OFF
 )
 
 
@@ -142,8 +142,8 @@ option(
 # Because magic_enum is used in the our public header file, magic_enum is
 # packaged alongside the library when installed if this option is enabled.
 option(
-    ASSERT_USE_MAGIC_ENUM
-    "Use magic_enum library to print better diagnostics for enum classes (will also be included in ${package_name} package installation)"
-    OFF
+  ASSERT_USE_MAGIC_ENUM
+  "Use magic_enum library to print better diagnostics for enum classes (will also be included in ${package_name} package installation)"
+  OFF
 )
 option(ASSERT_USE_EXTERNAL_MAGIC_ENUM "Obtain magic_enum via find_package instead of FetchContent" OFF)
