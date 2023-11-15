@@ -75,6 +75,9 @@ jobs:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: dependencies
+      run: |
+           pip install icdiff
     - name: build
       run: |
            mkdir -p build
@@ -99,6 +102,9 @@ jobs:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: dependencies
+      run: |
+           pip install icdiff
     - name: build
       run: |
            mkdir -p build
