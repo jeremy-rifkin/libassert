@@ -43,6 +43,8 @@
  #endif
 #endif
 
+#include <assert/assert_export.hpp>
+
 #define LIBASSERT_IS_CLANG 0
 #define LIBASSERT_IS_GCC 0
 #define LIBASSERT_IS_MSVC 0
@@ -111,6 +113,9 @@ namespace libassert {
  #define ASSERT_FAIL libassert_default_fail_action
 #endif
 
+#ifndef ASSERT_FAIL
+ ASSERT_EXPORT
+#endif
 void ASSERT_FAIL(libassert::assert_type type, libassert::ASSERTION fatal, const libassert::assertion_printer& printer);
 
 // always_false is just convenient to use here
@@ -138,7 +143,7 @@ namespace libassert::detail {
     };
 
     // bootstrap with primitive implementations
-    void primitive_assert_impl(
+    ASSERT_EXPORT void primitive_assert_impl(
         bool condition,
         bool verify,
         const char* expression,
@@ -158,13 +163,13 @@ namespace libassert::detail {
      * String utilities
      */
 
-    [[nodiscard]] std::string bstringf(const char* format, ...);
+    [[nodiscard]] ASSERT_EXPORT std::string bstringf(const char* format, ...);
 
     /*
      * System wrappers
      */
 
-    [[nodiscard]] std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
+    [[nodiscard]] ASSERT_EXPORT std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
 
     /*
      * Stacktrace implementation
@@ -172,7 +177,7 @@ namespace libassert::detail {
 
     // All in the .cpp
 
-    struct opaque_trace {
+    struct ASSERT_EXPORT opaque_trace {
         void* trace;
         ~opaque_trace();
         opaque_trace(void* t) : trace(t) {}
@@ -543,13 +548,13 @@ namespace libassert::detail {
         none // needs to be at the end for sorting reasons
     };
 
-    [[nodiscard]] std::string prettify_type(std::string type);
+    [[nodiscard]] ASSERT_EXPORT std::string prettify_type(std::string type);
 
-    [[nodiscard]] literal_format get_literal_format(const std::string& expression);
+    [[nodiscard]] ASSERT_EXPORT literal_format get_literal_format(const std::string& expression);
 
-    [[nodiscard]] bool is_bitwise(std::string_view op);
+    [[nodiscard]] ASSERT_EXPORT bool is_bitwise(std::string_view op);
 
-    [[nodiscard]] std::pair<std::string, std::string> decompose_expression(
+    [[nodiscard]] ASSERT_EXPORT std::pair<std::string, std::string> decompose_expression(
         const std::string& expression,
         std::string_view target_op
     );
@@ -558,7 +563,7 @@ namespace libassert::detail {
      * stringification
      */
 
-    LIBASSERT_ATTR_COLD [[nodiscard]]
+    LIBASSERT_ATTR_COLD [[nodiscard]] ASSERT_EXPORT
     constexpr std::string_view substring_bounded_by(
         std::string_view sig,
         std::string_view l,
@@ -587,29 +592,29 @@ namespace libassert::detail {
     }
 
     namespace stringification {
-        [[nodiscard]] std::string stringify(const std::string&, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(const std::string_view&, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(const std::string&, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(const std::string_view&, literal_format = literal_format::none);
         // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
-        [[nodiscard]] std::string stringify(std::nullptr_t, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(char, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(bool, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(short, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(int, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(long, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(long long, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(unsigned short, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(unsigned int, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(unsigned long, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(unsigned long long, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(float, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(double, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(long double, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(std::error_code ec, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(std::error_condition ec, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::nullptr_t, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(char, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(bool, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(short, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(int, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(long, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(long long, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(unsigned short, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(unsigned int, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(unsigned long, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(unsigned long long, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(float, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(double, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(long double, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::error_code ec, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::error_condition ec, literal_format = literal_format::none);
         #if __cplusplus >= 202002L
-        [[nodiscard]] std::string stringify(std::strong_ordering, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(std::weak_ordering, literal_format = literal_format::none);
-        [[nodiscard]] std::string stringify(std::partial_ordering, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::strong_ordering, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::weak_ordering, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::partial_ordering, literal_format = literal_format::none);
         #endif
 
         #ifdef __cpp_lib_expected
@@ -632,7 +637,7 @@ namespace libassert::detail {
         }
         #endif
 
-        [[nodiscard]] std::string stringify_ptr(const void*, literal_format = literal_format::none);
+        [[nodiscard]] ASSERT_EXPORT std::string stringify_ptr(const void*, literal_format = literal_format::none);
 
         template<typename T, typename = void> class can_basic_stringify : public std::false_type {};
         template<typename T> class can_basic_stringify<
@@ -787,7 +792,7 @@ namespace libassert::detail {
         }
     }
 
-    struct binary_diagnostics_descriptor {
+    struct ASSERT_EXPORT binary_diagnostics_descriptor {
         std::vector<std::string> lstrings;
         std::vector<std::string> rstrings;
         std::string a_str;
@@ -810,7 +815,7 @@ namespace libassert::detail {
         operator=(binary_diagnostics_descriptor&&) noexcept(GCC_ISNT_STUPID); // = default; in the .cpp
     };
 
-    void sort_and_dedup(literal_format(&)[format_arr_length]);
+    ASSERT_EXPORT void sort_and_dedup(literal_format(&)[format_arr_length]);
 
     template<typename A, typename B>
     LIBASSERT_ATTR_COLD [[nodiscard]]
@@ -852,7 +857,7 @@ namespace libassert::detail {
     #undef LIBASSERT_Y
     #undef LIBASSERT_X
 
-    struct extra_diagnostics {
+    struct ASSERT_EXPORT extra_diagnostics {
         ASSERTION fatality = ASSERTION::FATAL;
         std::string message;
         std::vector<std::pair<std::string, std::string>> entries;
@@ -928,7 +933,7 @@ namespace libassert::detail {
      */
 
     // collection of assertion data that can be put in static storage and all passed by a single pointer
-    struct assert_static_parameters {
+    struct ASSERT_EXPORT assert_static_parameters {
         const char* name;
         assert_type type;
         const char* expr_str;
@@ -942,13 +947,13 @@ namespace libassert::detail {
  */
 
 namespace libassert {
-    struct verification_failure : std::exception {
+    struct ASSERT_EXPORT verification_failure : std::exception {
         // I must just this once
         // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
         [[nodiscard]] virtual const char* what() const noexcept final override;
     };
 
-    class assertion_printer {
+    class ASSERT_EXPORT assertion_printer {
         const detail::assert_static_parameters* params;
         const detail::extra_diagnostics& processed_args;
         detail::binary_diagnostics_descriptor& binary_diagnostics;
@@ -980,16 +985,16 @@ namespace libassert {
 
 namespace libassert::utility {
     // strip ansi escape sequences from a string
-    [[nodiscard]] std::string strip_colors(const std::string& str);
+    [[nodiscard]] ASSERT_EXPORT std::string strip_colors(const std::string& str);
 
     // replace 24-bit rgb ansi color sequences with traditional color sequences
-    [[nodiscard]] std::string replace_rgb(std::string str);
+    [[nodiscard]] ASSERT_EXPORT std::string replace_rgb(std::string str);
 
     // returns the width of the terminal represented by fd, will be 0 on error
-    [[nodiscard]] int terminal_width(int fd);
+    [[nodiscard]] ASSERT_EXPORT int terminal_width(int fd);
 
     // generates a stack trace, formats to the given width
-    [[nodiscard]] std::string stacktrace(int width);
+    [[nodiscard]] ASSERT_EXPORT std::string stacktrace(int width);
 
     // returns the type name of T
     template<typename T>
@@ -1018,9 +1023,9 @@ namespace libassert::utility {
 
 namespace libassert::config {
     // configures whether the default assertion handler prints in color or not to tty devices
-    void set_color_output(bool);
+    ASSERT_EXPORT void set_color_output(bool);
     // configure whether to use 24-bit rgb ansi color sequences or traditional ansi color sequences
-    void set_rgb_output(bool);
+    ASSERT_EXPORT void set_rgb_output(bool);
 }
 
 /*
@@ -1028,7 +1033,7 @@ namespace libassert::config {
  */
 
 namespace libassert::detail {
-    size_t count_args_strings(const char* const*);
+    ASSERT_EXPORT size_t count_args_strings(const char* const*);
 
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
