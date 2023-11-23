@@ -676,15 +676,15 @@ namespace libassert::detail {
                     // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
                     trace.begin() + end + 1,
                     [](const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_frame& b) {
-                        return a.line < b.line;
+                        return a.line.value_or(0) < b.line.value_or(0);
                     }
                 )->line;
-            const size_t max_line_number_width = n_digits(max_line_number);
+            const size_t max_line_number_width = n_digits(max_line_number.value_or(0));
             const size_t max_frame_width = n_digits(end - start);
             // do the actual trace
             for(size_t i = start; i <= end; i++) {
                 const auto& [address, line, col, source_path, signature, is_inline] = trace.frames[i];
-                const std::string line_number = line == 0 ? "?" : std::to_string(line);
+                const std::string line_number = line.has_value() ? std::to_string(line.value()) : "?";
                 // look for repeats, i.e. recursion we can fold
                 size_t recursion_folded = 0;
                 if(end - i >= 4) {

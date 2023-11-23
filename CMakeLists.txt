@@ -21,6 +21,14 @@ project(
 include(cmake/ProjectIsTopLevel.cmake)
 include(cmake/OptionVariables.cmake)
 
+if(CMAKE_GENERATOR STREQUAL "Ninja")
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    add_compile_options(-fdiagnostics-color=always)
+  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    add_compile_options(-fcolor-diagnostics)
+  endif()
+endif()
+
 
 # ---- Project Dependencies ----
 
@@ -28,7 +36,7 @@ set(ASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
 set(ASSERT_MAGIC_ENUM_TAG "v0.9.4")
 
 set(ASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
-set(ASSERT_CPPTRACE_TAG "594dd720b48622965ce0a1b4b7ab38b5807ff827")
+set(ASSERT_CPPTRACE_TAG "4ec11d00de87fa8354170c8956e69b6650774146")
 
 # obtain cpptrace
 if(ASSERT_USE_EXTERNAL_CPPTRACE)
