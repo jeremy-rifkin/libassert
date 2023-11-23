@@ -36,6 +36,7 @@ if(ASSERT_STATIC)
   add_library(assert STATIC src/assert.cpp include/assert.hpp)
 else()
   add_library(assert SHARED src/assert.cpp include/assert.hpp)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
 target_include_directories(
@@ -76,10 +77,10 @@ else()
   FetchContent_Declare(
     cpptrace
     GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-    GIT_TAG        v0.2.1
+    GIT_TAG        4ec11d00de87fa8354170c8956e69b6650774146
   )
   FetchContent_MakeAvailable(cpptrace)
-  set(ASSERT_CPPTRACE_TARGET_NAME cpptrace)
+  set(ASSERT_CPPTRACE_TARGET_NAME cpptrace::cpptrace)
 endif()
 target_link_libraries(assert PRIVATE ${ASSERT_CPPTRACE_TARGET_NAME})
 
