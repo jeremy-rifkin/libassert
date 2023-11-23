@@ -533,7 +533,7 @@ if(WIN32)
   add_custom_command(
     TARGET my_executable POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_FILE:cpptrace>
+    $<TARGET_FILE:cpptrace::cpptrace>
     $<TARGET_FILE_DIR:my_executable>
   )
 endif()
