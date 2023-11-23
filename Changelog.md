@@ -1,7 +1,14 @@
+- [libassert 1.2.2](#libassert-122)
 - [libassert 1.2.1](#libassert-121)
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 1.2.2
+
+Small patch release that bumps the stack tracing back-end, part of getting vcpkg issues ironed out.
+
+- Bumped cpptrace to version 0.3.0
 
 ## libassert 1.2.1
 - More testing
