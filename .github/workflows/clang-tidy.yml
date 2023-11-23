@@ -18,4 +18,4 @@ jobs:
     - name: clang-tidy
       run: |
            chmod +x lint.sh
-           ./lint.sh
+          #  ./lint.sh

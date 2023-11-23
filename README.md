@@ -515,7 +515,7 @@ include(FetchContent)
 FetchContent_Declare(
     assert
     GIT_REPOSITORY "https://github.com/jeremy-rifkin/libassert"
-    GIT_TAG "v1.2.1"
+    GIT_TAG "v1.2.2"
 )
 FetchContent_MakeAvailable(assert)
 
