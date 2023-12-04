@@ -77,7 +77,7 @@ else()
   FetchContent_Declare(
     cpptrace
     GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-    GIT_TAG        4ec11d00de87fa8354170c8956e69b6650774146
+    GIT_TAG        e1f91f18774d04d05bfbd1b37306b87573b4a99c # v0.3.1
   )
   FetchContent_MakeAvailable(cpptrace)
   set(ASSERT_CPPTRACE_TARGET_NAME cpptrace::cpptrace)
