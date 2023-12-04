@@ -33,7 +33,7 @@ endif()
 # ---- Project Dependencies ----
 
 set(ASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
-set(ASSERT_MAGIC_ENUM_TAG "v0.9.4")
+set(ASSERT_MAGIC_ENUM_TAG "e55b9b54d5cf61f8e117cafb17846d7d742dd3b4") # v0.9.5
 
 set(ASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
 set(ASSERT_CPPTRACE_TAG "e1f91f18774d04d05bfbd1b37306b87573b4a99c") # v0.3.1
