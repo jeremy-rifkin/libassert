@@ -22,9 +22,9 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     target_compile_options(
       demo
       PRIVATE
-      "-DASSERT_USE_MAGIC_ENUM"
-      "-DASSERT_FAIL=custom_fail"
-      "-DASSERT_LOWERCASE"
+      "-DLIBASSERT_USE_MAGIC_ENUM"
+      "-DLIBASSERT_FAIL=custom_fail"
+      "-DLIBASSERT_LOWERCASE"
     )
 
     add_executable(integration tests/integration/integration.cpp tests/integration/a.cpp tests/integration/x/a.cpp)
@@ -39,9 +39,9 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     target_compile_options(
       integration
       PRIVATE
-      "-DASSERT_USE_MAGIC_ENUM"
-      "-DASSERT_FAIL=custom_fail"
-      "-DASSERT_LOWERCASE"
+      "-DLIBASSERT_USE_MAGIC_ENUM"
+      "-DLIBASSERT_FAIL=custom_fail"
+      "-DLIBASSERT_LOWERCASE"
     )
     add_test(
       NAME integration

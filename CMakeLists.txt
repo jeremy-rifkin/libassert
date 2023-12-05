@@ -102,14 +102,14 @@ target_compile_options(
 
 # used in export header generated below
 if(NOT ASSERT_BUILD_SHARED)
-  target_compile_definitions(${target_name} PUBLIC ASSERT_STATIC_DEFINE)
+  target_compile_definitions(${target_name} PUBLIC LIBASSERT_STATIC_DEFINE)
 endif()
 
 # generate header file with export macros prefixed with BASE_NAME
 include(GenerateExportHeader)
 generate_export_header(
   ${target_name}
-  BASE_NAME assert
+  BASE_NAME libassert
   EXPORT_FILE_NAME include/assert/assert_export.hpp
 )
 
@@ -166,7 +166,7 @@ if(ASSERT_USE_MAGIC_ENUM)
   target_compile_definitions(
     ${target_name} PUBLIC
     # $<$<BOOL:"${ASSERT_USE_MAGIC_ENUM}">:ASSERT_USE_MAGIC_ENUM>
-    ASSERT_USE_MAGIC_ENUM
+    LIBASSERT_USE_MAGIC_ENUM
   )
 endif()
 

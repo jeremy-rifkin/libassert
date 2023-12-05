@@ -30,7 +30,7 @@
  #include <compare>
 #endif
 
-#ifdef ASSERT_USE_MAGIC_ENUM
+#ifdef LIBASSERT_USE_MAGIC_ENUM
  // relative include so that multiple library versions don't clash
  // e.g. if both libA and libB have different versions of libassert as a public
  // dependency, then any library that consumes both will have both sets of include
@@ -88,10 +88,10 @@
 // https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
 #if defined(_GLIBCXX_USE_CXX11_ABI)
  // NOLINTNEXTLINE(misc-include-cleaner)
- #define GCC_ISNT_STUPID _GLIBCXX_USE_CXX11_ABI
+ #define LIBASSERT_GCC_ISNT_STUPID _GLIBCXX_USE_CXX11_ABI
 #else
  // assume others target new abi by default - homework
- #define GCC_ISNT_STUPID 1
+ #define LIBASSERT_GCC_ISNT_STUPID 1
 #endif
 
 namespace libassert {
@@ -109,14 +109,14 @@ namespace libassert {
     class assertion_printer;
 }
 
-#ifndef ASSERT_FAIL
- #define ASSERT_FAIL libassert_default_fail_action
+#ifndef LIBASSERT_FAIL
+ #define LIBASSERT_FAIL libassert_default_fail_action
 #endif
 
-#ifndef ASSERT_FAIL
- ASSERT_EXPORT
+#ifndef LIBASSERT_FAIL
+ LIBASSERT_EXPORT
 #endif
-void ASSERT_FAIL(libassert::assert_type type, libassert::ASSERTION fatal, const libassert::assertion_printer& printer);
+void LIBASSERT_FAIL(libassert::assert_type type, libassert::ASSERTION fatal, const libassert::assertion_printer& printer);
 
 // always_false is just convenient to use here
 #define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
@@ -143,7 +143,7 @@ namespace libassert::detail {
     };
 
     // bootstrap with primitive implementations
-    ASSERT_EXPORT void primitive_assert_impl(
+    LIBASSERT_EXPORT void primitive_assert_impl(
         bool condition,
         bool verify,
         const char* expression,
@@ -163,13 +163,13 @@ namespace libassert::detail {
      * String utilities
      */
 
-    [[nodiscard]] ASSERT_EXPORT std::string bstringf(const char* format, ...);
+    [[nodiscard]] LIBASSERT_EXPORT std::string bstringf(const char* format, ...);
 
     /*
      * System wrappers
      */
 
-    [[nodiscard]] ASSERT_EXPORT std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
+    [[nodiscard]] LIBASSERT_EXPORT std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
 
     /*
      * Stacktrace implementation
@@ -177,7 +177,7 @@ namespace libassert::detail {
 
     // All in the .cpp
 
-    struct ASSERT_EXPORT opaque_trace {
+    struct LIBASSERT_EXPORT opaque_trace {
         void* trace;
         ~opaque_trace();
         opaque_trace(void* t) : trace(t) {}
@@ -322,7 +322,7 @@ namespace libassert::detail {
         LIBASSERT_GEN_OP_BOILERPLATE(band,   &);
         LIBASSERT_GEN_OP_BOILERPLATE(bxor,   ^);
         LIBASSERT_GEN_OP_BOILERPLATE(bor,    |);
-        #ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
+        #ifdef LIBASSERT_DECOMPOSE_BINARY_LOGICAL
          struct land {
              static constexpr std::string_view op_string = "&&";
              template<typename A, typename B>
@@ -513,7 +513,7 @@ namespace libassert::detail {
         LIBASSERT_GEN_OP_BOILERPLATE(ops::band, &)
         LIBASSERT_GEN_OP_BOILERPLATE(ops::bxor, ^)
         LIBASSERT_GEN_OP_BOILERPLATE(ops::bor, |)
-        #ifdef ASSERT_DECOMPOSE_BINARY_LOGICAL
+        #ifdef LIBASSERT_DECOMPOSE_BINARY_LOGICAL
          LIBASSERT_GEN_OP_BOILERPLATE(ops::land, &&)
          LIBASSERT_GEN_OP_BOILERPLATE(ops::lor, ||)
         #endif
@@ -548,13 +548,13 @@ namespace libassert::detail {
         none // needs to be at the end for sorting reasons
     };
 
-    [[nodiscard]] ASSERT_EXPORT std::string prettify_type(std::string type);
+    [[nodiscard]] LIBASSERT_EXPORT std::string prettify_type(std::string type);
 
-    [[nodiscard]] ASSERT_EXPORT literal_format get_literal_format(const std::string& expression);
+    [[nodiscard]] LIBASSERT_EXPORT literal_format get_literal_format(const std::string& expression);
 
-    [[nodiscard]] ASSERT_EXPORT bool is_bitwise(std::string_view op);
+    [[nodiscard]] LIBASSERT_EXPORT bool is_bitwise(std::string_view op);
 
-    [[nodiscard]] ASSERT_EXPORT std::pair<std::string, std::string> decompose_expression(
+    [[nodiscard]] LIBASSERT_EXPORT std::pair<std::string, std::string> decompose_expression(
         const std::string& expression,
         std::string_view target_op
     );
@@ -563,7 +563,7 @@ namespace libassert::detail {
      * stringification
      */
 
-    LIBASSERT_ATTR_COLD [[nodiscard]] ASSERT_EXPORT
+    LIBASSERT_ATTR_COLD [[nodiscard]] LIBASSERT_EXPORT
     constexpr std::string_view substring_bounded_by(
         std::string_view sig,
         std::string_view l,
@@ -592,29 +592,29 @@ namespace libassert::detail {
     }
 
     namespace stringification {
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(const std::string&, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(const std::string_view&, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::string&, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::string_view&, literal_format = literal_format::none);
         // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::nullptr_t, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(char, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(bool, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(short, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(int, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(long, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(long long, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(unsigned short, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(unsigned int, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(unsigned long, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(unsigned long long, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(float, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(double, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(long double, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::error_code ec, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::error_condition ec, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::nullptr_t, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(char, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(bool, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(short, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(int, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long long, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned short, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned int, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned long, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned long long, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(float, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(double, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long double, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_code ec, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_condition ec, literal_format = literal_format::none);
         #if __cplusplus >= 202002L
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::strong_ordering, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::weak_ordering, literal_format = literal_format::none);
-        [[nodiscard]] ASSERT_EXPORT std::string stringify(std::partial_ordering, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::strong_ordering, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::weak_ordering, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::partial_ordering, literal_format = literal_format::none);
         #endif
 
         #ifdef __cpp_lib_expected
@@ -637,7 +637,7 @@ namespace libassert::detail {
         }
         #endif
 
-        [[nodiscard]] ASSERT_EXPORT std::string stringify_ptr(const void*, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify_ptr(const void*, literal_format = literal_format::none);
 
         template<typename T, typename = void> class can_basic_stringify : public std::false_type {};
         template<typename T> class can_basic_stringify<
@@ -726,7 +726,7 @@ namespace libassert::detail {
             } else if constexpr(is_tuple_like<T>::value) {
                 return stringify_tuple_like(t);
             }
-            #ifdef ASSERT_USE_MAGIC_ENUM
+            #ifdef LIBASSERT_USE_MAGIC_ENUM
             else if constexpr(std::is_enum<strip<T>>::value) {
                 std::string_view name = magic_enum::enum_name(t);
                 if(!name.empty()) {
@@ -792,7 +792,7 @@ namespace libassert::detail {
         }
     }
 
-    struct ASSERT_EXPORT binary_diagnostics_descriptor {
+    struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
         std::vector<std::string> lstrings;
         std::vector<std::string> rstrings;
         std::string a_str;
@@ -812,10 +812,10 @@ namespace libassert::detail {
         binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
         binary_diagnostics_descriptor& operator=(const binary_diagnostics_descriptor&) = delete;
         binary_diagnostics_descriptor&
-        operator=(binary_diagnostics_descriptor&&) noexcept(GCC_ISNT_STUPID); // = default; in the .cpp
+        operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID); // = default; in the .cpp
     };
 
-    ASSERT_EXPORT void sort_and_dedup(literal_format(&)[format_arr_length]);
+    LIBASSERT_EXPORT void sort_and_dedup(literal_format(&)[format_arr_length]);
 
     template<typename A, typename B>
     LIBASSERT_ATTR_COLD [[nodiscard]]
@@ -857,7 +857,7 @@ namespace libassert::detail {
     #undef LIBASSERT_Y
     #undef LIBASSERT_X
 
-    struct ASSERT_EXPORT extra_diagnostics {
+    struct LIBASSERT_EXPORT extra_diagnostics {
         ASSERTION fatality = ASSERTION::FATAL;
         std::string message;
         std::vector<std::pair<std::string, std::string>> entries;
@@ -933,7 +933,7 @@ namespace libassert::detail {
      */
 
     // collection of assertion data that can be put in static storage and all passed by a single pointer
-    struct ASSERT_EXPORT assert_static_parameters {
+    struct LIBASSERT_EXPORT assert_static_parameters {
         const char* name;
         assert_type type;
         const char* expr_str;
@@ -947,13 +947,13 @@ namespace libassert::detail {
  */
 
 namespace libassert {
-    struct ASSERT_EXPORT verification_failure : std::exception {
+    struct LIBASSERT_EXPORT verification_failure : std::exception {
         // I must just this once
         // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
         [[nodiscard]] virtual const char* what() const noexcept final override;
     };
 
-    class ASSERT_EXPORT assertion_printer {
+    class LIBASSERT_EXPORT assertion_printer {
         const detail::assert_static_parameters* params;
         const detail::extra_diagnostics& processed_args;
         detail::binary_diagnostics_descriptor& binary_diagnostics;
@@ -985,16 +985,16 @@ namespace libassert {
 
 namespace libassert::utility {
     // strip ansi escape sequences from a string
-    [[nodiscard]] ASSERT_EXPORT std::string strip_colors(const std::string& str);
+    [[nodiscard]] LIBASSERT_EXPORT std::string strip_colors(const std::string& str);
 
     // replace 24-bit rgb ansi color sequences with traditional color sequences
-    [[nodiscard]] ASSERT_EXPORT std::string replace_rgb(std::string str);
+    [[nodiscard]] LIBASSERT_EXPORT std::string replace_rgb(std::string str);
 
     // returns the width of the terminal represented by fd, will be 0 on error
-    [[nodiscard]] ASSERT_EXPORT int terminal_width(int fd);
+    [[nodiscard]] LIBASSERT_EXPORT int terminal_width(int fd);
 
     // generates a stack trace, formats to the given width
-    [[nodiscard]] ASSERT_EXPORT std::string stacktrace(int width);
+    [[nodiscard]] LIBASSERT_EXPORT std::string stacktrace(int width);
 
     // returns the type name of T
     template<typename T>
@@ -1023,9 +1023,9 @@ namespace libassert::utility {
 
 namespace libassert::config {
     // configures whether the default assertion handler prints in color or not to tty devices
-    ASSERT_EXPORT void set_color_output(bool);
+    LIBASSERT_EXPORT void set_color_output(bool);
     // configure whether to use 24-bit rgb ansi color sequences or traditional ansi color sequences
-    ASSERT_EXPORT void set_rgb_output(bool);
+    LIBASSERT_EXPORT void set_rgb_output(bool);
 }
 
 /*
@@ -1033,7 +1033,7 @@ namespace libassert::config {
  */
 
 namespace libassert::detail {
-    ASSERT_EXPORT size_t count_args_strings(const char* const*);
+    LIBASSERT_EXPORT size_t count_args_strings(const char* const*);
 
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
@@ -1090,7 +1090,7 @@ namespace libassert::detail {
             trace,
             sizeof_extra_diagnostics
         };
-        ::ASSERT_FAIL(params->type, fatal, printer);
+        ::LIBASSERT_FAIL(params->type, fatal, printer);
     }
 
     template<typename A, typename B, typename C, typename... Args>
@@ -1322,7 +1322,7 @@ using libassert::ASSERTION;
   #define LIBASSERT_DESTROY_DECOMPOSER libassert::detail::destroy(libassert_decomposer)
  #endif
 #endif
-#define ASSERT_INVOKE(expr, doreturn, check_expression, name, type, failaction, ...) \
+#define LIBASSERT_INVOKE(expr, doreturn, check_expression, name, type, failaction, ...) \
         /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
         /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
         LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
@@ -1373,16 +1373,16 @@ using libassert::ASSERTION;
 #endif
 
 #ifndef NDEBUG
- #define DEBUG_ASSERT(expr, ...) ASSERT_INVOKE(expr, false, true, "DEBUG_ASSERT", debug_assertion, , __VA_ARGS__)
- #define ASSERT(expr, ...) ASSERT_INVOKE(expr, true, true, "ASSERT", assertion, , __VA_ARGS__)
+ #define DEBUG_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, false, true, "DEBUG_ASSERT", debug_assertion, , __VA_ARGS__)
+ #define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, true, true, "ASSERT", assertion, , __VA_ARGS__)
 #else
  #define DEBUG_ASSERT(expr, ...) (void)0
- #define ASSERT(expr, ...) ASSERT_INVOKE(expr, true, false, "ASSERT", assertion, , __VA_ARGS__)
+ #define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, true, false, "ASSERT", assertion, , __VA_ARGS__)
 #endif
 
-#ifdef ASSERT_LOWERCASE
+#ifdef LIBASSERT_LOWERCASE
  #ifndef NDEBUG
-  #define debug_assert(expr, ...) ASSERT_INVOKE(expr, false, true, "debug_assert", debug_assertion, , __VA_ARGS__)
+  #define debug_assert(expr, ...) LIBASSERT_INVOKE(expr, false, true, "debug_assert", debug_assertion, , __VA_ARGS__)
  #else
   #define debug_assert(expr, ...) (void)0
  #endif
@@ -1391,35 +1391,35 @@ using libassert::ASSERTION;
 #ifdef NO_ASSERT_RELEASE_EVAL
  #undef ASSERT
  #ifndef NDEBUG
-  #define ASSERT(expr, ...) ASSERT_INVOKE(expr, false, true, "ASSERT", assertion, , __VA_ARGS__)
+  #define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, false, true, "ASSERT", assertion, , __VA_ARGS__)
  #else
   #define ASSERT(expr, ...) (void)0
  #endif
- #ifdef ASSERT_LOWERCASE
+ #ifdef LIBASSERT_LOWERCASE
   #undef assert
   #ifndef NDEBUG
-   #define assert(expr, ...) ASSERT_INVOKE(expr, false, true, "assert", assertion, , __VA_ARGS__)
+   #define assert(expr, ...) LIBASSERT_INVOKE(expr, false, true, "assert", assertion, , __VA_ARGS__)
   #else
    #define assert(expr, ...) (void)0
   #endif
  #endif
 #endif
 
-#define ASSUME(expr, ...) ASSERT_INVOKE(expr, true, true, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
+#define ASSUME(expr, ...) LIBASSERT_INVOKE(expr, true, true, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
 
-#define VERIFY(expr, ...) ASSERT_INVOKE(expr, true, true, "VERIFY", verification, , __VA_ARGS__)
+#define VERIFY(expr, ...) LIBASSERT_INVOKE(expr, true, true, "VERIFY", verification, , __VA_ARGS__)
 
 #endif
 
 // Intentionally done outside the include guard. Libc++ leaks `assert` (among other things), so the include for
 // assert.hpp should go after other includes when using -DASSERT_LOWERCASE.
-#ifdef ASSERT_LOWERCASE
+#ifdef LIBASSERT_LOWERCASE
  #ifdef assert
   #undef assert
  #endif
  #ifndef NDEBUG
-  #define assert(expr, ...) ASSERT_INVOKE(expr, true, true, "assert", assertion, , __VA_ARGS__)
+  #define assert(expr, ...) LIBASSERT_INVOKE(expr, true, true, "assert", assertion, , __VA_ARGS__)
  #else
-  #define assert(expr, ...) ASSERT_INVOKE(expr, true, false, "assert", assertion, , __VA_ARGS__)
+  #define assert(expr, ...) LIBASSERT_INVOKE(expr, true, false, "assert", assertion, , __VA_ARGS__)
  #endif
 #endif

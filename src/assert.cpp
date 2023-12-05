@@ -761,7 +761,7 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor&
-    binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept(GCC_ISNT_STUPID) = default;
+    binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID) = default;
 
     LIBASSERT_ATTR_COLD
     static std::string print_values(const std::vector<std::string>& vec, size_t lw) {
