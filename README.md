@@ -121,7 +121,7 @@ assertion system:
 | `DEBUG_ASSERT` | Core assumptions                                     | Checked in debug, no codegen in release                                              |
 | `ASSERT`       | Checks that are good to have even in release         | Checked in both debug and release builds                                             |
 | `ASSUME`       | Assumptions that can serve as hints to the optimizer | Checked in debug, `if(!(expr)) { __builtin_unreachable(); }` in release              |
-| `PANIC`        | Something has gone catestrophically wrong            | Panic is like `VERIFY(false, ...)`, but the compiler gets `[[noreturn]]` information |
+| `PANIC`        | Something has gone catestrophically wrong            | Panic is like `ASSERT(false, ...)`, but the compiler gets `[[noreturn]]` information |
 
 `ASSUME` marks the fail path as unreachable in release, potentially providing helpful information to the optimizer. This
 isn't the default behavior for all assertions because the immediate consequence of this is that assertion failure in
