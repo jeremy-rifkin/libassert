@@ -95,10 +95,6 @@
 #endif
 
 namespace libassert {
-    enum class ASSERTION {
-        NONFATAL, FATAL
-    };
-
     enum class assert_type {
         debug_assertion,
         assertion,
@@ -116,7 +112,7 @@ namespace libassert {
 #ifndef LIBASSERT_FAIL
  LIBASSERT_EXPORT
 #endif
-void LIBASSERT_FAIL(libassert::assert_type type, libassert::ASSERTION fatal, const libassert::assertion_printer& printer);
+void LIBASSERT_FAIL(libassert::assert_type type, const libassert::assertion_printer& printer);
 
 // always_false is just convenient to use here
 #define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
@@ -858,7 +854,6 @@ namespace libassert::detail {
     #undef LIBASSERT_X
 
     struct LIBASSERT_EXPORT extra_diagnostics {
-        ASSERTION fatality = ASSERTION::FATAL;
         std::string message;
         std::vector<std::pair<std::string, std::string>> entries;
         const char* pretty_function = "<error>";
@@ -879,9 +874,7 @@ namespace libassert::detail {
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, const T& t) {
-        if constexpr(isa<T, ASSERTION>) {
-            entry.fatality = t;
-        } else if constexpr(isa<T, pretty_function_name_wrapper>) {
+        if constexpr(isa<T, pretty_function_name_wrapper>) {
             entry.pretty_function = t.pretty_function;
         } else {
             // three cases to handle: assert message, errno, and regular diagnostics
@@ -1065,7 +1058,6 @@ namespace libassert::detail {
         );
         // process_args needs to be called as soon as possible in case errno needs to be read
         const auto processed_args = process_args(args_strings, args...);
-        const auto fatal = processed_args.fatality;
         opaque_trace raw_trace = get_stacktrace_opaque();
         // generate header
         binary_diagnostics_descriptor binary_diagnostics;
@@ -1103,7 +1095,7 @@ namespace libassert::detail {
             trace,
             sizeof_extra_diagnostics
         };
-        ::LIBASSERT_FAIL(params->type, fatal, printer);
+        ::LIBASSERT_FAIL(params->type, printer);
     }
 
     template<typename A, typename B, typename C, typename... Args>
@@ -1149,9 +1141,6 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
     // This non-constexpr method is called from an assertion in a constexpr context if a failure occurs. It is
     // intentionally a no-op.
 }
-
-// NOLINTNEXTLINE(misc-unused-using-decls)
-using libassert::ASSERTION;
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || (defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL == 0)
  // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h

@@ -969,7 +969,7 @@ namespace libassert {
 
     LIBASSERT_ATTR_COLD std::string assertion_printer::operator()(int width) const {
         const auto& [ name, type, expr_str, location, args_strings ] = *params;
-        const auto& [ fatal, message, extra_diagnostics, pretty_function ] = processed_args;
+        const auto& [ message, extra_diagnostics, pretty_function ] = processed_args;
         std::string output;
         // generate header
         const auto function = prettify_type(pretty_function);
@@ -1017,7 +1017,6 @@ namespace libassert::utility {
 LIBASSERT_ATTR_COLD
 void libassert_default_fail_action(
     libassert::assert_type type,
-    ASSERTION fatal,
     const libassert::assertion_printer& printer
 ) {
     // TODO: Just throw instead of all of this?
@@ -1034,18 +1033,14 @@ void libassert_default_fail_action(
     switch(type) {
         case libassert::assert_type::debug_assertion:
         case libassert::assert_type::assertion:
-            if(fatal == ASSERTION::FATAL) {
-                case libassert::assert_type::assumption: // switch-if-case, cursed!
-                (void)fflush(stderr);
-                std::abort();
-            }
+            case libassert::assert_type::assumption: // switch-if-case, cursed!
+            (void)fflush(stderr);
+            std::abort();
             // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
             // this library (on top of preventing fallthrough from nonfatal libassert)
             break;
         case libassert::assert_type::verification:
-            if(fatal == ASSERTION::FATAL) {
-                throw libassert::verification_failure();
-            }
+            throw libassert::verification_failure();
             break;
         default:
             LIBASSERT_PRIMITIVE_ASSERT(false);
