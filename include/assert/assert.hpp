@@ -94,6 +94,14 @@
  #define LIBASSERT_GCC_ISNT_STUPID 1
 #endif
 
+#if LIBASSERT_IS_MSVC
+ #pragma warning(push)
+ // warning C4251: using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for some
+ // reason
+ // 4275 is the same thing but for base classes
+ #pragma warning(disable: 4251; disable: 4275)
+#endif
+
 namespace libassert {
     enum class assert_type {
         debug_assertion,
@@ -112,7 +120,7 @@ namespace libassert {
 #ifndef LIBASSERT_FAIL
  LIBASSERT_EXPORT
 #endif
-void LIBASSERT_FAIL(libassert::assert_type type, const libassert::assertion_printer& printer);
+LIBASSERT_EXPORT void LIBASSERT_FAIL(libassert::assert_type type, const libassert::assertion_printer& printer);
 
 // always_false is just convenient to use here
 #define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
@@ -183,7 +191,7 @@ namespace libassert::detail {
         opaque_trace& operator=(opaque_trace&&) = delete;
     };
 
-    opaque_trace get_stacktrace_opaque();
+    LIBASSERT_EXPORT opaque_trace get_stacktrace_opaque();
 
     /*
      * metaprogramming utilities
@@ -1137,6 +1145,10 @@ namespace libassert::detail {
     }
 }
 
+#if LIBASSERT_IS_MSVC
+ #pragma warning(pop)
+#endif
+
 inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
     // This non-constexpr method is called from an assertion in a constexpr context if a failure occurs. It is
     // intentionally a no-op.
@@ -1302,10 +1314,11 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
 // lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
 // Note: libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr) done for ternary
 #if LIBASSERT_IS_MSVC
- #define LIBASSERT_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{libassert_msvc_pfunc}
+ #define LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{libassert_msvc_pfunc}
 #else
- #define LIBASSERT_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
+ #define LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
 #endif
+#define LIBASSERT_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
 #if LIBASSERT_IS_CLANG // -Wall in clang
  #define LIBASSERT_IGNORE_UNUSED_VALUE _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
 #else
@@ -1384,11 +1397,11 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
               LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
               if constexpr(sizeof libassert_decomposer > 32) { \
                 process_assert_fail(libassert_decomposer, libassert_params \
-                                           LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
+                                           LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG); \
               } else { \
                 /* std::move it to assert_fail_m, will be moved back to r */ \
                 auto libassert_r = process_assert_fail_m(std::move(libassert_decomposer), libassert_params \
-                                           LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
+                                           LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG); \
                 /* can't move-assign back to decomposer if it holds reference members */ \
                 LIBASSERT_DESTROY_DECOMPOSER; \
                 new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \

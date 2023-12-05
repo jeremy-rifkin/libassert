@@ -156,7 +156,7 @@ namespace libassert::detail {
      * system wrappers
      */
 
-    LIBASSERT_ATTR_COLD void enable_virtual_terminal_processing_if_needed() {
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed() {
         // enable colors / ansi processing if necessary
         #if IS_WINDOWS
          // https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing

@@ -6,7 +6,7 @@
 #include <assert/assert.hpp>
 
 namespace libassert::detail {
-    [[nodiscard]] std::string highlight(const std::string& expression);
+    [[nodiscard]] LIBASSERT_EXPORT std::string highlight(const std::string& expression);
 }
 
 int main() {

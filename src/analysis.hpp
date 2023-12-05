@@ -13,7 +13,7 @@ namespace libassert::detail {
         std::string content;
     };
 
-    LIBASSERT_ATTR_COLD
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT /* FIXME */
     std::string highlight(const std::string& expression);
 
     LIBASSERT_ATTR_COLD

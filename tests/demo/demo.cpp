@@ -390,7 +390,7 @@ public:
 };
 
 namespace libassert::detail {
-    void enable_virtual_terminal_processing_if_needed();
+    LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed();
 }
 
 int main() {
