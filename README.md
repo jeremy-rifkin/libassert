@@ -63,17 +63,13 @@ float f = *assert(get_param());
 ```
 ![](screenshots/c.png)
 
-**Library philosophy:** Provide as much helpful diagnostic info as possible.
+**Library philosophy:** Provide as much helpful diagnostic info as possible. **
 
 **Types of assertions:**
 
-- `DEBUG_ASSERT` This is the analog for &lt;cassert&gt;: checked in debug and does nothing in release
-- `ASSERT` Checked in debug but still evaluated and returned ([more below](#methodology)) in release
-  - Of course, if the expression's value isn't used or doesn't have any side effects it should be eliminated by the
-    optimizer
-- `ASSUME` Checks core assumptions, preconditions, and postconditions in debug and provides hints to the optimizer in
-  release
-- `VERIFY` Checks the condition in both debug and release
+- `DEBUG_ASSERT`: Checked in debug but but does nothing in release (analogous to the standard library's `assert`)
+- `ASSERT`: Checked in both debug and release
+- `ASSUME`: Checked in debug and serves as an optimization hint in release
 
 **Returning a value:**
 
@@ -105,30 +101,27 @@ violations close to their sources. Assertion tooling should prioritize providing
 and context to the developer as possible to allow for speedy triage. Unfortunately, existing
 language and library tooling provides very limited triage information.
 
-For example with stdlib asserts, when `assert(n <= 12);` fails we may get no information about why
-(i.e., the value of `n`) and we don't get stack trace. Ideally an assertion failure should provide
-enough diagnostic information that we don't have to rerun in a debugger to pinpoint the problem.
+For example with stdlib assertions an assertion such as `assert(n <= 12);` provides no information upon failure about
+why it failed or what lead to its failure. Providing a stack trace and the value of `n` greatley improves triage and
+debugging. Ideally an assertion failure should provide enough diagnostic information that the programmmer does's have to
+rerun in a debugger to pinpoint the problem.
 
-This library is an exploration looking at how much helpful information and functionality can be
-packed into assertions while also providing a quick and easy interface for the developer.
+Version 1 of this library was an exploration looking at how much helpful information and functionality could be packed
+into assertions while also providing a quick and easy interface for the developer.
+
+Version 2 of this library takes lessons learned from version 1 to create a ...
 
 ## Methodology
 
 Different types of assumptions call for different handling and different behavior. This library implements a tiered
 assertion system:
 
-| Name           | When to Use                                                                                        | Effect                                                                                                     |
-| -------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `DEBUG_ASSERT` | Core assumptions that potentially can't be optimized away (e.g. calls to `std::unordered_map::at`) | Checked in debug, no codegen in release                                                                    |
-| `ASSERT`       | Core assumptions                                                                                   | Checked in debug, still evaluated and returned in release (usually elided by the optimizer if appropriate) |
-| `ASSUME`       | Assumptions that can serve as hints to the optimizer                                               | Checked in debug, `if(!expr) { __builtin_unreachable(); }` in release                                      |
-| `VERIFY`       | Checks that are good to have even in release                                                       | Checked in both debug and release builds                                                                   |
-
-All assertions except `DEBUG_ASSERT` return a value from the assertion expression so checks can be seamlessly integrated
-into a program's structure. Because an expression's result may still be relevant even in a release build the expression
-still has to be valid and evaluated even in a release build. Of course, if the result is unused and produces no side
-effects it will be optimized away (at the very least during LTO). But consequently all side effects are preserved unlike
-traditional asserts. This is the motivation for `DEBUG_ASSERT`, where it's undesirable for side effects to be preserved.
+| Name           | When to Use                                          | Effect                                                                               |
+| -------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `DEBUG_ASSERT` | Core assumptions                                     | Checked in debug, no codegen in release                                              |
+| `ASSERT`       | Checks that are good to have even in release         | Checked in both debug and release builds                                             |
+| `ASSUME`       | Assumptions that can serve as hints to the optimizer | Checked in debug, `if(!(expr)) { __builtin_unreachable(); }` in release              |
+| `PANIC`        | Something has gone catestrophically wrong            | Panic is like `VERIFY(false, ...)`, but the compiler gets `[[noreturn]]` information |
 
 `ASSUME` marks the fail path as unreachable in release, potentially providing helpful information to the optimizer. This
 isn't the default behavior for all assertions because the immediate consequence of this is that assertion failure in
@@ -137,6 +130,20 @@ isn't the default behavior for all assertions because the immediate consequence 
 All of these assertions can be marked as nonfatal by passing `ASSERTION::FATAL` which prevents aborting or throwing in
 the default assertion failure handler. Except `ASSUME` which aborts regardless of being marked fatal. This can all be
 customized in a custom assertion failure handler.
+
+Assertion variants that can be used in-line in an expression, such as
+`FILE* file = VERIFY_VAL(fopen(path, "r"), "Failed to open file");`, are also available:
+
+| Name         | When to Use                                          | Effect                                                                  |
+| ------------ | ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| `ASSERT_VAL` | Core assumptions                                     | Checked in debug, must be evaluated in both debug and release           |
+| `ASSUME_VAL` | Assumptions that can serve as hints to the optimizer | Checked in debug, `if(!(expr)) { __builtin_unreachable(); }` in release |
+| `VERIFY_VAL` | Checks that are good to have even in release         | Checked in both debug and release builds                                |
+
+Even for `ASSERT_VAL` the expression still has to be valid and evaluated even in a release build. Of course, if the
+result is unused and produces no side effects it will be optimized away (at the very least during LTO). But consequently
+all side effects are preserved unlike traditional asserts. This is the motivation for `DEBUG_ASSERT`, where it's
+undesirable for side effects to be preserved.
 
 ## Considerations
 
@@ -492,7 +499,7 @@ namespace libassert {
 using libassert::ASSERTION;
 ```
 
-This library defines macros of the form `LIBASSERT_*`. In macro expansion variables of the form
+This library defines macros of the form `ASSERT_*`. In macro expansion variables of the form
 `libassert_*` are created. The user shouldn't define variables of this form to prevent shadowing
 issues.
 
