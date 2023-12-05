@@ -119,19 +119,19 @@ int garple() {
 }
 
 void rec(int n) {
-    if(n == 0) assert(false);
+    if(n == 0) debug_assert(false);
     else rec(n - 1);
 }
 
 void recursive_a(int), recursive_b(int);
 
 void recursive_a(int n) {
-    if(n == 0) assert(false);
+    if(n == 0) debug_assert(false);
     else recursive_b(n - 1);
 }
 
 void recursive_b(int n) {
-    if(n == 0) assert(false);
+    if(n == 0) debug_assert(false);
     else recursive_a(n - 1);
 }
 
@@ -141,9 +141,9 @@ auto min_items() {
 
 void zoog(std::map<std::string, int> map) {
     #if __cplusplus >= 202002L
-     assert(map.contains("foo"), "expected key not found", map);
+     debug_assert(map.contains("foo"), "expected key not found", map);
     #else
-     assert(map.count("foo") != 1, "expected key not found", map);
+     debug_assert(map.count("foo") != 1, "expected key not found", map);
     #endif
     DEBUG_ASSERT(map.at("bar") >= 0, "unexpected value for foo in the map", map);
 }
@@ -182,44 +182,44 @@ public:
                 { "baz", 20 }
             });
             std::vector<int> vec = {2, 3, 5, 7, 11, 13};
-            assert(vec.size() > min_items(), "vector doesn't have enough items", vec);
+            debug_assert(vec.size() > min_items(), "vector doesn't have enough items", vec);
         }
         const char* path = "/home/foobar/baz";
         {
             int fd = open(path, O_RDONLY);
-            assert(fd >= 0, "Internal error with foobars", errno, path);
+            debug_assert(fd >= 0, "Internal error with foobars", errno, path);
             LIBASSERT_PHONY_USE(fd);
         }
         {
-            assert(open(path, O_RDONLY) >= 0, "Internal error with foobars", errno, path);
+            debug_assert(open(path, O_RDONLY) >= 0, "Internal error with foobars", errno, path);
         }
         {
-            FILE* f = VERIFY(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
+            FILE* f = ASSERT_VAL(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
             LIBASSERT_PHONY_USE(f);
         }
-        assert(false, "Error while doing XYZ");
-        assert(false);
+        debug_assert(false, "Error while doing XYZ");
+        debug_assert(false);
         DEBUG_ASSERT((puts("DEBUG_ASSERT called") && false));
 
         {
             std::map<int, int> map {{1,1}};
-            assert(map.count(1) == 2);
-            assert(map.count(1) >= 2 * garple(), "Error while doing XYZ");
+            debug_assert(map.count(1) == 2);
+            debug_assert(map.count(1) >= 2 * garple(), "Error while doing XYZ");
         }
-        assert(0, 2 == garple());
+        debug_assert(0, 2 == garple());
         {
             std::optional<float> parameter;
             #ifndef _MSC_VER
-             if(auto i = *VERIFY(parameter)) {
+             if(auto i = *ASSERT_VAL(parameter)) {
                  static_assert(std::is_same<decltype(i), float>::value);
              }
-             float f = *assert(get_param());
+             float f = *assert_val(get_param());
              (void)f;
             #else
-             VERIFY(parameter);
-             assert(get_param());
+             ASSERT(parameter);
+             debug_assert(get_param());
             #endif
-            auto x = [&] () -> decltype(auto) { return VERIFY(parameter); };
+            auto x = [&] () -> decltype(auto) { return ASSERT_VAL(parameter); };
             static_assert(std::is_same<decltype(x()), std::optional<float>&>::value);
         }
 
@@ -228,17 +228,17 @@ public:
         {
             M() < 2;
             puts("----");
-            assert(M() < 2);
+            debug_assert(M() < 2);
             puts("----");
             M m;
             puts("----");
-            assert(m < 2);
+            debug_assert(m < 2);
             puts("----");
         }
 
 
-        assert(true ? false : true == false);
-        assert(true ? false : true, "pffft");
+        debug_assert(true ? false : true == false);
+        debug_assert(true ? false : true, "pffft");
 
         wubble();
 
@@ -246,36 +246,36 @@ public:
 
         recursive_a(10);
 
-        assert(18446744073709551606ULL == -10);
+        debug_assert(18446744073709551606ULL == -10);
 
-        assert(get_mask() == 0b00001101);
-        assert(0xf == 16);
+        debug_assert(get_mask() == 0b00001101);
+        debug_assert(0xf == 16);
 
         {
             std::string s = "test\n";
             int i = 0;
-            assert(s == "test");
-            assert(s[i] == 'c', "", s, i);
+            debug_assert(s == "test");
+            debug_assert(s[i] == 'c', "", s, i);
         }
         {
-            assert(S<S<int>>(2) == S<S<int>>(4));
+            debug_assert(S<S<int>>(2) == S<S<int>>(4));
             S<void> e, f;
-            assert(e == f);
+            debug_assert(e == f);
         }
 
         long long x = -9'223'372'036'854'775'807;
-        assert(x & 0x4);
+        debug_assert(x & 0x4);
 
-        assert(!x and true == 2);
-        assert((puts("A"), false) && (puts("B"), false));
+        debug_assert(!x and true == 2);
+        debug_assert((puts("A"), false) && (puts("B"), false));
 
         {
             #if defined(__GNUC__) || defined(__GNUG__) // gcc/clang
              #pragma GCC diagnostic ignored "-Wshadow"
             #endif
             std::string s = "h1eLlo";
-            assert(std::find_if(s.begin(), s.end(), [](char c) {
-                assert(not isdigit(c), c);
+            debug_assert(std::find_if(s.begin(), s.end(), [](char c) {
+                debug_assert(not isdigit(c), c);
                 return c >= 'A' and c <= 'Z';
             }) == s.end());
         }
@@ -284,40 +284,40 @@ public:
             std::set<int> a = { 2, 2, 4, 6, 10 };
             std::set<int> b = { 2, 2, 5, 6, 10 };
             std::vector<double> c = { 1.2, 2.44, 3.15159, 5.2 };
-            assert(a == b, c);
+            debug_assert(a == b, c);
             std::map<std::string, int> m0 = {
                 {"foo", 2},
                 {"bar", -2}
             };
-            assert(false, m0);
+            debug_assert(false, m0);
             std::map<std::string, std::vector<int>> m1 = {
                 {"foo", {1, -2, 3, -4}},
                 {"bar", {-100, 200, 400, -800}}
             };
-            assert(false, m1);
+            debug_assert(false, m1);
             auto t = std::make_tuple(1, 0.1 + 0.2, "foobars");
-            assert(false, t);
+            debug_assert(false, t);
             std::array<int, 10> arr = {1,2,3,4,5,6,7,8,9,10};
-            assert(false, arr);
+            debug_assert(false, arr);
         }
 
         // Numeric
         // Tests useful during development
-        /*assert(.1f == .1);
-        assert(1.0 == 1.0 + std::numeric_limits<double>::epsilon());
+        /*debug_assert(.1f == .1);
+        debug_assert(1.0 == 1.0 + std::numeric_limits<double>::epsilon());
         ASSERT_EQ(0x12p2, 12);
         ASSERT_EQ(0x12p2, 0b10);
-        assert(0b1000000 == 0x3);
-        assert(.1 == 2);
-        assert(true == false);
-        assert(true ? false : true == false);
-        assert(0b100 == 0x3);
+        debug_assert(0b1000000 == 0x3);
+        debug_assert(.1 == 2);
+        debug_assert(true == false);
+        debug_assert(true ? false : true == false);
+        debug_assert(0b100 == 0x3);
 
-        assert(0 == (2 == garple()));
+        debug_assert(0 == (2 == garple()));
         ASSERT_GTEQ(map.count(1 == 1), 2);
         ASSERT_EQ(map.count(1), 2, "Error while doing XYZ");
         ASSERT_GTEQ(map.count(2 * garple()), 2, "Error while doing XYZ");
-        assert(S<S<int>>(2) == S<S<int>>(4));
+        debug_assert(S<S<int>>(2) == S<S<int>>(4));
         S<S<int>> a(1), b(2);
         ASSERT_EQ(a, b);
         const S<S<int>> c(4), d(8);
@@ -335,57 +335,57 @@ public:
         ASSERT_EQ(foo, (int*)nullptr);
 
 
-        assert(0 == (2  ==  garple()));
-        //assert(0 == 2 == garple());
+        debug_assert(0 == (2  ==  garple()));
+        //debug_assert(0 == 2 == garple());
 
-        assert(true ? false : true, "pffft");
+        debug_assert(true ? false : true, "pffft");
         {
             std::string x = "aa";
             std::string y = "bb";
-            assert(x == y);
+            debug_assert(x == y);
         }
         {
             P x {"aa"};
             P y {"bb"};
-            assert(x == y);
+            debug_assert(x == y);
         }
         {
             P x {"aa"};
-            assert(x == P {"bb"});
+            debug_assert(x == P {"bb"});
         }
         {
             const P x {"aa"};
-            assert(x == P {"bb"});
+            debug_assert(x == P {"bb"});
         }
-        assert((42 & 3U) == 1UL);
+        debug_assert((42 & 3U) == 1UL);
 
-        assert([](int a, int b) {
+        debug_assert([](int a, int b) {
             return a + b;
         } (10, 32) not_eq 42);
-        assert([](){return 42;}() not_eq 42);
-        assert([&]<typename T>(T a, T b){return a+b;}(10, 32) not_eq 42);
+        debug_assert([](){return 42;}() not_eq 42);
+        debug_assert([&]<typename T>(T a, T b){return a+b;}(10, 32) not_eq 42);
         ASSERT_NEQ([](int a, int b) {
             return a + b;
         } (10, 32), 42);
-        assert('\n' == '\t');
-        assert(<:](){return 42;%>() not_eq 42);
+        debug_assert('\n' == '\t');
+        debug_assert(<:](){return 42;%>() not_eq 42);
 
-        assert(&a == nullptr);
+        debug_assert(&a == nullptr);
 
         {
             std::string s = "h1ello";
-            assert(std::find_if(s.begin(), s.end(), [](char c) {
-                if(c == '1') assert(c != '1');
-                //assert(!isdigit(c), c);
+            debug_assert(std::find_if(s.begin(), s.end(), [](char c) {
+                if(c == '1') debug_assert(c != '1');
+                //debug_assert(!isdigit(c), c);
                 return c == 'e';
             }) == s.end());
         }
 
-        assert(0.1 == 0.2);
-        assert(.1 == 0.2);
-        assert(.1f == 0.2);
+        debug_assert(0.1 == 0.2);
+        debug_assert(.1 == 0.2);
+        debug_assert(.1f == 0.2);
 
-        assert(true); // this should lead to another assert(false) because we're in demo mode*/
+        debug_assert(true); // this should lead to another debug_assert(false) because we're in demo mode*/
     }
 };
 

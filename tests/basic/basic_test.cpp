@@ -11,7 +11,7 @@ std::optional<float> foo() {
 }
 
 int main() {
-    auto f = *ASSERT(foo());
+    auto f = *DEBUG_ASSERT_VAL(foo());
     static_assert(std::is_same<decltype(f), float>::value);
     assert(f == 2.5f);
 }

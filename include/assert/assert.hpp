@@ -1324,7 +1324,43 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
   #define LIBASSERT_DESTROY_DECOMPOSER libassert::detail::destroy(libassert_decomposer)
  #endif
 #endif
-#define LIBASSERT_INVOKE(expr, doreturn, check_expression, name, type, failaction, ...) \
+#define LIBASSERT_INVOKE(expr, name, type, failaction, ...) \
+        /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
+        /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
+        do { \
+          LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
+          LIBASSERT_IGNORE_UNUSED_VALUE \
+          LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
+          LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
+          LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
+          auto libassert_decomposer = \
+                         libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
+          LIBASSERT_WARNING_PRAGMA_POP_GCC \
+          decltype(auto) libassert_value = libassert_decomposer.get_value(); \
+          constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
+          /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
+          /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
+          /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
+          if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
+            ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
+            failaction \
+            LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
+            if constexpr(sizeof libassert_decomposer > 32) { \
+              process_assert_fail(libassert_decomposer, libassert_params \
+                                         LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
+            } else { \
+              /* std::move it to assert_fail_m, will be moved back to r */ \
+              auto libassert_r = process_assert_fail_m(std::move(libassert_decomposer), libassert_params \
+                                         LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
+              /* can't move-assign back to decomposer if it holds reference members */ \
+              LIBASSERT_DESTROY_DECOMPOSER; \
+              new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \
+            } \
+          } \
+          LIBASSERT_WARNING_PRAGMA_POP_CLANG \
+        } while(false) \
+
+#define LIBASSERT_INVOKE_VAL(expr, doreturn, check_expression, name, type, failaction, ...) \
         /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
         /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
         LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
@@ -1374,42 +1410,50 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
  #define LIBASSERT_ASSUME_ACTION
 #endif
 
+// assertion macros
+
 #ifndef NDEBUG
- #define DEBUG_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, false, true, "DEBUG_ASSERT", debug_assertion, , __VA_ARGS__)
- #define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, true, true, "ASSERT", assertion, , __VA_ARGS__)
+ #define DEBUG_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "DEBUG_ASSERT", debug_assertion, , __VA_ARGS__)
 #else
  #define DEBUG_ASSERT(expr, ...) (void)0
- #define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, true, false, "ASSERT", assertion, , __VA_ARGS__)
 #endif
 
 #ifdef LIBASSERT_LOWERCASE
  #ifndef NDEBUG
-  #define debug_assert(expr, ...) LIBASSERT_INVOKE(expr, false, true, "debug_assert", debug_assertion, , __VA_ARGS__)
+  #define debug_assert(expr, ...) LIBASSERT_INVOKE(expr, "debug_assert", debug_assertion, , __VA_ARGS__)
  #else
   #define debug_assert(expr, ...) (void)0
  #endif
 #endif
 
-#ifdef NO_ASSERT_RELEASE_EVAL
- #undef ASSERT
+#define ASSUME(expr, ...) LIBASSERT_INVOKE(expr, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
+
+#define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "ASSERT", assertion, , __VA_ARGS__)
+// #define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "ASSERT", verification, , __VA_ARGS__)
+
+// value variants
+
+#ifndef NDEBUG
+ #define DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
+#else
+ #define DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, false, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
+#endif
+
+#ifdef LIBASSERT_LOWERCASE
  #ifndef NDEBUG
-  #define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, false, true, "ASSERT", assertion, , __VA_ARGS__)
+  #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "debug_assert_val", debug_assertion, , __VA_ARGS__)
  #else
-  #define ASSERT(expr, ...) (void)0
- #endif
- #ifdef LIBASSERT_LOWERCASE
-  #undef assert
-  #ifndef NDEBUG
-   #define assert(expr, ...) LIBASSERT_INVOKE(expr, false, true, "assert", assertion, , __VA_ARGS__)
-  #else
-   #define assert(expr, ...) (void)0
-  #endif
+  #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, false, "debug_assert_val", debug_assertion, , __VA_ARGS__)
  #endif
 #endif
 
-#define ASSUME(expr, ...) LIBASSERT_INVOKE(expr, true, true, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
+#define ASSUME_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
 
-#define VERIFY(expr, ...) LIBASSERT_INVOKE(expr, true, true, "VERIFY", verification, , __VA_ARGS__)
+#define ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSERT", verification, , __VA_ARGS__)
+
+#ifdef LIBASSERT_LOWERCASE
+ #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "assert", assertion, , __VA_ARGS__)
+#endif
 
 #endif
 
@@ -1420,8 +1464,8 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
   #undef assert
  #endif
  #ifndef NDEBUG
-  #define assert(expr, ...) LIBASSERT_INVOKE(expr, true, true, "assert", assertion, , __VA_ARGS__)
+  #define assert(expr, ...) LIBASSERT_INVOKE(expr, "assert", assertion, , __VA_ARGS__)
  #else
-  #define assert(expr, ...) LIBASSERT_INVOKE(expr, true, false, "assert", assertion, , __VA_ARGS__)
+  #define assert(expr, ...) LIBASSERT_INVOKE(expr, "assert", assertion, , __VA_ARGS__)
  #endif
 #endif

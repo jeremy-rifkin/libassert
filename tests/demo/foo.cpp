@@ -1,5 +1,5 @@
 #include <assert/assert.hpp>
 
 void qux() {
-    assert(false);
+    debug_assert(false);
 }

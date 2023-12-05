@@ -56,21 +56,21 @@ struct only_move_constructable {
 int main() {
     // test rvalue
     {
-        decltype(auto) a = ASSERT(only_move_constructable(2) == 2);
+        decltype(auto) a = DEBUG_ASSERT_VAL(only_move_constructable(2) == 2);
         static_assert(std::is_same<decltype(a), only_move_constructable>::value);
-        assert(!is_lvalue(ASSERT(only_move_constructable(2) == 2)));
-        assert(ASSERT(only_move_constructable(2) == 2).x == 2);
-        //assert(assert(only_move_constructable(2) == 2).x++ == 2); // not allowed
+        assert(!is_lvalue(DEBUG_ASSERT_VAL(only_move_constructable(2) == 2)));
+        assert(DEBUG_ASSERT_VAL(only_move_constructable(2) == 2).x == 2);
+        //assert(debug_assert(only_move_constructable(2) == 2).x++ == 2); // not allowed
     }
 
     // test lvalue
     {
         only_move_constructable x(2);
-        decltype(auto) b = ASSERT(x == 2);
+        decltype(auto) b = DEBUG_ASSERT_VAL(x == 2);
         static_assert(std::is_same<decltype(b), only_move_constructable&>::value);
-        assert(is_lvalue(ASSERT(x == 2)));
-        ASSERT(x == 2).x++;
-        VERIFY(x.x == 3);
+        assert(is_lvalue(DEBUG_ASSERT_VAL(x == 2)));
+        DEBUG_ASSERT_VAL(x == 2).x++;
+        ASSERT(x.x == 3);
     }
 
     // test values are forwarded properly
@@ -89,7 +89,7 @@ int main() {
             }
         };
         S s;
-        decltype(auto) v = ASSERT(s << 2 == false);
+        decltype(auto) v = DEBUG_ASSERT_VAL(s << 2 == false);
         static_assert(std::is_same<decltype(v), B>::value);
     }
     {
@@ -107,28 +107,28 @@ int main() {
             }
         };
         S s{b};
-        decltype(auto) v = ASSERT(s << 2 == false);
+        decltype(auto) v = DEBUG_ASSERT_VAL(s << 2 == false);
         static_assert(std::is_same<decltype(v), B&>::value);
     }
 
     // above cases test lhs returns, now test the case where the full value is returned
     {
-        auto v0 = ASSERT(1 | 2);
-        VERIFY(v0 == 3);
-        auto v1 = ASSERT(7 & 4);
-        VERIFY(v1 == 4);
-        auto v2 = ASSERT(1 << 16);
-        VERIFY(v2 == 65536);
-        auto v3 = ASSERT(32 >> 2);
-        VERIFY(v3 == 8);
+        auto v0 = DEBUG_ASSERT_VAL(1 | 2);
+        ASSERT(v0 == 3);
+        auto v1 = DEBUG_ASSERT_VAL(7 & 4);
+        ASSERT(v1 == 4);
+        auto v2 = DEBUG_ASSERT_VAL(1 << 16);
+        ASSERT(v2 == 65536);
+        auto v3 = DEBUG_ASSERT_VAL(32 >> 2);
+        ASSERT(v3 == 8);
     }
 
-    // test DEBUG_ASSERT returns nothing
+    // test _VAL returns the correct type
     {
         auto f = [] {
-            return DEBUG_ASSERT(false);
+            return DEBUG_ASSERT_VAL(false);
         };
-        static_assert(std::is_same<decltype(f()), void>::value);
+        static_assert(std::is_same<decltype(f()), bool>::value);
     }
 
     return 0;

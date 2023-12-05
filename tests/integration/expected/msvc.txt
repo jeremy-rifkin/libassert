@@ -1,6 +1,6 @@
 ===================== [value printing: strings] =====================
 Assertion failed at integration/integration.cpp:1103: void __cdecl test_class<int>::something_else(void):
-    assert(s == "test");
+    debug_assert(s == "test");
     Where:
         s => "test\n"
 
@@ -14,7 +14,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1104: void __cdecl test_class<int>::something_else(void):
-    assert(s[i] == 'c', ...);
+    debug_assert(s[i] == 'c', ...);
     Where:
         s[i] => 't'
     Extra diagnostics:
@@ -31,7 +31,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1107: void __cdecl test_class<int>::something_else(void):
-    assert(buffer == thing);
+    debug_assert(buffer == thing);
     Where:
         buffer => char*: nullptr
         thing  => "foo"
@@ -46,7 +46,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1108: void __cdecl test_class<int>::something_else(void):
-    assert(buffer == +thing);
+    debug_assert(buffer == +thing);
     Where:
         buffer => char*: nullptr
         +thing => "foo"
@@ -61,7 +61,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1110: void __cdecl test_class<int>::something_else(void):
-    assert(s == sv);
+    debug_assert(s == sv);
     Where:
         s  => "test\n"
         sv => "foo"
@@ -77,7 +77,7 @@ Stack trace:
 
 ===================== [value printing: pointers] =====================
 Assertion failed at integration/integration.cpp:1201: void __cdecl test_class<int>::something_else(void):
-    assert((uintptr_t)-1 == 0xff);
+    debug_assert((uintptr_t)-1 == 0xff);
     Where:
         (uintptr_t)-1 =>  18446744073709551615  0xffffffffffffffff
         0xff          =>  255                   0xff
@@ -92,7 +92,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1202: void __cdecl test_class<int>::something_else(void):
-    assert((uintptr_t)-1 == (uintptr_t)0xff);
+    debug_assert((uintptr_t)-1 == (uintptr_t)0xff);
     Where:
         (uintptr_t)-1   => 18446744073709551615
         (uintptr_t)0xff => 255
@@ -107,7 +107,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1204: void __cdecl test_class<int>::something_else(void):
-    assert(foo == nullptr);
+    debug_assert(foo == nullptr);
     Where:
         foo => void*: 0xdeadbeef
 
@@ -122,7 +122,7 @@ Stack trace:
 
 ===================== [value printing: number formats] =====================
 Assertion failed at integration/integration.cpp:1303: void __cdecl test_class<int>::something_else(void):
-    assert(mask & flags);
+    debug_assert(mask & flags);
     Where:
         mask  =>  405  0b0000000110010101
         flags =>  42   0b0000000000101010
@@ -137,7 +137,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1304: void __cdecl test_class<int>::something_else(void):
-    assert(0xf == 16);
+    debug_assert(0xf == 16);
     Where:
         0xf =>  15  0xf
         16  =>  16  0x10
@@ -153,7 +153,7 @@ Stack trace:
 
 ===================== [value printing: floating point] =====================
 Assertion failed at integration/integration.cpp:1401: void __cdecl test_class<int>::something_else(void):
-    assert(1 == 1.5);
+    debug_assert(1 == 1.5);
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -165,7 +165,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1402: void __cdecl test_class<int>::something_else(void):
-    assert(0.5 != .5);
+    debug_assert(0.5 != .5);
     Where:
         .5 => 0.5
 
@@ -179,7 +179,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1403: void __cdecl test_class<int>::something_else(void):
-    assert(0.1 + 0.2 == 0.3);
+    debug_assert(0.1 + 0.2 == 0.3);
     Where:
         0.1 + 0.2 => 0.30000000000000004
         0.3       => 0.29999999999999999
@@ -194,7 +194,7 @@ Stack trace:
 
 
 Verification failed at integration/integration.cpp:1404: void __cdecl test_class<int>::something_else(void):
-    VERIFY(.1 + .2 == .3);
+    ASSERT(.1 + .2 == .3);
     Where:
         .1 + .2 => 0.30000000000000004
         .3      => 0.29999999999999999
@@ -209,7 +209,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1407: void __cdecl test_class<int>::something_else(void):
-    assert(ff == .1);
+    debug_assert(ff == .1);
     Where:
         ff => 0.100000001
         .1 => 0.10000000000000001
@@ -224,7 +224,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1408: void __cdecl test_class<int>::something_else(void):
-    assert(.1f == .1);
+    debug_assert(.1f == .1);
     Where:
         .1f => 0.100000001
         .1  => 0.10000000000000001
@@ -240,7 +240,7 @@ Stack trace:
 
 ===================== [value printing: ostream overloads] =====================
 Assertion failed at integration/integration.cpp:1502: void __cdecl test_class<int>::something_else(void):
-    assert(p == printable{2.55});
+    debug_assert(p == printable{2.55});
     Where:
         p               => (printable = 1.42)
         printable{2.55} => (printable = 2.55)
@@ -256,7 +256,7 @@ Stack trace:
 
 ===================== [value printing: no ostream overload] =====================
 Assertion failed at integration/integration.cpp:1602: void __cdecl test_class<int>::something_else(void):
-    assert(p == not_printable{2.55});
+    debug_assert(p == not_printable{2.55});
     Where:
         p                   => <instance of not_printable<double>>
         not_printable{2.55} => <instance of not_printable<double>>
@@ -271,7 +271,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1603: void __cdecl test_class<int>::something_else(void):
-    assert(p.f == not_printable{2.55}.f);
+    debug_assert(p.f == not_printable{2.55}.f);
     Where:
         p.f                   => <instance of std::optional<double>>
         not_printable{2.55}.f => <instance of std::optional<double>>
@@ -287,7 +287,7 @@ Stack trace:
 
 ===================== [optional messages] =====================
 Assertion failed at integration/integration.cpp:1701: void __cdecl test_class<int>::something_else(void):
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         2 => 2
 
@@ -301,7 +301,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1702: void __cdecl test_class<int>::something_else(void): foo
-    assert(false, ...);
+    debug_assert(false, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -313,7 +313,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1703: void __cdecl test_class<int>::something_else(void): foo
-    assert(false, ...);
+    debug_assert(false, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -325,7 +325,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1704: void __cdecl test_class<int>::something_else(void): foo
-    assert(false, ...);
+    debug_assert(false, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -337,7 +337,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1705: void __cdecl test_class<int>::something_else(void): foo
-    assert(false, ...);
+    debug_assert(false, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -349,7 +349,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1706: void __cdecl test_class<int>::something_else(void): foo
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         2 => 2
 
@@ -363,7 +363,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1707: void __cdecl test_class<int>::something_else(void): foo
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         2 => 2
 
@@ -377,7 +377,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1708: void __cdecl test_class<int>::something_else(void): foo
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         2 => 2
 
@@ -391,7 +391,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1709: void __cdecl test_class<int>::something_else(void): foo
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         2 => 2
 
@@ -405,7 +405,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1710: void __cdecl test_class<int>::something_else(void):
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         nullptr => nullptr
 
@@ -419,7 +419,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1711: void __cdecl test_class<int>::something_else(void): (nullptr)
-    assert(false, ...);
+    debug_assert(false, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -432,7 +432,7 @@ Stack trace:
 
 ===================== [errno] =====================
 Assertion failed at integration/integration.cpp:1802: void __cdecl test_class<int>::something_else(void):
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         errno =>  2 "No such file or directory"
 
@@ -446,7 +446,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1804: void __cdecl test_class<int>::something_else(void): foo
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         errno =>  2 "No such file or directory"
 
@@ -463,7 +463,7 @@ Stack trace:
 bar() called
 foo() called
 Assertion failed at integration/integration.cpp:1901: void __cdecl test_class<int>::something_else(void): foo
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         false           => false
         2 * foo()       => 4
@@ -481,7 +481,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:1902: void __cdecl test_class<int>::something_else(void):
-    assert([] { return false; } ());
+    debug_assert([] { return false; } ());
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -494,7 +494,7 @@ Stack trace:
 
 ===================== [safe comparisons] =====================
 Assertion failed at integration/integration.cpp:2001: void __cdecl test_class<int>::something_else(void):
-    assert(18446744073709551606ULL == -10);
+    debug_assert(18446744073709551606ULL == -10);
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -506,7 +506,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2002: void __cdecl test_class<int>::something_else(void):
-    assert(-1 > 1U);
+    debug_assert(-1 > 1U);
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -519,7 +519,7 @@ Stack trace:
 
 ===================== [expression decomposition] =====================
 Assertion failed at integration/integration.cpp:2102: void __cdecl test_class<int>::something_else(void):
-    assert(1 == (1 & 2));
+    debug_assert(1 == (1 & 2));
     Where:
         (1 & 2) => 0
 
@@ -533,7 +533,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2103: void __cdecl test_class<int>::something_else(void):
-    assert(1 < 1 < 0);
+    debug_assert(1 < 1 < 0);
     Where:
         1 < 1 => false
 
@@ -547,7 +547,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2104: void __cdecl test_class<int>::something_else(void):
-    assert(0 + 0 + 0);
+    debug_assert(0 + 0 + 0);
     Where:
         0 + 0 + 0 => 0
 
@@ -561,7 +561,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2105: void __cdecl test_class<int>::something_else(void):
-    assert(false == false == false);
+    debug_assert(false == false == false);
     Where:
         false == false => true
 
@@ -575,7 +575,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2106: void __cdecl test_class<int>::something_else(void):
-    assert(1 << 1 == 200);
+    debug_assert(1 << 1 == 200);
     Where:
         1 << 1 => 2
 
@@ -589,7 +589,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2107: void __cdecl test_class<int>::something_else(void):
-    assert(1 << 1 << 31);
+    debug_assert(1 << 1 << 31);
     Where:
         1 << 1 => 2
 
@@ -603,7 +603,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2109: void __cdecl test_class<int>::something_else(void):
-    assert(x -= 2);
+    debug_assert(x -= 2);
     Where:
         x => 0
 
@@ -617,7 +617,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2111: void __cdecl test_class<int>::something_else(void):
-    assert(x -= x -= 1);
+    debug_assert(x -= x -= 1);
     Where:
         x      => 0
         x -= 1 => 0
@@ -632,7 +632,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2113: void __cdecl test_class<int>::something_else(void):
-    assert(x -= x -= x -= 1);
+    debug_assert(x -= x -= x -= 1);
     Where:
         x           => 0
         x -= x -= 1 => 0
@@ -647,7 +647,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2114: void __cdecl test_class<int>::something_else(void): pffft
-    assert(true ? false : true, ...);
+    debug_assert(true ? false : true, ...);
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -659,7 +659,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2116: void __cdecl test_class<int>::something_else(void):
-    assert(a >> 1);
+    debug_assert(a >> 1);
     Where:
         a => 1
 
@@ -676,7 +676,7 @@ Stack trace:
 foo() called
 bar() called
 Assertion failed at integration/integration.cpp:2201: void __cdecl test_class<int>::something_else(void):
-    assert(foo() < bar());
+    debug_assert(foo() < bar());
     Where:
         foo() => 2
         bar() => -2
@@ -695,7 +695,7 @@ logger_type::logger_type() [n=1]
 logger_type::logger_type() [n=2]
 logger_type::operator==(const logger_type&) [n=1, other=2]
 Assertion failed at integration/integration.cpp:2304: void __cdecl test_class<int>::something_else(void):
-    assert(lt1 == lt2);
+    debug_assert(lt1 == lt2);
     Where:
         lt1 => logger_type [n = 1]
         lt2 => logger_type [n = 2]
@@ -719,7 +719,7 @@ logger_type::compl logger_type() [n=-2]
 logger_type::operator==(int, const logger_type&) [b=1, n=2]
 logger_type::logger_type(logger_type&&) [n=2]
 Assertion failed at integration/integration.cpp:2308: void __cdecl test_class<int>::something_else(void):
-    assert(1 == logger_type(2));
+    debug_assert(1 == logger_type(2));
     Where:
         logger_type(2) => logger_type [n = 2]
 
@@ -748,7 +748,7 @@ logger_type::compl logger_type() [n=-2]
 logger_type::operator==(const logger_type&, int) [n=1, b=2]
 logger_type::logger_type(logger_type&&) [n=1]
 Assertion failed at integration/integration.cpp:2312: void __cdecl test_class<int>::something_else(void):
-    assert(logger_type(1) == 2);
+    debug_assert(logger_type(1) == 2);
     Where:
         logger_type(1) => logger_type [n = 1]
 
@@ -785,7 +785,7 @@ logger_type::operator==(const logger_type&) [n=1, other=2]
 logger_type::logger_type(logger_type&&) [n=1]
 logger_type::logger_type(logger_type&&) [n=2]
 Assertion failed at integration/integration.cpp:2316: void __cdecl test_class<int>::something_else(void):
-    assert(logger_type(1) == logger_type(2));
+    debug_assert(logger_type(1) == logger_type(2));
     Where:
         logger_type(1) => logger_type [n = 1]
         logger_type(2) => logger_type [n = 2]
@@ -817,7 +817,7 @@ logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=1]
 logger_type::compl logger_type() [n=-2]
 Verification failed at integration/integration.cpp:2317: void __cdecl test_class<int>::something_else(void):
-    VERIFY(!(std::is_same<decltype(r), logger_type>::value));
+    ASSERT(!(std::is_same<decltype(r), logger_type>::value));
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -829,7 +829,7 @@ Stack trace:
 
 
 Verification failed at integration/integration.cpp:2318: void __cdecl test_class<int>::something_else(void):
-    VERIFY(r.n != 1);
+    ASSERT(r.n != 1);
     Where:
         r.n => 1
 
@@ -849,7 +849,7 @@ logger_type::compl logger_type() [n=1]
 logger_type::logger_type() [n=2]
 logger_type::operator==(const logger_type&, int) [n=2, b=2]
 Assertion failed at integration/integration.cpp:601: decltype(auto) __cdecl test_class<int>::get_lt_a(logger_type &):
-    assert(l == 2);
+    debug_assert(l == 2);
     Where:
         l => logger_type [n = 2]
 
@@ -866,7 +866,7 @@ Stack trace:
 
 logger_type::operator==(const logger_type&, int) [n=3, b=1]
 Assertion failed at integration/integration.cpp:2405: void __cdecl test_class<int>::something_else(void):
-    assert(lt == 1);
+    debug_assert(lt == 1);
     Where:
         lt => logger_type [n = 3]
 
@@ -881,7 +881,7 @@ Stack trace:
 
 logger_type::operator==(const logger_type&, int) [n=3, b=1]
 Assertion failed at integration/integration.cpp:2406: void __cdecl test_class<int>::something_else(void):
-    assert(x == 1);
+    debug_assert(x == 1);
     Where:
         x => logger_type [n = 3]
 
@@ -898,7 +898,7 @@ logger_type::compl logger_type() [n=3]
 --------------------------------------------
 
 Assertion failed at integration/integration.cpp:2411: void __cdecl test_class<int>::something_else(void):
-    assert(x ^= 1);
+    debug_assert(x ^= 1);
     Where:
         x =>  0  0b00000000000000000000000000000000
         1 =>  1  0b00000000000000000000000000000001
@@ -921,7 +921,7 @@ logger_type::compl logger_type() [n=-2]
 logger_type::operator==(const logger_type&, int) [n=2, b=2]
 logger_type::logger_type(logger_type&&) [n=2]
 Assertion failed at integration/integration.cpp:605: decltype(auto) __cdecl test_class<int>::get_lt_b(void):
-    assert(logger_type(2) == 2);
+    debug_assert(logger_type(2) == 2);
     Where:
         logger_type(2) => logger_type [n = 2]
 
@@ -948,7 +948,7 @@ logger_type::compl logger_type() [n=-2]
 logger_type::logger_type(logger_type&&) [n=2]
 logger_type::compl logger_type() [n=-2]
 Assertion failed at integration/integration.cpp:2503: void __cdecl test_class<int>::something_else(void):
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         x => logger_type [n = 2]
 
@@ -966,7 +966,7 @@ logger_type::compl logger_type() [n=2]
 
 ===================== [simple recursion] =====================
 Assertion failed at integration/integration.cpp:501: void __cdecl rec(int):
-    assert(false);
+    debug_assert(false);
 
 Stack trace:
 # 1 rec(int)
@@ -988,7 +988,7 @@ Stack trace:
 
 ===================== [other recursion] =====================
 Assertion failed at integration/integration.cpp:508: void __cdecl recursive_a(int):
-    assert(false);
+    debug_assert(false);
 
 Stack trace:
 # 1 recursive_a(int)
@@ -1023,7 +1023,7 @@ Stack trace:
 
 ===================== [Path differentiation] =====================
 Assertion failed at integration/x/a.cpp:5: void __cdecl test_path_differentiation_2(void):
-    assert(false);
+    debug_assert(false);
 
 Stack trace:
 # 1 test_path_differentiation_2()
@@ -1040,7 +1040,7 @@ Stack trace:
 
 ===================== [Enum handling] =====================
 Assertion failed at integration/integration.cpp:2904: void __cdecl test_class<int>::something_else(void):
-    assert(a != A);
+    debug_assert(a != A);
     Where:
         a => 0
         A => 0
@@ -1055,7 +1055,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:2906: void __cdecl test_class<int>::something_else(void):
-    assert(b != bar::A);
+    debug_assert(b != bar::A);
     Where:
         b      => A
         bar::A => A
@@ -1071,7 +1071,7 @@ Stack trace:
 
 ===================== [Literal format handling] =====================
 Assertion failed at integration/integration.cpp:3001: void __cdecl test_class<int>::something_else(void):
-    assert(0xff == 077);
+    debug_assert(0xff == 077);
     Where:
         0xff =>  255  0xff  0377
         077  =>  63   0x3f  077
@@ -1086,7 +1086,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:3002: void __cdecl test_class<int>::something_else(void):
-    assert('x' == 20);
+    debug_assert('x' == 20);
     Where:
         'x' =>  'x'     120
         20  =>  '\x14'  20
@@ -1101,7 +1101,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:3003: void __cdecl test_class<int>::something_else(void):
-    assert('x' == 'y');
+    debug_assert('x' == 'y');
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -1113,7 +1113,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:3005: void __cdecl test_class<int>::something_else(void):
-    assert(c == 20);
+    debug_assert(c == 20);
     Where:
         c  =>  'x'     120
         20 =>  '\x14'  20
@@ -1129,7 +1129,7 @@ Stack trace:
 
 ===================== [Container printing] =====================
 Assertion failed at integration/integration.cpp:3104: void __cdecl test_class<int>::something_else(void):
-    assert(a == b, ...);
+    debug_assert(a == b, ...);
     Where:
         a => std::set<int, std::less<int>> [size: 4]: [2, 4, 6, 10]
         b => std::set<int, std::less<int>> [size: 4]: [2, 5, 6, 10]
@@ -1146,7 +1146,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:3109: void __cdecl test_class<int>::something_else(void):
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         m0 => std::map<std::string, int, std::less<std::string>> [size: 2]: [["bar", -2], ["foo", 2]]
 
@@ -1160,7 +1160,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:3114: void __cdecl test_class<int>::something_else(void):
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         m1 => std::map<std::string, std::vector<int>, std::less<std::string>> [size: 2]: [["bar", [-100, 200, 400, -800]], ["foo", [1, -2, 3, -4]]]
 
@@ -1174,7 +1174,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:3116: void __cdecl test_class<int>::something_else(void):
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         t => std::tuple<int, double, char const *>: [1, 0.30000000000000004, "foobars"]
 
@@ -1188,7 +1188,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:3118: void __cdecl test_class<int>::something_else(void):
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         arr => std::array<int, 10> [size: 10]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -1202,7 +1202,7 @@ Stack trace:
 
 
 Assertion failed at integration/integration.cpp:3120: void __cdecl test_class<int>::something_else(void):
-    assert(false, ...);
+    debug_assert(false, ...);
     Extra diagnostics:
         carr => int[5] [size: 5]: [5, 4, 3, 2, 1]
 
@@ -1217,7 +1217,7 @@ Stack trace:
 
 ===================== [Type cleaning] =====================
 Assertion failed at integration/integration.cpp:3305: void __cdecl test_class<int>::test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>, std::less<std::string>> &):
-    assert(map == other);
+    debug_assert(map == other);
     Where:
         map   => std::map<std::string, std::vector<std::string_view>, std::less<std::string>> [size: 2]: [["bar", ["b1", "b3", "b5"]], ["foo", ["f1", "f3", "f5"]]]
         other => std::map<std::string, std::vector<std::string_view>, std::less<std::string>> [size: 0]: []
@@ -1235,7 +1235,7 @@ Stack trace:
 
 ===================== [Debug stringification customization point] =====================
 Assertion failed at integration/integration.cpp:3402: void __cdecl test_class<int>::something_else(void):
-    assert(x == y, ...);
+    debug_assert(x == y, ...);
     Where:
         x => (debug_print_customization = 2)
         y => (debug_print_customization = 1)
@@ -1254,7 +1254,7 @@ Stack trace:
 
 ===================== [Complex type resolution] =====================
 Assertion failed at integration/integration.cpp:3602: void __cdecl test_class<int>::test_complex_typing(volatile const std::vector<std::string> *const &, int [], const char (&)[4], void (__cdecl complex_typing::S::* )(int, std::string, void ***, void *(__cdecl *)(int), void (__cdecl *(__cdecl *)(int))(void), void (__cdecl *(*(__cdecl *)(int))[5])(void)), int complex_typing::S::* ):
-    assert(false);
+    debug_assert(false);
 
 Stack trace:
 # 1 test_class<int>::test_complex_typing(std::vector<std::string>*&, int*, char(&)[4], void(complex_typing::S::*)(int, std::string, void***, void*(*)(int), void(*(*)(int))(), void(*(*(*)(int))[5])()), int complex_typing::S::*)

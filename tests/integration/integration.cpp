@@ -122,19 +122,19 @@ namespace complex_typing {
 
 #line 500
 void rec(int n) {
-    if(n == 0) assert(false);
+    if(n == 0) debug_assert(false);
     else rec(n - 1);
 }
 
 void recursive_a(int), recursive_b(int);
 
 void recursive_a(int n) {
-    if(n == 0) assert(false);
+    if(n == 0) debug_assert(false);
     else recursive_b(n - 1);
 }
 
 void recursive_b(int n) {
-    if(n == 0) assert(false);
+    if(n == 0) debug_assert(false);
     else recursive_a(n - 1);
 }
 
@@ -164,23 +164,23 @@ public:
         {
             std::string s = "test\n";
             int i = 0;
-            assert(s == "test");
-            assert(s[i] == 'c', "", s, i);
+            debug_assert(s == "test");
+            debug_assert(s[i] == 'c', "", s, i);
             char* buffer = nullptr;
             char thing[] = "foo";
-            assert(buffer == thing);
-            assert(buffer == +thing);
+            debug_assert(buffer == thing);
+            debug_assert(buffer == +thing);
             std::string_view sv = "foo";
-            assert(s == sv);
+            debug_assert(s == sv);
         }
         // value printing: pointers
         SECTION("value printing: pointers");
         #line 1200
         {
-            assert((uintptr_t)-1 == 0xff);
-            assert((uintptr_t)-1 == (uintptr_t)0xff);
+            debug_assert((uintptr_t)-1 == 0xff);
+            debug_assert((uintptr_t)-1 == (uintptr_t)0xff);
             void* foo = (void*)0xdeadbeefULL;
-            assert(foo == nullptr);
+            debug_assert(foo == nullptr);
         }
         // value printing: number formats
         SECTION("value printing: number formats");
@@ -188,104 +188,104 @@ public:
         {
             const uint16_t flags = 0b000101010;
             const uint16_t mask = 0b110010101;
-            assert(mask bitand flags);
-            assert(0xf == 16);
+            debug_assert(mask bitand flags);
+            debug_assert(0xf == 16);
         }
         // value printing: floating point
         SECTION("value printing: floating point");
         #line 1400
         {
-            assert(1 == 1.5);
-            assert(0.5 != .5); // FIXME
-            assert(0.1 + 0.2 == 0.3);
-            VERIFY(.1 + .2 == .3);
-            assert(0.1f + 0.2f == 0.3f);
+            debug_assert(1 == 1.5);
+            debug_assert(0.5 != .5); // FIXME
+            debug_assert(0.1 + 0.2 == 0.3);
+            ASSERT(.1 + .2 == .3);
+            debug_assert(0.1f + 0.2f == 0.3f);
             float ff = .1f;
-            assert(ff == .1);
-            assert(.1f == .1);
+            debug_assert(ff == .1);
+            debug_assert(.1f == .1);
         }
         // value printing: ostream overloads
         SECTION("value printing: ostream overloads");
         #line 1500
         {
             printable p{1.42};
-            assert(p == printable{2.55});
+            debug_assert(p == printable{2.55});
         }
         // value printing: no ostream overload
         SECTION("value printing: no ostream overload");
         #line 1600
         {
             const not_printable p{1.42};
-            assert(p == not_printable{2.55});
-            assert(p.f == not_printable{2.55}.f);
+            debug_assert(p == not_printable{2.55});
+            debug_assert(p.f == not_printable{2.55}.f);
         }
 
         // optional messages
         SECTION("optional messages");
         #line 1700
         {
-            assert(false, 2);
-            assert(false, "foo");
-            assert(false, "foo"s);
-            assert(false, "foo"sv);
-            assert(false, (char*)"foo");
-            assert(false, "foo", 2);
-            assert(false, "foo"s, 2);
-            assert(false, "foo"sv, 2);
-            assert(false, (char*)"foo", 2);
-            assert(false, nullptr);
-            assert(false, (char*)nullptr);
+            debug_assert(false, 2);
+            debug_assert(false, "foo");
+            debug_assert(false, "foo"s);
+            debug_assert(false, "foo"sv);
+            debug_assert(false, (char*)"foo");
+            debug_assert(false, "foo", 2);
+            debug_assert(false, "foo"s, 2);
+            debug_assert(false, "foo"sv, 2);
+            debug_assert(false, (char*)"foo", 2);
+            debug_assert(false, nullptr);
+            debug_assert(false, (char*)nullptr);
         }
         // extra diagnostics
         SECTION("errno");
         #line 1800
         {
             errno = 2;
-            assert(false, errno);
+            debug_assert(false, errno);
             errno = 2;
-            assert(false, "foo", errno);
+            debug_assert(false, "foo", errno);
         }
         // general
         SECTION("general");
         #line 1900
         {
-            assert(false, "foo", false, 2 * foo(), "foobar"sv, bar(), printable{2.55});
-            assert([] { return false; } ());
+            debug_assert(false, "foo", false, 2 * foo(), "foobar"sv, bar(), printable{2.55});
+            debug_assert([] { return false; } ());
         }
         // safe comparisons
         SECTION("safe comparisons");
         #line 2000
         {
-            assert(18446744073709551606ULL == -10);
-            assert(-1 > 1U);
+            debug_assert(18446744073709551606ULL == -10);
+            debug_assert(-1 > 1U);
         }
 
         // expression decomposition
         SECTION("expression decomposition");
         #line 2100
         {
-            //ASSERT(1 = (1 bitand 2)); // <- FIXME: Not evaluated correctly
-            assert(1 == (1 bitand 2));
-            assert(1 < 1 < 0);
-            assert(0 + 0 + 0);
-            assert(false == false == false);
-            assert(1 << 1 == 200);
-            assert(1 << 1 << 31);
+            //DEBUG_ASSERT(1 = (1 bitand 2)); // <- FIXME: Not evaluated correctly
+            debug_assert(1 == (1 bitand 2));
+            debug_assert(1 < 1 < 0);
+            debug_assert(0 + 0 + 0);
+            debug_assert(false == false == false);
+            debug_assert(1 << 1 == 200);
+            debug_assert(1 << 1 << 31);
             int x = 2;
-            assert(x -= 2);
+            debug_assert(x -= 2);
             x = 2;
-            assert(x -= x -= 1); // TODO: double check....
+            debug_assert(x -= x -= 1); // TODO: double check....
             x = 2;
-            assert(x -= x -= x -= 1); // TODO: double check....
-            assert(true ? false : true, "pffft");
+            debug_assert(x -= x -= x -= 1); // TODO: double check....
+            debug_assert(true ? false : true, "pffft");
             int a = 1; // regression test for #26
-            assert(a >> 1);
+            debug_assert(a >> 1);
         }
         // ensure values are only computed once
         SECTION("ensure values are only computed once");
         #line 2200
         {
-            assert(foo() < bar());
+            debug_assert(foo() < bar());
         }
         // value forwarding: copy / moves
         SECTION("value forwarding: copy / moves");
@@ -294,21 +294,21 @@ public:
             {
                 logger_type lt1(1);
                 logger_type lt2(2);
-                assert(lt1 == lt2);
+                debug_assert(lt1 == lt2);
             }
             std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
             {
-                assert(1 == logger_type(2));
+                debug_assert(1 == logger_type(2));
             }
             std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
             {
-                assert(logger_type(1) == 2);
+                debug_assert(logger_type(1) == 2);
             }
             std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
             {
-                auto r = assert(logger_type(1) == logger_type(2));
-                VERIFY(!(std::is_same<decltype(r), logger_type>::value));
-                VERIFY(r.n != 1);
+                auto r = assert_val(logger_type(1) == logger_type(2));
+                ASSERT(!(std::is_same<decltype(r), logger_type>::value));
+                ASSERT(r.n != 1);
             }
             std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
         }
@@ -322,15 +322,15 @@ public:
                 logger_type lt(2);
                 decltype(auto) x = get_lt_a(lt);
                 x.n++;
-                assert(lt == 1);
-                assert(x == 1);
+                debug_assert(lt == 1);
+                debug_assert(x == 1);
             }
             std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
             {
                 int x = 1;
-                assert(x ^= 1);
-                //assert(x ^= 1) |= 0xf0; // FIXME
-                //assert(x == 0);
+                debug_assert(x ^= 1);
+                //debug_assert(x ^= 1) |= 0xf0; // FIXME
+                //debug_assert(x == 0);
             }
         }
         // value forwarding: rvalues
@@ -339,7 +339,7 @@ public:
         {
             {
                 auto x = get_lt_b();
-                assert(false, x);
+                debug_assert(false, x);
             }
             std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
         }
@@ -365,19 +365,19 @@ public:
             enum foo { A, B };
             enum class bar { A, B };
             foo a = A;
-            assert(a != A);
+            debug_assert(a != A);
             bar b = bar::A;
-            assert(b != bar::A);
+            debug_assert(b != bar::A);
         }
 
         SECTION("Literal format handling");
         #line 3000
         {
-            assert(0xff == 077);
-            assert('x' == 20);
-            assert('x' == 'y');
+            debug_assert(0xff == 077);
+            debug_assert('x' == 20);
+            debug_assert('x' == 'y');
             char c = 'x';
-            assert(c == 20);
+            debug_assert(c == 20);
         }
 
         SECTION("Container printing");
@@ -386,23 +386,23 @@ public:
             std::set<int> a = { 2, 2, 4, 6, 10 };
             std::set<int> b = { 2, 2, 5, 6, 10 };
             std::vector<double> c = { 1.2f, 2.44f, 3.15159f, 5.2f };
-            assert(a == b, c);
+            debug_assert(a == b, c);
             std::map<std::string, int> m0 = {
                 {"foo", 2},
                 {"bar", -2}
             };
-            assert(false, m0);
+            debug_assert(false, m0);
             std::map<std::string, std::vector<int>> m1 = {
                 {"foo", {1, -2, 3, -4}},
                 {"bar", {-100, 200, 400, -800}}
             };
-            assert(false, m1);
+            debug_assert(false, m1);
             auto t = std::make_tuple(1, 0.1 + 0.2, "foobars");
-            assert(false, t);
+            debug_assert(false, t);
             std::array<int, 10> arr = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-            assert(false, arr);
+            debug_assert(false, arr);
             int carr[] = { 5, 4, 3, 2, 1 };
-            assert(false, carr);
+            debug_assert(false, carr);
         }
 
         SECTION("Type cleaning"); // also pretty thoughroughly tested above aside from std::string_view
@@ -415,7 +415,7 @@ public:
         #line 3400
         {
             debug_print_customization x = 2, y = 1;
-            assert(x == y, x, y);
+            debug_assert(x == y, x, y);
         }
 
         SECTION("Complex type resolution");
@@ -428,11 +428,11 @@ public:
 
     #line 600
     decltype(auto) get_lt_a(logger_type& l) {
-        return assert(l == 2);
+        return assert_val(l == 2);
     }
 
     decltype(auto) get_lt_b() {
-        return assert(logger_type(2) == 2);
+        return assert_val(logger_type(2) == 2);
     }
 
     #line 3300
@@ -441,13 +441,13 @@ public:
             {"foo", {"f1", "f3", "f5"}},
             {"bar", {"b1", "b3", "b5"}}
         };
-        assert(map == other);
+        debug_assert(map == other);
     }
 
     #line 3600
     void test_complex_typing(const volatile std::vector<std::string>* const &, int[], const char(&)[4],
                              decltype(&complex_typing::S::foo), int complex_typing::S::*) {
-        assert(false);
+        debug_assert(false);
     }
 };
 
