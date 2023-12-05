@@ -613,7 +613,7 @@ namespace libassert::detail {
                 end = i;
             }
         }
-        #if !LIBASSERT_IS_MSVC
+        #if !LIBASSERT_IS_MSVC // TODO: Wrong
          const int start_offset = 0;
         #else
          const int start_offset = 1; // accommodate for lambda being used as statement expression

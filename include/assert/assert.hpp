@@ -1,5 +1,5 @@
-#ifndef LIBASSERT_HPP
-#define LIBASSERT_HPP
+#ifndef ASSERT_HPP
+#define ASSERT_HPP
 
 // Copyright (c) 2021-2023 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
@@ -1021,11 +1021,24 @@ namespace libassert::utility {
  * Configuration
  */
 
+//namespace libassert {
 namespace libassert::config {
     // configures whether the default assertion handler prints in color or not to tty devices
     LIBASSERT_EXPORT void set_color_output(bool);
     // configure whether to use 24-bit rgb ansi color sequences or traditional ansi color sequences
     LIBASSERT_EXPORT void set_rgb_output(bool);
+    // ASSERT_EXPORT void set_color_output(bool);
+    // ASSERT_EXPORT void set_color_palette();
+    // ASSERT_EXPORT void set_failure_handler();
+    // enum class path_mode {
+    //     // full path is used
+    //     full,
+    //     // only enough folders needed to disambiguate are provided
+    //     disambiguated, // TODO: Maybe just a bad idea
+    //     // only the file name is used
+    //     name,
+    // };
+    // ASSERT_EXPORT void set_path_mode(path_mode mode);
 }
 
 /*
