@@ -51,6 +51,12 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     )
 
     set(
+      dsym_targets
+      demo
+      integration
+    )
+
+    set(
       unit_test_sources
       tests/unit/constexpr_contexts.cpp
       tests/unit/disambiguation.cpp
@@ -65,7 +71,18 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       add_executable(${test_name} ${test_file})
       target_link_libraries(${test_name} libassert-lib)
       add_test(NAME ${test_name} COMMAND ${test_name})
+      list(APPEND dsym_targets ${test_name})
     endforeach(test_file ${unit_test_sources})
     add_executable(basic tests/basic/basic_test.cpp)
     target_link_libraries(basic PRIVATE libassert-lib)
+
+    if(APPLE)
+      foreach(target ${dsym_targets})
+        add_custom_command(
+          TARGET ${target}
+          POST_BUILD
+          COMMAND dsymutil $<TARGET_FILE:${target}>
+        )
+      endforeach(target ${dsym_targets})
+    endif()
 endif()
