@@ -5,9 +5,11 @@ Debug Assertion failed at integration\integration.cpp:1103: void __cdecl test_cl
         s => "test\n"
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1103
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -20,9 +22,11 @@ Debug Assertion failed at integration\integration.cpp:1104: void __cdecl test_cl
         i => 0
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1104
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -33,9 +37,11 @@ Debug Assertion failed at integration\integration.cpp:1107: void __cdecl test_cl
         thing  => "foo"
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1107
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -46,9 +52,11 @@ Debug Assertion failed at integration\integration.cpp:1108: void __cdecl test_cl
         +thing => "foo"
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1108
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -59,9 +67,11 @@ Debug Assertion failed at integration\integration.cpp:1110: void __cdecl test_cl
         sv => "foo"
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1110
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -73,9 +83,11 @@ Debug Assertion failed at integration\integration.cpp:1201: void __cdecl test_cl
         0xff          =>  255                   0xff
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1201
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -86,9 +98,11 @@ Debug Assertion failed at integration\integration.cpp:1202: void __cdecl test_cl
         (uintptr_t)0xff => 255
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1202
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -98,9 +112,11 @@ Debug Assertion failed at integration\integration.cpp:1204: void __cdecl test_cl
         foo => void*: 0xdeadbeef
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1204
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -112,9 +128,11 @@ Debug Assertion failed at integration\integration.cpp:1303: void __cdecl test_cl
         flags =>  42   0b0000000000101010
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1303
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -125,9 +143,11 @@ Debug Assertion failed at integration\integration.cpp:1304: void __cdecl test_cl
         16  =>  16  0x10
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1304
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -136,9 +156,11 @@ Debug Assertion failed at integration\integration.cpp:1401: void __cdecl test_cl
     debug_assert(1 == 1.5);
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1401
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -148,9 +170,11 @@ Debug Assertion failed at integration\integration.cpp:1402: void __cdecl test_cl
         .5 => 0.5
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1402
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -161,9 +185,11 @@ Debug Assertion failed at integration\integration.cpp:1403: void __cdecl test_cl
         0.3       => 0.29999999999999999
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1403
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -174,9 +200,11 @@ Assertion failed at integration\integration.cpp:1404: void __cdecl test_class<in
         .3      => 0.29999999999999999
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1404
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -187,9 +215,11 @@ Debug Assertion failed at integration\integration.cpp:1407: void __cdecl test_cl
         .1 => 0.10000000000000001
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1407
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -200,9 +230,11 @@ Debug Assertion failed at integration\integration.cpp:1408: void __cdecl test_cl
         .1  => 0.10000000000000001
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1408
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -214,9 +246,11 @@ Debug Assertion failed at integration\integration.cpp:1502: void __cdecl test_cl
         printable{2.55} => (printable = 2.55)
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1502
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -228,9 +262,11 @@ Debug Assertion failed at integration\integration.cpp:1602: void __cdecl test_cl
         not_printable{2.55} => <instance of not_printable<double>>
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1602
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -241,9 +277,11 @@ Debug Assertion failed at integration\integration.cpp:1603: void __cdecl test_cl
         not_printable{2.55}.f => <instance of std::optional<double>>
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1603
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -254,9 +292,11 @@ Debug Assertion failed at integration\integration.cpp:1701: void __cdecl test_cl
         2 => 2
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1701
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -264,9 +304,11 @@ Debug Assertion failed at integration\integration.cpp:1702: void __cdecl test_cl
     debug_assert(false, ...);
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1702
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -274,9 +316,11 @@ Debug Assertion failed at integration\integration.cpp:1703: void __cdecl test_cl
     debug_assert(false, ...);
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1703
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -284,9 +328,11 @@ Debug Assertion failed at integration\integration.cpp:1704: void __cdecl test_cl
     debug_assert(false, ...);
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1704
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -294,9 +340,11 @@ Debug Assertion failed at integration\integration.cpp:1705: void __cdecl test_cl
     debug_assert(false, ...);
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1705
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -306,9 +354,11 @@ Debug Assertion failed at integration\integration.cpp:1706: void __cdecl test_cl
         2 => 2
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1706
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -318,9 +368,11 @@ Debug Assertion failed at integration\integration.cpp:1707: void __cdecl test_cl
         2 => 2
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1707
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -330,9 +382,11 @@ Debug Assertion failed at integration\integration.cpp:1708: void __cdecl test_cl
         2 => 2
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1708
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -342,9 +396,11 @@ Debug Assertion failed at integration\integration.cpp:1709: void __cdecl test_cl
         2 => 2
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1709
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -354,9 +410,11 @@ Debug Assertion failed at integration\integration.cpp:1710: void __cdecl test_cl
         nullptr => nullptr
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1710
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -364,9 +422,11 @@ Debug Assertion failed at integration\integration.cpp:1711: void __cdecl test_cl
     debug_assert(false, ...);
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1711
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -377,9 +437,11 @@ Debug Assertion failed at integration\integration.cpp:1802: void __cdecl test_cl
         errno =>  2 "No such file or directory"
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1802
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -389,9 +451,11 @@ Debug Assertion failed at integration\integration.cpp:1804: void __cdecl test_cl
         errno =>  2 "No such file or directory"
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1804
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -408,9 +472,11 @@ Debug Assertion failed at integration\integration.cpp:1901: void __cdecl test_cl
         printable{2.55} => (printable = 2.55)
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1901
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -418,9 +484,11 @@ Debug Assertion failed at integration\integration.cpp:1902: void __cdecl test_cl
     debug_assert([] { return false; } ());
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:1902
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -429,9 +497,11 @@ Debug Assertion failed at integration\integration.cpp:2001: void __cdecl test_cl
     debug_assert(18446744073709551606ULL == -10);
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2001
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -439,9 +509,11 @@ Debug Assertion failed at integration\integration.cpp:2002: void __cdecl test_cl
     debug_assert(-1 > 1U);
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2002
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -452,9 +524,11 @@ Debug Assertion failed at integration\integration.cpp:2102: void __cdecl test_cl
         (1 & 2) => 0
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2102
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -464,9 +538,11 @@ Debug Assertion failed at integration\integration.cpp:2103: void __cdecl test_cl
         1 < 1 => false
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2103
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -476,9 +552,11 @@ Debug Assertion failed at integration\integration.cpp:2104: void __cdecl test_cl
         0 + 0 + 0 => 0
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2104
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -488,9 +566,11 @@ Debug Assertion failed at integration\integration.cpp:2105: void __cdecl test_cl
         false == false => true
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2105
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -500,9 +580,11 @@ Debug Assertion failed at integration\integration.cpp:2106: void __cdecl test_cl
         1 << 1 => 2
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2106
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -512,9 +594,11 @@ Debug Assertion failed at integration\integration.cpp:2107: void __cdecl test_cl
         1 << 1 => 2
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2107
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -524,9 +608,11 @@ Debug Assertion failed at integration\integration.cpp:2109: void __cdecl test_cl
         x => 0
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2109
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -537,9 +623,11 @@ Debug Assertion failed at integration\integration.cpp:2111: void __cdecl test_cl
         x -= 1 => 0
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2111
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -550,9 +638,11 @@ Debug Assertion failed at integration\integration.cpp:2113: void __cdecl test_cl
         x -= x -= 1 => 0
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2113
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -560,9 +650,11 @@ Debug Assertion failed at integration\integration.cpp:2114: void __cdecl test_cl
     debug_assert(true ? false : true, ...);
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2114
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -572,9 +664,11 @@ Debug Assertion failed at integration\integration.cpp:2116: void __cdecl test_cl
         a => 1
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2116
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -588,9 +682,11 @@ Debug Assertion failed at integration\integration.cpp:2201: void __cdecl test_cl
         bar() => -2
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2201
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -605,9 +701,11 @@ Debug Assertion failed at integration\integration.cpp:2304: void __cdecl test_cl
         lt2 => logger_type [n = 2]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2304
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -626,9 +724,11 @@ Debug Assertion failed at integration\integration.cpp:2308: void __cdecl test_cl
         logger_type(2) => logger_type [n = 2]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2308
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -653,9 +753,11 @@ Debug Assertion failed at integration\integration.cpp:2312: void __cdecl test_cl
         logger_type(1) => logger_type [n = 1]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2312
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -685,11 +787,13 @@ Assertion failed at integration\integration.cpp:2316: void __cdecl test_class<in
         logger_type(2) => logger_type [n = 2]
 
 Stack trace:
-# 1 test_class<int>::something_else()
+# 1 `test_class<int>::something_else'::`539'::<lambda_54>::operator()(char*)
       at integration.cpp:2316
-# 2 test_class<int>::something<N>(std::pair<N, int>)
+# 2 test_class<int>::something_else()
+      at integration.cpp:2316
+# 3 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 3 main()
+# 4 main()
       at integration.cpp:402
 
 
@@ -714,9 +818,11 @@ Assertion failed at integration\integration.cpp:2317: void __cdecl test_class<in
     ASSERT(!(std::is_same<decltype(r), logger_type>::value));
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2317
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -726,9 +832,11 @@ Assertion failed at integration\integration.cpp:2318: void __cdecl test_class<in
         r.n => 1
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2318
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -744,13 +852,15 @@ Assertion failed at integration\integration.cpp:601: decltype(auto) __cdecl test
         l => logger_type [n = 2]
 
 Stack trace:
-# 1 test_class<int>::get_lt_a(logger_type&)
+# 1 `test_class<int>::get_lt_a'::`2'::<lambda_1>::operator()(char*)
       at integration.cpp:601
-# 2 test_class<int>::something_else()
+# 2 test_class<int>::get_lt_a(logger_type&)
+      at integration.cpp:601
+# 3 test_class<int>::something_else()
       at integration.cpp:2403
-# 3 test_class<int>::something<N>(std::pair<N, int>)
+# 4 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 4 main()
+# 5 main()
       at integration.cpp:402
 
 
@@ -761,9 +871,11 @@ Debug Assertion failed at integration\integration.cpp:2405: void __cdecl test_cl
         lt => logger_type [n = 3]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2405
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -774,9 +886,11 @@ Debug Assertion failed at integration\integration.cpp:2406: void __cdecl test_cl
         x => logger_type [n = 3]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2406
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -790,9 +904,11 @@ Debug Assertion failed at integration\integration.cpp:2411: void __cdecl test_cl
         1 =>  1  0b00000000000000000000000000000001
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2411
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -810,13 +926,15 @@ Assertion failed at integration\integration.cpp:605: decltype(auto) __cdecl test
         logger_type(2) => logger_type [n = 2]
 
 Stack trace:
-# 1 test_class<int>::get_lt_b()
+# 1 `test_class<int>::get_lt_b'::`2'::<lambda_1>::operator()(char*)
       at integration.cpp:605
-# 2 test_class<int>::something_else()
+# 2 test_class<int>::get_lt_b()
+      at integration.cpp:605
+# 3 test_class<int>::something_else()
       at integration.cpp:2502
-# 3 test_class<int>::something<N>(std::pair<N, int>)
+# 4 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 4 main()
+# 5 main()
       at integration.cpp:402
 
 
@@ -837,9 +955,11 @@ Debug Assertion failed at integration\integration.cpp:2503: void __cdecl test_cl
         x => logger_type [n = 2]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2503
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -852,17 +972,19 @@ Debug Assertion failed at integration\integration.cpp:501: void __cdecl rec(int)
 
 Stack trace:
 # 1 rec(int)
+      at integration.cpp:501
+# 2 rec(int)
       at integration.cpp:502
 |                                   |
 | 8 layers of recursion were folded |
 |                                   |
-#10 rec(int)
+#11 rec(int)
       at integration.cpp:502
-#11 test_class<int>::something_else()
+#12 test_class<int>::something_else()
       at integration.cpp:2600
-#12 test_class<int>::something<N>(std::pair<N, int>)
+#13 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-#13 main()
+#14 main()
       at integration.cpp:402
 
 
@@ -871,31 +993,33 @@ Debug Assertion failed at integration\integration.cpp:508: void __cdecl recursiv
     debug_assert(false);
 
 Stack trace:
-# 1 recursive_b(int)
+# 1 recursive_a(int)
+      at integration.cpp:508
+# 2 recursive_b(int)
       at integration.cpp:514
-# 2 recursive_a(int)
+# 3 recursive_a(int)
       at integration.cpp:509
-# 3 recursive_b(int)
+# 4 recursive_b(int)
       at integration.cpp:514
-# 4 recursive_a(int)
+# 5 recursive_a(int)
       at integration.cpp:509
-# 5 recursive_b(int)
+# 6 recursive_b(int)
       at integration.cpp:514
-# 6 recursive_a(int)
+# 7 recursive_a(int)
       at integration.cpp:509
-# 7 recursive_b(int)
+# 8 recursive_b(int)
       at integration.cpp:514
-# 8 recursive_a(int)
+# 9 recursive_a(int)
       at integration.cpp:509
-# 9 recursive_b(int)
+#10 recursive_b(int)
       at integration.cpp:514
-#10 recursive_a(int)
+#11 recursive_a(int)
       at integration.cpp:509
-#11 test_class<int>::something_else()
+#12 test_class<int>::something_else()
       at integration.cpp:2700
-#12 test_class<int>::something<N>(std::pair<N, int>)
+#13 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-#13 main()
+#14 main()
       at integration.cpp:402
 
 
@@ -904,13 +1028,15 @@ Debug Assertion failed at integration\x\a.cpp:5: void __cdecl test_path_differen
     debug_assert(false);
 
 Stack trace:
-# 1 test_path_differentiation()
-      at a.cpp:7
-# 2 test_class<int>::something_else()
+# 1 test_path_differentiation_2()
+      at x/a.cpp:5
+# 2 test_path_differentiation()
+      at integration/a.cpp:7
+# 3 test_class<int>::something_else()
       at integration.cpp:2800
-# 3 test_class<int>::something<N>(std::pair<N, int>)
+# 4 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 4 main()
+# 5 main()
       at integration.cpp:402
 
 
@@ -922,9 +1048,11 @@ Debug Assertion failed at integration\integration.cpp:2904: void __cdecl test_cl
         A => 0
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2904
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -935,9 +1063,11 @@ Debug Assertion failed at integration\integration.cpp:2906: void __cdecl test_cl
         bar::A => A
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:2906
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -949,9 +1079,11 @@ Debug Assertion failed at integration\integration.cpp:3001: void __cdecl test_cl
         077  =>  63   0x3f  077
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3001
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -962,9 +1094,11 @@ Debug Assertion failed at integration\integration.cpp:3002: void __cdecl test_cl
         20  =>  '\x14'  20
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3002
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -972,9 +1106,11 @@ Debug Assertion failed at integration\integration.cpp:3003: void __cdecl test_cl
     debug_assert('x' == 'y');
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3003
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -985,9 +1121,11 @@ Debug Assertion failed at integration\integration.cpp:3005: void __cdecl test_cl
         20 =>  '\x14'  20
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3005
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -1001,9 +1139,11 @@ Debug Assertion failed at integration\integration.cpp:3104: void __cdecl test_cl
         c => std::vector<double> [size: 4]: [1.2000000476837158, 2.440000057220459, 3.15159010887146, 5.1999998092651367]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3104
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -1013,9 +1153,11 @@ Debug Assertion failed at integration\integration.cpp:3109: void __cdecl test_cl
         m0 => std::map<std::string, int, std::less<std::string>> [size: 2]: [["bar", -2], ["foo", 2]]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3109
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -1025,9 +1167,11 @@ Debug Assertion failed at integration\integration.cpp:3114: void __cdecl test_cl
         m1 => std::map<std::string, std::vector<int>, std::less<std::string>> [size: 2]: [["bar", [-100, 200, 400, -800]], ["foo", [1, -2, 3, -4]]]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3114
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -1037,9 +1181,11 @@ Debug Assertion failed at integration\integration.cpp:3116: void __cdecl test_cl
         t => std::tuple<int, double, char const *>: [1, 0.30000000000000004, "foobars"]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3116
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -1049,9 +1195,11 @@ Debug Assertion failed at integration\integration.cpp:3118: void __cdecl test_cl
         arr => std::array<int, 10> [size: 10]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3118
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -1061,9 +1209,11 @@ Debug Assertion failed at integration\integration.cpp:3120: void __cdecl test_cl
         carr => int[5] [size: 5]: [5, 4, 3, 2, 1]
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3120
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -1075,11 +1225,13 @@ Debug Assertion failed at integration\integration.cpp:3305: void __cdecl test_cl
         other => std::map<std::string, std::vector<std::string_view>, std::less<std::string>> [size: 0]: []
 
 Stack trace:
-# 1 test_class<int>::something_else()
+# 1 test_class<int>::test_pretty_function_cleaning(std::map<std::string, std::vector<std::string_view>, std::less<std::string>
+      at integration.cpp:3305
+# 2 test_class<int>::something_else()
       at integration.cpp:3201
-# 2 test_class<int>::something<N>(std::pair<N, int>)
+# 3 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 3 main()
+# 4 main()
       at integration.cpp:402
 
 
@@ -1094,9 +1246,11 @@ Debug Assertion failed at integration\integration.cpp:3402: void __cdecl test_cl
         y => (debug_print_customization = 1)
 
 Stack trace:
-# 1 test_class<int>::something<N>(std::pair<N, int>)
+# 1 test_class<int>::something_else()
+      at integration.cpp:3402
+# 2 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 2 main()
+# 3 main()
       at integration.cpp:402
 
 
@@ -1105,11 +1259,13 @@ Debug Assertion failed at integration\integration.cpp:3602: void __cdecl test_cl
     debug_assert(false);
 
 Stack trace:
-# 1 test_class<int>::something_else()
+# 1 test_class<int>::test_complex_typing(std::vector<std::string>*&, int*, char(&)[4], void(complex_typing::S::*)(int, std::string, void***, void*(*)(int), void(*(*)(int))(), void(*(*(*)(int))[5])()), int complex_typing::S::*)
+      at integration.cpp:3602
+# 2 test_class<int>::something_else()
       at integration.cpp:3502
-# 2 test_class<int>::something<N>(std::pair<N, int>)
+# 3 test_class<int>::something<N>(std::pair<N, int>)
       at integration.cpp:1004
-# 3 main()
+# 4 main()
       at integration.cpp:402
 
 
