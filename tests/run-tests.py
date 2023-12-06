@@ -75,14 +75,17 @@ def main():
         sys.exit(1)
 
     integration_binary = sys.argv[1]
+    # cmake build type
+    build_type = sys.argv[2].lower()
 
     target = []
 
-    if sys.argv[2].startswith("gcc") or sys.argv[1].startswith("g++"):
-        target.append("gcc")
-    elif sys.argv[2].startswith("clang"):
+    compiler_id = sys.argv[3].lower()
+    if compiler_id.startswith("gcc") or compiler_id.startswith("g++") or compiler_id.startswith("gnu"):
+        target.append("gnu")
+    elif compiler_id.startswith("clang"):
         target.append("clang")
-    elif sys.argv[2].startswith("cl"):
+    elif compiler_id.startswith("cl") or compiler_id.startswith("msvc"):
         target.append("msvc")
 
     if platform.system() == "Windows":
@@ -92,7 +95,7 @@ def main():
     else:
         target.append("linux")
 
-    other_configs = sys.argv[3:]
+    other_configs = sys.argv[4:]
     for config in other_configs:
         target.append(config.lower())
 
@@ -119,7 +122,7 @@ def main():
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "integration/expected/", file), "r") as f:
         expected = f.read()
 
-    if run_integration(integration_binary, expected, "debug" not in target):
+    if run_integration(integration_binary, expected, build_type != "debug"):
         print("Test passed")
     else:
         print("Test failed")
