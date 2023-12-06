@@ -1014,7 +1014,7 @@ namespace libassert::utility {
 
 // Default handler
 
-LIBASSERT_ATTR_COLD
+LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
 void libassert_default_fail_action(
     libassert::assert_type type,
     const libassert::assertion_printer& printer

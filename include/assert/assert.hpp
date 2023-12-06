@@ -120,7 +120,7 @@ namespace libassert {
 #ifndef LIBASSERT_FAIL
  LIBASSERT_EXPORT
 #endif
-LIBASSERT_EXPORT void LIBASSERT_FAIL(libassert::assert_type type, const libassert::assertion_printer& printer);
+void LIBASSERT_FAIL(libassert::assert_type type, const libassert::assertion_printer& printer);
 
 // always_false is just convenient to use here
 #define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
@@ -567,7 +567,7 @@ namespace libassert::detail {
      * stringification
      */
 
-    LIBASSERT_ATTR_COLD [[nodiscard]] LIBASSERT_EXPORT
+    LIBASSERT_ATTR_COLD [[nodiscard]]
     constexpr std::string_view substring_bounded_by(
         std::string_view sig,
         std::string_view l,
