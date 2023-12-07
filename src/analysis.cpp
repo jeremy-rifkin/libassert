@@ -132,7 +132,6 @@ namespace libassert::detail {
         std::unordered_set<std::string_view> bitwise_operators = {
             "^", "&", "|", "^=", "&=", "|=", "xor", "bitand", "bitor", "and_eq", "or_eq", "xor_eq"
         };
-        std::vector<std::pair<std::regex, literal_format>> literal_formats;
 
     private:
         LIBASSERT_ATTR_COLD
@@ -259,16 +258,6 @@ namespace libassert::detail {
                 #endif
                 rules[i] = { rules_raw[i].first, std::regex(str) };
             }
-            // setup literal format rules
-            literal_formats = {
-                { std::regex(int_binary),    literal_format::binary },
-                { std::regex(int_octal),     literal_format::octal },
-                { std::regex(int_decimal),   literal_format::dec },
-                { std::regex(int_hex),       literal_format::hex },
-                { std::regex(float_decimal), literal_format::dec },
-                { std::regex(float_hex),     literal_format::hex },
-                { std::regex(char_literal),  literal_format::character }
-            };
             // generate precedence table
             // bottom few rows of the precedence table:
             const std::unordered_map<int, std::vector<std::string_view>> precedences = {
@@ -432,16 +421,6 @@ namespace libassert::detail {
             return output;
         } catch(...) {
             return {{"", expression}};
-        }
-
-        LIBASSERT_ATTR_COLD
-        literal_format get_literal_format(const std::string& expression) {
-            for(auto& [ re, type ] : literal_formats) {
-                if(std::regex_match(expression, re)) {
-                    return type;
-                }
-            }
-            return literal_format::none; // not a literal
         }
 
         LIBASSERT_ATTR_COLD
@@ -744,10 +723,6 @@ namespace libassert::detail {
         #else
         return analysis::get().highlight(expression);
         #endif
-    }
-
-    LIBASSERT_ATTR_COLD literal_format get_literal_format(const std::string& expression) {
-        return analysis::get().get_literal_format(expression);
     }
 
     LIBASSERT_ATTR_COLD std::string trim_suffix(const std::string& expression) {

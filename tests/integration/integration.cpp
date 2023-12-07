@@ -57,7 +57,7 @@ struct debug_print_customization {
     }
 };
 
-[[nodiscard]] std::string stringify(const debug_print_customization& p, libassert::detail::literal_format) {
+[[nodiscard]] std::string stringify(const debug_print_customization& p) {
     return "(debug_print_customization = " + std::to_string(p.x) + ")";
 }
 
