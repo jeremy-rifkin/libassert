@@ -762,8 +762,8 @@ namespace libassert::detail {
     constexpr size_t where_indent = 8;
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
-    std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
-        auto& [ lstring, rstring, a_sstr, b_sstr, _ ] = diagnostics;
+    std::string print_binary_diagnostics(size_t term_width, const binary_diagnostics_descriptor& diagnostics) {
+        const auto& [ lstring, rstring, a_sstr, b_sstr, _ ] = diagnostics;
         std::vector<std::string> lstrings = { lstring.str };
         std::vector<std::string> rstrings = { rstring.str };
         const std::string& a_str = a_sstr;
