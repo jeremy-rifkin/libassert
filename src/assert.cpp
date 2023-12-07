@@ -234,7 +234,7 @@ namespace libassert::detail {
         }
 
         LIBASSERT_ATTR_COLD std::string stringify(char value) {
-            return stringify((int)value);
+            return escape_string({&value, 1}, '\'');
         }
 
         LIBASSERT_ATTR_COLD std::string stringify(bool value) {
