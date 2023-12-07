@@ -103,6 +103,17 @@
 #endif
 
 namespace libassert {
+    enum class literal_format {
+        integer_character = 1,
+        integer_decimal = 2,
+        integer_hex = 4,
+        integer_octal = 8,
+        integer_binary = 16,
+        float_decimal = 32,
+        float_hex = 64,
+        none = 0
+    };
+
     enum class assert_type {
         debug_assertion,
         assertion,
@@ -543,18 +554,7 @@ namespace libassert::detail {
      * C++ syntax analysis logic
      */
 
-    enum class literal_format {
-        character,
-        dec,
-        hex,
-        octal,
-        binary,
-        none // needs to be at the end for sorting reasons
-    };
-
     [[nodiscard]] LIBASSERT_EXPORT std::string prettify_type(std::string type);
-
-    [[nodiscard]] LIBASSERT_EXPORT literal_format get_literal_format(const std::string& expression);
 
     [[nodiscard]] LIBASSERT_EXPORT bool is_bitwise(std::string_view op);
 
@@ -596,52 +596,52 @@ namespace libassert::detail {
     }
 
     namespace stringification {
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::string&, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::string_view&, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::string&);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::string_view&);
         // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::nullptr_t, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(char, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(bool, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(short, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(int, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long long, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned short, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned int, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned long, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned long long, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(float, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(double, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long double, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_code ec, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_condition ec, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::nullptr_t);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(char);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(bool);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(short);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(int);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long long);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned short);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned int);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned long);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(unsigned long long);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(float);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(double);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long double);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_code);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_condition);
         #if __cplusplus >= 202002L
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::strong_ordering, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::weak_ordering, literal_format = literal_format::none);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::partial_ordering, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::strong_ordering);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::weak_ordering);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::partial_ordering);
         #endif
 
         #ifdef __cpp_lib_expected
         template<typename E>
-        [[nodiscard]] std::string stringify(const std::unexpected<E>& x, literal_format fmt = literal_format::none) {
-            return "unexpected " + stringify(x.error(), fmt == literal_format::none ? literal_format::dec : fmt);
+        [[nodiscard]] std::string stringify(const std::unexpected<E>& x) {
+            return "unexpected " + stringify(x.error());
         }
 
         template<typename T, typename E>
-        [[nodiscard]] std::string stringify(const std::expected<T, E>& x, literal_format fmt = literal_format::none) {
+        [[nodiscard]] std::string stringify(const std::expected<T, E>& x) {
             if(x.has_value()) {
                 if constexpr(std::is_void_v<T>) {
                     return "expected void";
                 } else {
-                    return "expected " + stringify(*x, fmt == literal_format::none ? literal_format::dec : fmt);
+                    return "expected " + stringify(*x);
                 }
             } else {
-                return "unexpected " + stringify(x.error(), fmt == literal_format::none ? literal_format::dec : fmt);
+                return "unexpected " + stringify(x.error());
             }
         }
         #endif
 
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify_ptr(const void*, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify_ptr(const void*);
 
         template<typename T, typename = void> class can_basic_stringify : public std::false_type {};
         template<typename T> class can_basic_stringify<
@@ -693,7 +693,7 @@ namespace libassert::detail {
                                                     || std::is_function<strip<T>>::value
                                                     || !can_basic_stringify<T>::value, int>::type = 0>
         LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify(const T& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
+        std::string stringify(const T& t) {
             if constexpr(
                 has_stream_overload<T>::value && !is_string_type<T>
                 && !std::is_pointer<strip<typename std::decay<T>::type>>::value
@@ -711,7 +711,7 @@ namespace libassert::detail {
                     if(it != begin_it) {
                         str += ", ";
                     }
-                    str += stringify(*it, literal_format::dec);
+                    str += stringify(*it);
                 }
                 str += "]";
                 return str;
@@ -726,7 +726,7 @@ namespace libassert::detail {
                     }
                 }
                 return prettify_type(std::string(type_name<T>())) + ": "
-                                                    + stringify_ptr(reinterpret_cast<const void*>(t), fmt);
+                                                    + stringify_ptr(reinterpret_cast<const void*>(t));
             } else if constexpr(is_tuple_like<T>::value) {
                 return stringify_tuple_like(t);
             }
@@ -747,10 +747,13 @@ namespace libassert::detail {
 
         // I'm going to assume at least one index because is_tuple_like requires index 0 to exist
         template<typename T, size_t... I> std::string stringify_tuple_like(const T& t, std::index_sequence<I...>) {
-            using lf = literal_format;
             using stringification::stringify; // ADL
             return "["
-                    + (stringify(std::get<0>(t), lf::dec) + ... + (", " + stringify(std::get<I + 1>(t), lf::dec)))
+                    + (
+                        stringify(std::get<0>(t))
+                        + ...
+                        + (", " + stringify(std::get<I + 1>(t)))
+                    )
                     + "]";
         }
     }
@@ -759,57 +762,53 @@ namespace libassert::detail {
      * assert diagnostics generation
      */
 
-    constexpr size_t format_arr_length = 5;
+    enum class stringification_tag {
+        simple,
+        arithmetic
+    };
+
+    struct LIBASSERT_EXPORT stringification_wrapper {
+        stringification_tag tag;
+        std::string str;
+    };
 
     // TODO: Not yet happy with the naming of this function / how it's used
     template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
-    std::string generate_stringification(const T& v, literal_format fmt = literal_format::none) {
+    stringification_wrapper generate_stringification(const T& v) {
         using stringification::stringify; // ADL
-        if constexpr((stringification::adl::is_printable_container<T>::value && !is_string_type<T>)) {
-            using std::size; // ADL
-            return prettify_type(std::string(type_name<T>()))
-                       + " [size: " + std::to_string(size(v)) + "]: " + stringify(v, fmt);
-        } else if constexpr(stringification::is_tuple_like<T>::value) {
-            return prettify_type(std::string(type_name<T>())) + ": " + stringify(v, fmt);
-        } else {
-            return stringify(v, fmt);
-        }
-    }
-
-    template<typename T>
-    LIBASSERT_ATTR_COLD [[nodiscard]]
-    std::vector<std::string> generate_stringifications(const T& v, const literal_format (&formats)[format_arr_length]) {
         if constexpr((std::is_arithmetic<strip<T>>::value || std::is_enum<strip<T>>::value) && !isa<T, bool>) {
-            std::vector<std::string> vec;
-            for(literal_format fmt : formats) {
-                if(fmt == literal_format::none) { break; }
-                using stringification::stringify; // ADL
-                // TODO: consider pushing empty fillers to keep columns aligned later on? Does not
-                // matter at the moment because floats only have decimal and hex literals but could
-                // if more formats are added.
-                vec.push_back(stringify(v, fmt));
-            }
-            return vec;
+            return { stringification_tag::arithmetic, stringify(v) };
         } else {
-            return { generate_stringification(v) };
+            if constexpr((stringification::adl::is_printable_container<T>::value && !is_string_type<T>)) {
+                using std::size; // ADL
+                return {
+                    stringification_tag::simple,
+                    prettify_type(std::string(type_name<T>()))
+                        + " [size: " + std::to_string(size(v)) + "]: " + stringify(v)
+                };
+            } else if constexpr(stringification::is_tuple_like<T>::value) {
+                return {
+                    stringification_tag::simple, prettify_type(std::string(type_name<T>())) + ": " + stringify(v)
+                };
+            } else {
+                return { stringification_tag::simple, stringify(v) };
+            }
         }
     }
 
     struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
-        std::vector<std::string> lstrings;
-        std::vector<std::string> rstrings;
+        stringification_wrapper lstring;
+        stringification_wrapper rstring;
         std::string a_str;
         std::string b_str;
-        bool multiple_formats;
         bool present = false;
         binary_diagnostics_descriptor(); // = default; in the .cpp
         binary_diagnostics_descriptor(
-            std::vector<std::string>& lstrings,
-            std::vector<std::string>& rstrings,
-            std::string a_str,
-            std::string b_str,
-            bool multiple_formats
+            stringification_wrapper&& lstring,
+            stringification_wrapper&& rstring,
+            const char* a_str,
+            const char* b_str
         );
         compl binary_diagnostics_descriptor(); // = default; in the .cpp
         binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = delete;
@@ -818,8 +817,6 @@ namespace libassert::detail {
         binary_diagnostics_descriptor&
         operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID); // = default; in the .cpp
     };
-
-    LIBASSERT_EXPORT void sort_and_dedup(literal_format(&)[format_arr_length]);
 
     template<typename A, typename B>
     LIBASSERT_ATTR_COLD [[nodiscard]]
@@ -830,29 +827,12 @@ namespace libassert::detail {
         const char* b_str,
         std::string_view op
     ) {
-        using lf = literal_format;
-        // Note: op
-        // figure out what information we need to print in the where clause
-        // find all literal formats involved (literal_format::dec included for everything)
-        auto lformat = get_literal_format(a_str);
-        auto rformat = get_literal_format(b_str);
-        // formerly used std::set here, now using array + sorting, `none` entries will be at the end and ignored
-        constexpr bool either_is_character = isa<A, char> || isa<B, char>;
-        constexpr bool either_is_arithmetic = is_arith_not_bool_char<A> || is_arith_not_bool_char<B>;
-        lf formats[format_arr_length] = {
-            either_is_arithmetic ? lf::dec :  lf::none,
-            lformat, rformat, // ↓ always display binary for bitwise
-            is_bitwise(op) ? lf::binary : lf::none,
-            either_is_character ? lf::character : lf::none
+        return binary_diagnostics_descriptor {
+            generate_stringification(a),
+            generate_stringification(b),
+            a_str,
+            b_str
         };
-        sort_and_dedup(formats); // print in specific order, avoid duplicates
-        if(formats[0] == lf::none) {
-            formats[0] = lf::dec; // if no formats apply just print everything default, TODO this is a bit of a hack
-        }
-        // generate raw strings for given formats, without highlighting
-        std::vector<std::string> lstrings = generate_stringifications(a, formats);
-        std::vector<std::string> rstrings = generate_stringifications(b, formats);
-        return binary_diagnostics_descriptor { lstrings, rstrings, a_str, b_str, formats[1] != lf::none };
     }
 
     #define LIBASSERT_X(x) #x
@@ -914,7 +894,7 @@ namespace libassert::detail {
                         return;
                     }
                 }
-                entry.entries.push_back({ args_strings[i], generate_stringification(t, literal_format::dec) });
+                entry.entries.push_back({ args_strings[i], generate_stringification(t).str });
             }
         }
     }
@@ -1013,8 +993,7 @@ namespace libassert::utility {
     template<typename T>
     [[nodiscard]] std::string stringify(const T& t) {
         using detail::stringification::stringify; // ADL
-        using lf = detail::literal_format;
-        return stringify(t, detail::isa<T, char> ? lf::character : lf::dec);
+        return stringify(t);
     }
 }
 
