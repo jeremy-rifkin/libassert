@@ -54,7 +54,7 @@ jobs:
            ./main
 
   test-macos-fetchcontent:
-    runs-on: macos-13
+    runs-on: macos-14
     steps:
     - uses: actions/checkout@v2
     - name: test
@@ -68,7 +68,7 @@ jobs:
            make
            ./main
   test-macos-findpackage:
-    runs-on: macos-13
+    runs-on: macos-14
     steps:
     - uses: actions/checkout@v2
     - name: build
@@ -86,7 +86,7 @@ jobs:
            make
            ./main
   test-macos-add_subdirectory:
-    runs-on: macos-13
+    runs-on: macos-14
     steps:
     - uses: actions/checkout@v2
     - name: test

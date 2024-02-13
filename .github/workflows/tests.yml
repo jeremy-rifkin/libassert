@@ -36,7 +36,7 @@ jobs:
       run: |
            CTEST_OUTPUT_ON_FAILURE=1 make test
   test-macos:
-    runs-on: macos-13
+    runs-on: macos-14
     strategy:
       fail-fast: false
       matrix:
