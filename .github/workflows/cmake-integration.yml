@@ -129,7 +129,7 @@ jobs:
            cp -Recurse libassert/tests/findpackage-integration .
            mkdir findpackage-integration/build
            cd findpackage-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_BUILD_TYPE=g++ "-GUnix Makefiles"
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_BUILD_TYPE=g++ "-GUnix Makefiles" -DCMAKE_PREFIX_PATH=C:/foo
            make
            ./main.exe
   test-mingw-add_subdirectory:
@@ -178,7 +178,7 @@ jobs:
            cp -Recurse libassert/tests/findpackage-integration .
            mkdir findpackage-integration/build
            cd findpackage-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=C:/foo
            msbuild demo_project.sln
            .\Debug\main.exe
   test-windows-add_subdirectory:
