@@ -5,7 +5,6 @@ include(CMakePackageConfigHelpers)
 install(
   DIRECTORY
   "${PROJECT_SOURCE_DIR}/include/"     # our header files
-  "${PROJECT_BINARY_DIR}/include/"     # generated header files
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
   COMPONENT ${package_name}-development
 )

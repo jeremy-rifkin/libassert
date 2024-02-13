@@ -101,18 +101,10 @@ target_compile_options(
 # ---- Generate Build Info Headers ----
 
 # used in export header generated below
-if(NOT ASSERT_BUILD_SHARED)
+if(build_type STREQUAL "STATIC")
   target_compile_definitions(${target_name} PUBLIC LIBASSERT_STATIC_DEFINE)
+  set(LIBASSERT_STATIC_DEFINE TRUE)
 endif()
-
-# generate header file with export macros prefixed with BASE_NAME
-include(GenerateExportHeader)
-generate_export_header(
-  ${target_name}
-  BASE_NAME libassert
-  EXPORT_FILE_NAME include/assert/assert_export.hpp
-)
-
 
 # ---- Library Properties ----
 

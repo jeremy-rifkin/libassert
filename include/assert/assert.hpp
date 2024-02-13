@@ -43,7 +43,28 @@
  #endif
 #endif
 
-#include <assert/assert_export.hpp>
+#ifdef _WIN32
+#define LIBASSERT_EXPORT_ATTR __declspec(dllexport)
+#define LIBASSERT_IMPORT_ATTR __declspec(dllimport)
+#else
+#define LIBASSERT_EXPORT_ATTR __attribute__((visibility("default")))
+#define LIBASSERT_IMPORT_ATTR __attribute__((visibility("default")))
+#endif
+
+#ifdef LIBASSERT_STATIC_DEFINE
+#  define LIBASSERT_EXPORT
+#  define LIBASSERT_NO_EXPORT
+#else
+#  ifndef LIBASSERT_EXPORT
+#    ifdef libassert_lib_EXPORTS
+        /* We are building this library */
+#      define LIBASSERT_EXPORT LIBASSERT_EXPORT_ATTR
+#    else
+        /* We are using this library */
+#      define LIBASSERT_EXPORT LIBASSERT_IMPORT_ATTR
+#    endif
+#  endif
+#endif
 
 #define LIBASSERT_IS_CLANG 0
 #define LIBASSERT_IS_GCC 0

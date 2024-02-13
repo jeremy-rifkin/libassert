@@ -92,14 +92,14 @@ mark_as_advanced(ASSERT_BUILD_TESTING)
 # -DCMAKE_INSTALL_INCLUDEDIR=include on the command line would expand to an
 # absolute path with the base being the current CMake directory, leading to
 # unexpected errors.
-if(PROJECT_IS_TOP_LEVEL)
-  set(
-    CMAKE_INSTALL_INCLUDEDIR "include/${package_name}-${PROJECT_VERSION}"
-    CACHE STRING ""
-  )
-  # marked as advanced in GNUInstallDirs version, so we follow their lead
-  mark_as_advanced(CMAKE_INSTALL_INCLUDEDIR)
-endif()
+# if(PROJECT_IS_TOP_LEVEL)
+#   set(
+#     CMAKE_INSTALL_INCLUDEDIR "include/${package_name}-${PROJECT_VERSION}"
+#     CACHE STRING ""
+#   )
+#   # marked as advanced in GNUInstallDirs version, so we follow their lead
+#   mark_as_advanced(CMAKE_INSTALL_INCLUDEDIR)
+# endif()
 
 
 # do not include earlier or we can't set CMAKE_INSTALL_INCLUDEDIR above
