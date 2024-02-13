@@ -24,16 +24,21 @@ jobs:
            cd build
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
-            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-            -DCPPTRACE_BACKTRACE_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/include/backtrace.h
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}}
            make -j
   build-macos:
     runs-on: macos-14
     strategy:
       fail-fast: false
       matrix:
-        compiler: [g++-13, clang++]
+        compiler: [g++-12, clang++]
+        c_compiler: [gcc-12, clang]
         target: [Debug, Release]
+        exclude: # TODO: Ugly hack
+          - compiler: g++-12
+            c_compiler: clang
+          - compiler: clang++
+            c_compiler: gcc-12
     steps:
     - uses: actions/checkout@v2
     - name: build
