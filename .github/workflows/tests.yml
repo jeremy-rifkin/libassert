@@ -39,9 +39,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [g++-13, clang++]
+        compiler: [g++-12, clang++]
+        c_compiler: [gcc-12, clang]
         target: [Debug]
-        exclude:
+        exclude: # TODO: Ugly hack
+          - compiler: g++-12
+            c_compiler: clang
+          - compiler: clang++
+            c_compiler: gcc-12
           - compiler: clang++ # Disabled due to #15 TODO TODO TODO
             target: Debug
     steps:
@@ -56,6 +61,7 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+            -DCMAKE_C_COMPILER=${{matrix.c_compiler}} \
             -DASSERT_BUILD_TESTING=On
            make -j
     - name: test

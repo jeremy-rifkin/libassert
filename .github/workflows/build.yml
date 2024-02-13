@@ -32,13 +32,8 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [g++-12, clang++]
-        c_compiler: [gcc-12, clang]
+        c_compiler: [g++-12, clang++]
         target: [Debug, Release]
-        exclude: # TODO: Ugly hack
-          - compiler: g++-12
-            c_compiler: clang
-          - compiler: clang++
-            c_compiler: gcc-12
     steps:
     - uses: actions/checkout@v2
     - name: build
