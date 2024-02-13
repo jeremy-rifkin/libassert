@@ -204,8 +204,8 @@ Note: Extra diagnostics are only evaluated in the failure path of an assertion.
 
 A lot of work has been put into generating pretty stack traces and formatting them as nicely as
 possible. [Cpptrace](https://github.com/jeremy-rifkin/cpptrace) is used as a portable and
-self-contained solution for stacktraces pre-C++23. Optional configurations can be found on the
-library's page.
+self-contained solution for stacktraces pre-C++23. Optional configurations can be found in the
+library's documentation.
 
 One feature worth noting is that instead of always printing full paths, only the minimum number of
 directories needed to differentiate paths are printed.
