@@ -8,6 +8,8 @@
 #include <cstddef>
 #include <exception>
 #include <iterator>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string_view>
 #include <string>
@@ -702,6 +704,28 @@ namespace libassert::detail {
                                             void>::type
                                         >
                                     > : public std::true_type {};
+        }
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify(const std::optional<T>& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
+            auto type = prettify_type(std::string(type_name<std::optional<T>>()));
+            if(t) {
+                return type + ": " + stringify(t.value(), fmt);
+            } else {
+                return type + ": nullopt";
+            }
+        }
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify(const std::unique_ptr<T>& t, [[maybe_unused]] literal_format fmt = literal_format::none) {
+            auto type = prettify_type(std::string(type_name<std::unique_ptr<T>>()));
+            if(t) {
+                return type + ": " + stringify(*t, fmt);
+            } else {
+                return type + ": nullptr";
+            }
         }
 
         template<typename T, size_t... I>

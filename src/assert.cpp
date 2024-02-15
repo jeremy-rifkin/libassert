@@ -209,7 +209,7 @@ namespace libassert::detail {
             else if(c == '\t') escaped += "\\t";
             else if(c == '\r') escaped += "\\r";
             else if(c == '\n') escaped += "\\n";
-            else if(c == quote) escaped += "\\" + std::to_string(quote);
+            else if(c == quote) escaped += std::initializer_list<char>{'\\', quote};
             else if(c >= 32 && c <= 126) escaped += c; // printable
             else {
                 constexpr const char * const hexdig = "0123456789abcdef";

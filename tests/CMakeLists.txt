@@ -71,6 +71,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       tests/unit/test_type_prettier.cpp
       tests/unit/tokens_and_highlighting.cpp
       tests/unit/type_handling.cpp
+      tests/unit/stringify.cpp
     )
     foreach(test_file ${unit_test_sources})
       get_filename_component(test_name ${test_file} NAME_WE)

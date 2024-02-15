@@ -64,6 +64,10 @@ namespace libassert::detail {
             std::regex(R"(,\s*std(::[a-zA-Z0-9_]+)?::allocator<)"), ""
         };
         replace_all_template(type, allocator);
+        static const std::pair<std::regex, std::string_view> default_delete = {
+            std::regex(R"(,\s*std(::[a-zA-Z0-9_]+)?::default_delete<)"), ""
+        };
+        replace_all_template(type, default_delete);
         // replace std::__cxx11 -> std:: for gcc dual abi
         // https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
         replace_all_dynamic(type, "std::__cxx11::", "std::");
@@ -241,7 +245,8 @@ namespace libassert::detail {
                     int_decimal
                 }) },
                 { token_e::punctuation, punctuators_re },
-                { token_e::named_literal, "true|false|nullptr" },
+                // nullopt added deliberately
+                { token_e::named_literal, "true|false|nullptr|nullopt" },
                 { token_e::string     , union_regexes({
                     char_literal,
                     raw_string_literal,
@@ -359,7 +364,8 @@ namespace libassert::detail {
             // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
             while(std::regex_search(str.cbegin() + i, str.cend(), match, escapes_re)) {
                 // add string part
-                LIBASSERT_PRIMITIVE_ASSERT(match.position() > 0);
+                // TODO: I don't know why this assert was added, I might have done it in dev on a whim. Re-evaluate.
+                // LIBASSERT_PRIMITIVE_ASSERT(match.position() > 0);
                 if(match.position() > 0) {
                     output.push_back({GREEN, str.substr(i, match.position())});
                 }
