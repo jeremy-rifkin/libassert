@@ -57,6 +57,12 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     )
 
     set(
+      all_targets
+      demo
+      integration
+    )
+
+    set(
       unit_test_sources
       tests/unit/constexpr_contexts.cpp
       tests/unit/disambiguation.cpp
@@ -68,6 +74,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     )
     foreach(test_file ${unit_test_sources})
       get_filename_component(test_name ${test_file} NAME_WE)
+      list(APPEND all_targets ${test_name})
       add_executable(${test_name} ${test_file})
       target_link_libraries(${test_name} libassert-lib)
       add_test(NAME ${test_name} COMMAND ${test_name})
@@ -85,4 +92,14 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
         )
       endforeach(target ${dsym_targets})
     endif()
+
+    foreach(target ${all_targets})
+      target_compile_options(
+        ${target_name}
+        PRIVATE
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror=return-type -Wshadow -Wundef -Werror>
+        $<$<CXX_COMPILER_ID:GNU>:-Wuseless-cast -Wnonnull-compare>
+        $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive->
+      )
+    endforeach()
 endif()
