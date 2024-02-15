@@ -662,7 +662,8 @@ namespace libassert::detail {
         }
         #endif
 
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify_ptr(const void*, literal_format = literal_format::none);
+        [[nodiscard]] LIBASSERT_EXPORT
+        std::string stringify_pointer_value(const void*, literal_format = literal_format::none);
 
         template<typename T, typename = void> class can_basic_stringify : public std::false_type {};
         template<typename T> class can_basic_stringify<
@@ -691,7 +692,6 @@ namespace libassert::detail {
             template<typename T> class is_printable_container<
                                         T,
                                         std::void_t<
-                                            decltype(size(decllval<T>())),
                                             decltype(begin(decllval<T>())),
                                             decltype(end(decllval<T>())),
                                             typename std::enable_if< // can stringify (and not just "instance of")
@@ -704,11 +704,21 @@ namespace libassert::detail {
                                     > : public std::true_type {};
         }
 
-        template<typename T, size_t... I> std::string stringify_tuple_like(const T&, std::index_sequence<I...>);
+        template<typename T, size_t... I>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_tuple_like(const T&, std::index_sequence<I...>);
 
-        template<typename T> std::string stringify_tuple_like(const T& t) {
+        template<typename T> LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify_tuple_like(const T& t) {
             return stringify_tuple_like(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
         }
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_container(const T& container);
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_pointer(const T& t, [[maybe_unused]] literal_format fmt);
 
         template<typename T, typename std::enable_if<std::is_pointer<strip<typename std::decay<T>::type>>::value
                                                     || std::is_function<strip<T>>::value
@@ -725,29 +735,12 @@ namespace libassert::detail {
                 oss<<t;
                 return std::move(oss).str();
             } else if constexpr(adl::is_printable_container<T>::value && !is_c_string<T>) {
-                using std::begin, std::end; // ADL
-                std::string str = "[";
-                const auto begin_it = begin(t);
-                for(auto it = begin_it; it != end(t); it++) {
-                    if(it != begin_it) {
-                        str += ", ";
-                    }
-                    str += stringify(*it, literal_format::dec);
-                }
-                str += "]";
-                return str;
+                return stringify_container(t);
             } else if constexpr(
                 std::is_pointer<strip<typename std::decay<T>::type>>::value
                 || std::is_function<strip<T>>::value
             ) {
-                if constexpr(isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char>) { // strings
-                    const void* v = t; // circumvent -Wnonnull-compare
-                    if(v != nullptr) {
-                        return stringify(std::string_view(t)); // not printing type for now, TODO: reconsider?
-                    }
-                }
-                return prettify_type(std::string(type_name<T>())) + ": "
-                                                    + stringify_ptr(reinterpret_cast<const void*>(t), fmt);
+                return stringify_pointer(t, fmt);
             } else if constexpr(is_tuple_like<T>::value) {
                 return stringify_tuple_like(t);
             }
@@ -767,12 +760,43 @@ namespace libassert::detail {
         }
 
         // I'm going to assume at least one index because is_tuple_like requires index 0 to exist
-        template<typename T, size_t... I> std::string stringify_tuple_like(const T& t, std::index_sequence<I...>) {
+        template<typename T, size_t... I>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_tuple_like(const T& t, std::index_sequence<I...>) {
             using lf = literal_format;
             using stringification::stringify; // ADL
             return "["
                     + (stringify(std::get<0>(t), lf::dec) + ... + (", " + stringify(std::get<I + 1>(t), lf::dec)))
                     + "]";
+        }
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_container(const T& container) {
+            using std::begin, std::end; // ADL
+            std::string str = "[";
+            const auto begin_it = begin(container);
+            for(auto it = begin_it; it != end(container); it++) {
+                if(it != begin_it) {
+                    str += ", ";
+                }
+                str += stringify(*it, literal_format::dec);
+            }
+            str += "]";
+            return str;
+        }
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_pointer(const T& t, [[maybe_unused]] literal_format fmt) {
+            if constexpr(isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char>) { // strings
+                const void* v = t; // circumvent -Wnonnull-compare
+                if(v != nullptr) {
+                    return stringify(std::string_view(t)); // not printing type for now, TODO: reconsider?
+                }
+            }
+            return prettify_type(std::string(type_name<T>())) + ": "
+                                                + stringify_pointer_value(reinterpret_cast<const void*>(t), fmt);
         }
     }
 
@@ -898,45 +922,51 @@ namespace libassert::detail {
         const char* pretty_function;
     };
 
+    inline void process_arg(
+        extra_diagnostics& entry,
+        size_t,
+        const char* const* const,
+        const pretty_function_name_wrapper& t
+    ) {
+        entry.pretty_function = t.pretty_function;
+    }
+
     template<typename T>
     LIBASSERT_ATTR_COLD
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, const T& t) {
-        if constexpr(isa<T, pretty_function_name_wrapper>) {
-            entry.pretty_function = t.pretty_function;
-        } else {
-            // three cases to handle: assert message, errno, and regular diagnostics
-            #if LIBASSERT_IS_MSVC
-             #pragma warning(push)
-             #pragma warning(disable: 4127) // MSVC thinks constexpr should be used here. It should not.
-            #endif
-            if(isa<T, strip<decltype(errno)>> && args_strings[i] == errno_expansion) {
-            #if LIBASSERT_IS_MSVC
-             #pragma warning(pop)
-            #endif
-                // this is redundant and useless but the body for errno handling needs to be in an
-                // if constexpr wrapper
-                if constexpr(isa<T, strip<decltype(errno)>>) {
-                // errno will expand to something hideous like (*__errno_location()),
-                // may as well replace it with "errno"
-                entry.entries.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
-                }
-            } else {
-                if constexpr(is_string_type<T>) {
-                    if(i == 0) {
-                        if constexpr(std::is_pointer<T>::value) {
-                            if(t == nullptr) {
-                                entry.message = "(nullptr)";
-                                return;
-                            }
-                        }
-                        entry.message = t;
-                        return;
-                    }
-                }
-                entry.entries.push_back({ args_strings[i], generate_stringification(t, literal_format::dec) });
+        // three cases to handle: assert message, errno, and regular diagnostics
+        #if LIBASSERT_IS_MSVC
+         #pragma warning(push)
+         #pragma warning(disable: 4127) // MSVC thinks constexpr should be used here. It should not.
+        #endif
+        // TODO: Maybe just unconditionally capture errno and handle later...
+        if(isa<T, strip<decltype(errno)>> && args_strings[i] == errno_expansion) {
+        #if LIBASSERT_IS_MSVC
+         #pragma warning(pop)
+        #endif
+            // this is redundant and useless but the body for errno handling needs to be in an
+            // if constexpr wrapper
+            if constexpr(isa<T, strip<decltype(errno)>>) {
+            // errno will expand to something hideous like (*__errno_location()),
+            // may as well replace it with "errno"
+            entry.entries.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
             }
+        } else {
+            if constexpr(is_string_type<T>) {
+                if(i == 0) {
+                    if constexpr(std::is_pointer<T>::value) {
+                        if(t == nullptr) {
+                            entry.message = "(nullptr)";
+                            return;
+                        }
+                    }
+                    entry.message = t;
+                    return;
+                }
+            }
+            entry.entries.push_back({ args_strings[i], generate_stringification(t, literal_format::dec) });
         }
     }
 

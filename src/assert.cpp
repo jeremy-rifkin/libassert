@@ -378,7 +378,7 @@ namespace libassert::detail {
         }
         #endif
 
-        LIBASSERT_ATTR_COLD std::string stringify_ptr(const void* value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify_pointer_value(const void* value, literal_format) {
             if(value == nullptr) {
                 return "nullptr";
             }
