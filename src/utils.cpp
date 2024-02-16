@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <assert/assert.hpp>
+#include <cpptrace/cpptrace.hpp>
 
 #include "utils.hpp"
 
@@ -24,9 +25,9 @@ namespace libassert::detail {
         if(!condition) {
             const char* action = verify ? "Verification" : "Assertion";
             const char* name   = verify ? "verify"       : "assert";
+            std::string out_message;
             if(message == nullptr) {
-                (void)fprintf(
-                    stderr,
+                out_message += stringf(
                     "%s failed at %s:%d: %s\n",
                     action,
                     location.file,
@@ -34,8 +35,7 @@ namespace libassert::detail {
                     signature
                 );
             } else {
-                (void)fprintf(
-                    stderr,
+                out_message += stringf(
                     "%s failed at %s:%d: %s: %s\n",
                     action,
                     location.file,
@@ -44,8 +44,8 @@ namespace libassert::detail {
                     message
                 );
             }
-            (void)fprintf(stderr, "    primitive_%s(%s);\n", name, expression);
-            std::abort();
+            out_message += stringf("    primitive_%s(%s);\n", name, expression);
+            throw cpptrace::runtime_error(std::move(out_message));
         }
     }
 
