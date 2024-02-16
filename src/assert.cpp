@@ -197,6 +197,47 @@ namespace libassert::detail {
     }
 
     /*
+     * literal format management
+     */
+
+    [[nodiscard]] literal_format operator|(literal_format a, literal_format b) {
+        return static_cast<literal_format>(
+            static_cast<std::underlying_type<literal_format>::type>(a) |
+            static_cast<std::underlying_type<literal_format>::type>(b)
+        );
+    }
+
+    [[nodiscard]] bool operator&(literal_format a, literal_format b) {
+        return static_cast<std::underlying_type<literal_format>::type>(a) &
+               static_cast<std::underlying_type<literal_format>::type>(b);
+    }
+
+    thread_local literal_format current_format = literal_format::default_format;
+
+    // get current literal_format configuration for the thread
+    [[nodiscard]] LIBASSERT_EXPORT literal_format get_thread_current_literal_format() {
+        return current_format;
+    }
+
+    // sets the current literal_format configuration for the thread
+    LIBASSERT_EXPORT void set_thread_current_literal_format(literal_format format) {
+        current_format = format;
+    }
+
+    bool has_integral_format(literal_format format) {
+        return format & (
+            literal_format::integer_decimal |
+            literal_format::integer_hex |
+            literal_format::integer_octal |
+            literal_format::integer_binary
+        );
+    }
+
+    bool has_floating_format(literal_format format) {
+        return format & (literal_format::float_decimal | literal_format::float_hex);
+    }
+
+    /*
      * stringification
      */
 
@@ -221,53 +262,57 @@ namespace libassert::detail {
     }
 
     namespace stringification {
-        LIBASSERT_ATTR_COLD std::string stringify(const std::string& value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(const std::string& value) {
             return escape_string(value, '"');
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(const std::string_view& value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(const std::string_view& value) {
             return escape_string(value, '"');
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(std::nullptr_t, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(std::nullptr_t) {
             return "nullptr";
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(char value, literal_format fmt) {
-            if(fmt == literal_format::character) {
-                return escape_string({&value, 1}, '\'');
+        LIBASSERT_ATTR_COLD std::string stringify(char value) {
+            if(has_integral_format(get_thread_current_literal_format())) {
+                return escape_string({&value, 1}, '\'') + ' ' + stringify((int)value);
             } else {
-                return stringify((int)value, fmt);
+                return escape_string({&value, 1}, '\'');
             }
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(bool value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(bool value) {
                 return value ? "true" : "false";
         }
 
         template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>
         LIBASSERT_ATTR_COLD [[nodiscard]]
-        static std::string stringify_integral(T value, literal_format fmt) {
+        static std::string stringify_integral(T value, literal_format format) {
             std::ostringstream oss;
-            switch(fmt) {
+            switch(format) {
                 case literal_format::character:
-                    if(cmp_greater_equal(value, std::numeric_limits<char>::min())
-                    && cmp_less_equal(value, std::numeric_limits<char>::max())) {
-                        return stringify(static_cast<char>(value), literal_format::character);
+                    if(
+                        cmp_greater_equal(value, std::numeric_limits<char>::min()) &&
+                        cmp_less_equal(value, std::numeric_limits<char>::max())
+                    ) {
+                        char c = static_cast<char>(value);
+                        return escape_string({&c, 1}, '\'');
                     } else {
                         return "";
                     }
-                case literal_format::dec:
                     break;
-                case literal_format::hex:
+                case literal_format::integer_hex:
                     oss<<std::showbase<<std::hex;
                     break;
-                case literal_format::octal:
+                case literal_format::integer_octal:
                     oss<<std::showbase<<std::oct;
                     break;
-                case literal_format::binary:
+                case literal_format::integer_binary:
                     oss<<"0b"<<std::bitset<sizeof(value) * 8>(value);
                     goto r;
+                case literal_format::integer_decimal:
+                    break;
                 default:
                     LIBASSERT_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
             }
@@ -275,56 +320,70 @@ namespace libassert::detail {
             r: return std::move(oss).str();
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(short value, literal_format fmt) {
-            return stringify_integral(value, fmt);
+        template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        static std::string stringify_integral(T value) {
+            auto current_format = get_thread_current_literal_format();
+            if(current_format == literal_format::default_format) {
+                return stringify_integral(value, literal_format::integer_decimal);
+            } else {
+                std::string result;
+                for(auto format : {
+                    literal_format::integer_decimal,
+                    literal_format::integer_hex,
+                    literal_format::integer_octal,
+                    literal_format::integer_binary
+                }) {
+                    if(current_format & format) {
+                        if(!result.empty()) {
+                            result += ' ';
+                        }
+                        result += stringify_integral(value, format);
+                    }
+                }
+                return result;
+            }
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(int value, literal_format fmt) {
-            return stringify_integral(value, fmt);
+        LIBASSERT_ATTR_COLD std::string stringify(short value) {
+            return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(long value, literal_format fmt) {
-            return stringify_integral(value, fmt);
+        LIBASSERT_ATTR_COLD std::string stringify(int value) {
+            return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(long long value, literal_format fmt) {
-            return stringify_integral(value, fmt);
+        LIBASSERT_ATTR_COLD std::string stringify(long value) {
+            return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(unsigned short value, literal_format fmt) {
-            return stringify_integral(value, fmt);
+        LIBASSERT_ATTR_COLD std::string stringify(long long value) {
+            return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(unsigned int value, literal_format fmt) {
-            return stringify_integral(value, fmt);
+        LIBASSERT_ATTR_COLD std::string stringify(unsigned short value) {
+            return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(unsigned long value, literal_format fmt) {
-            return stringify_integral(value, fmt);
+        LIBASSERT_ATTR_COLD std::string stringify(unsigned int value) {
+            return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(unsigned long long value, literal_format fmt) {
-            return stringify_integral(value, fmt);
+        LIBASSERT_ATTR_COLD std::string stringify(unsigned long value) {
+            return stringify_integral(value);
+        }
+
+        LIBASSERT_ATTR_COLD std::string stringify(unsigned long long value) {
+            return stringify_integral(value);
         }
 
         template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
         LIBASSERT_ATTR_COLD [[nodiscard]]
-        static std::string stringify_floating_point(T value, literal_format fmt) {
+        static std::string stringify_floating_point(T value, literal_format format) {
             std::ostringstream oss;
-            switch(fmt) {
-                case literal_format::character:
-                    return "";
-                case literal_format::dec:
-                    break;
-                case literal_format::hex:
-                    // apparently std::hexfloat automatically prepends "0x" while std::hex does not
-                    oss<<std::hexfloat;
-                    break;
-                case literal_format::octal:
-                case literal_format::binary:
-                    return "";
-                default:
-                    LIBASSERT_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
+            if(format == literal_format::float_hex) {
+                // apparently std::hexfloat automatically prepends "0x" while std::hex does not
+                oss<<std::hexfloat;
             }
             oss<<std::setprecision(std::numeric_limits<T>::max_digits10)<<value;
             std::string s = std::move(oss).str();
@@ -335,41 +394,61 @@ namespace libassert::detail {
             return s;
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(float value, literal_format fmt) {
-            return stringify_floating_point(value, fmt);
+        template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        static std::string stringify_floating_point(T value) {
+            auto current_format = get_thread_current_literal_format();
+            if(current_format == literal_format::default_format) {
+                return stringify_floating_point(value, literal_format::float_decimal);
+            } else {
+                std::string result;
+                for(auto format : { literal_format::float_decimal, literal_format::float_hex }) {
+                    if(current_format & format) {
+                        if(!result.empty()) {
+                            result += ' ';
+                        }
+                        result += stringify_floating_point(value, format);
+                    }
+                }
+                return result;
+            }
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(double value, literal_format fmt) {
-            return stringify_floating_point(value, fmt);
+        LIBASSERT_ATTR_COLD std::string stringify(float value) {
+            return stringify_floating_point(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(long double value, literal_format fmt) {
-            return stringify_floating_point(value, fmt);
+        LIBASSERT_ATTR_COLD std::string stringify(double value) {
+            return stringify_floating_point(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(std::error_code ec, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(long double value) {
+            return stringify_floating_point(value);
+        }
+
+        LIBASSERT_ATTR_COLD std::string stringify(std::error_code ec) {
             return ec.category().name() + (':' + std::to_string(ec.value())) + ' ' + ec.message();
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(std::error_condition ec, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(std::error_condition ec) {
             return ec.category().name() + (':' + std::to_string(ec.value())) + ' ' + ec.message();
         }
 
         #if __cplusplus >= 202002L
-        LIBASSERT_ATTR_COLD std::string stringify(std::strong_ordering value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(std::strong_ordering value) {
                 if(value == std::strong_ordering::less)       return "std::strong_ordering::less";
                 if(value == std::strong_ordering::equivalent) return "std::strong_ordering::equivalent";
                 if(value == std::strong_ordering::equal)      return "std::strong_ordering::equal";
                 if(value == std::strong_ordering::greater)    return "std::strong_ordering::greater";
                 return "Unknown std::strong_ordering value";
         }
-        LIBASSERT_ATTR_COLD std::string stringify(std::weak_ordering value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(std::weak_ordering value) {
                 if(value == std::weak_ordering::less)       return "std::weak_ordering::less";
                 if(value == std::weak_ordering::equivalent) return "std::weak_ordering::equivalent";
                 if(value == std::weak_ordering::greater)    return "std::weak_ordering::greater";
                 return "Unknown std::weak_ordering value";
         }
-        LIBASSERT_ATTR_COLD std::string stringify(std::partial_ordering value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify(std::partial_ordering value) {
                 if(value == std::partial_ordering::less)       return "std::partial_ordering::less";
                 if(value == std::partial_ordering::equivalent) return "std::partial_ordering::equivalent";
                 if(value == std::partial_ordering::greater)    return "std::partial_ordering::greater";
@@ -378,7 +457,7 @@ namespace libassert::detail {
         }
         #endif
 
-        LIBASSERT_ATTR_COLD std::string stringify_pointer_value(const void* value, literal_format) {
+        LIBASSERT_ATTR_COLD std::string stringify_pointer_value(const void* value) {
             if(value == nullptr) {
                 return "nullptr";
             }
@@ -740,14 +819,14 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
-        std::vector<std::string>& _lstrings,
-        std::vector<std::string>& _rstrings,
+        std::string&& _lstring,
+        std::string&& _rstring,
         std::string _a_str,
         std::string _b_str,
         bool _multiple_formats
     ):
-        lstrings(_lstrings),
-        rstrings(_rstrings),
+        lstring(_lstring),
+        rstring(_rstring),
         a_str(std::move(_a_str)),
         b_str(std::move(_b_str)),
         multiple_formats(_multiple_formats),
@@ -806,9 +885,12 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
-        auto& [ lstrings, rstrings, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;
+        auto& [ lstring, rstring, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;
         const std::string& a_str = a_sstr;
         const std::string& b_str = b_sstr;
+        // TODO: Temporary hack while reworking
+        std::vector<std::string> lstrings = { lstring };
+        std::vector<std::string> rstrings = { rstring };
         LIBASSERT_PRIMITIVE_ASSERT(!lstrings.empty());
         LIBASSERT_PRIMITIVE_ASSERT(!rstrings.empty());
         // pad all columns where there is overlap
@@ -867,20 +949,6 @@ namespace libassert::detail {
             }
         }
         return where;
-    }
-
-    LIBASSERT_ATTR_COLD
-    void sort_and_dedup(literal_format (&formats)[format_arr_length]) {
-        std::sort(std::begin(formats), std::end(formats));
-        size_t write_index = 1, read_index = 1;
-        for(; read_index < std::size(formats); read_index++) {
-            if(formats[read_index] != formats[write_index - 1]) {
-                formats[write_index++] = formats[read_index];
-            }
-        }
-        while(write_index < std::size(formats)) {
-            formats[write_index++] = literal_format::none;
-        }
     }
 
     LIBASSERT_ATTR_COLD [[nodiscard]]

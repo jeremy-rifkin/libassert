@@ -16,24 +16,24 @@ using namespace std::literals;
 
 int main() {
     // primitive types
-    ASSERT(stringification::stringify(false, literal_format::dec) == R"(false)");
-    ASSERT(stringification::stringify(42, literal_format::dec) == R"(42)");
-    ASSERT(stringification::stringify(2.25, literal_format::dec) == R"(2.25)");
+    ASSERT(stringification::stringify(false) == R"(false)");
+    ASSERT(stringification::stringify(42) == R"(42)");
+    ASSERT(stringification::stringify(2.25) == R"(2.25)");
     // TODO: Other formats
     // pointers
-    ASSERT(stringification::stringify(nullptr, literal_format::dec) == R"(nullptr)");
+    ASSERT(stringification::stringify(nullptr) == R"(nullptr)");
     int x;
     int* ptr = &x;
-    auto s = stringification::stringify(ptr, literal_format::dec);
+    auto s = stringification::stringify(ptr);
     ASSERT(s.find("int*: 0x") == 0, "", s);
     auto uptr = std::make_unique<int>(62);
-    ASSERT(stringification::stringify(uptr, literal_format::dec) == R"(std::unique_ptr<int>: 62)");
+    ASSERT(stringification::stringify(uptr) == R"(std::unique_ptr<int>: 62)");
     ASSERT(stringification::stringify(std::unique_ptr<int>()) == R"(std::unique_ptr<int>: nullptr)");
     // strings and chars
     ASSERT(stringification::stringify("foobar") == R"("foobar")");
     ASSERT(stringification::stringify("foobar"sv) == R"("foobar")");
     ASSERT(stringification::stringify("foobar"s) == R"("foobar")");
-    ASSERT(stringification::stringify(char(42), literal_format::dec) == R"(42)");
+    ASSERT(stringification::stringify(char(42)) == R"(42)");
     // ASSERT(stringification::stringify(R"("foobar")") == R"xx(R\\\"("foobar")")xx"); // TODO: Don't escape in raw strings
     // containers
     std::array arr{1,2,3,4,5};
@@ -45,7 +45,7 @@ int main() {
     std::optional<int> opt;
     ASSERT(stringification::stringify(opt) == R"(std::optional<int>: nullopt)");
     opt = 63;
-    ASSERT(stringification::stringify(opt, literal_format::dec) == R"(std::optional<int>: 63)");
+    ASSERT(stringification::stringify(opt) == R"(std::optional<int>: 63)");
     // error codes
     // customization point objects
     // libfmt
