@@ -200,14 +200,14 @@ namespace libassert::detail {
      * literal format management
      */
 
-    [[nodiscard]] literal_format operator|(literal_format a, literal_format b) {
+    [[nodiscard]] constexpr literal_format operator|(literal_format a, literal_format b) {
         return static_cast<literal_format>(
             static_cast<std::underlying_type<literal_format>::type>(a) |
             static_cast<std::underlying_type<literal_format>::type>(b)
         );
     }
 
-    [[nodiscard]] bool operator&(literal_format a, literal_format b) {
+    [[nodiscard]] constexpr std::underlying_type<literal_format>::type operator&(literal_format a, literal_format b) {
         return static_cast<std::underlying_type<literal_format>::type>(a) &
                static_cast<std::underlying_type<literal_format>::type>(b);
     }
@@ -224,17 +224,53 @@ namespace libassert::detail {
         current_format = format;
     }
 
+    LIBASSERT_EXPORT literal_format set_literal_format(
+        const char* a_str,
+        const char* b_str,
+        std::string_view op,
+        bool either_is_character,
+        bool either_is_arithmetic
+    ) {
+        auto previous = get_thread_current_literal_format();
+        auto lformat = get_literal_format(a_str);
+        auto rformat = get_literal_format(b_str);
+        auto format = lformat | rformat;
+        if(either_is_arithmetic) {
+            format = format | literal_format::integer_decimal | literal_format::float_decimal;
+        }
+        if(either_is_character) {
+            format = format | literal_format::character;
+        }
+        if(is_bitwise(op)) {
+            format = format | literal_format::integer_binary;
+        }
+        set_thread_current_literal_format(format);
+        return previous;
+    }
+
+    LIBASSERT_EXPORT void restore_literal_format(literal_format format) {
+        set_thread_current_literal_format(format);
+    }
+
+    constexpr auto integer_formats = literal_format::integer_decimal
+                                   | literal_format::integer_hex
+                                   | literal_format::integer_octal
+                                   | literal_format::integer_binary
+                                   | literal_format::character;
+
+    constexpr auto float_formats = literal_format::float_decimal | literal_format::float_hex;
+
+    LIBASSERT_EXPORT bool has_multiple_formats() {
+        auto format = get_thread_current_literal_format();
+        return popcount(format & integer_formats) > 1 || popcount(format & float_formats) > 1;
+    }
+
     bool has_integral_format(literal_format format) {
-        return format & (
-            literal_format::integer_decimal |
-            literal_format::integer_hex |
-            literal_format::integer_octal |
-            literal_format::integer_binary
-        );
+        return format & integer_formats;
     }
 
     bool has_floating_format(literal_format format) {
-        return format & (literal_format::float_decimal | literal_format::float_hex);
+        return format & float_formats;
     }
 
     /*
@@ -332,7 +368,8 @@ namespace libassert::detail {
                     literal_format::integer_decimal,
                     literal_format::integer_hex,
                     literal_format::integer_octal,
-                    literal_format::integer_binary
+                    literal_format::integer_binary,
+                    literal_format::character
                 }) {
                     if(current_format & format) {
                         if(!result.empty()) {

@@ -237,6 +237,9 @@ namespace libassert::detail {
     // Is integral but not boolean
     template<typename T> inline constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
 
+    template<typename T> inline constexpr bool is_arith_not_bool_char =
+                                                       std::is_arithmetic_v<strip<T>> && !isa<T, bool> && !isa<T, char>;
+
     template<typename T> inline constexpr bool is_c_string =
            isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
         || isa<std::decay_t<strip<T>>, const char*>;
@@ -563,7 +566,7 @@ namespace libassert::detail {
      * C++ syntax analysis logic
      */
 
-    enum class literal_format {
+    enum class literal_format : unsigned {
         default_format = 0,
         integer_decimal = 1,
         integer_hex = 2,
@@ -579,6 +582,17 @@ namespace libassert::detail {
 
     // sets the current literal_format configuration for the thread
     LIBASSERT_EXPORT void set_thread_current_literal_format(literal_format format);
+
+    LIBASSERT_EXPORT literal_format set_literal_format(
+        const char* a_str,
+        const char* b_str,
+        std::string_view op,
+        bool either_is_character,
+        bool either_is_arithmetic
+    );
+    LIBASSERT_EXPORT void restore_literal_format(literal_format);
+    // does the current literal format config have multiple formats
+    LIBASSERT_EXPORT bool has_multiple_formats();
 
     [[nodiscard]] LIBASSERT_EXPORT std::pair<std::string, std::string> decompose_expression(
         const std::string& expression,
@@ -874,18 +888,28 @@ namespace libassert::detail {
     binary_diagnostics_descriptor generate_binary_diagnostic(
         const A& a,
         const B& b,
-        const char* a_str,
+        const char* a_str, // TODO: Why is op a string view but these are not
         const char* b_str,
         std::string_view op
     ) {
-        // TODO: Literal format handling
-        return binary_diagnostics_descriptor {
+        constexpr bool either_is_character = isa<A, char> || isa<B, char>;
+        constexpr bool either_is_arithmetic = is_arith_not_bool_char<A> || is_arith_not_bool_char<B>;
+        literal_format previous_format = set_literal_format(
+            a_str,
+            b_str,
+            op,
+            either_is_character,
+            either_is_arithmetic
+        );
+        binary_diagnostics_descriptor descriptor(
             generate_stringification(a),
             generate_stringification(b),
             a_str,
             b_str,
-            false
-        };
+            has_multiple_formats()
+        );
+        restore_literal_format(previous_format);
+        return descriptor;
     }
 
     #define LIBASSERT_X(x) #x
