@@ -212,16 +212,16 @@ namespace libassert::detail {
                static_cast<std::underlying_type<literal_format>::type>(b);
     }
 
-    thread_local literal_format current_format = literal_format::default_format;
+    thread_local literal_format thread_current_literal_format = literal_format::default_format;
 
     // get current literal_format configuration for the thread
     [[nodiscard]] LIBASSERT_EXPORT literal_format get_thread_current_literal_format() {
-        return current_format;
+        return thread_current_literal_format;
     }
 
     // sets the current literal_format configuration for the thread
     LIBASSERT_EXPORT void set_thread_current_literal_format(literal_format format) {
-        current_format = format;
+        thread_current_literal_format = format;
     }
 
     LIBASSERT_EXPORT literal_format set_literal_format(
