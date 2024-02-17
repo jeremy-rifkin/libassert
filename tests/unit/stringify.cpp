@@ -39,7 +39,11 @@ int main() {
     std::array arr{1,2,3,4,5};
     ASSERT(generate_stringification(arr) == R"(std::array<int, 5>: [1, 2, 3, 4, 5])");
     std::map<int, int> map{{1,2},{3,4}};
+    #if defined(_WIN32) && !LIBASSERT_IS_GCC
+    ASSERT(generate_stringification(map) == R"(std::map<int, int, std::less<int>>: [[1, 2], [3, 4]])");
+    #else
     ASSERT(generate_stringification(map) == R"(std::map<int, int>: [[1, 2], [3, 4]])");
+    #endif
     std::tuple<int, float, std::string, std::array<int, 5>> tuple = {1, 1.25, "good", arr};
     // ASSERT(generate_stringification(tuple) == R"([1, 1.25, \"good\", [1, 2, 3, 4, 5]])"); // TODO fix
     std::optional<int> opt;
@@ -55,7 +59,7 @@ int main() {
     int carr[] = {1, 1, 2, 3, 5, 8};
     static_assert(stringification::adl::is_container<int[5]>::value && stringification::adl::is_printable_container<int[5]>::value && !is_c_string<int[5]>);
     // static_assert(can_stringify<int[5]>::value);
-    #if LIBASSERT_IS_CLANG
+    #if LIBASSERT_IS_CLANG || LIBASSERT_IS_MSVC
     ASSERT(generate_stringification(carr) == R"(int[6]: [1, 1, 2, 3, 5, 8])");
     #else
     ASSERT(generate_stringification(carr) == R"(int [6]: [1, 1, 2, 3, 5, 8])");
