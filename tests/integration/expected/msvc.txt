@@ -1220,7 +1220,7 @@ Stack trace:
 Debug Assertion failed at integration\integration.cpp:3305: void __cdecl test_class<int>::test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>, std::less<std::string>> &):
     debug_assert(map == other);
     Where:
-        map   => std::map<std::string, std::vector<std::string_view>, std::less<std::string>> [["bar", ["b1", "b3", "b5"]], ["foo", ["f1", "f3", "f5"]]]
+        map   => std::map<std::string, std::vector<std::string_view>, std::less<std::string>>: [["bar", ["b1", "b3", "b5"]], ["foo", ["f1", "f3", "f5"]]]
         other => std::map<std::string, std::vector<std::string_view>, std::less<std::string>>: []
 
 Stack trace:
