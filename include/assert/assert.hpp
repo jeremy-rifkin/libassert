@@ -1007,7 +1007,7 @@ namespace libassert::detail {
 
     template<typename T, typename std::enable_if<!can_stringify<T>::value, int>::type = 0>
     LIBASSERT_ATTR_COLD [[nodiscard]]
-    std::string generate_stringification(const T& v) {
+    std::string generate_stringification(const T&) {
         return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
     }
 
