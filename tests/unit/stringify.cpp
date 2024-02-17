@@ -55,7 +55,11 @@ int main() {
     int carr[] = {1, 1, 2, 3, 5, 8};
     static_assert(stringification::adl::is_container<int[5]>::value && stringification::adl::is_printable_container<int[5]>::value && !is_c_string<int[5]>);
     // static_assert(can_stringify<int[5]>::value);
+    #if LIBASSERT_IS_CLANG
+    ASSERT(generate_stringification(carr) == R"(int[6]: [1, 1, 2, 3, 5, 8])");
+    #else
     ASSERT(generate_stringification(carr) == R"(int [6]: [1, 1, 2, 3, 5, 8])");
+    #endif
     // enum E { EE, FF };
     // ASSERT(generate_stringification(FF) == R"(int [6]: [1, 1, 2, 3, 5, 8])");
     // error codes

@@ -1132,8 +1132,8 @@ Stack trace:
 Debug Assertion failed at integration\integration.cpp:3104: void __cdecl test_class<int>::something_else(void):
     debug_assert(a == b, ...);
     Where:
-        a => std::set<int, std::less<int>> [2, 4, 6, 10]
-        b => std::set<int, std::less<int>> [2, 5, 6, 10]
+        a => std::set<int, std::less<int>>: [2, 4, 6, 10]
+        b => std::set<int, std::less<int>>: [2, 5, 6, 10]
     Extra diagnostics:
         c => std::vector<double>: [1.2000000476837158, 2.440000057220459, 3.15159010887146, 5.1999998092651367]
 
@@ -1149,7 +1149,7 @@ Stack trace:
 Debug Assertion failed at integration\integration.cpp:3109: void __cdecl test_class<int>::something_else(void):
     debug_assert(false, ...);
     Extra diagnostics:
-        m0 => std::map<std::string, int, std::less<std::string>> [["bar", -2], ["foo", 2]]
+        m0 => std::map<std::string, int, std::less<std::string>>: [["bar", -2], ["foo", 2]]
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -1163,7 +1163,7 @@ Stack trace:
 Debug Assertion failed at integration\integration.cpp:3114: void __cdecl test_class<int>::something_else(void):
     debug_assert(false, ...);
     Extra diagnostics:
-        m1 => std::map<std::string, std::vector<int>, std::less<std::string>> [["bar", [-100, 200, 400, -800]], ["foo", [1, -2, 3, -4]]]
+        m1 => std::map<std::string, std::vector<int>, std::less<std::string>>: [["bar", [-100, 200, 400, -800]], ["foo", [1, -2, 3, -4]]]
 
 Stack trace:
 # 1 test_class<int>::something_else()
@@ -1221,7 +1221,7 @@ Debug Assertion failed at integration\integration.cpp:3305: void __cdecl test_cl
     debug_assert(map == other);
     Where:
         map   => std::map<std::string, std::vector<std::string_view>, std::less<std::string>> [["bar", ["b1", "b3", "b5"]], ["foo", ["f1", "f3", "f5"]]]
-        other => std::map<std::string, std::vector<std::string_view>, std::less<std::string>> [size: 0]: []
+        other => std::map<std::string, std::vector<std::string_view>, std::less<std::string>>: []
 
 Stack trace:
 # 1 test_class<int>::test_pretty_function_cleaning(std::map<std::string, std::vector<std::string_view>, std::less<std::string>
