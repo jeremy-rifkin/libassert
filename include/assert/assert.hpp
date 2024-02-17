@@ -567,14 +567,14 @@ namespace libassert::detail {
      */
 
     enum class literal_format : unsigned {
+        // integers and floats are decimal by default, chars are of course chars, and everything else only has one
+        // format that makes sense
         default_format = 0,
-        integer_decimal = 1,
-        integer_hex = 2,
-        integer_octal = 4,
-        integer_binary = 8,
-        character = 16,
-        float_decimal = 32,
-        float_hex = 64
+        integer_hex = 1,
+        integer_octal = 2,
+        integer_binary = 4,
+        integer_character = 8, // format integers as characters and characters as integers
+        float_hex = 16,
     };
 
     // get current literal_format configuration for the thread
@@ -587,8 +587,7 @@ namespace libassert::detail {
         const char* a_str,
         const char* b_str,
         std::string_view op,
-        bool either_is_character,
-        bool either_is_arithmetic
+        bool integer_character
     );
     LIBASSERT_EXPORT void restore_literal_format(literal_format);
     // does the current literal format config have multiple formats
@@ -898,8 +897,7 @@ namespace libassert::detail {
             a_str,
             b_str,
             op,
-            either_is_character,
-            either_is_arithmetic
+            either_is_character && either_is_arithmetic
         );
         binary_diagnostics_descriptor descriptor(
             generate_stringification(a),

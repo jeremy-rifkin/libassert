@@ -268,11 +268,11 @@ namespace libassert::detail {
             literal_formats = {
                 { std::regex(int_binary),    literal_format::integer_binary },
                 { std::regex(int_octal),     literal_format::integer_octal },
-                { std::regex(int_decimal),   literal_format::integer_decimal },
+                { std::regex(int_decimal),   literal_format::default_format },
                 { std::regex(int_hex),       literal_format::integer_hex },
-                { std::regex(float_decimal), literal_format::float_decimal },
+                { std::regex(float_decimal), literal_format::default_format },
                 { std::regex(float_hex),     literal_format::float_hex },
-                { std::regex(char_literal),  literal_format::character }
+                { std::regex(char_literal),  literal_format::default_format }
             };
             // generate precedence table
             // bottom few rows of the precedence table:

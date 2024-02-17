@@ -228,18 +228,14 @@ namespace libassert::detail {
         const char* a_str,
         const char* b_str,
         std::string_view op,
-        bool either_is_character,
-        bool either_is_arithmetic
+        bool integer_character
     ) {
         auto previous = get_thread_current_literal_format();
         auto lformat = get_literal_format(a_str);
         auto rformat = get_literal_format(b_str);
         auto format = lformat | rformat;
-        if(either_is_arithmetic) {
-            format = format | literal_format::integer_decimal | literal_format::float_decimal;
-        }
-        if(either_is_character) {
-            format = format | literal_format::character;
+        if(integer_character) { // if one is a character and the other is not
+            format = format | literal_format::integer_character;
         }
         if(is_bitwise(op)) {
             format = format | literal_format::integer_binary;
@@ -252,25 +248,17 @@ namespace libassert::detail {
         set_thread_current_literal_format(format);
     }
 
-    constexpr auto integer_formats = literal_format::integer_decimal
-                                   | literal_format::integer_hex
-                                   | literal_format::integer_octal
-                                   | literal_format::integer_binary
-                                   | literal_format::character;
+    constexpr auto non_default_integer_formats = literal_format::integer_hex
+                                               | literal_format::integer_octal
+                                               | literal_format::integer_binary
+                                            //    | literal_format::integer_character
+                                               ;
 
-    constexpr auto float_formats = literal_format::float_decimal | literal_format::float_hex;
+    constexpr auto non_default_float_formats = literal_format::float_hex;
 
     LIBASSERT_EXPORT bool has_multiple_formats() {
         auto format = get_thread_current_literal_format();
-        return popcount(format & integer_formats) > 1 || popcount(format & float_formats) > 1;
-    }
-
-    bool has_integral_format(literal_format format) {
-        return format & integer_formats;
-    }
-
-    bool has_floating_format(literal_format format) {
-        return format & float_formats;
+        return popcount(format & non_default_integer_formats) || popcount(format & non_default_float_formats);
     }
 
     /*
@@ -311,15 +299,15 @@ namespace libassert::detail {
         }
 
         LIBASSERT_ATTR_COLD std::string stringify(char value) {
-            if(has_integral_format(get_thread_current_literal_format())) {
-                return escape_string({&value, 1}, '\'') + ' ' + stringify((int)value);
+            if(get_thread_current_literal_format() & literal_format::integer_character) {
+                return stringify(static_cast<int>(value));
             } else {
                 return escape_string({&value, 1}, '\'');
             }
         }
 
         LIBASSERT_ATTR_COLD std::string stringify(bool value) {
-                return value ? "true" : "false";
+            return value ? "true" : "false";
         }
 
         template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>
@@ -327,7 +315,7 @@ namespace libassert::detail {
         static std::string stringify_integral(T value, literal_format format) {
             std::ostringstream oss;
             switch(format) {
-                case literal_format::character:
+                case literal_format::integer_character:
                     if(
                         cmp_greater_equal(value, std::numeric_limits<char>::min()) &&
                         cmp_less_equal(value, std::numeric_limits<char>::max())
@@ -335,7 +323,8 @@ namespace libassert::detail {
                         char c = static_cast<char>(value);
                         return escape_string({&c, 1}, '\'');
                     } else {
-                        return "";
+                        // TODO: Handle this better
+                        return "<no char>";
                     }
                     break;
                 case literal_format::integer_hex:
@@ -347,7 +336,7 @@ namespace libassert::detail {
                 case literal_format::integer_binary:
                     oss<<"0b"<<std::bitset<sizeof(value) * 8>(value);
                     goto r;
-                case literal_format::integer_decimal:
+                case literal_format::default_format:
                     break;
                 default:
                     LIBASSERT_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
@@ -360,26 +349,23 @@ namespace libassert::detail {
         LIBASSERT_ATTR_COLD [[nodiscard]]
         static std::string stringify_integral(T value) {
             auto current_format = get_thread_current_literal_format();
-            if(current_format == literal_format::default_format) {
-                return stringify_integral(value, literal_format::integer_decimal);
-            } else {
-                std::string result;
+            std::string result = stringify_integral(value, literal_format::default_format);
+            if(current_format & literal_format::integer_character) {
+                result = stringify_integral(value, literal_format::integer_character) + ' ' + std::move(result);
+            }
+            if(current_format & non_default_integer_formats) {
                 for(auto format : {
-                    literal_format::integer_decimal,
                     literal_format::integer_hex,
                     literal_format::integer_octal,
-                    literal_format::integer_binary,
-                    literal_format::character
+                    literal_format::integer_binary
                 }) {
                     if(current_format & format) {
-                        if(!result.empty()) {
-                            result += ' ';
-                        }
+                        result += ' ';
                         result += stringify_integral(value, format);
                     }
                 }
-                return result;
             }
+            return result;
         }
 
         LIBASSERT_ATTR_COLD std::string stringify(short value) {
@@ -435,11 +421,9 @@ namespace libassert::detail {
         LIBASSERT_ATTR_COLD [[nodiscard]]
         static std::string stringify_floating_point(T value) {
             auto current_format = get_thread_current_literal_format();
-            if(current_format == literal_format::default_format) {
-                return stringify_floating_point(value, literal_format::float_decimal);
-            } else {
-                std::string result;
-                for(auto format : { literal_format::float_decimal, literal_format::float_hex }) {
+            std::string result = stringify_floating_point(value, literal_format::default_format);
+            if(current_format & non_default_float_formats) {
+                for(auto format : { literal_format::float_hex }) {
                     if(current_format & format) {
                         if(!result.empty()) {
                             result += ' ';
@@ -447,8 +431,8 @@ namespace libassert::detail {
                         result += stringify_floating_point(value, format);
                     }
                 }
-                return result;
             }
+            return result;
         }
 
         LIBASSERT_ATTR_COLD std::string stringify(float value) {
