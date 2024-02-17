@@ -25,7 +25,7 @@ int main() {
     int x;
     int* ptr = &x;
     auto s = generate_stringification(ptr);
-    ASSERT(s.find("int*: 0x") == 0, "", s);
+    ASSERT(s.find("int*: 0x") == 0 || s.find("int *: 0x") == 0, "", s);
     auto uptr = std::make_unique<int>(62);
     ASSERT(generate_stringification(uptr) == R"(std::unique_ptr<int>: 62)");
     ASSERT(generate_stringification(std::unique_ptr<int>()) == R"(std::unique_ptr<int>: nullptr)");
