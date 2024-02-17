@@ -1038,8 +1038,7 @@ Stack trace:
 Debug Assertion failed at integration/integration.cpp:2904: void test_class<int>::something_else() [T = int]:
     debug_assert(a != A);
     Where:
-        a => 0
-        A => 0
+        a => A
 
 Stack trace:
 # 1 test_class<int>::something_else()
