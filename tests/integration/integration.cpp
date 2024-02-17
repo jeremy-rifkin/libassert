@@ -57,9 +57,11 @@ struct debug_print_customization {
     }
 };
 
-[[nodiscard]] std::string stringify(const debug_print_customization& p, libassert::detail::literal_format) {
-    return "(debug_print_customization = " + std::to_string(p.x) + ")";
-}
+template<> struct libassert::stringifier<debug_print_customization> {
+    std::string stringify(const debug_print_customization& p) {
+        return "(debug_print_customization = " + std::to_string(p.x) + ")";
+    }
+};
 
 int foo() {
     std::cout<<"foo() called"<<std::endl;

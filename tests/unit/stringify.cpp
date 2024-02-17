@@ -16,36 +16,48 @@ using namespace std::literals;
 
 int main() {
     // primitive types
-    ASSERT(stringification::stringify(false) == R"(false)");
-    ASSERT(stringification::stringify(42) == R"(42)");
-    ASSERT(stringification::stringify(2.25) == R"(2.25)");
+    ASSERT(generate_stringification(false) == R"(false)");
+    ASSERT(generate_stringification(42) == R"(42)");
+    ASSERT(generate_stringification(2.25) == R"(2.25)");
     // TODO: Other formats
     // pointers
-    ASSERT(stringification::stringify(nullptr) == R"(nullptr)");
+    ASSERT(generate_stringification(nullptr) == R"(nullptr)");
     int x;
     int* ptr = &x;
-    auto s = stringification::stringify(ptr);
+    auto s = generate_stringification(ptr);
     ASSERT(s.find("int*: 0x") == 0, "", s);
     auto uptr = std::make_unique<int>(62);
-    ASSERT(stringification::stringify(uptr) == R"(std::unique_ptr<int>: 62)");
-    ASSERT(stringification::stringify(std::unique_ptr<int>()) == R"(std::unique_ptr<int>: nullptr)");
+    ASSERT(generate_stringification(uptr) == R"(std::unique_ptr<int>: 62)");
+    ASSERT(generate_stringification(std::unique_ptr<int>()) == R"(std::unique_ptr<int>: nullptr)");
     // strings and chars
-    ASSERT(stringification::stringify("foobar") == R"("foobar")");
-    ASSERT(stringification::stringify("foobar"sv) == R"("foobar")");
-    ASSERT(stringification::stringify("foobar"s) == R"("foobar")");
-    ASSERT(stringification::stringify(char(42)) == R"(42)");
-    // ASSERT(stringification::stringify(R"("foobar")") == R"xx(R\\\"("foobar")")xx"); // TODO: Don't escape in raw strings
+    ASSERT(generate_stringification("foobar") == R"("foobar")");
+    ASSERT(generate_stringification("foobar"sv) == R"("foobar")");
+    ASSERT(generate_stringification("foobar"s) == R"("foobar")");
+    ASSERT(generate_stringification(char(42)) == R"('*')");
+    // ASSERT(generate_stringification(R"("foobar")") == R"xx(R\\\"("foobar")")xx"); // TODO: Don't escape in raw strings
     // containers
     std::array arr{1,2,3,4,5};
-    ASSERT(stringification::stringify(arr) == R"([1, 2, 3, 4, 5])");
+    ASSERT(generate_stringification(arr) == R"(std::array<int, 5>: [1, 2, 3, 4, 5])");
     std::map<int, int> map{{1,2},{3,4}};
-    ASSERT(stringification::stringify(map) == R"([[1, 2], [3, 4]])");
+    ASSERT(generate_stringification(map) == R"(std::map<int, int>: [[1, 2], [3, 4]])");
     std::tuple<int, float, std::string, std::array<int, 5>> tuple = {1, 1.25, "good", arr};
-    // ASSERT(stringification::stringify(tuple) == R"([1, 1.25, \"good\", [1, 2, 3, 4, 5]])"); // TODO fix
+    // ASSERT(generate_stringification(tuple) == R"([1, 1.25, \"good\", [1, 2, 3, 4, 5]])"); // TODO fix
     std::optional<int> opt;
-    ASSERT(stringification::stringify(opt) == R"(std::optional<int>: nullopt)");
+    ASSERT(generate_stringification(opt) == R"(std::optional<int>: nullopt)");
     opt = 63;
-    ASSERT(stringification::stringify(opt) == R"(std::optional<int>: 63)");
+    ASSERT(generate_stringification(opt) == R"(std::optional<int>: 63)");
+    std::vector<int> vec2 {2, 42, {}, 60};
+    ASSERT(generate_stringification(vec2) == R"(std::vector<int>: [2, 42, 0, 60])");
+    std::vector<std::optional<int>> vec {2, 42, {}, 60};
+    ASSERT(generate_stringification(vec) == R"(std::vector<std::optional<int>>: [2, 42, nullopt, 60])");
+    std::vector<std::optional<std::vector<std::pair<int, float>>>> vovp {{{{2, 1.2f}}}, {}, {{{20, 6.2f}}}};
+    ASSERT(generate_stringification(vovp) == R"(std::vector<std::optional<std::vector<std::pair<int, float>>>>: [[[2, 1.20000005]], nullopt, [[20, 6.19999981]]])");
+    int carr[] = {1, 1, 2, 3, 5, 8};
+    static_assert(stringification::adl::is_container<int[5]>::value && stringification::adl::is_printable_container<int[5]>::value && !is_c_string<int[5]>);
+    // static_assert(can_stringify<int[5]>::value);
+    ASSERT(generate_stringification(carr) == R"(int [6]: [1, 1, 2, 3, 5, 8])");
+    // enum E { EE, FF };
+    // ASSERT(generate_stringification(FF) == R"(int [6]: [1, 1, 2, 3, 5, 8])");
     // error codes
     // customization point objects
     // libfmt

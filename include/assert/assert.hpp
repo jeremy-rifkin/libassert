@@ -704,6 +704,12 @@ namespace libassert::detail {
                                     std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
                                 > : public std::true_type {};
 
+        template<typename T, typename = void> class has_stringifier : public std::false_type {};
+        template<typename T> class has_stringifier<
+                                    T,
+                                    std::void_t<decltype(stringifier<strip<T>>{}.stringify(std::declval<T>()))>
+                                > : public std::true_type {};
+
         template<typename T, typename = void> class is_tuple_like : public std::false_type {};
         template<typename T> class is_tuple_like<
                                     T,
@@ -714,7 +720,7 @@ namespace libassert::detail {
                                 > : public std::true_type {};
 
         namespace adl {
-            using std::size, std::begin, std::end; // ADL
+            using std::begin, std::end; // ADL
             template<typename T, typename = void> class is_container : public std::false_type {};
             // template<typename T> class is_printable_container<
             //                             T,
@@ -791,7 +797,9 @@ namespace libassert::detail {
             typename T,
             typename std::enable_if<
                 has_stream_overload<T>::value
+                    && !has_stringifier<T>::value
                     && !is_string_type<T>
+                    && !std::is_enum<strip<T>>::value
                     && !std::is_pointer<strip<typename std::decay<T>::type>>::value,
                 int
             >::type = 0
@@ -804,22 +812,39 @@ namespace libassert::detail {
             return std::move(oss).str();
         }
 
-        // TODO: print underlying representation if not magic enum
-        #ifdef LIBASSERT_USE_MAGIC_ENUM
         template<
             typename T,
             typename std::enable_if<
-                std::is_enum<strip<T>>::value,
+                has_stringifier<T>::value,
                 int
             >::type = 0
         >
+        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
+            return stringifier<strip<T>>{}.stringify(t);
+        }
+
+        #ifdef LIBASSERT_USE_MAGIC_ENUM
+        template<typename T, typename std::enable_if<std::is_enum<strip<T>>::value, int>::type = 0>
         LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
             std::string_view name = magic_enum::enum_name(t);
             if(!name.empty()) {
                 return std::string(name);
             } else {
-                return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
+                return bstringf(
+                    "enum %s: %s",
+                    prettify_type(std::string(type_name<T>())).c_str(),
+                    stringify(static_cast<typename std::underlying_type<T>::type>(t)).c_str()
+                );
             }
+        }
+        #else
+        template<typename T, typename std::enable_if<std::is_enum<strip<T>>::value, int>::type = 0>
+        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
+            return bstringf(
+                "enum %s: %s",
+                prettify_type(std::string(type_name<T>())).c_str(),
+                stringify(static_cast<typename std::underlying_type<T>::type>(t)).c_str()
+            );
         }
         #endif
 
@@ -876,7 +901,7 @@ namespace libassert::detail {
         template<
             typename T,
             typename std::enable_if<
-                std::is_pointer<strip<typename std::decay<T>::type>>::value
+                (std::is_pointer<strip<typename std::decay<T>::type>>::value && (isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char> || !adl::is_container<T>::value))
                     || std::is_function<strip<T>>::value,
                 int
             >::type = 0
