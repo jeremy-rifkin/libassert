@@ -45,6 +45,14 @@
  #endif
 #endif
 
+// Ever seen an assertion library with a 1500+ line header? :)
+// Block comments are used to create some visual separation and try to break the library into more manageable parts.
+// I've tried as much as I can to keep logically connected parts together but there is some bootstrapping necessary.
+
+// =====================================================================================================================
+// || Preprocessor stuff                                                                                              ||
+// =====================================================================================================================
+
 #ifdef _WIN32
 #define LIBASSERT_EXPORT_ATTR __declspec(dllexport)
 #define LIBASSERT_IMPORT_ATTR __declspec(dllimport)
@@ -117,6 +125,9 @@
  #define LIBASSERT_GCC_ISNT_STUPID 1
 #endif
 
+// always_false is just convenient to use here
+#define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
+
 #if LIBASSERT_IS_MSVC
  #pragma warning(push)
  // warning C4251: using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for
@@ -125,45 +136,9 @@
  #pragma warning(disable: 4251; disable: 4275)
 #endif
 
-namespace libassert {
-    enum class assert_type {
-        debug_assertion,
-        assertion,
-        assumption,
-        verification
-    };
-
-    class assertion_printer;
-}
-
-#ifndef LIBASSERT_FAIL
- #define LIBASSERT_FAIL libassert_default_fail_action
-#endif
-
-#ifndef LIBASSERT_FAIL
- LIBASSERT_EXPORT
-#endif
-void LIBASSERT_FAIL(libassert::assert_type type, const libassert::assertion_printer& printer);
-
-// always_false is just convenient to use here
-#define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
-
-/*
- * Stringify customization point
- *
- */
-
-namespace libassert {
-    template<typename T> struct stringifier /*{
-        std::convertible_to<std::string> stringify(const T&);
-    }*/;
-}
-
-/*
- * Internal mechanisms
- *
- * Macros exposed: LIBASSERT_PRIMITIVE_ASSERT
- */
+// =====================================================================================================================
+// || Core utilities                                                                                                  ||
+// =====================================================================================================================
 
 namespace libassert::detail {
     // Lightweight helper, eventually may use C++20 std::source_location if this library no longer
@@ -196,55 +171,51 @@ namespace libassert::detail {
     #else
      #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) LIBASSERT_PHONY_USE(c)
     #endif
+}
 
-    /*
-     * C++ syntax analysis logic
-     */
+// =====================================================================================================================
+// || Basic formatting and type tools                                                                                 ||
+// =====================================================================================================================
 
-    enum class literal_format : unsigned {
-        // integers and floats are decimal by default, chars are of course chars, and everything else only has one
-        // format that makes sense
-        default_format = 0,
-        integer_hex = 1,
-        integer_octal = 2,
-        integer_binary = 4,
-        integer_character = 8, // format integers as characters and characters as integers
-        float_hex = 16,
-    };
-
-    // get current literal_format configuration for the thread
-    [[nodiscard]] LIBASSERT_EXPORT literal_format get_thread_current_literal_format();
-
-    // sets the current literal_format configuration for the thread
-    LIBASSERT_EXPORT void set_thread_current_literal_format(literal_format format);
-
-    LIBASSERT_EXPORT literal_format set_literal_format(
-        const char* a_str,
-        const char* b_str,
-        std::string_view op,
-        bool integer_character
-    );
-    LIBASSERT_EXPORT void restore_literal_format(literal_format);
-    // does the current literal format config have multiple formats
-    LIBASSERT_EXPORT bool has_multiple_formats();
-
-    [[nodiscard]] LIBASSERT_EXPORT std::pair<std::string, std::string> decompose_expression(
-        const std::string& expression,
-        std::string_view target_op
-    );
-
-    [[nodiscard]] LIBASSERT_EXPORT std::string prettify_type(std::string type);
-
-    /*
-     * String utilities
-     */
-
+namespace libassert::detail {
     [[nodiscard]] LIBASSERT_EXPORT std::string bstringf(const char* format, ...);
 
-    /*
-     * metaprogramming utilities
-     */
+    LIBASSERT_ATTR_COLD [[nodiscard]]
+    constexpr std::string_view substring_bounded_by(
+        std::string_view sig,
+        std::string_view l,
+        std::string_view r
+    ) noexcept {
+        auto i = sig.find(l) + l.length();
+        return sig.substr(i, sig.rfind(r) - i);
+    }
 
+    template<typename T>
+    LIBASSERT_ATTR_COLD [[nodiscard]]
+    constexpr std::string_view type_name() noexcept {
+        // Cases to handle:
+        // gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
+        // clang: std::string_view ns::type_name() [T = int]
+        // msvc:  class std::basic_string_view<char,struct std::char_traits<char> > __cdecl ns::type_name<int>(void)
+        #if LIBASSERT_IS_CLANG
+         return substring_bounded_by(LIBASSERT_PFUNC, "[T = ", "]");
+        #elif LIBASSERT_IS_GCC
+         return substring_bounded_by(LIBASSERT_PFUNC, "[with T = ", "; std::string_view = ");
+        #elif LIBASSERT_IS_MSVC
+         return substring_bounded_by(LIBASSERT_PFUNC, "type_name<", ">(void)");
+        #else
+         static_assert(false, "unsupported compiler");
+        #endif
+    }
+
+    [[nodiscard]] LIBASSERT_EXPORT std::string prettify_type(std::string type);
+}
+
+// =====================================================================================================================
+// || Metaprogramming utilities                                                                                       ||
+// =====================================================================================================================
+
+namespace libassert::detail {
     struct nothing {};
 
     template<typename T> inline constexpr bool is_nothing = std::is_same_v<T, nothing>;
@@ -283,39 +254,21 @@ namespace libassert::detail {
             && isa<typename std::remove_extent_t<typename std::remove_reference_t<T>>, char>;
 
     template<typename T> typename std::add_lvalue_reference_t<T> decllval() noexcept;
+}
 
-    /*
-     * stringification
-     */
+// =====================================================================================================================
+// || Stringification micro-library                                                                                   ||
+// || Note: There is some stateful stuff behind the scenes related to literal format configuration                    ||
+// =====================================================================================================================
 
-    LIBASSERT_ATTR_COLD [[nodiscard]]
-    constexpr std::string_view substring_bounded_by(
-        std::string_view sig,
-        std::string_view l,
-        std::string_view r
-    ) noexcept {
-        auto i = sig.find(l) + l.length();
-        return sig.substr(i, sig.rfind(r) - i);
-    }
+namespace libassert {
+    // customization point
+    template<typename T> struct stringifier /*{
+        std::convertible_to<std::string> stringify(const T&);
+    }*/;
+}
 
-    template<typename T>
-    LIBASSERT_ATTR_COLD [[nodiscard]]
-    constexpr std::string_view type_name() noexcept {
-        // Cases to handle:
-        // gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
-        // clang: std::string_view ns::type_name() [T = int]
-        // msvc:  class std::basic_string_view<char,struct std::char_traits<char> > __cdecl ns::type_name<int>(void)
-        #if LIBASSERT_IS_CLANG
-         return substring_bounded_by(LIBASSERT_PFUNC, "[T = ", "]");
-        #elif LIBASSERT_IS_GCC
-         return substring_bounded_by(LIBASSERT_PFUNC, "[with T = ", "; std::string_view = ");
-        #elif LIBASSERT_IS_MSVC
-         return substring_bounded_by(LIBASSERT_PFUNC, "type_name<", ">(void)");
-        #else
-         static_assert(false, "unsupported compiler");
-        #endif
-    }
-
+namespace libassert::detail {
     namespace stringification {
         //
         // General traits
@@ -653,42 +606,20 @@ namespace libassert::detail {
     std::string generate_stringification(const T&) {
         return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
     }
+}
 
-    /*
-     * System wrappers
-     */
+// =====================================================================================================================
+// || Expression decomposition micro-library                                                                          ||
+// =====================================================================================================================
 
-    [[nodiscard]] LIBASSERT_EXPORT std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
-
-    /*
-     * Stacktrace implementation
-     */
-
-    // All in the .cpp
-
-    struct LIBASSERT_EXPORT opaque_trace {
-        void* trace;
-        ~opaque_trace();
-        opaque_trace(void* t) : trace(t) {}
-        opaque_trace(const opaque_trace&) = delete;
-        opaque_trace(opaque_trace&&) = delete;
-        opaque_trace& operator=(const opaque_trace&) = delete;
-        opaque_trace& operator=(opaque_trace&&) = delete;
-    };
-
-    LIBASSERT_EXPORT opaque_trace get_stacktrace_opaque();
-
-    /*
-     * expression decomposition
-     */
-
+namespace libassert::detail {
     // Lots of boilerplate
     // Using int comparison functions here to support proper signed comparisons. Need to make sure
     // assert(map.count(1) == 2) doesn't produce a warning. It wouldn't under normal circumstances
     // but it would in this library due to the parameters being forwarded down a long chain.
     // And we want to provide as much robustness as possible anyways.
     // Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
-    // Not using std:: versions because library is targetting C++17
+    // Not using std:: versions because library is targeting C++17
     template<typename T, typename U>
     [[nodiscard]] constexpr bool cmp_equal(T t, U u) {
         using UT = std::make_unsigned_t<T>;
@@ -980,8 +911,102 @@ namespace libassert::detail {
     };
 
     // for ternary support
-    template<typename U> expression_decomposer(U&&)
-             -> expression_decomposer<std::conditional_t<std::is_rvalue_reference_v<U>, std::remove_reference_t<U>, U>>;
+    template<typename U>
+    expression_decomposer(U&&) -> expression_decomposer<
+        std::conditional_t<std::is_rvalue_reference_v<U>, std::remove_reference_t<U>, U>
+    >;
+}
+
+// =====================================================================================================================
+// || Library core  ...  TODO: Organize below this line                                                               ||
+// =====================================================================================================================
+
+namespace libassert {
+    enum class assert_type {
+        debug_assertion,
+        assertion,
+        assumption,
+        verification
+    };
+
+    class assertion_printer;
+}
+
+#ifndef LIBASSERT_FAIL
+ #define LIBASSERT_FAIL libassert_default_fail_action
+#endif
+
+#ifndef LIBASSERT_FAIL
+ LIBASSERT_EXPORT
+#endif
+void LIBASSERT_FAIL(libassert::assert_type type, const libassert::assertion_printer& printer);
+
+/*
+ * Internal mechanisms
+ *
+ * Macros exposed: LIBASSERT_PRIMITIVE_ASSERT
+ */
+
+namespace libassert::detail {
+    /*
+     * C++ syntax analysis logic
+     */
+
+    enum class literal_format : unsigned {
+        // integers and floats are decimal by default, chars are of course chars, and everything else only has one
+        // format that makes sense
+        default_format = 0,
+        integer_hex = 1,
+        integer_octal = 2,
+        integer_binary = 4,
+        integer_character = 8, // format integers as characters and characters as integers
+        float_hex = 16,
+    };
+
+    // get current literal_format configuration for the thread
+    [[nodiscard]] LIBASSERT_EXPORT literal_format get_thread_current_literal_format();
+
+    // sets the current literal_format configuration for the thread
+    LIBASSERT_EXPORT void set_thread_current_literal_format(literal_format format);
+
+    LIBASSERT_EXPORT literal_format set_literal_format(
+        const char* a_str,
+        const char* b_str,
+        std::string_view op,
+        bool integer_character
+    );
+    LIBASSERT_EXPORT void restore_literal_format(literal_format);
+    // does the current literal format config have multiple formats
+    LIBASSERT_EXPORT bool has_multiple_formats();
+
+    [[nodiscard]] LIBASSERT_EXPORT std::pair<std::string, std::string> decompose_expression(
+        const std::string& expression,
+        std::string_view target_op
+    );
+
+    /*
+     * System wrappers
+     */
+
+    [[nodiscard]] LIBASSERT_EXPORT std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
+
+    /*
+     * Stacktrace implementation
+     */
+
+    // All in the .cpp
+
+    struct LIBASSERT_EXPORT opaque_trace {
+        void* trace;
+        ~opaque_trace();
+        opaque_trace(void* t) : trace(t) {}
+        opaque_trace(const opaque_trace&) = delete;
+        opaque_trace(opaque_trace&&) = delete;
+        opaque_trace& operator=(const opaque_trace&) = delete;
+        opaque_trace& operator=(opaque_trace&&) = delete;
+    };
+
+    LIBASSERT_EXPORT opaque_trace get_stacktrace_opaque();
 
     /*
      * assert diagnostics generation
