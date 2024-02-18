@@ -692,12 +692,6 @@ namespace libassert::detail {
         [[nodiscard]] LIBASSERT_EXPORT
         std::string stringify_pointer_value(const void*);
 
-        // template<typename T, typename = void> class can_basic_stringify : public std::false_type {};
-        // template<typename T> class can_basic_stringify<
-        //                             T,
-        //                             std::void_t<decltype(stringify(std::declval<T>()))>
-        //                         > : public std::true_type {};
-
         template<typename T, typename = void> class has_stream_overload : public std::false_type {};
         template<typename T> class has_stream_overload<
                                     T,
@@ -848,55 +842,6 @@ namespace libassert::detail {
         }
         #endif
 
-        // template<typename T>
-        // LIBASSERT_ATTR_COLD [[nodiscard]]
-        // std::string stringify_container(const T& container);
-
-        // template<typename T>
-        // LIBASSERT_ATTR_COLD [[nodiscard]]
-        // std::string stringify_pointer(const T& t);
-
-        // template<typename T, typename std::enable_if<std::is_pointer<strip<typename std::decay<T>::type>>::value
-        //                                             || std::is_function<strip<T>>::value
-        //                                             || !can_basic_stringify<T>::value, int>::type = 0>
-        // LIBASSERT_ATTR_COLD [[nodiscard]]
-        // std::string stringify(const T& t) {
-        //     if constexpr(
-        //         has_stream_overload<T>::value
-        //         && !is_string_type<T>
-        //         && !std::is_pointer<strip<typename std::decay<T>::type>>::value
-        //     ) {
-        //         // clang-tidy bug here
-        //         // NOLINTNEXTLINE(misc-const-correctness)
-        //         std::ostringstream oss;
-        //         oss<<t;
-        //         return std::move(oss).str();
-        //     } else if constexpr(adl::is_printable_container<T>::value && !is_c_string<T>) {
-        //         return stringify_container(t);
-        //     } else if constexpr(
-        //         std::is_pointer<strip<typename std::decay<T>::type>>::value
-        //         || std::is_function<strip<T>>::value
-        //     ) {
-        //         return stringify_pointer(t);
-        //     } else if constexpr(is_tuple_like<T>::value) {
-        //         return stringify_tuple_like(t);
-        //     }
-        //     #ifdef LIBASSERT_USE_MAGIC_ENUM
-        //     else if constexpr(std::is_enum<strip<T>>::value) {
-        //         std::string_view name = magic_enum::enum_name(t);
-        //         if(!name.empty()) {
-        //             return std::string(name);
-        //         } else {
-        //             return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
-        //         }
-        //     }
-        //     #endif
-        //     else {
-        //         static_assert(always_false<T>, "");
-        //         //return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
-        //     }
-        // }
-
         // pointers
         template<
             typename T,
@@ -923,7 +868,7 @@ namespace libassert::detail {
             template<typename T> class is_printable_container<
                                         T,
                                         std::void_t<
-                                            decltype(*begin(decllval<T>()))
+                                            decltype(stringify(*begin(decllval<T>())))
                                         >
                                     > : public std::true_type {};
         }
