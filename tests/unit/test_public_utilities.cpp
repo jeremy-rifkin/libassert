@@ -14,5 +14,5 @@ int main() {
     // stringification tests
     DEBUG_ASSERT(generate_stringification(12) == "12");
     DEBUG_ASSERT(generate_stringification('x') == "'x'");
-    DEBUG_ASSERT(generate_stringification(std::make_pair("foobar", 20)) == R"(std::pair<const char*, int>: [\"foobar\", 20])");
+    DEBUG_ASSERT(generate_stringification(std::make_pair("foobar", 20)) == R"(std::pair<const char*, int>: ["foobar", 20])");
 }
