@@ -6,12 +6,12 @@ include(cmake/PreventInSourceBuilds.cmake)
 # ---- Initialize Project ----
 
 # used to support find_package
-set(package_name "assert")
+set(package_name "libassert")
 
 # create base project
 project(
   libassert
-  VERSION 1.2.2
+  VERSION 2.0.0
   DESCRIPTION "The most over-engineered C++ assertion library"
   HOMEPAGE_URL "https://github.com/jeremy-rifkin/libassert"
   LANGUAGES CXX
@@ -65,7 +65,7 @@ set(target_name "libassert-lib")
 add_library(${target_name} ${build_type})
 
 # alias to cause error at configuration time instead of link time if target is missing
-add_library(assert::assert ALIAS ${target_name})
+add_library(libassert::assert ALIAS ${target_name})
 
 # add /include files to target
 # this is solely for IDE benefit, doesn't affect building, so unconditionally list magic_enum
@@ -116,7 +116,7 @@ set_target_properties(
   VISIBILITY_INLINES_HIDDEN YES
   VERSION "${PROJECT_VERSION}"
   SOVERSION "${PROJECT_VERSION_MAJOR}"
-  EXPORT_NAME "assert"
+  EXPORT_NAME "libassert"
   OUTPUT_NAME "assert"
 )
 

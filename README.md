@@ -534,7 +534,7 @@ if(WIN32)
   add_custom_command(
     TARGET my_executable POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_FILE:assert::assert>
+    $<TARGET_FILE:libassert::assert>
     $<TARGET_FILE_DIR:my_executable>
   )
   add_custom_command(

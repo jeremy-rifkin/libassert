@@ -9,7 +9,7 @@ if(ASSERT_USE_MAGIC_ENUM)
 endif()
 
 # We cannot modify an existing IMPORT target
-if(NOT TARGET assert::assert)
+if(NOT TARGET libassert::assert)
 
   # import targets
   include("${CMAKE_CURRENT_LIST_DIR}/@package_name@-targets.cmake")
@@ -17,5 +17,5 @@ if(NOT TARGET assert::assert)
 endif()
 
 if(@LIBASSERT_STATIC_DEFINE@)
-    target_compile_definitions(assert::assert INTERFACE LIBASSERT_STATIC_DEFINE)
+    target_compile_definitions(libassert::assert INTERFACE LIBASSERT_STATIC_DEFINE)
 endif()

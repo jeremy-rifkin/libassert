@@ -27,7 +27,7 @@ install(
 
 # create config file that points to targets file
 configure_file(
-  "${PROJECT_SOURCE_DIR}/cmake/in/assert-config-cmake.in"
+  "${PROJECT_SOURCE_DIR}/cmake/in/libassert-config-cmake.in"
   "${PROJECT_BINARY_DIR}/cmake/${package_name}-config.cmake"
   @ONLY
 )
@@ -55,7 +55,7 @@ install(
 # create targets file included by config file with targets for consumers
 install(
   EXPORT ${package_name}-targets
-  NAMESPACE assert::
+  NAMESPACE libassert::
   DESTINATION "${ASSERT_INSTALL_CMAKEDIR}"
   COMPONENT ${package_name}-development
 )

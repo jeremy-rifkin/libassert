@@ -5,13 +5,13 @@ project(demo_project VERSION 0.0.1 LANGUAGES CXX)
 add_executable(main main.cpp)
 
 add_subdirectory(libassert)
-target_link_libraries(main assert::assert)
+target_link_libraries(main libassert::assert)
 
 if(WIN32)
   add_custom_command(
     TARGET main POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_FILE:assert::assert>
+    $<TARGET_FILE:libassert::assert>
     $<TARGET_FILE_DIR:main>
   )
   add_custom_command(
