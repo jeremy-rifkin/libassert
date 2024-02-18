@@ -175,8 +175,8 @@ namespace libassert::detail {
         int line;
         constexpr source_location(
             //const char* _function /*= __builtin_FUNCTION()*/,
-            const char* _file     = __builtin_FILE(),
-            int _line             = __builtin_LINE()
+            const char* _file = __builtin_FILE(),
+            int _line         = __builtin_LINE()
         ) : file(_file), /*function(_function),*/ line(_line) {}
     };
 
@@ -248,25 +248,27 @@ namespace libassert::detail {
     // Is integral but not boolean
     template<typename T> inline constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
 
-    template<typename T> inline constexpr bool is_arith_not_bool_char =
-                                                       std::is_arithmetic_v<strip<T>> && !isa<T, bool> && !isa<T, char>;
+    template<typename T>
+    inline constexpr bool is_arith_not_bool_char = std::is_arithmetic_v<strip<T>> && !isa<T, bool> && !isa<T, char>;
 
-    template<typename T> inline constexpr bool is_c_string =
+    template<typename T>
+    inline constexpr bool is_c_string =
            isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
-        || isa<std::decay_t<strip<T>>, const char*>;
+            || isa<std::decay_t<strip<T>>, const char*>;
 
-    template<typename T> inline constexpr bool is_string_type =
+    template<typename T>
+    inline constexpr bool is_string_type =
            isa<T, std::string>
-        || isa<T, std::string_view>
-        || is_c_string<T>;
+            || isa<T, std::string_view>
+            || is_c_string<T>;
 
     // char(&)[20], const char(&)[20], const char(&)[]
     template<typename T> inline constexpr bool is_string_literal =
-           std::is_lvalue_reference<T>::value
-        && std::is_array<typename std::remove_reference<T>::type>::value
-        && isa<typename std::remove_extent<typename std::remove_reference<T>::type>::type, char>;
+           std::is_lvalue_reference_v<T>
+            && std::is_array_v<typename std::remove_reference_t<T>>
+            && isa<typename std::remove_extent_t<typename std::remove_reference_t<T>>, char>;
 
-    template<typename T> typename std::add_lvalue_reference<T>::type decllval() noexcept;
+    template<typename T> typename std::add_lvalue_reference_t<T> decllval() noexcept;
 
     /*
      * expression decomposition
@@ -446,7 +448,7 @@ namespace libassert::detail {
          = default;
         constexpr expression_decomposer& operator=(expression_decomposer&&) = delete;
         // value constructors
-        template<typename U, typename std::enable_if<!isa<U, expression_decomposer>, int>::type = 0>
+        template<typename U, typename std::enable_if_t<!isa<U, expression_decomposer>, int> = 0>
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload) // TODO
         explicit constexpr expression_decomposer(U&& _a) : a(std::forward<U>(_a)) {}
         template<typename U, typename V>
@@ -499,7 +501,7 @@ namespace libassert::detail {
         }
         [[nodiscard]]
         constexpr A take_lhs() { // should only be called if ret_lhs() == true
-            if constexpr(std::is_lvalue_reference<A>::value) {
+            if constexpr(std::is_lvalue_reference_v<A>) {
                 return ((((a))));
             } else {
                 return std::move(a);
@@ -693,65 +695,60 @@ namespace libassert::detail {
         std::string stringify_pointer_value(const void*);
 
         template<typename T, typename = void> class has_stream_overload : public std::false_type {};
-        template<typename T> class has_stream_overload<
-                                    T,
-                                    std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
-                                > : public std::true_type {};
+        template<typename T>
+        class has_stream_overload<
+            T,
+            std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
+        > : public std::true_type {};
 
         template<typename T, typename = void> class has_stringifier : public std::false_type {};
-        template<typename T> class has_stringifier<
-                                    T,
-                                    std::void_t<decltype(stringifier<strip<T>>{}.stringify(std::declval<T>()))>
-                                > : public std::true_type {};
+        template<typename T>
+        class has_stringifier<
+            T,
+            std::void_t<decltype(stringifier<strip<T>>{}.stringify(std::declval<T>()))>
+        > : public std::true_type {};
 
         template<typename T, typename = void> class is_tuple_like : public std::false_type {};
-        template<typename T> class is_tuple_like<
-                                    T,
-                                    std::void_t<
-                                        typename std::tuple_size<T>::type,
-                                        decltype(std::get<0>(std::declval<T>()))
-                                    >
-                                > : public std::true_type {};
+        template<typename T>
+        class is_tuple_like<
+            T,
+            std::void_t<
+                typename std::tuple_size<T>::type, // TODO: decltype(std::tuple_size_v<T>) ?
+                decltype(std::get<0>(std::declval<T>()))
+            >
+        > : public std::true_type {};
 
         namespace adl {
             using std::begin, std::end; // ADL
             template<typename T, typename = void> class is_container : public std::false_type {};
-            // template<typename T> class is_printable_container<
-            //                             T,
-            //                             std::void_t<
-            //                                 decltype(begin(decllval<T>())),
-            //                                 decltype(end(decllval<T>())),
-            //                                 decltype(stringify(*begin(decllval<T>())))
-            //                                 // typename std::enable_if< // can stringify (and not just "instance of")
-            //                                 //     has_stream_overload<decltype(*begin(decllval<T>()))>::value
-            //                                 //     || std::is_enum<strip<decltype(*begin(decllval<T>()))>>::value
-            //                                 //     || is_printable_container<strip<decltype(*begin(decllval<T>()))>>::value
-            //                                 //     || is_tuple_like<strip<decltype(*begin(decllval<T>()))>>::value,
-            //                                 // void>::type
-            //                             >
-            //                         > : public std::true_type {};
-            template<typename T> class is_container<
-                                        T,
-                                        std::void_t<
-                                            decltype(begin(decllval<T>())),
-                                            decltype(end(decllval<T>()))
-                                        >
-                                    > : public std::true_type {};
+            template<typename T>
+            class is_container<
+                T,
+                std::void_t<
+                    decltype(begin(decllval<T>())),
+                    decltype(end(decllval<T>()))
+                >
+            > : public std::true_type {};
             template<typename T, typename = void> class is_deref : public std::false_type {};
-            template<typename T> class is_deref<
-                                        T,
-                                        std::void_t<
-                                            decltype(*decllval<T>())
-                                        >
-                                    > : public std::true_type {};
+            template<typename T>
+            class is_deref<
+                T,
+                std::void_t<
+                    decltype(*decllval<T>())
+                >
+            > : public std::true_type {};
             template<typename T, typename = void> class is_begin_deref : public std::false_type {};
-            template<typename T> class is_begin_deref<
-                                        T,
-                                        std::void_t<
-                                            decltype(*begin(decllval<T>()))
-                                        >
-                                    > : public std::true_type {};
-            template<typename T> constexpr inline bool is_container_like = is_deref<T>::value || is_begin_deref<T>::value || is_tuple_like<T>::value;
+            template<typename T>
+            class is_begin_deref<
+                T,
+                std::void_t<
+                    decltype(*begin(decllval<T>()))
+                >
+            > : public std::true_type {};
+            template<typename T>
+            constexpr inline bool is_container_like = is_deref<T>::value
+                                                        || is_begin_deref<T>::value
+                                                        || is_tuple_like<T>::value;
         }
 
         // deferrable wrappers, these need to be implemented after stringify(container)
@@ -781,7 +778,7 @@ namespace libassert::detail {
 
         template<
             typename T,
-            typename std::enable_if<is_tuple_like<T>::value && !adl::is_container<T>::value, int>::type = 0
+            typename std::enable_if_t<is_tuple_like<T>::value && !adl::is_container<T>::value, int> = 0
         >
         LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
             return stringify_tuple_like(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
@@ -789,14 +786,14 @@ namespace libassert::detail {
 
         template<
             typename T,
-            typename std::enable_if<
+            typename std::enable_if_t<
                 has_stream_overload<T>::value
                     && !has_stringifier<T>::value
                     && !is_string_type<T>
-                    && !std::is_enum<strip<T>>::value
-                    && !std::is_pointer<strip<typename std::decay<T>::type>>::value,
+                    && !std::is_enum_v<strip<T>>
+                    && !std::is_pointer_v<strip<typename std::decay_t<T>>>,
                 int
-            >::type = 0
+            > = 0
         >
         LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
             // clang-tidy bug here
@@ -808,17 +805,17 @@ namespace libassert::detail {
 
         template<
             typename T,
-            typename std::enable_if<
+            typename std::enable_if_t<
                 has_stringifier<T>::value,
                 int
-            >::type = 0
+            > = 0
         >
         LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
             return stringifier<strip<T>>{}.stringify(t);
         }
 
         #ifdef LIBASSERT_USE_MAGIC_ENUM
-        template<typename T, typename std::enable_if<std::is_enum<strip<T>>::value, int>::type = 0>
+        template<typename T, typename std::enable_if_t<std::is_enum_v<strip<T>>, int> = 0>
         LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
             std::string_view name = magic_enum::enum_name(t);
             if(!name.empty()) {
@@ -832,12 +829,12 @@ namespace libassert::detail {
             }
         }
         #else
-        template<typename T, typename std::enable_if<std::is_enum<strip<T>>::value, int>::type = 0>
+        template<typename T, typename std::enable_if_t<std::is_enum_v<strip<T>>, int> = 0>
         LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
             return bstringf(
                 "enum %s: %s",
                 prettify_type(std::string(type_name<T>())).c_str(),
-                stringify(static_cast<typename std::underlying_type<T>::type>(t)).c_str()
+                stringify(static_cast<typename std::underlying_type_t<T>>(t)).c_str()
             );
         }
         #endif
@@ -845,15 +842,19 @@ namespace libassert::detail {
         // pointers
         template<
             typename T,
-            typename std::enable_if<
-                (std::is_pointer<strip<typename std::decay<T>::type>>::value && (isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char> || !adl::is_container<T>::value))
-                    || std::is_function<strip<T>>::value,
+            typename std::enable_if_t<
+                (
+                    std::is_pointer_v<strip<typename std::decay_t<T>>> && (
+                        isa<typename std::remove_pointer_t<typename std::decay_t<T>>, char>
+                            || !adl::is_container<T>::value
+                    )
+                ) || std::is_function_v<strip<T>>,
                 int
-            >::type = 0
+            > = 0
         >
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify(const T& t) {
-            if constexpr(isa<typename std::remove_pointer<typename std::decay<T>::type>::type, char>) { // strings
+            if constexpr(isa<typename std::remove_pointer_t<typename std::decay_t<T>>, char>) { // strings
                 const void* v = t; // circumvent -Wnonnull-compare
                 if(v != nullptr) {
                     return stringify(std::string_view(t)); // not printing type for now, TODO: reconsider?
@@ -865,18 +866,22 @@ namespace libassert::detail {
         namespace adl {
             using std::size, std::begin, std::end; // ADL
             template<typename T, typename = void> class is_printable_container : public std::false_type {};
-            template<typename T> class is_printable_container<
-                                        T,
-                                        std::void_t<
-                                            decltype(stringify(*begin(decllval<T>())))
-                                        >
-                                    > : public std::true_type {};
+            template<typename T>
+            class is_printable_container<
+                T,
+                std::void_t<
+                    decltype(stringify(*begin(decllval<T>())))
+                >
+            > : public std::true_type {};
         }
 
         // containers
         template<
             typename T,
-            typename std::enable_if<adl::is_container<T>::value && adl::is_printable_container<T>::value && !is_c_string<T>, int>::type = 0
+            typename std::enable_if_t<
+                adl::is_container<T>::value && adl::is_printable_container<T>::value && !is_c_string<T>,
+                int
+            > = 0
         >
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify(const T& container) {
@@ -938,19 +943,19 @@ namespace libassert::detail {
     struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
 
     // Top-level stringify utility
-    template<typename T, typename std::enable_if<can_stringify<T>::value, int>::type = 0>
+    template<typename T, typename std::enable_if_t<can_stringify<T>::value, int> = 0>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string generate_stringification(const T& v) {
         if constexpr(stringification::adl::is_container_like<T> && !is_string_type<T>) {
             return prettify_type(std::string(type_name<T>())) + ": " + stringification::stringify(v);
-        } else if constexpr(std::is_pointer<T>::value && !is_string_type<T>) {
+        } else if constexpr(std::is_pointer_v<T> && !is_string_type<T>) {
             return prettify_type(std::string(type_name<T>())) + ": " + stringification::stringify(v);
         } else {
             return stringification::stringify(v);
         }
     }
 
-    template<typename T, typename std::enable_if<!can_stringify<T>::value, int>::type = 0>
+    template<typename T, typename std::enable_if_t<!can_stringify<T>::value, int> = 0>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string generate_stringification(const T&) {
         return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
@@ -1069,7 +1074,7 @@ namespace libassert::detail {
         } else {
             if constexpr(is_string_type<T>) {
                 if(i == 0) {
-                    if constexpr(std::is_pointer<T>::value) {
+                    if constexpr(std::is_pointer_v<T>) {
                         if(t == nullptr) {
                             entry.message = "(nullptr)";
                             return;
@@ -1293,7 +1298,7 @@ namespace libassert::detail {
     constexpr auto get_expression_return_value(T& value, expression_decomposer<A, B, C>& decomposer) {
         if constexpr(R) {
             if constexpr(ret_lhs) {
-                if constexpr(std::is_lvalue_reference<A>::value) {
+                if constexpr(std::is_lvalue_reference_v<A>) {
                     return assert_value_wrapper<A>{decomposer.take_lhs()};
                 } else {
                     return assert_value_wrapper<A>{std::move(decomposer.take_lhs())};
@@ -1576,7 +1581,7 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
           /* https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3 */ \
           /* Note: Somewhat relying on this call being inlined so inefficiency is eliminated */ \
           libassert::detail::get_expression_return_value <doreturn LIBASSERT_COMMA \
-            libassert_ret_lhs LIBASSERT_COMMA std::is_lvalue_reference<decltype(libassert_value)>::value> \
+            libassert_ret_lhs LIBASSERT_COMMA std::is_lvalue_reference_v<decltype(libassert_value)>> \
               (libassert_value, *std::launder(&libassert_decomposer)); \
         ) LIBASSERT_IF(doreturn)(.value,) \
         LIBASSERT_WARNING_PRAGMA_POP_CLANG
