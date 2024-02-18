@@ -994,8 +994,6 @@ namespace libassert::detail {
      * Stacktrace implementation
      */
 
-    // All in the .cpp
-
     struct LIBASSERT_EXPORT opaque_trace {
         void* trace;
         ~opaque_trace();
@@ -1011,8 +1009,6 @@ namespace libassert::detail {
     /*
      * assert diagnostics generation
      */
-
-    constexpr size_t format_arr_length = 5;
 
     struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
         std::string lstring;
@@ -1497,25 +1493,25 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
 // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
 // name, not signature
 #define LIBASSERT_STATIC_DATA(name, type, expr_str, ...) \
-                                /* extra string here because of extra comma from map, also serves as terminator */ \
-                                /* LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS because msvc */ \
-                                /* Trailing return type here to work around a gcc <= 9.2 bug */ \
-                                /* Oddly only affecting builds under -DNDEBUG https://godbolt.org/z/5Treozc4q */ \
-                                using libassert_params_t = libassert::detail::assert_static_parameters; \
-                                /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
-                                const libassert_params_t* libassert_params = []() -> const libassert_params_t* { \
-                                  static constexpr const char* const libassert_arg_strings[] = { \
-                                    LIBASSERT_MAP(LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS(__VA_ARGS__)) "" \
-                                  }; \
-                                  static constexpr libassert_params_t _libassert_params = { \
-                                    name LIBASSERT_COMMA \
-                                    type LIBASSERT_COMMA \
-                                    expr_str LIBASSERT_COMMA \
-                                    {} LIBASSERT_COMMA \
-                                    libassert_arg_strings LIBASSERT_COMMA \
-                                  }; \
-                                  return &_libassert_params; \
-                                }();
+    /* extra string here because of extra comma from map, also serves as terminator */ \
+    /* LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS because msvc */ \
+    /* Trailing return type here to work around a gcc <= 9.2 bug */ \
+    /* Oddly only affecting builds under -DNDEBUG https://godbolt.org/z/5Treozc4q */ \
+    using libassert_params_t = libassert::detail::assert_static_parameters; \
+    /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
+    const libassert_params_t* libassert_params = []() -> const libassert_params_t* { \
+        static constexpr const char* const libassert_arg_strings[] = { \
+            LIBASSERT_MAP(LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS(__VA_ARGS__)) "" \
+        }; \
+        static constexpr libassert_params_t _libassert_params = { \
+            name LIBASSERT_COMMA \
+            type LIBASSERT_COMMA \
+            expr_str LIBASSERT_COMMA \
+            {} LIBASSERT_COMMA \
+            libassert_arg_strings LIBASSERT_COMMA \
+        }; \
+        return &_libassert_params; \
+    }();
 
 // Note about statement expressions: These are needed for two reasons. The first is putting the arg string array and
 // source location structure in .rodata rather than on the stack, the second is a _Pragma for warnings which isn't
@@ -1554,84 +1550,100 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
  #endif
 #endif
 #define LIBASSERT_INVOKE(expr, name, type, failaction, ...) \
-        /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
-        /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
-        do { \
-          LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
-          LIBASSERT_IGNORE_UNUSED_VALUE \
-          LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
-          LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
-          LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
-          auto libassert_decomposer = \
-                         libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
-          LIBASSERT_WARNING_PRAGMA_POP_GCC \
-          decltype(auto) libassert_value = libassert_decomposer.get_value(); \
-          constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
-          /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
-          /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
-          /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
-          if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
+    /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
+    /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
+    do { \
+        LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
+        LIBASSERT_IGNORE_UNUSED_VALUE \
+        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
+        LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
+        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
+        auto libassert_decomposer = libassert::detail::expression_decomposer( \
+            libassert::detail::expression_decomposer{} << expr \
+        ); \
+        LIBASSERT_WARNING_PRAGMA_POP_GCC \
+        decltype(auto) libassert_value = libassert_decomposer.get_value(); \
+        constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
+        /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
+        /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
+        /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
+        if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
             ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
             failaction \
             LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
             if constexpr(sizeof libassert_decomposer > 32) { \
-              process_assert_fail(libassert_decomposer, libassert_params \
-                                         LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
+                process_assert_fail( \
+                    libassert_decomposer, \
+                    libassert_params \
+                    LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
+                ); \
             } else { \
-              /* std::move it to assert_fail_m, will be moved back to r */ \
-              auto libassert_r = process_assert_fail_m(std::move(libassert_decomposer), libassert_params \
-                                         LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG); \
-              /* can't move-assign back to decomposer if it holds reference members */ \
-              LIBASSERT_DESTROY_DECOMPOSER; \
-              new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \
+                /* std::move it to assert_fail_m, will be moved back to r */ \
+                auto libassert_r = process_assert_fail_m( \
+                    std::move(libassert_decomposer), \
+                    libassert_params \
+                    LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
+                ); \
+                /* can't move-assign back to decomposer if it holds reference members */ \
+                LIBASSERT_DESTROY_DECOMPOSER; \
+                new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \
             } \
-          } \
-          LIBASSERT_WARNING_PRAGMA_POP_CLANG \
-        } while(false) \
+        } \
+        LIBASSERT_WARNING_PRAGMA_POP_CLANG \
+    } while(false) \
 
 #define LIBASSERT_INVOKE_VAL(expr, doreturn, check_expression, name, type, failaction, ...) \
-        /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
-        /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
-        LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
-        LIBASSERT_IGNORE_UNUSED_VALUE \
-        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
-        LIBASSERT_STMTEXPR( \
-          LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
-          LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
-          auto libassert_decomposer = \
-                         libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr); \
-          LIBASSERT_WARNING_PRAGMA_POP_GCC \
-          decltype(auto) libassert_value = libassert_decomposer.get_value(); \
-          constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
-          if constexpr(check_expression) { \
+    /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
+    /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
+    LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
+    LIBASSERT_IGNORE_UNUSED_VALUE \
+    LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
+    LIBASSERT_STMTEXPR( \
+        LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
+        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
+        auto libassert_decomposer = libassert::detail::expression_decomposer( \
+            libassert::detail::expression_decomposer{} << expr \
+        ); \
+        LIBASSERT_WARNING_PRAGMA_POP_GCC \
+        decltype(auto) libassert_value = libassert_decomposer.get_value(); \
+        constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
+        if constexpr(check_expression) { \
             /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
             /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
             /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
             if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
-              ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
-              failaction \
-              LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
-              if constexpr(sizeof libassert_decomposer > 32) { \
-                process_assert_fail(libassert_decomposer, libassert_params \
-                                           LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG); \
-              } else { \
-                /* std::move it to assert_fail_m, will be moved back to r */ \
-                auto libassert_r = process_assert_fail_m(std::move(libassert_decomposer), libassert_params \
-                                           LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG); \
-                /* can't move-assign back to decomposer if it holds reference members */ \
-                LIBASSERT_DESTROY_DECOMPOSER; \
-                new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \
-              } \
+                ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
+                failaction \
+                LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
+                if constexpr(sizeof libassert_decomposer > 32) { \
+                    process_assert_fail( \
+                        libassert_decomposer, \
+                        libassert_params \
+                        LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG \
+                    ); \
+                } else { \
+                    /* std::move it to assert_fail_m, will be moved back to r */ \
+                    auto libassert_r = process_assert_fail_m( \
+                        std::move(libassert_decomposer), \
+                        libassert_params \
+                        LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG \
+                    ); \
+                    /* can't move-assign back to decomposer if it holds reference members */ \
+                    LIBASSERT_DESTROY_DECOMPOSER; \
+                    new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \
+                } \
             } \
-          }, \
-          /* Note: std::launder needed in 17 in case of placement new / move shenanigans above */ \
-          /* https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3 */ \
-          /* Note: Somewhat relying on this call being inlined so inefficiency is eliminated */ \
-          libassert::detail::get_expression_return_value <doreturn LIBASSERT_COMMA \
-            libassert_ret_lhs LIBASSERT_COMMA std::is_lvalue_reference_v<decltype(libassert_value)>> \
-              (libassert_value, *std::launder(&libassert_decomposer)); \
-        ) LIBASSERT_IF(doreturn)(.value,) \
-        LIBASSERT_WARNING_PRAGMA_POP_CLANG
+        }, \
+        /* Note: std::launder needed in 17 in case of placement new / move shenanigans above */ \
+        /* https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3 */ \
+        /* Note: Somewhat relying on this call being inlined so inefficiency is eliminated */ \
+        libassert::detail::get_expression_return_value< \
+            doreturn LIBASSERT_COMMA \
+            libassert_ret_lhs LIBASSERT_COMMA \
+            std::is_lvalue_reference_v<decltype(libassert_value)> \
+        >(libassert_value, *std::launder(&libassert_decomposer)); \
+    ) LIBASSERT_IF(doreturn)(.value,) \
+    LIBASSERT_WARNING_PRAGMA_POP_CLANG
 
 #ifdef NDEBUG
  #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE;
