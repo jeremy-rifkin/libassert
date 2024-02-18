@@ -116,7 +116,7 @@ set_target_properties(
   VISIBILITY_INLINES_HIDDEN YES
   VERSION "${PROJECT_VERSION}"
   SOVERSION "${PROJECT_VERSION_MAJOR}"
-  EXPORT_NAME "libassert"
+  EXPORT_NAME "assert"
   OUTPUT_NAME "assert"
 )
 
