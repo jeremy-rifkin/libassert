@@ -14,6 +14,9 @@
 using namespace libassert::detail;
 using namespace std::literals;
 
+struct S {};
+struct S2 {};
+
 int main() {
     // primitive types
     ASSERT(generate_stringification(false) == R"(false)");
@@ -61,6 +64,7 @@ int main() {
     int carr[] = {1, 1, 2, 3, 5, 8};
     static_assert(can_stringify<int[5]>::value);
     static_assert(stringification::stringifiable<int[5]>);
+    static_assert(stringification::stringifiable_container<int[5]>());
     #if LIBASSERT_IS_CLANG || LIBASSERT_IS_MSVC
     ASSERT(generate_stringification(carr) == R"(int[6]: [1, 1, 2, 3, 5, 8])");
     #else
@@ -70,7 +74,6 @@ int main() {
     // ASSERT(generate_stringification(FF) == R"(int [6]: [1, 1, 2, 3, 5, 8])");
 
     // non-printable containers
-    struct S {};
     std::vector<S> svec(10);
     // stringification::stringify(svec);
     static_assert(!can_stringify<std::vector<S>>::value);
@@ -78,11 +81,10 @@ int main() {
     static_assert(!stringification::stringifiable_container<std::vector<S>>());
     static_assert(!stringification::stringifiable<S>);
     static_assert(!stringification::stringifiable_container<S>());
-    ASSERT(generate_stringification(svec) == R"(<instance of std::vector<main()::S>>)");
-    struct S2 {};
+    ASSERT(generate_stringification(svec) == R"(<instance of std::vector<S>>)");
     std::vector<std::vector<S2>> svec2(10, std::vector<S2>(10));
     static_assert(!stringification::stringifiable<std::vector<std::vector<S2>>>);
-    ASSERT(generate_stringification(svec2) == R"(<instance of std::vector<std::vector<main()::S2>>>)");
+    ASSERT(generate_stringification(svec2) == R"(<instance of std::vector<std::vector<S2>>>)");
     std::vector<std::vector<int>> svec3(10, std::vector<int>(10));
     static_assert(stringification::stringifiable<std::vector<std::vector<int>>>);
     ASSERT(generate_stringification(svec3) == R"(std::vector<std::vector<int>>: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])");
