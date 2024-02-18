@@ -119,8 +119,8 @@
 
 #if LIBASSERT_IS_MSVC
  #pragma warning(push)
- // warning C4251: using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for some
- // reason
+ // warning C4251: using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for
+ // some reason
  // 4275 is the same thing but for base classes
  #pragma warning(disable: 4251; disable: 4275)
 #endif
@@ -317,6 +317,71 @@ namespace libassert::detail {
     }
 
     namespace stringification {
+        //
+        // General traits
+        //
+        template<typename T, typename = void> class is_tuple_like : public std::false_type {};
+        template<typename T>
+        class is_tuple_like<
+            T,
+            std::void_t<
+                typename std::tuple_size<T>::type, // TODO: decltype(std::tuple_size_v<T>) ?
+                decltype(std::get<0>(std::declval<T>()))
+            >
+        > : public std::true_type {};
+
+        namespace adl {
+            using std::begin, std::end; // ADL
+            template<typename T, typename = void> class is_container : public std::false_type {};
+            template<typename T>
+            class is_container<
+                T,
+                std::void_t<
+                    decltype(begin(decllval<T>())),
+                    decltype(end(decllval<T>()))
+                >
+            > : public std::true_type {};
+            template<typename T, typename = void> class is_begin_deref : public std::false_type {};
+            template<typename T>
+            class is_begin_deref<
+                T,
+                std::void_t<
+                    decltype(*begin(decllval<T>()))
+                >
+            > : public std::true_type {};
+        }
+
+        template<typename T, typename = void> class is_deref : public std::false_type {};
+        template<typename T>
+        class is_deref<
+            T,
+            std::void_t<
+                decltype(*decllval<T>())
+            >
+        > : public std::true_type {};
+
+        template<typename T>
+        constexpr inline bool is_container_like = is_deref<T>::value
+                                                    || adl::is_begin_deref<T>::value
+                                                    || is_tuple_like<T>::value;
+
+        template<typename T, typename = void> class has_stream_overload : public std::false_type {};
+        template<typename T>
+        class has_stream_overload<
+            T,
+            std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
+        > : public std::true_type {};
+
+        template<typename T, typename = void> class has_stringifier : public std::false_type {};
+        template<typename T>
+        class has_stringifier<
+            T,
+            std::void_t<decltype(stringifier<strip<T>>{}.stringify(std::declval<T>()))>
+        > : public std::true_type {};
+
+        //
+        // Basic types
+        //
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::string&);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::string_view&);
         // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
@@ -341,119 +406,8 @@ namespace libassert::detail {
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::weak_ordering);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::partial_ordering);
         #endif
-
-        #ifdef __cpp_lib_expected
-        template<typename E>
-        [[nodiscard]] std::string stringify(const std::unexpected<E>& x) {
-            return "unexpected " + stringify(x.error());
-        }
-
-        template<typename T, typename E>
-        [[nodiscard]] std::string stringify(const std::expected<T, E>& x) {
-            if(x.has_value()) {
-                if constexpr(std::is_void_v<T>) {
-                    return "expected void";
-                } else {
-                    return "expected " + stringify(*x);
-                }
-            } else {
-                return "unexpected " + stringify(x.error());
-            }
-        }
-        #endif
-
         [[nodiscard]] LIBASSERT_EXPORT
         std::string stringify_pointer_value(const void*);
-
-        template<typename T, typename = void> class has_stream_overload : public std::false_type {};
-        template<typename T>
-        class has_stream_overload<
-            T,
-            std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
-        > : public std::true_type {};
-
-        template<typename T, typename = void> class has_stringifier : public std::false_type {};
-        template<typename T>
-        class has_stringifier<
-            T,
-            std::void_t<decltype(stringifier<strip<T>>{}.stringify(std::declval<T>()))>
-        > : public std::true_type {};
-
-        template<typename T, typename = void> class is_tuple_like : public std::false_type {};
-        template<typename T>
-        class is_tuple_like<
-            T,
-            std::void_t<
-                typename std::tuple_size<T>::type, // TODO: decltype(std::tuple_size_v<T>) ?
-                decltype(std::get<0>(std::declval<T>()))
-            >
-        > : public std::true_type {};
-
-        namespace adl {
-            using std::begin, std::end; // ADL
-            template<typename T, typename = void> class is_container : public std::false_type {};
-            template<typename T>
-            class is_container<
-                T,
-                std::void_t<
-                    decltype(begin(decllval<T>())),
-                    decltype(end(decllval<T>()))
-                >
-            > : public std::true_type {};
-            template<typename T, typename = void> class is_deref : public std::false_type {};
-            template<typename T>
-            class is_deref<
-                T,
-                std::void_t<
-                    decltype(*decllval<T>())
-                >
-            > : public std::true_type {};
-            template<typename T, typename = void> class is_begin_deref : public std::false_type {};
-            template<typename T>
-            class is_begin_deref<
-                T,
-                std::void_t<
-                    decltype(*begin(decllval<T>()))
-                >
-            > : public std::true_type {};
-            template<typename T>
-            constexpr inline bool is_container_like = is_deref<T>::value
-                                                        || is_begin_deref<T>::value
-                                                        || is_tuple_like<T>::value;
-        }
-
-        // deferrable wrappers, these need to be implemented after stringify(container)
-        template<typename T, size_t... I>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify_tuple_like(const T&, std::index_sequence<I...>);
-
-        template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify_optional(const T&);
-
-        template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify_smart_ptr(const T&);
-
-        template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify(const std::optional<T>& t) {
-            return stringify_optional(t);
-        }
-
-        template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify(const std::unique_ptr<T>& t) {
-            return stringify_smart_ptr(t);
-        }
-
-        template<
-            typename T,
-            typename std::enable_if_t<is_tuple_like<T>::value && !adl::is_container<T>::value, int> = 0
-        >
-        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
-            return stringify_tuple_like(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
-        }
 
         template<
             typename T,
@@ -534,23 +488,97 @@ namespace libassert::detail {
             return stringify_pointer_value(reinterpret_cast<const void*>(t));
         }
 
-        namespace adl {
-            using std::size, std::begin, std::end; // ADL
-            template<typename T, typename = void> class is_printable_container : public std::false_type {};
-            template<typename T>
-            class is_printable_container<
-                T,
-                std::void_t<
-                    decltype(stringify(*begin(decllval<T>())))
-                >
-            > : public std::true_type {};
+        //
+        // Compositions of other types
+        //
+        #ifdef __cpp_lib_expected
+        template<typename E>
+        [[nodiscard]] std::string stringify(const std::unexpected<E>& x) {
+            return "unexpected " + stringify(x.error());
+        }
+
+        template<typename T, typename E>
+        [[nodiscard]] std::string stringify(const std::expected<T, E>& x) {
+            if(x.has_value()) {
+                if constexpr(std::is_void_v<T>) {
+                    return "expected void";
+                } else {
+                    return "expected " + stringify(*x);
+                }
+            } else {
+                return "unexpected " + stringify(x.error());
+            }
+        }
+        #endif
+
+        // deferrable wrappers, these need to be implemented after stringify(container)
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_optional(const T&);
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_smart_ptr(const T&);
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify(const std::optional<T>& t) {
+            return stringify_optional(t);
+        }
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify(const std::unique_ptr<T>& t) {
+            return stringify_smart_ptr(t);
+        }
+
+        template<typename T, size_t... I>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_tuple_like(const T& t, std::index_sequence<I...>);
+
+        template<
+            typename T,
+            typename std::enable_if_t<is_tuple_like<T>::value && !adl::is_container<T>::value, int> = 0
+        >
+        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
+            return stringify_tuple_like(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
+        }
+
+        template<typename T, typename = void>
+        class has_basic_stringify : public std::false_type {};
+        template<typename T>
+        class has_basic_stringify<
+            T,
+            std::void_t<decltype(stringify(std::declval<T>()))>
+        > : public std::true_type {};
+
+        template<typename T, typename = void>
+        class has_value_type : public std::false_type {};
+        template<typename T>
+        class has_value_type<
+            T,
+            std::void_t<typename T::value_type>
+        > : public std::true_type {};
+
+        template<typename T> constexpr bool stringifiable_container();
+
+        template<typename T> inline constexpr bool stringifiable = has_basic_stringify<T>::value || stringifiable_container<T>();
+
+        template<typename T> constexpr bool stringifiable_container() {
+            if constexpr(has_value_type<T>::value) {
+                return stringifiable<typename T::value_type>;
+            } else if constexpr(std::is_array_v<typename std::remove_reference_t<T>>) { // C arrays
+                return stringifiable<decltype(std::declval<T>()[0])>;
+            } else {
+                return false;
+            }
         }
 
         // containers
         template<
             typename T,
             typename std::enable_if_t<
-                adl::is_container<T>::value && adl::is_printable_container<T>::value && !is_c_string<T>,
+                adl::is_container<T>::value && stringifiable_container<T>() && !is_c_string<T>,
                 int
             > = 0
         >
@@ -607,17 +635,11 @@ namespace libassert::detail {
         std::void_t<decltype(stringification::stringify(std::declval<T>()))>
     > : public std::true_type {};
 
-    template<typename Test, template<typename...> class Ref>
-    struct is_specialization : std::false_type {};
-
-    template<template<typename...> class Ref, typename... Args>
-    struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
-
     // Top-level stringify utility
     template<typename T, typename std::enable_if_t<can_stringify<T>::value, int> = 0>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string generate_stringification(const T& v) {
-        if constexpr(stringification::adl::is_container_like<T> && !is_string_type<T>) {
+        if constexpr(stringification::is_container_like<T> && !is_string_type<T>) {
             return prettify_type(std::string(type_name<T>())) + ": " + stringification::stringify(v);
         } else if constexpr(std::is_pointer_v<T> && !is_string_type<T>) {
             return prettify_type(std::string(type_name<T>())) + ": " + stringification::stringify(v);
