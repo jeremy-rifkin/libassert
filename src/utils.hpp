@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <type_traits>
 
 #include <assert/assert.hpp>
 
@@ -83,6 +84,22 @@ namespace libassert::detail {
             return {};
         }
     }
+
+    template<typename T, typename std::enable_if<std::is_unsigned<T>::value, int>::type = 0>
+    constexpr T popcount(T value) {
+        T pop = 0;
+        while(value) {
+            value &= value - 1;
+            pop++;
+        }
+        return pop;
+    }
+
+    static_assert(popcount(0U) == 0);
+    static_assert(popcount(1U) == 1);
+    static_assert(popcount(2U) == 1);
+    static_assert(popcount(3U) == 2);
+    static_assert(popcount(0xf0U) == 4);
 }
 
 #endif

@@ -266,13 +266,13 @@ namespace libassert::detail {
             }
             // setup literal format rules
             literal_formats = {
-                { std::regex(int_binary),    literal_format::binary },
-                { std::regex(int_octal),     literal_format::octal },
-                { std::regex(int_decimal),   literal_format::dec },
-                { std::regex(int_hex),       literal_format::hex },
-                { std::regex(float_decimal), literal_format::dec },
-                { std::regex(float_hex),     literal_format::hex },
-                { std::regex(char_literal),  literal_format::character }
+                { std::regex(int_binary),    literal_format::integer_binary },
+                { std::regex(int_octal),     literal_format::integer_octal },
+                { std::regex(int_decimal),   literal_format::default_format },
+                { std::regex(int_hex),       literal_format::integer_hex },
+                { std::regex(float_decimal), literal_format::default_format },
+                { std::regex(float_hex),     literal_format::float_hex },
+                { std::regex(char_literal),  literal_format::default_format }
             };
             // generate precedence table
             // bottom few rows of the precedence table:
@@ -447,7 +447,7 @@ namespace libassert::detail {
                     return type;
                 }
             }
-            return literal_format::none; // not a literal
+            return literal_format::default_format; // not a literal // TODO
         }
 
         LIBASSERT_ATTR_COLD
