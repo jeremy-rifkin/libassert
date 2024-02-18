@@ -139,7 +139,7 @@ def icdiff(a: Union[str, tuple], b: Union[str, tuple]):
         launch_ic("icdiff")
     except FileNotFoundError:
         try:
-            launch_ic("python3", "./icdiff")
+            launch_ic("python3", "-m", "icdiff")
         except FileNotFoundError:
             print("FileNotFoundError while spawning subprocess")
     print("{x}============={x}".format(x = "=" * 40))
