@@ -918,7 +918,62 @@ namespace libassert::detail {
 }
 
 // =====================================================================================================================
-// || Library core  ...  TODO: Organize below this line                                                               ||
+// || Libassert public interface                                                                                      ||
+// =====================================================================================================================
+
+namespace libassert {
+    // strip ansi escape sequences from a string
+    [[nodiscard]] LIBASSERT_EXPORT std::string strip_colors(const std::string& str);
+
+    // replace 24-bit rgb ansi color sequences with traditional color sequences
+    [[nodiscard]] LIBASSERT_EXPORT std::string replace_rgb(std::string str);
+
+    // returns the width of the terminal represented by fd, will be 0 on error
+    [[nodiscard]] LIBASSERT_EXPORT int terminal_width(int fd);
+
+    // generates a stack trace, formats to the given width
+    [[nodiscard]] LIBASSERT_EXPORT std::string stacktrace(int width);
+
+    // returns the type name of T
+    template<typename T>
+    [[nodiscard]] std::string_view type_name() noexcept {
+        return detail::type_name<T>();
+    }
+
+    // returns the prettified type name for T
+    template<typename T> // TODO: Use this above....
+    [[nodiscard]] std::string pretty_type_name() noexcept {
+        return detail::prettify_type(std::string(detail::type_name<T>()));
+    }
+
+    // returns a debug stringification of t
+    // template<typename T>
+    // [[nodiscard]] std::string stringify(const T& t) {
+    //     return detail::generate_stringification(t);
+    // }
+    using detail::generate_stringification;
+
+    // configures whether the default assertion handler prints in color or not to tty devices
+    LIBASSERT_EXPORT void set_color_output(bool);
+    // configure whether to use 24-bit rgb ansi color sequences or traditional ansi color sequences
+    LIBASSERT_EXPORT void set_rgb_output(bool);
+    // ASSERT_EXPORT void set_color_output(bool);
+    // ASSERT_EXPORT void set_color_palette();
+    // ASSERT_EXPORT void set_failure_handler();
+    // enum class path_mode {
+    //     // full path is used
+    //     full,
+    //     // only enough folders needed to disambiguate are provided
+    //     disambiguated, // TODO: Maybe just a bad idea
+    //     // only the file name is used
+    //     name,
+    // };
+    // ASSERT_EXPORT void set_path_mode(path_mode mode);
+
+}
+
+// =====================================================================================================================
+// || Library core                                                                                                    ||
 // =====================================================================================================================
 
 namespace libassert {
@@ -1190,68 +1245,6 @@ namespace libassert {
         // filename, line, function, message
         [[nodiscard]] std::tuple<const char*, int, std::string, const char*> get_assertion_info() const;
     };
-}
-
-/*
- * Public utilities
- */
-
-namespace libassert::utility {
-    // strip ansi escape sequences from a string
-    [[nodiscard]] LIBASSERT_EXPORT std::string strip_colors(const std::string& str);
-
-    // replace 24-bit rgb ansi color sequences with traditional color sequences
-    [[nodiscard]] LIBASSERT_EXPORT std::string replace_rgb(std::string str);
-
-    // returns the width of the terminal represented by fd, will be 0 on error
-    [[nodiscard]] LIBASSERT_EXPORT int terminal_width(int fd);
-
-    // generates a stack trace, formats to the given width
-    [[nodiscard]] LIBASSERT_EXPORT std::string stacktrace(int width);
-
-    // returns the type name of T
-    template<typename T>
-    [[nodiscard]] std::string_view type_name() noexcept {
-        return detail::type_name<T>();
-    }
-
-    // returns the prettified type name for T
-    template<typename T> // TODO: Use this above....
-    [[nodiscard]] std::string pretty_type_name() noexcept {
-        return detail::prettify_type(std::string(detail::type_name<T>()));
-    }
-
-    // returns a debug stringification of t
-    // TODO: Test this
-    template<typename T>
-    [[nodiscard]] std::string stringify(const T& t) {
-        using detail::stringification::stringify; // ADL
-        return stringify(t);
-    }
-}
-
-/*
- * Configuration
- */
-
-//namespace libassert {
-namespace libassert::config {
-    // configures whether the default assertion handler prints in color or not to tty devices
-    LIBASSERT_EXPORT void set_color_output(bool);
-    // configure whether to use 24-bit rgb ansi color sequences or traditional ansi color sequences
-    LIBASSERT_EXPORT void set_rgb_output(bool);
-    // ASSERT_EXPORT void set_color_output(bool);
-    // ASSERT_EXPORT void set_color_palette();
-    // ASSERT_EXPORT void set_failure_handler();
-    // enum class path_mode {
-    //     // full path is used
-    //     full,
-    //     // only enough folders needed to disambiguate are provided
-    //     disambiguated, // TODO: Maybe just a bad idea
-    //     // only the file name is used
-    //     name,
-    // };
-    // ASSERT_EXPORT void set_path_mode(path_mode mode);
 }
 
 /*

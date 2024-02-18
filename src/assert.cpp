@@ -88,7 +88,7 @@ public:
     }
 };
 
-namespace libassert::utility {
+namespace libassert {
     LIBASSERT_ATTR_COLD
     std::string strip_colors(const std::string& str) {
         static const std::regex ansi_escape_re("\033\\[[^m]+m");
@@ -136,7 +136,7 @@ namespace libassert::utility {
     }
 }
 
-namespace libassert::config {
+namespace libassert {
     static std::atomic_bool output_colors = true;
 
     LIBASSERT_ATTR_COLD void set_color_output(bool enable) {
@@ -1089,7 +1089,7 @@ namespace libassert {
     }
 }
 
-namespace libassert::utility {
+namespace libassert {
     LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int width) {
         auto trace = cpptrace::generate_raw_trace();
         return print_stacktrace(&trace, width);
@@ -1105,14 +1105,14 @@ void libassert_default_fail_action(
 ) {
     // TODO: Just throw instead of all of this?
     libassert::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-    std::string message = printer(libassert::utility::terminal_width(STDERR_FILENO));
-    if(libassert::detail::isatty(STDERR_FILENO) && libassert::config::output_colors) {
-        if(!libassert::config::output_rgb) {
-            message = libassert::utility::replace_rgb(std::move(message));
+    std::string message = printer(libassert::terminal_width(STDERR_FILENO));
+    if(libassert::detail::isatty(STDERR_FILENO) && libassert::output_colors) {
+        if(!libassert::output_rgb) {
+            message = libassert::replace_rgb(std::move(message));
         }
         std::cerr << message << std::endl;
     } else {
-        std::cerr << libassert::utility::strip_colors(message) << std::endl;
+        std::cerr << libassert::strip_colors(message) << std::endl;
     }
     switch(type) {
         case libassert::assert_type::debug_assertion:

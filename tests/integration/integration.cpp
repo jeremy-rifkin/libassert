@@ -20,7 +20,7 @@ using namespace std::literals;
 void test_path_differentiation();
 
 void custom_fail(libassert::assert_type, const libassert::assertion_printer& printer) {
-    std::cout<<libassert::utility::strip_colors(printer(0))<<std::endl<<std::endl;
+    std::cout<<libassert::strip_colors(printer(0))<<std::endl<<std::endl;
 }
 
 template<typename T>

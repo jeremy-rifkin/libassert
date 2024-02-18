@@ -36,7 +36,7 @@ void qux();
 void wubble();
 
 void custom_fail(libassert::assert_type, const libassert::assertion_printer& printer) {
-    std::cerr<<printer(libassert::utility::terminal_width(STDERR_FILENO))<<std::endl<<std::endl;
+    std::cerr<<printer(libassert::terminal_width(STDERR_FILENO))<<std::endl<<std::endl;
 }
 
 static std::string indent(const std::string_view str, size_t depth, char c = ' ', bool ignore_first = false) {

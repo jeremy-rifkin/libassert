@@ -4,7 +4,7 @@
 
 #include <assert/assert.hpp>
 
-using namespace libassert::utility;
+using namespace libassert;
 
 int main() {
     // pretty_type_name tests
@@ -12,7 +12,7 @@ int main() {
     DEBUG_ASSERT(pretty_name.find("basic_string") == std::string::npos);
     DEBUG_ASSERT(pretty_name.find("allocator") == std::string::npos);
     // stringification tests
-    DEBUG_ASSERT(stringify(12) == "12");
-    DEBUG_ASSERT(stringify('x') == "'x'");
-    DEBUG_ASSERT(stringify(std::make_pair("foobar", 20)) == R"(["foobar", 20])");
+    DEBUG_ASSERT(generate_stringification(12) == "12");
+    DEBUG_ASSERT(generate_stringification('x') == "'x'");
+    DEBUG_ASSERT(generate_stringification(std::make_pair("foobar", 20)) == R"(std::pair<const char*, int>: [\"foobar\", 20])");
 }
