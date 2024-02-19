@@ -922,12 +922,6 @@ namespace libassert::detail {
 // =====================================================================================================================
 
 namespace libassert {
-    // strip ansi escape sequences from a string
-    [[nodiscard]] LIBASSERT_EXPORT std::string strip_colors(const std::string& str);
-
-    // replace 24-bit rgb ansi color sequences with traditional color sequences
-    [[nodiscard]] LIBASSERT_EXPORT std::string replace_rgb(std::string str);
-
     // returns the width of the terminal represented by fd, will be 0 on error
     [[nodiscard]] LIBASSERT_EXPORT int terminal_width(int fd);
 
@@ -953,20 +947,38 @@ namespace libassert {
     // }
     using detail::generate_stringification;
 
-    // configures whether the default assertion handler prints in color or not to tty devices
+    // configures whether the default assertion handler prints in color or not to tty devices (default true)
     LIBASSERT_EXPORT void set_color_output(bool);
-    // configure whether to use 24-bit rgb ansi color sequences or traditional ansi color sequences
-    LIBASSERT_EXPORT void set_rgb_output(bool);
-    // ASSERT_EXPORT void set_color_output(bool);
-    // ASSERT_EXPORT void set_color_palette();
-    // ASSERT_EXPORT void set_failure_handler();
+
+    // NOTE: string view underlying data should have static storage duration, or otherwise live as long as the scheme
+    // is in use
+    struct color_scheme {
+        std::string_view string;
+        std::string_view escape;
+        std::string_view keyword;
+        std::string_view named_literal;
+        std::string_view number;
+        std::string_view operator_token;
+        std::string_view call_identifier;
+        std::string_view scope_resolution_identifier;
+        std::string_view identifier;
+        std::string_view accent;
+        std::string_view reset;
+    };
+
+    LIBASSERT_EXPORT extern color_scheme ansi_basic;
+    LIBASSERT_EXPORT extern color_scheme ansi_rgb;
+    LIBASSERT_EXPORT extern color_scheme blank;
+
+    LIBASSERT_EXPORT void set_color_scheme(color_scheme);
+
     // enum class path_mode {
     //     // full path is used
     //     full,
     //     // only enough folders needed to disambiguate are provided
     //     disambiguated, // TODO: Maybe just a bad idea
     //     // only the file name is used
-    //     name,
+    //     basename,
     // };
     // ASSERT_EXPORT void set_path_mode(path_mode mode);
 
@@ -1231,7 +1243,7 @@ namespace libassert {
         assertion_printer(assertion_printer&&) = delete;
         assertion_printer& operator=(const assertion_printer&) = delete;
         assertion_printer& operator=(assertion_printer&&) = delete;
-        [[nodiscard]] std::string operator()(int width) const;
+        [[nodiscard]] std::string operator()(int width, color_scheme) const;
         // filename, line, function, message
         [[nodiscard]] std::tuple<const char*, int, std::string, const char*> get_assertion_info() const;
     };

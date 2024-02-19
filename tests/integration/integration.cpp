@@ -20,7 +20,7 @@ using namespace std::literals;
 void test_path_differentiation();
 
 void custom_fail(libassert::assert_type, const libassert::assertion_printer& printer) {
-    std::cout<<libassert::strip_colors(printer(0))<<std::endl<<std::endl;
+    std::cout<<printer(0, {})<<std::endl<<std::endl;
 }
 
 template<typename T>
@@ -458,6 +458,7 @@ struct N { };
 #line 400
 int main() {
     libassert::set_failure_handler(custom_fail);
+    libassert::set_color_output(false);
     test_class<int> t;
     #line 402
     t.something(std::pair {N(), 1});

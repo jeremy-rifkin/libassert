@@ -13,7 +13,7 @@
 using namespace libassert::detail;
 
 void custom_fail(libassert::assert_type, const libassert::assertion_printer& printer) {
-    std::cerr<<printer(libassert::terminal_width(2))<<std::endl<<std::endl;
+    std::cerr<<printer(libassert::terminal_width(2), libassert::ansi_rgb)<<std::endl<<std::endl;
     abort();
 }
 

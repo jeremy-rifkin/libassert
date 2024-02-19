@@ -20,6 +20,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <regex>
 #include <sstream>
 #include <string_view>
@@ -89,28 +90,6 @@ public:
 };
 
 namespace libassert {
-    LIBASSERT_ATTR_COLD
-    std::string strip_colors(const std::string& str) {
-        static const std::regex ansi_escape_re("\033\\[[^m]+m");
-        return std::regex_replace(str, ansi_escape_re, "");
-    }
-
-    LIBASSERT_ATTR_COLD
-    std::string replace_rgb(std::string str) {
-        for(const auto& [rgb, alt] : std::initializer_list<std::pair<std::string_view, std::string_view>>{
-            { RED, RED_ALT },
-            { ORANGE, ORANGE_ALT },
-            { YELLOW, YELLOW_ALT },
-            { GREEN, GREEN_ALT },
-            { BLUE, BLUE_ALT },
-            { CYAN, CYAN_ALT },
-            { PURPL, PURPL_ALT }
-        }) {
-            detail::replace_all(str, rgb, alt);
-        }
-        return str;
-    }
-
     // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
     LIBASSERT_ATTR_COLD int terminal_width(int fd) {
         if(fd < 0) {
@@ -133,20 +112,6 @@ namespace libassert {
          if(ioctl(fd, TIOCGWINSZ, &w) == -1) { return 0; }
          return w.ws_col;
         #endif
-    }
-}
-
-namespace libassert {
-    static std::atomic_bool output_colors = true;
-
-    LIBASSERT_ATTR_COLD void set_color_output(bool enable) {
-        output_colors = enable;
-    }
-
-    static std::atomic_bool output_rgb = true;
-
-    LIBASSERT_ATTR_COLD void set_rgb_output(bool enable) {
-        output_rgb = enable;
     }
 }
 
@@ -626,7 +591,7 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    static std::string wrapped_print(const std::vector<column_t>& columns) {
+    static std::string wrapped_print(const std::vector<column_t>& columns, color_scheme scheme) {
         // 2d array rows/columns
         struct line_content {
             size_t length;
@@ -657,7 +622,7 @@ namespace libassert::detail {
                     // append
                     lines[current_line][i].content += block.color;
                     lines[current_line][i].content += substr;
-                    lines[current_line][i].content += block.color.empty() ? "" : RESET;
+                    lines[current_line][i].content += block.color.empty() ? "" : scheme.reset;
                     // advance
                     block_i += extract;
                     lines[current_line][i].length += extract;
@@ -750,7 +715,7 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD [[nodiscard]]
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    std::string print_stacktrace(const cpptrace::raw_trace* raw_trace, int term_width) {
+    std::string print_stacktrace(const cpptrace::raw_trace* raw_trace, int term_width, color_scheme scheme) {
         std::string stacktrace;
         if(raw_trace && !raw_trace->empty()) {
             auto trace = raw_trace->resolve();
@@ -797,7 +762,7 @@ namespace libassert::detail {
                 // pretty print with columns for wide terminals
                 // split printing for small terminals
                 if(term_width >= 50) {
-                    auto sig = highlight_blocks(signature + "("); // hack for the highlighter
+                    auto sig = highlight_blocks(signature + "(", scheme); // hack for the highlighter
                     sig.pop_back();
                     const size_t left = 2 + max_frame_width;
                     // todo: is this looking right...?
@@ -806,30 +771,37 @@ namespace libassert::detail {
                     LIBASSERT_PRIMITIVE_ASSERT(remaining_width >= 2);
                     const size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
                     const size_t sig_width = remaining_width - file_width;
-                    stacktrace += wrapped_print({
-                        { 1,          {{"", "#"}} },
-                        { left - 2,   highlight_blocks(std::to_string(frame_number)), true },
-                        { file_width, {{"", files.at(source_path)}} },
-                        { middle,     highlight_blocks(line_number), true }, // intentionally not coloring "?"
-                        { sig_width,  sig }
-                    });
+                    stacktrace += wrapped_print(
+                        {
+                            { 1,          {{"", "#"}} },
+                            { left - 2,   highlight_blocks(std::to_string(frame_number), scheme), true },
+                            { file_width, {{"", files.at(source_path)}} },
+                            { middle,     highlight_blocks(line_number, scheme), true }, // intentionally not coloring "?"
+                            { sig_width,  sig }
+                        },
+                        scheme
+                    );
                 } else {
-                    auto sig = highlight(signature + "("); // hack for the highlighter
+                    auto sig = highlight(signature + "(", scheme); // hack for the highlighter
                     sig = sig.substr(0, sig.rfind('('));
                     stacktrace += stringf(
-                        "#" CYAN "%2d" RESET " %s\n      at %s:%s\n",
+                        "#%s%2d%s %s\n      at %s:%s%s%s\n",
+                        std::string(scheme.number).c_str(),
                         (int)frame_number,
+                        std::string(scheme.reset).c_str(),
                         sig.c_str(),
                         files.at(source_path).c_str(),
-                        (CYAN + line_number + RESET).c_str() // yes this is excessive; intentionally coloring "?"
+                        std::string(scheme.number).c_str(),
+                        line_number.c_str(),
+                        std::string(scheme.reset).c_str() // yes this is excessive; intentionally coloring "?"
                     );
                 }
                 if(recursion_folded) {
                     i += recursion_folded;
                     const std::string s = stringf("| %d layers of recursion were folded |", recursion_folded);
-                    stacktrace += stringf(BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
-                    stacktrace += stringf(BLUE  "%s"   RESET "\n", s.c_str());
-                    stacktrace += stringf(BLUE "|%*s|" RESET "\n", int(s.size() - 2), "");
+                    (((stacktrace += scheme.accent) += stringf("|%*s|", int(s.size() - 2), "")) += scheme.reset) += '\n';
+                    (((stacktrace += scheme.accent) += stringf("%s", s.c_str())) += scheme.reset) += '\n';
+                    (((stacktrace += scheme.accent) += stringf("|%*s|", int(s.size() - 2), "")) += scheme.reset) += '\n';
                 }
             }
         } else {
@@ -859,17 +831,17 @@ namespace libassert::detail {
     binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID) = default;
 
     LIBASSERT_ATTR_COLD
-    static std::string print_values(const std::vector<std::string>& vec, size_t lw) {
+    static std::string print_values(const std::vector<std::string>& vec, size_t lw, color_scheme scheme) {
         LIBASSERT_PRIMITIVE_ASSERT(!vec.empty());
         std::string values;
         if(vec.size() == 1) {
-            values += stringf("%s\n", indent(highlight(vec[0]), 8 + lw + 4, ' ', true).c_str());
+            values += stringf("%s\n", indent(highlight(vec[0], scheme), 8 + lw + 4, ' ', true).c_str());
         } else {
             // spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
             // no indentation done here for multiple value printing
             values += " ";
             for(const auto& str : vec) {
-                values += stringf("%s", highlight(str).c_str());
+                values += stringf("%s", highlight(str, scheme).c_str());
                 if(&str != &*--vec.end()) {
                     values += "  ";
                 }
@@ -880,17 +852,17 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
-    static std::vector<highlight_block> get_values(const std::vector<std::string>& vec) {
+    static std::vector<highlight_block> get_values(const std::vector<std::string>& vec, color_scheme scheme) {
         LIBASSERT_PRIMITIVE_ASSERT(!vec.empty());
         if(vec.size() == 1) {
-            return highlight_blocks(vec[0]);
+            return highlight_blocks(vec[0], scheme);
         } else {
             std::vector<highlight_block> blocks;
             // spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
             // no indentation done here for multiple value printing
             blocks.push_back({"", " "});
             for(const auto& str : vec) {
-                auto h = highlight_blocks(str);
+                auto h = highlight_blocks(str, scheme);
                 blocks.insert(blocks.end(), h.begin(), h.end());
                 if(&str != &*--vec.end()) {
                     blocks.push_back({"", "  "});
@@ -905,7 +877,11 @@ namespace libassert::detail {
     constexpr size_t where_indent = 8;
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
-    std::string print_binary_diagnostics(size_t term_width, binary_diagnostics_descriptor& diagnostics) {
+    std::string print_binary_diagnostics(
+        binary_diagnostics_descriptor& diagnostics,
+        size_t term_width,
+        color_scheme scheme
+    ) {
         auto& [ lstring, rstring, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;
         const std::string& a_str = a_sstr;
         const std::string& b_str = b_sstr;
@@ -941,25 +917,28 @@ namespace libassert::detail {
                 lw = std::min(lw, term_width / 2 - where_indent - arrow_width);
             }
             where += "    Where:\n";
-            auto print_clause = [term_width, lw, &where](
+            auto print_clause = [term_width, lw, &where, &scheme](
                 const std::string& expr_str,
                 const std::vector<std::string>& expr_strs
             ) {
                 if(term_width >= min_term_width) {
-                    where += wrapped_print({
-                        { where_indent - 1, {{"", ""}} }, // 8 space indent, wrapper will add a space
-                        { lw, highlight_blocks(expr_str) },
-                        { 2, {{"", "=>"}} },
-                        { term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(expr_strs) }
-                    });
+                    where += wrapped_print(
+                        {
+                            { where_indent - 1, {{"", ""}} }, // 8 space indent, wrapper will add a space
+                            { lw, highlight_blocks(expr_str, scheme) },
+                            { 2, {{"", "=>"}} },
+                            { term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(expr_strs, scheme) }
+                        },
+                        scheme
+                    );
                 } else {
                     where += stringf(
                         "        %s%*s => ",
-                        highlight(expr_str).c_str(),
+                        highlight(expr_str, scheme).c_str(),
                         int(lw - expr_str.size()),
                         ""
                     );
-                    where += print_values(expr_strs, lw);
+                    where += print_values(expr_strs, lw, scheme);
                 }
             };
             if(has_useful_where_clause.left) {
@@ -974,8 +953,9 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_extra_diagnostics(
+        const decltype(extra_diagnostics::entries)& extra_diagnostics,
         size_t term_width,
-        const decltype(extra_diagnostics::entries)& extra_diagnostics
+        color_scheme scheme
     ) {
         std::string output = "    Extra diagnostics:\n";
         size_t lw = 0;
@@ -984,16 +964,28 @@ namespace libassert::detail {
         }
         for(const auto& entry : extra_diagnostics) {
             if(term_width >= min_term_width) {
-                output += wrapped_print({
-                    { 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
-                    { lw, highlight_blocks(entry.first) },
-                    { 2, {{"", "=>"}} },
-                    { term_width - lw - 8 /* indent */ - 4 /* arrow */, highlight_blocks(entry.second) }
-                });
+                output += wrapped_print(
+                    {
+                        { 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
+                        { lw, highlight_blocks(entry.first, scheme) },
+                        { 2, {{"", "=>"}} },
+                        { term_width - lw - 8 /* indent */ - 4 /* arrow */, highlight_blocks(entry.second, scheme) }
+                    },
+                    scheme
+                );
             } else {
-                output += stringf("        %s%*s => %s\n",
-                                  highlight(entry.first).c_str(), int(lw - entry.first.length()), "",
-                                  indent(highlight(entry.second), 8 + lw + 4, ' ', true).c_str());
+                output += stringf(
+                    "        %s%*s => %s\n",
+                    highlight(entry.first, scheme).c_str(),
+                    int(lw - entry.first.length()),
+                    "",
+                    indent(
+                        highlight(entry.second, scheme),
+                        8 + lw + 4,
+                        ' ',
+                        true
+                    ).c_str()
+                );
             }
         }
         return output;
@@ -1027,6 +1019,55 @@ namespace libassert::detail {
 }
 
 namespace libassert {
+    static std::atomic_bool output_colors = true;
+
+    LIBASSERT_ATTR_COLD void set_color_output(bool enable) {
+        output_colors = enable;
+    }
+
+    LIBASSERT_EXPORT color_scheme ansi_basic {
+        BASIC_GREEN, /* string */
+        BASIC_BLUE, /* escape */
+        BASIC_PURPL, /* keyword */
+        BASIC_ORANGE, /* named_literal */
+        BASIC_CYAN, /* number */
+        BASIC_PURPL, /* operator_token */
+        BASIC_BLUE, /* call_identifier */
+        BASIC_YELLOW, /* scope_resolution_identifier */
+        BASIC_BLUE, /* identifier */
+        BASIC_BLUE, /* accent */
+        RESET
+    };
+
+    LIBASSERT_EXPORT color_scheme ansi_rgb {
+        RGB_GREEN, /* string */
+        RGB_BLUE, /* escape */
+        RGB_PURPL, /* keyword */
+        RGB_ORANGE, /* named_literal */
+        RGB_CYAN, /* number */
+        RGB_PURPL, /* operator_token */
+        RGB_BLUE, /* call_identifier */
+        RGB_YELLOW, /* scope_resolution_identifier */
+        RGB_BLUE, /* identifier */
+        RGB_BLUE, /* accent */
+        RESET
+    };
+
+    LIBASSERT_EXPORT color_scheme blank_color_scheme;
+
+    std::mutex color_scheme_mutex;
+    color_scheme current_color_scheme = ansi_rgb;
+
+    LIBASSERT_EXPORT void set_color_scheme(color_scheme scheme) {
+        std::unique_lock lock(color_scheme_mutex);
+        current_color_scheme = scheme;
+    }
+
+    LIBASSERT_EXPORT color_scheme get_color_scheme() {
+        std::unique_lock lock(color_scheme_mutex);
+        return current_color_scheme;
+    }
+
     namespace detail {
         LIBASSERT_ATTR_COLD
         void libassert_default_failure_handler(
@@ -1035,15 +1076,11 @@ namespace libassert {
         ) {
             // TODO: Just throw instead of all of this?
             enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-            std::string message = printer(terminal_width(STDERR_FILENO));
-            if(isatty(STDERR_FILENO) && output_colors) {
-                if(!output_rgb) {
-                    message = replace_rgb(std::move(message));
-                }
-                std::cerr << message << std::endl;
-            } else {
-                std::cerr << strip_colors(message) << std::endl;
-            }
+            std::string message = printer(
+                terminal_width(STDERR_FILENO),
+                isatty(STDERR_FILENO) && output_colors ? get_color_scheme() : blank_color_scheme
+            );
+            std::cerr << message << std::endl;
             switch(type) {
                 case assert_type::debug_assertion:
                 case assert_type::assertion:
@@ -1101,33 +1138,53 @@ namespace libassert {
         delete trace;
     }
 
-    LIBASSERT_ATTR_COLD std::string assertion_printer::operator()(int width) const {
+    LIBASSERT_ATTR_COLD std::string assertion_printer::operator()(int width, color_scheme scheme) const {
         const auto& [ name, type, expr_str, location, args_strings ] = *params;
         const auto& [ message, extra_diagnostics, pretty_function ] = processed_args;
         std::string output;
         // generate header
         const auto function = prettify_type(pretty_function);
         if(!message.empty()) {
-            output += stringf("%s failed at %s:%d: %s: %s\n",
-                              assert_type_name(type), location.file, location.line,
-                              highlight(function).c_str(), message.c_str());
+            output += stringf(
+                "%s failed at %s:%d: %s: %s\n",
+                assert_type_name(type),
+                location.file,
+                location.line,
+                highlight(function, scheme).c_str(),
+                message.c_str()
+            );
         } else {
-            output += stringf("%s failed at %s:%d: %s:\n", assert_type_name(type),
-                              location.file, location.line, highlight(function).c_str());
+            output += stringf(
+                "%s failed at %s:%d: %s:\n",
+                assert_type_name(type),
+                location.file,
+                location.line,
+                highlight(function, scheme).c_str()
+            );
         }
-        output += stringf("    %s\n", highlight(stringf("%s(%s%s);", name, expr_str,
-                                                        sizeof_args > 0 ? ", ..." : "")).c_str());
+        output += stringf(
+            "    %s\n",
+            highlight(
+                stringf(
+                    "%s(%s%s);",
+                    name,
+                    expr_str,
+                    sizeof_args > 0 ? ", ..." : ""
+                ),
+                scheme
+            ).c_str()
+        );
         // generate binary diagnostics
         if(binary_diagnostics.present) {
-            output += print_binary_diagnostics(width, binary_diagnostics);
+            output += print_binary_diagnostics(binary_diagnostics, width, scheme);
         }
         // generate extra diagnostics
         if(!extra_diagnostics.empty()) {
-            output += print_extra_diagnostics(width, extra_diagnostics);
+            output += print_extra_diagnostics(extra_diagnostics, width, scheme);
         }
         // generate stack trace
         output += "\nStack trace:\n";
-        output += print_stacktrace(static_cast<cpptrace::raw_trace*>(raw_trace), width);
+        output += print_stacktrace(static_cast<cpptrace::raw_trace*>(raw_trace), width, scheme);
         return output;
     }
 
@@ -1140,8 +1197,8 @@ namespace libassert {
 }
 
 namespace libassert {
-    LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int width) {
+    LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int) {
         auto trace = cpptrace::generate_raw_trace();
-        return print_stacktrace(&trace, width);
+        return ""; //print_stacktrace(&trace, width); // TODO FIXME
     }
 }

@@ -357,7 +357,7 @@ namespace libassert::detail {
         }
 
         LIBASSERT_ATTR_COLD
-        std::vector<highlight_block> highlight_string(const std::string& str) const {
+        std::vector<highlight_block> highlight_string(const std::string& str, color_scheme scheme) const {
             std::vector<highlight_block> output;
             std::smatch match;
             std::size_t i = 0;
@@ -367,13 +367,13 @@ namespace libassert::detail {
                 // TODO: I don't know why this assert was added, I might have done it in dev on a whim. Re-evaluate.
                 // LIBASSERT_PRIMITIVE_ASSERT(match.position() > 0);
                 if(match.position() > 0) {
-                    output.push_back({GREEN, str.substr(i, match.position())});
+                    output.push_back({scheme.string, str.substr(i, match.position())});
                 }
-                output.push_back({BLUE, str.substr(i + match.position(), match.length())});
+                output.push_back({scheme.escape, str.substr(i + match.position(), match.length())});
                 i += match.position() + match.length();
             }
             if(i < str.length()) {
-                output.push_back({GREEN, str.substr(i)});
+                output.push_back({scheme.string, str.substr(i)});
             }
             return output;
         }
@@ -381,7 +381,7 @@ namespace libassert::detail {
         LIBASSERT_ATTR_COLD
         // TODO: Refactor
         // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-        std::vector<highlight_block> highlight(const std::string& expression) try {
+        std::vector<highlight_block> highlight(const std::string& expression, color_scheme scheme) try {
             const auto tokens = tokenize(expression);
             std::vector<highlight_block> output;
             for(size_t i = 0; i < tokens.size(); i++) {
@@ -400,34 +400,34 @@ namespace libassert::detail {
                 };
                 switch(token.token_type) {
                     case token_e::keyword:
-                        output.push_back({PURPL, token.str});
+                        output.push_back({scheme.keyword, token.str});
                         break;
                     case token_e::punctuation:
                         if(highlight_ops.count(token.str)) {
-                            output.push_back({PURPL, token.str});
+                            output.push_back({scheme.operator_token, token.str});
                         } else {
                             output.push_back({"", token.str});
                         }
                         break;
                     case token_e::named_literal:
-                        output.push_back({ORANGE, token.str});
+                        output.push_back({scheme.named_literal, token.str});
                         break;
                     case token_e::number:
-                        output.push_back({CYAN, token.str});
+                        output.push_back({scheme.number, token.str});
                         break;
                     case token_e::string:
                         {
-                            auto string_tokens = highlight_string(token.str);
+                            auto string_tokens = highlight_string(token.str, scheme);
                             output.insert(output.end(), string_tokens.begin(), string_tokens.end());
                         }
                         break;
                     case token_e::identifier:
                         if(peek().str == "(") {
-                            output.push_back({BLUE, token.str});
+                            output.push_back({scheme.call_identifier, token.str});
                         } else if(peek().str == "::") {
-                            output.push_back({YELLOW, token.str});
+                            output.push_back({scheme.scope_resolution_identifier, token.str});
                         } else {
-                            output.push_back({BLUE, token.str});
+                            output.push_back({scheme.identifier, token.str});
                         }
                         break;
                     case token_e::whitespace:
@@ -726,17 +726,17 @@ namespace libassert::detail {
     std::mutex analysis::singleton_mutex;
 
     LIBASSERT_ATTR_COLD
-    std::string highlight(const std::string& expression) {
+    std::string highlight(const std::string& expression, color_scheme scheme) {
         #ifdef NCOLOR
         return expression;
         #else
-        auto blocks = analysis::get().highlight(expression);
+        auto blocks = analysis::get().highlight(expression, scheme);
         std::string str;
         for(auto& block : blocks) {
             str += block.color;
             str += block.content;
             if(!block.color.empty()) {
-                str += RESET;
+                str += scheme.reset;
             }
         }
         return str;
@@ -744,11 +744,11 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
-    std::vector<highlight_block> highlight_blocks(const std::string& expression) {
+    std::vector<highlight_block> highlight_blocks(const std::string& expression, color_scheme scheme) {
         #ifdef NCOLOR
         return expression;
         #else
-        return analysis::get().highlight(expression);
+        return analysis::get().highlight(expression, scheme);
         #endif
     }
 

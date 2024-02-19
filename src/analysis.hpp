@@ -14,9 +14,10 @@ namespace libassert::detail {
     };
 
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT /* FIXME */
-    std::string highlight(const std::string& expression);
+    std::string highlight(const std::string& expression, color_scheme scheme);
 
-    LIBASSERT_ATTR_COLD std::vector<highlight_block> highlight_blocks(const std::string& expression);
+    LIBASSERT_ATTR_COLD
+    std::vector<highlight_block> highlight_blocks(const std::string& expression, color_scheme scheme);
 
     LIBASSERT_ATTR_COLD literal_format get_literal_format(const std::string& expression);
 
