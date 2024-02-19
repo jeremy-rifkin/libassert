@@ -180,32 +180,12 @@ namespace libassert::detail {
 namespace libassert::detail {
     [[nodiscard]] LIBASSERT_EXPORT std::string bstringf(const char* format, ...);
 
-    LIBASSERT_ATTR_COLD [[nodiscard]]
-    constexpr std::string_view substring_bounded_by(
-        std::string_view sig,
-        std::string_view l,
-        std::string_view r
-    ) noexcept {
-        auto i = sig.find(l) + l.length();
-        return sig.substr(i, sig.rfind(r) - i);
-    }
+    [[nodiscard]] LIBASSERT_EXPORT std::string_view type_name_core(std::string_view signature) noexcept;
 
     template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
-    constexpr std::string_view type_name() noexcept {
-        // Cases to handle:
-        // gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
-        // clang: std::string_view ns::type_name() [T = int]
-        // msvc:  class std::basic_string_view<char,struct std::char_traits<char> > __cdecl ns::type_name<int>(void)
-        #if LIBASSERT_IS_CLANG
-         return substring_bounded_by(LIBASSERT_PFUNC, "[T = ", "]");
-        #elif LIBASSERT_IS_GCC
-         return substring_bounded_by(LIBASSERT_PFUNC, "[with T = ", "; std::string_view = ");
-        #elif LIBASSERT_IS_MSVC
-         return substring_bounded_by(LIBASSERT_PFUNC, "type_name<", ">(void)");
-        #else
-         static_assert(false, "unsupported compiler");
-        #endif
+    std::string_view type_name() noexcept {
+        return type_name_core(LIBASSERT_PFUNC);
     }
 
     [[nodiscard]] LIBASSERT_EXPORT std::string prettify_type(std::string type);
@@ -555,7 +535,6 @@ namespace libassert::detail {
         template<typename T, size_t... I>
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify_tuple_like(const T& t, std::index_sequence<I...>) {
-            using stringification::stringify; // ADL
             return "[" + (stringify(std::get<0>(t)) + ... + (", " + stringify(std::get<I + 1>(t)))) + "]";
         }
 

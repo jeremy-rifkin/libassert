@@ -100,6 +100,19 @@ namespace libassert::detail {
     static_assert(popcount(2U) == 1);
     static_assert(popcount(3U) == 2);
     static_assert(popcount(0xf0U) == 4);
+
+    template<typename T>
+    LIBASSERT_ATTR_COLD
+    static constexpr T n_digits(T value) {
+        return value < 10 ? 1 : 1 + n_digits(value / 10);
+    }
+
+    static_assert(n_digits(0) == 1);
+    static_assert(n_digits(1) == 1);
+    static_assert(n_digits(9) == 1);
+    static_assert(n_digits(10) == 2);
+    static_assert(n_digits(11) == 2);
+    static_assert(n_digits(1024) == 4);
 }
 
 #endif

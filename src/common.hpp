@@ -15,7 +15,6 @@
 #define RGB_CYAN   ANSIRGB(86,  194, 192) // modified
 #define RGB_PURPL  ANSIRGB(198, 120, 221)
 
-// TODO
 #define BASIC_RED    ESC "31m"
 #define BASIC_ORANGE ESC "33m" // using yellow as orange
 #define BASIC_YELLOW ESC "34m" // based off use (identifiers in scope res) it's better to color as blue here

@@ -82,6 +82,8 @@ target_sources(
   src/assert.cpp
   src/analysis.cpp
   src/utils.cpp
+  src/formatting_and_type_tools.cpp
+  src/stringification.cpp
 )
 
 # link dependencies
