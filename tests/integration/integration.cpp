@@ -457,6 +457,8 @@ struct N { };
 
 #line 400
 int main() {
+    libassert::set_failure_handler(custom_fail);
     test_class<int> t;
+    #line 402
     t.something(std::pair {N(), 1});
 }

@@ -970,13 +970,6 @@ namespace libassert {
     // };
     // ASSERT_EXPORT void set_path_mode(path_mode mode);
 
-}
-
-// =====================================================================================================================
-// || Library core                                                                                                    ||
-// =====================================================================================================================
-
-namespace libassert {
     enum class assert_type {
         debug_assertion,
         assertion,
@@ -985,16 +978,13 @@ namespace libassert {
     };
 
     class assertion_printer;
+
+    LIBASSERT_EXPORT void set_failure_handler(void (*handler)(assert_type, const assertion_printer&));
 }
 
-#ifndef LIBASSERT_FAIL
- #define LIBASSERT_FAIL libassert_default_fail_action
-#endif
-
-#ifndef LIBASSERT_FAIL
- LIBASSERT_EXPORT
-#endif
-void LIBASSERT_FAIL(libassert::assert_type type, const libassert::assertion_printer& printer);
+// =====================================================================================================================
+// || Library core                                                                                                    ||
+// =====================================================================================================================
 
 /*
  * Internal mechanisms
@@ -1254,6 +1244,8 @@ namespace libassert {
 namespace libassert::detail {
     LIBASSERT_EXPORT size_t count_args_strings(const char* const*);
 
+    LIBASSERT_EXPORT void fail(assert_type type, const assertion_printer& printer);
+
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
     // TODO: Re-evaluate forwarding here.
@@ -1308,7 +1300,7 @@ namespace libassert::detail {
             trace,
             sizeof_extra_diagnostics
         };
-        ::LIBASSERT_FAIL(params->type, printer);
+        fail(params->type, printer);
     }
 
     template<typename A, typename B, typename C, typename... Args>

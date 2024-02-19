@@ -23,7 +23,6 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       demo
       PRIVATE
       "-DLIBASSERT_USE_MAGIC_ENUM"
-      "-DLIBASSERT_FAIL=custom_fail"
       "-DLIBASSERT_LOWERCASE"
     )
 
@@ -40,7 +39,6 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       integration
       PRIVATE
       "-DLIBASSERT_USE_MAGIC_ENUM"
-      "-DLIBASSERT_FAIL=custom_fail"
       "-DLIBASSERT_LOWERCASE"
     )
     add_test(

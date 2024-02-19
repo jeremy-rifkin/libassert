@@ -1027,6 +1027,56 @@ namespace libassert::detail {
 }
 
 namespace libassert {
+    namespace detail {
+        LIBASSERT_ATTR_COLD
+        void libassert_default_failure_handler(
+            assert_type type,
+            const assertion_printer& printer
+        ) {
+            // TODO: Just throw instead of all of this?
+            enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
+            std::string message = printer(terminal_width(STDERR_FILENO));
+            if(isatty(STDERR_FILENO) && output_colors) {
+                if(!output_rgb) {
+                    message = replace_rgb(std::move(message));
+                }
+                std::cerr << message << std::endl;
+            } else {
+                std::cerr << strip_colors(message) << std::endl;
+            }
+            switch(type) {
+                case assert_type::debug_assertion:
+                case assert_type::assertion:
+                    case assert_type::assumption: // switch-if-case, cursed!
+                    (void)fflush(stderr);
+                    std::abort();
+                    // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
+                    // this library (on top of preventing fallthrough from nonfatal libassert)
+                    break;
+                case assert_type::verification:
+                    throw verification_failure();
+                    break;
+                default:
+                    LIBASSERT_PRIMITIVE_ASSERT(false);
+            }
+        }
+    }
+
+    static std::atomic failure_handler = detail::libassert_default_failure_handler;
+
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
+    void set_failure_handler(void (*handler)(assert_type, const assertion_printer&)) {
+        failure_handler = handler;
+    }
+
+    namespace detail {
+        LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void fail(assert_type type, const assertion_printer& printer) {
+            failure_handler.load()(type, printer);
+        }
+    }
+}
+
+namespace libassert {
     using namespace detail;
 
     const char* verification_failure::what() const noexcept {
@@ -1093,40 +1143,5 @@ namespace libassert {
     LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int width) {
         auto trace = cpptrace::generate_raw_trace();
         return print_stacktrace(&trace, width);
-    }
-}
-
-// Default handler
-
-LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
-void libassert_default_fail_action(
-    libassert::assert_type type,
-    const libassert::assertion_printer& printer
-) {
-    // TODO: Just throw instead of all of this?
-    libassert::detail::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-    std::string message = printer(libassert::terminal_width(STDERR_FILENO));
-    if(libassert::detail::isatty(STDERR_FILENO) && libassert::output_colors) {
-        if(!libassert::output_rgb) {
-            message = libassert::replace_rgb(std::move(message));
-        }
-        std::cerr << message << std::endl;
-    } else {
-        std::cerr << libassert::strip_colors(message) << std::endl;
-    }
-    switch(type) {
-        case libassert::assert_type::debug_assertion:
-        case libassert::assert_type::assertion:
-            case libassert::assert_type::assumption: // switch-if-case, cursed!
-            (void)fflush(stderr);
-            std::abort();
-            // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
-            // this library (on top of preventing fallthrough from nonfatal libassert)
-            break;
-        case libassert::assert_type::verification:
-            throw libassert::verification_failure();
-            break;
-        default:
-            LIBASSERT_PRIMITIVE_ASSERT(false);
     }
 }
