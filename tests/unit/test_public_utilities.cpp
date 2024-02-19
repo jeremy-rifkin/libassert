@@ -6,7 +6,7 @@
 
 using namespace libassert;
 
-std::string replace_all(std::string str, std::string_view substr, std::string_view replacement) {
+std::string replace(std::string str, std::string_view substr, std::string_view replacement) {
     std::string::size_type pos = 0;
     // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
     while((pos = str.find(substr.data(), pos, substr.length())) != std::string::npos) {
@@ -25,6 +25,10 @@ int main() {
     DEBUG_ASSERT(generate_stringification(12) == "12");
     DEBUG_ASSERT(generate_stringification('x') == "'x'");
     DEBUG_ASSERT(
-        replace_all(generate_stringification(std::make_pair("foobar", 20)), "char *", "char*") == R"(std::pair<const char*, int>: ["foobar", 20])"
+        replace(
+            replace(generate_stringification(std::make_pair("foobar", 20)), "char const", "const char"),
+            "char *",
+            "char*"
+        ) == R"(std::pair<const char*, int>: ["foobar", 20])"
     );
 }
