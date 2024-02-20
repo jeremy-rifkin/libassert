@@ -4,7 +4,7 @@
 #endif
 #include <assert/assert.hpp>
 
-// Copyright (c) 2021-2023 Jeremy Rifkin under the MIT license
+// Copyright (c) 2021-2024 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
 #include <algorithm>
