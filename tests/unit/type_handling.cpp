@@ -43,7 +43,7 @@ template<typename T> constexpr bool is_lvalue(T&&) {
 struct only_move_constructable {
     int x;
     only_move_constructable(int _x) : x(_x) {}
-    compl only_move_constructable() = default;
+    ~only_move_constructable() = default;
     only_move_constructable(const only_move_constructable&) = delete;
     only_move_constructable(only_move_constructable&&) = default;
     only_move_constructable& operator=(const only_move_constructable&) = delete;

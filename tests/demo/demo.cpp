@@ -97,8 +97,8 @@ struct P {
 
 struct M {
     M() = default;
-    compl M() {
-        puts("M::compl M(); called");
+    ~M() {
+        puts("M::~M(); called");
     }
     M(const M&) = delete;
     M(M&&) = default; // only move-constructable

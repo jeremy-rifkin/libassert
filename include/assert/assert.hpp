@@ -753,7 +753,7 @@ namespace libassert::detail {
         A a;
         B b;
         explicit constexpr expression_decomposer() = default;
-        compl expression_decomposer() = default;
+        ~expression_decomposer() = default;
         // not copyable
         constexpr expression_decomposer(const expression_decomposer&) = delete;
         constexpr expression_decomposer& operator=(const expression_decomposer&) = delete;
@@ -1076,7 +1076,7 @@ namespace libassert::detail {
             std::string b_str,
             bool multiple_formats
         );
-        compl binary_diagnostics_descriptor(); // = default; in the .cpp
+        ~binary_diagnostics_descriptor(); // = default; in the .cpp
         binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = delete;
         binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
         binary_diagnostics_descriptor& operator=(const binary_diagnostics_descriptor&) = delete;
@@ -1123,7 +1123,7 @@ namespace libassert::detail {
         std::vector<std::pair<std::string, std::string>> entries;
         const char* pretty_function = "<error>";
         extra_diagnostics();
-        compl extra_diagnostics();
+        ~extra_diagnostics();
         extra_diagnostics(const extra_diagnostics&) = delete;
         extra_diagnostics(extra_diagnostics&&) noexcept; // = default; in the .cpp
         extra_diagnostics& operator=(const extra_diagnostics&) = delete;
@@ -1232,7 +1232,7 @@ namespace libassert {
             void* raw_trace,
             size_t sizeof_args
         );
-        compl assertion_printer();
+        ~assertion_printer();
         assertion_printer(const assertion_printer&) = delete;
         assertion_printer(assertion_printer&&) = delete;
         assertion_printer& operator=(const assertion_printer&) = delete;
@@ -1566,12 +1566,12 @@ namespace libassert {
     } while(false) \
 
 // Workaround for gcc bug 105734 / libassert bug #24
-#define LIBASSERT_DESTROY_DECOMPOSER libassert_decomposer.compl expression_decomposer() /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */
+#define LIBASSERT_DESTROY_DECOMPOSER libassert_decomposer.~expression_decomposer() /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */
 #if LIBASSERT_IS_GCC
  #if __GNUC__ == 12 && __GNUC_MINOR__ == 1
   namespace libassert::detail {
       template<typename T> constexpr void destroy(T& t) {
-          t.compl T();
+          t.~T();
       }
   }
   #undef LIBASSERT_DESTROY_DECOMPOSER
