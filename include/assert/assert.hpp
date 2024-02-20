@@ -6,9 +6,8 @@
 
 #include <cerrno>
 #include <cstddef>
-#include <exception>
-#include <iterator>
 #include <memory>
+#include <new>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -1650,6 +1649,7 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
 
 // assertion macros
 
+// Debug assert
 #ifndef NDEBUG
  #define DEBUG_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "DEBUG_ASSERT", debug_assertion, , __VA_ARGS__)
 #else
@@ -1664,10 +1664,12 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
  #endif
 #endif
 
-#define ASSUME(expr, ...) LIBASSERT_INVOKE(expr, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
-
+// Assert
 #define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "ASSERT", assertion, , __VA_ARGS__)
-// #define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "ASSERT", verification, , __VA_ARGS__)
+// lowercase version intentionally done outside of the include guard here
+
+// Assume
+#define ASSUME(expr, ...) LIBASSERT_INVOKE(expr, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
 
 // value variants
 
@@ -1685,12 +1687,12 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
  #endif
 #endif
 
-#define ASSUME_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
+#define ASSUME_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSUME_VAL", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
 
-#define ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSERT", verification, , __VA_ARGS__)
+#define ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSERT_VAL", verification, , __VA_ARGS__)
 
 #ifdef LIBASSERT_LOWERCASE
- #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "assert", assertion, , __VA_ARGS__)
+ #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "assert_VAL", assertion, , __VA_ARGS__)
 #endif
 
 #endif
