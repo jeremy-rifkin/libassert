@@ -1309,6 +1309,7 @@ namespace libassert::detail {
         fail(params->type, printer);
     }
 
+    // TODO: Re-evaluate benefit of this at all in non-cold path code
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE [[nodiscard]]
     expression_decomposer<A, B, C> process_assert_fail_m(
@@ -1318,6 +1319,16 @@ namespace libassert::detail {
     ) {
         process_assert_fail(decomposer, params, std::forward<Args>(args)...);
         return decomposer;
+    }
+
+    template<typename A, typename B, typename C, typename... Args>
+    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
+    void process_assert_fail_n(
+        expression_decomposer<A, B, C> decomposer,
+        const assert_static_parameters* params,
+        Args&&... args
+    ) {
+        process_assert_fail(decomposer, params, std::forward<Args>(args)...);
     }
 
     template<typename T>
@@ -1553,12 +1564,7 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
             libassert::detail::expression_decomposer{} << expr \
         ); \
         LIBASSERT_WARNING_PRAGMA_POP_GCC \
-        decltype(auto) libassert_value = libassert_decomposer.get_value(); \
-        constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
-        /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
-        /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
-        /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
-        if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
+        if(LIBASSERT_STRONG_EXPECT(!static_cast<bool>(libassert_decomposer.get_value()), 0)) { \
             ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
             failaction \
             LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
@@ -1570,14 +1576,11 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
                 ); \
             } else { \
                 /* std::move it to assert_fail_m, will be moved back to r */ \
-                auto libassert_r = process_assert_fail_m( \
+                process_assert_fail_n( \
                     std::move(libassert_decomposer), \
                     libassert_params \
                     LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
                 ); \
-                /* can't move-assign back to decomposer if it holds reference members */ \
-                LIBASSERT_DESTROY_DECOMPOSER; \
-                new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \
             } \
         } \
         LIBASSERT_WARNING_PRAGMA_POP_CLANG \
