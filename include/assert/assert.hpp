@@ -37,10 +37,10 @@
  // dependency, then any library that consumes both will have both sets of include
  // paths. this isn't an issue for #include <assert.hpp> but becomes an issue
  // for includes within the library (libA might include from libB)
- #if __has_include("magic_enum/magic_enum.hpp")
-    #include "magic_enum/magic_enum.hpp"
+ #if __has_include(<magic_enum/magic_enum.hpp>)
+    #include <magic_enum/magic_enum.hpp>
  #else
-    #include "magic_enum.hpp"
+    #include <magic_enum.hpp>
  #endif
 #endif
 

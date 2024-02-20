@@ -151,6 +151,7 @@ if(ASSERT_USE_MAGIC_ENUM)
   if(ASSERT_USE_EXTERNAL_MAGIC_ENUM)
     find_package(magic_enum REQUIRED)
   else()
+    include(FetchContent)
     FetchContent_Declare(magic_enum
       GIT_REPOSITORY "${ASSERT_MAGIC_ENUM_REPO}"
       GIT_TAG        "${ASSERT_MAGIC_ENUM_TAG}")
