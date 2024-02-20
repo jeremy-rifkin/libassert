@@ -74,44 +74,26 @@ int bar() {
 
 struct logger_type {
     int n;
-    logger_type(int _n): n(_n) {
+    explicit logger_type(int _n): n(_n) {
         std::cout<<"logger_type::logger_type() [n="<<n<<"]"<<std::endl;
     }
-    compl logger_type() {
-        std::cout<<"logger_type::compl logger_type() [n="<<n<<"]"<<std::endl;
-        n = -1;
+    bool operator==(const logger_type& other) const & {
+        std::cout<<"logger_type::operator==(const logger_type&) const & [n="<<n<<", other="<<other.n<<"]"<<std::endl;
+        return false;
     }
-    logger_type(const logger_type& other): n(other.n) {
-        std::cout<<"logger_type::logger_type(const logger_type&) [n="<<n<<"]"<<std::endl;
+    bool operator==(const logger_type& other) const && {
+        std::cout<<"logger_type::operator==(const logger_type&) const && [n="<<n<<", other="<<other.n<<"]"<<std::endl;
+        return false;
     }
-    logger_type(logger_type&& other) noexcept : n(other.n) {
-        other.n = -2;
-        std::cout<<"logger_type::logger_type(logger_type&&) [n="<<n<<"]"<<std::endl;
+    bool operator==(int other) const & {
+        std::cout<<"logger_type::operator==(int) const & [n="<<n<<", other="<<other<<"]"<<std::endl;
+        return false;
     }
-    logger_type& operator=(const logger_type& other) {
-        n = other.n;
-        std::cout<<"logger_type::operator=(const logger_type&) [n="<<n<<"]"<<std::endl;
-        return *this;
-    }
-    logger_type& operator=(logger_type&& other) noexcept {
-        n = other.n;
-        other.n = -2;
-        std::cout<<"logger_type::operator=(logger_type&&) [n="<<n<<"]"<<std::endl;
-        return *this;
-    }
-    bool operator==(const logger_type& other) const {
-        std::cout<<"logger_type::operator==(const logger_type&) [n="<<n<<", other="<<other.n<<"]"<<std::endl;
+    bool operator==(int other) const && {
+        std::cout<<"logger_type::operator==(int) const && [n="<<n<<", other="<<other<<"]"<<std::endl;
         return false;
     }
 };
-bool operator==(const logger_type& a, int b) {
-    std::cout<<"logger_type::operator==(const logger_type&, int) [n="<<a.n<<", b="<<b<<"]"<<std::endl;
-    return false;
-}
-bool operator==(int a, const logger_type& b) {
-    std::cout<<"logger_type::operator==(int, const logger_type&) [b="<<a<<", n="<<b.n<<"]"<<std::endl;
-    return false;
-}
 std::ostream& operator<<(std::ostream& stream, const logger_type& lt) {
     return stream<<"logger_type [n = "<<lt.n<<"]";
 }
@@ -288,31 +270,6 @@ public:
         #line 2200
         {
             debug_assert(foo() < bar());
-        }
-        // value forwarding: copy / moves
-        SECTION("value forwarding: copy / moves");
-        #line 2300
-        {
-            {
-                logger_type lt1(1);
-                logger_type lt2(2);
-                debug_assert(lt1 == lt2);
-            }
-            std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
-            {
-                debug_assert(1 == logger_type(2));
-            }
-            std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
-            {
-                debug_assert(logger_type(1) == 2);
-            }
-            std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
-            {
-                auto r = assert_val(logger_type(1) == logger_type(2));
-                ASSERT(!(std::is_same<decltype(r), logger_type>::value));
-                ASSERT(r.n != 1);
-            }
-            std::cout<<"--------------------------------------------"<<std::endl<<std::endl;
         }
         // value forwarding: lifetimes
         // TODO

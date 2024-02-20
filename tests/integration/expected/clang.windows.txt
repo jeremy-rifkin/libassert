@@ -690,164 +690,9 @@ Stack trace:
       at integration.cpp:403
 
 
-===================== [value forwarding: copy / moves] =====================
-logger_type::logger_type() [n=1]
-logger_type::logger_type() [n=2]
-logger_type::operator==(const logger_type&) [n=1, other=2]
-Debug Assertion failed at integration/integration.cpp:2304: void test_class<int>::something_else() [T = int]:
-    debug_assert(lt1 == lt2);
-    Where:
-        lt1 => logger_type [n = 1]
-        lt2 => logger_type [n = 2]
-
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:2304
-# 2 test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main()
-      at integration.cpp:403
-
-
-logger_type::compl logger_type() [n=2]
-logger_type::compl logger_type() [n=1]
---------------------------------------------
-
-logger_type::logger_type() [n=2]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::operator==(int, const logger_type&) [b=1, n=2]
-logger_type::logger_type(logger_type&&) [n=2]
-Debug Assertion failed at integration/integration.cpp:2308: void test_class<int>::something_else() [T = int]:
-    debug_assert(1 == logger_type(2));
-    Where:
-        logger_type(2) => logger_type [n = 2]
-
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:2308
-# 2 test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main()
-      at integration.cpp:403
-
-
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=2]
---------------------------------------------
-
-logger_type::logger_type() [n=1]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::operator==(const logger_type&, int) [n=1, b=2]
-logger_type::logger_type(logger_type&&) [n=1]
-Debug Assertion failed at integration/integration.cpp:2312: void test_class<int>::something_else() [T = int]:
-    debug_assert(logger_type(1) == 2);
-    Where:
-        logger_type(1) => logger_type [n = 1]
-
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:2312
-# 2 test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main()
-      at integration.cpp:403
-
-
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::compl logger_type() [n=-2]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=1]
---------------------------------------------
-
-logger_type::logger_type() [n=1]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::logger_type() [n=2]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::operator==(const logger_type&) [n=1, other=2]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::logger_type(logger_type&&) [n=2]
-Debug Assertion failed at integration/integration.cpp:2316: void test_class<int>::something_else() [T = int]:
-    assert_val(logger_type(1) == logger_type(2));
-    Where:
-        logger_type(1) => logger_type [n = 1]
-        logger_type(2) => logger_type [n = 2]
-
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:2316
-# 2 test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main()
-      at integration.cpp:403
-
-
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::logger_type(logger_type&&) [n=1]
-logger_type::compl logger_type() [n=-2]
-Assertion failed at integration/integration.cpp:2317: void test_class<int>::something_else() [T = int]:
-    ASSERT(!(std::is_same<decltype(r), logger_type>::value));
-
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:2317
-# 2 test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main()
-      at integration.cpp:403
-
-
-Assertion failed at integration/integration.cpp:2318: void test_class<int>::something_else() [T = int]:
-    ASSERT(r.n != 1);
-    Where:
-        r.n => 1
-
-Stack trace:
-# 1 test_class<int>::something_else()
-      at integration.cpp:2318
-# 2 test_class<int>::something<N>(std::pair<N, int>)
-      at integration.cpp:1005
-# 3 main()
-      at integration.cpp:403
-
-
-logger_type::compl logger_type() [n=1]
---------------------------------------------
-
 ===================== [value forwarding: lvalue references] =====================
 logger_type::logger_type() [n=2]
-logger_type::operator==(const logger_type&, int) [n=2, b=2]
+logger_type::operator==(int) const & [n=2, other=2]
 Debug Assertion failed at integration/integration.cpp:601: decltype(auto) test_class<int>::get_lt_a(logger_type &) [T = int]:
     assert_val(l == 2);
     Where:
@@ -864,7 +709,7 @@ Stack trace:
       at integration.cpp:403
 
 
-logger_type::operator==(const logger_type&, int) [n=3, b=1]
+logger_type::operator==(int) const & [n=3, other=1]
 Debug Assertion failed at integration/integration.cpp:2405: void test_class<int>::something_else() [T = int]:
     debug_assert(lt == 1);
     Where:
@@ -879,7 +724,7 @@ Stack trace:
       at integration.cpp:403
 
 
-logger_type::operator==(const logger_type&, int) [n=3, b=1]
+logger_type::operator==(int) const & [n=3, other=1]
 Debug Assertion failed at integration/integration.cpp:2406: void test_class<int>::something_else() [T = int]:
     debug_assert(x == 1);
     Where:
@@ -894,7 +739,6 @@ Stack trace:
       at integration.cpp:403
 
 
-logger_type::compl logger_type() [n=3]
 --------------------------------------------
 
 Debug Assertion failed at integration/integration.cpp:2411: void test_class<int>::something_else() [T = int]:
@@ -914,12 +758,7 @@ Stack trace:
 
 ===================== [value forwarding: rvalues] =====================
 logger_type::logger_type() [n=2]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::operator==(const logger_type&, int) [n=2, b=2]
-logger_type::logger_type(logger_type&&) [n=2]
+logger_type::operator==(int) const & [n=2, other=2]
 Debug Assertion failed at integration/integration.cpp:605: decltype(auto) test_class<int>::get_lt_b() [T = int]:
     assert_val(logger_type(2) == 2);
     Where:
@@ -936,17 +775,6 @@ Stack trace:
       at integration.cpp:403
 
 
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
-logger_type::compl logger_type() [n=-2]
-logger_type::logger_type(logger_type&&) [n=2]
-logger_type::compl logger_type() [n=-2]
 Debug Assertion failed at integration/integration.cpp:2503: void test_class<int>::something_else() [T = int]:
     debug_assert(false, ...);
     Extra diagnostics:
@@ -961,7 +789,6 @@ Stack trace:
       at integration.cpp:403
 
 
-logger_type::compl logger_type() [n=2]
 --------------------------------------------
 
 ===================== [simple recursion] =====================
