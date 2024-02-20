@@ -1008,15 +1008,10 @@ namespace libassert {
 // || Library core                                                                                                    ||
 // =====================================================================================================================
 
-/*
- * Internal mechanisms
- *
- * Macros exposed: LIBASSERT_PRIMITIVE_ASSERT
- */
 
 namespace libassert::detail {
     /*
-     * C++ syntax analysis logic
+     * C++ syntax analysis and literal formatting
      */
 
     // get current literal_format configuration for the thread
@@ -1692,7 +1687,7 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
 #define ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSERT_VAL", verification, , __VA_ARGS__)
 
 #ifdef LIBASSERT_LOWERCASE
- #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "assert_VAL", assertion, , __VA_ARGS__)
+ #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "assert_val", assertion, , __VA_ARGS__)
 #endif
 
 #endif

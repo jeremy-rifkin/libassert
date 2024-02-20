@@ -781,7 +781,7 @@ logger_type::operator==(const logger_type&) [n=1, other=2]
 logger_type::logger_type(logger_type&&) [n=1]
 logger_type::logger_type(logger_type&&) [n=2]
 Assertion failed at integration/integration.cpp:2316: void test_class<int>::something_else() [T = int]:
-    assert(logger_type(1) == logger_type(2));
+    assert_val(logger_type(1) == logger_type(2));
     Where:
         logger_type(1) => logger_type [n = 1]
         logger_type(2) => logger_type [n = 2]
@@ -845,7 +845,7 @@ logger_type::compl logger_type() [n=1]
 logger_type::logger_type() [n=2]
 logger_type::operator==(const logger_type&, int) [n=2, b=2]
 Assertion failed at integration/integration.cpp:601: decltype(auto) test_class<int>::get_lt_a(logger_type &) [T = int]:
-    assert(l == 2);
+    assert_val(l == 2);
     Where:
         l => logger_type [n = 2]
 
@@ -917,7 +917,7 @@ logger_type::compl logger_type() [n=-2]
 logger_type::operator==(const logger_type&, int) [n=2, b=2]
 logger_type::logger_type(logger_type&&) [n=2]
 Assertion failed at integration/integration.cpp:605: decltype(auto) test_class<int>::get_lt_b() [T = int]:
-    assert(logger_type(2) == 2);
+    assert_val(logger_type(2) == 2);
     Where:
         logger_type(2) => logger_type [n = 2]
 
