@@ -1363,11 +1363,6 @@ namespace libassert::detail {
  #pragma warning(pop)
 #endif
 
-inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
-    // This non-constexpr method is called from an assertion in a constexpr context if a failure occurs. It is
-    // intentionally a no-op.
-}
-
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || (defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL == 0)
  // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
  #define LIBASSERT_EVAL0(...) __VA_ARGS__
@@ -1445,9 +1440,6 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
 #define LIBASSERT_IF_false(t,f,...) f
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
- // Extra set of parentheses here because clang treats __extension__ as a low-precedence unary operator which interferes
- // with decltype(auto) in an expression like decltype(auto) x = __extension__ ({...}).y;
- #define LIBASSERT_STMTEXPR(B, R) (__extension__ ({ B R }))
  #if LIBASSERT_IS_GCC
   #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
@@ -1467,21 +1459,13 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
   #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG _Pragma("GCC diagnostic push")
   #define LIBASSERT_WARNING_PRAGMA_POP_CLANG _Pragma("GCC diagnostic pop")
  #endif
- #define LIBASSERT_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
 #else
- #define LIBASSERT_STMTEXPR(B, R) [&](const char* libassert_msvc_pfunc) { B return R }(LIBASSERT_PFUNC)
  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
- #define LIBASSERT_STATIC_CAST_TO_BOOL(x) libassert::detail::static_cast_to_bool(x)
- namespace libassert::detail {
-     template<typename T> constexpr bool static_cast_to_bool(T&& t) {
-         return static_cast<bool>(t);
-     }
- }
 #endif
 
 #if LIBASSERT_IS_GCC
@@ -1491,6 +1475,13 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
  // clang properly eats the comma with ##__VA_ARGS__
  #define LIBASSERT_VA_ARGS(...) , ##__VA_ARGS__
 #endif
+
+namespace libassert {
+    inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
+        // This non-constexpr method is called from an assertion in a constexpr context if a failure occurs. It is
+        // intentionally a no-op.
+    }
+}
 
 // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
 // name, not signature
@@ -1538,19 +1529,7 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
 #else
  #define LIBASSERT_IGNORE_UNUSED_VALUE
 #endif
-// Workaround for gcc bug 105734 / libassert bug #24
-#define LIBASSERT_DESTROY_DECOMPOSER libassert_decomposer.compl expression_decomposer() /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */
-#if LIBASSERT_IS_GCC
- #if __GNUC__ == 12 && __GNUC_MINOR__ == 1
-  namespace libassert::detail {
-      template<typename T> constexpr void destroy(T& t) {
-          t.compl T();
-      }
-  }
-  #undef LIBASSERT_DESTROY_DECOMPOSER
-  #define LIBASSERT_DESTROY_DECOMPOSER libassert::detail::destroy(libassert_decomposer)
- #endif
-#endif
+
 #define LIBASSERT_INVOKE(expr, name, type, failaction, ...) \
     /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
     /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
@@ -1565,7 +1544,7 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
         ); \
         LIBASSERT_WARNING_PRAGMA_POP_GCC \
         if(LIBASSERT_STRONG_EXPECT(!static_cast<bool>(libassert_decomposer.get_value()), 0)) { \
-            ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
+            libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
             failaction \
             LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
             if constexpr(sizeof libassert_decomposer > 32) { \
@@ -1586,6 +1565,34 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
         LIBASSERT_WARNING_PRAGMA_POP_CLANG \
     } while(false) \
 
+// Workaround for gcc bug 105734 / libassert bug #24
+#define LIBASSERT_DESTROY_DECOMPOSER libassert_decomposer.compl expression_decomposer() /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */
+#if LIBASSERT_IS_GCC
+ #if __GNUC__ == 12 && __GNUC_MINOR__ == 1
+  namespace libassert::detail {
+      template<typename T> constexpr void destroy(T& t) {
+          t.compl T();
+      }
+  }
+  #undef LIBASSERT_DESTROY_DECOMPOSER
+  #define LIBASSERT_DESTROY_DECOMPOSER libassert::detail::destroy(libassert_decomposer)
+ #endif
+#endif
+#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
+ // Extra set of parentheses here because clang treats __extension__ as a low-precedence unary operator which interferes
+ // with decltype(auto) in an expression like decltype(auto) x = __extension__ ({...}).y;
+ #define LIBASSERT_STMTEXPR(B, R) (__extension__ ({ B R }))
+ #define LIBASSERT_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
+#else
+ #define LIBASSERT_STMTEXPR(B, R) [&](const char* libassert_msvc_pfunc) { B return R }(LIBASSERT_PFUNC)
+ // Workaround for msvc bug
+ #define LIBASSERT_STATIC_CAST_TO_BOOL(x) libassert::detail::static_cast_to_bool(x)
+ namespace libassert::detail {
+     template<typename T> constexpr bool static_cast_to_bool(T&& t) {
+         return static_cast<bool>(t);
+     }
+ }
+#endif
 #define LIBASSERT_INVOKE_VAL(expr, doreturn, check_expression, name, type, failaction, ...) \
     /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
     /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
@@ -1606,7 +1613,7 @@ inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
             /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
             /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
             if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
-                ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
+                libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
                 failaction \
                 LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
                 if constexpr(sizeof libassert_decomposer > 32) { \
