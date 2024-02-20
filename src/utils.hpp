@@ -85,6 +85,30 @@ namespace libassert::detail {
         }
     }
 
+    /*
+     * Other
+     */
+
+    // Container utility
+    template<typename N> class small_static_map {
+        // TODO: Re-evaluate
+        const N& needle;
+    public:
+        explicit small_static_map(const N& n) : needle(n) {}
+        template<typename K, typename V, typename... Rest>
+        constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
+            if(needle == option) { return result; }
+            if constexpr(sizeof...(Rest) > 0) { return lookup(rest...); }
+            else { LIBASSERT_PRIMITIVE_ASSERT(false); LIBASSERT_UNREACHABLE; }
+        }
+        constexpr bool is_in() { return false; }
+        template<typename T, typename... Rest>
+        constexpr bool is_in(const T& option, const Rest&... rest) {
+            if(needle == option) { return true; }
+            return is_in(rest...);
+        }
+    };
+
     template<typename T, typename std::enable_if<std::is_unsigned<T>::value, int>::type = 0>
     constexpr T popcount(T value) {
         T pop = 0;
