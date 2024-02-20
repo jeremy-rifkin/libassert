@@ -88,6 +88,13 @@ int main() {
     static_assert(stringification::stringifiable<std::vector<std::vector<int>>>);
     ASSERT(generate_stringification(svec3) == R"(std::vector<std::vector<int>>: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])");
 
+    // some literal format stuff
+    ASSERT(generate_stringification(100) == "100");
+    libassert::set_fixed_literal_format(libassert::literal_format::integer_hex | libassert::literal_format::integer_octal);
+    libassert::detail::set_literal_format("", "", "", false);
+    ASSERT(generate_stringification(100) == "100 0x64 0144");
+    libassert::set_literal_format_mode(libassert::literal_format_mode::infer);
+
     // error codes
     // customization point objects
     // libfmt

@@ -924,7 +924,7 @@ namespace libassert {
     // [[nodiscard]] std::string stringify(const T& t) {
     //     return detail::generate_stringification(t);
     // }
-    using detail::generate_stringification;
+    using detail::generate_stringification; // TODO
 
     // configures whether the default assertion handler prints in color or not to tty devices (default true)
     LIBASSERT_EXPORT void set_color_output(bool);
@@ -950,6 +950,38 @@ namespace libassert {
     LIBASSERT_EXPORT extern color_scheme blank;
 
     LIBASSERT_EXPORT void set_color_scheme(color_scheme);
+
+    enum class literal_format : unsigned {
+        // integers and floats are decimal by default, chars are of course chars, and everything else only has one
+        // format that makes sense
+        default_format = 0,
+        integer_hex = 1,
+        integer_octal = 2,
+        integer_binary = 4,
+        integer_character = 8, // format integers as characters and characters as integers
+        float_hex = 16,
+    };
+
+    [[nodiscard]] constexpr literal_format operator|(literal_format a, literal_format b) {
+        return static_cast<literal_format>(
+            static_cast<std::underlying_type<literal_format>::type>(a) |
+            static_cast<std::underlying_type<literal_format>::type>(b)
+        );
+    }
+
+    enum class literal_format_mode {
+        infer, // infer literal formats based on the assertion condition
+        no_variations, // don't do any literal format variations, just default
+        fixed_variations // use a fixed set of formats always; note the default format will always be used
+    };
+
+    // NOTE: Should not be called during handling of an assertion in the current thread
+    LIBASSERT_EXPORT void set_literal_format_mode(literal_format_mode);
+
+    // NOTE: Should not be called during handling of an assertion in the current thread
+    // set a fixed literal format configuration, automatically changes the literal_format_mode; note that the default
+    // format will always be used along with others
+    LIBASSERT_EXPORT void set_fixed_literal_format(literal_format);
 
     // enum class path_mode {
     //     // full path is used
@@ -987,17 +1019,6 @@ namespace libassert::detail {
     /*
      * C++ syntax analysis logic
      */
-
-    enum class literal_format : unsigned {
-        // integers and floats are decimal by default, chars are of course chars, and everything else only has one
-        // format that makes sense
-        default_format = 0,
-        integer_hex = 1,
-        integer_octal = 2,
-        integer_binary = 4,
-        integer_character = 8, // format integers as characters and characters as integers
-        float_hex = 16,
-    };
 
     // get current literal_format configuration for the thread
     [[nodiscard]] LIBASSERT_EXPORT literal_format get_thread_current_literal_format();

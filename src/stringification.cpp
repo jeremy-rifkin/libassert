@@ -1,6 +1,7 @@
 #include <bitset>
 #include <iomanip>
 #include <limits>
+#include <mutex>
 #include <sstream>
 #include <string>
 
@@ -14,19 +15,36 @@ namespace libassert::detail {
      * literal format management
      */
 
-    [[nodiscard]] constexpr literal_format operator|(literal_format a, literal_format b) {
-        return static_cast<literal_format>(
-            static_cast<std::underlying_type<literal_format>::type>(a) |
-            static_cast<std::underlying_type<literal_format>::type>(b)
-        );
-    }
-
     [[nodiscard]] constexpr std::underlying_type<literal_format>::type operator&(literal_format a, literal_format b) {
         return static_cast<std::underlying_type<literal_format>::type>(a) &
                static_cast<std::underlying_type<literal_format>::type>(b);
     }
 
+    std::mutex literal_format_config_mutex;
+    literal_format_mode current_literal_format_mode;
+    literal_format current_fixed_literal_format;
+
     thread_local literal_format thread_current_literal_format = literal_format::default_format;
+}
+
+namespace libassert {
+    LIBASSERT_EXPORT void set_literal_format_mode(literal_format_mode mode) {
+        std::unique_lock lock(detail::literal_format_config_mutex);
+        detail::current_literal_format_mode = mode;
+    }
+
+    LIBASSERT_EXPORT void set_fixed_literal_format(literal_format format) {
+        std::unique_lock lock(detail::literal_format_config_mutex);
+        detail::current_fixed_literal_format = format;
+        detail::current_literal_format_mode = literal_format_mode::fixed_variations;
+    }
+}
+
+namespace libassert::detail {
+    std::pair<literal_format_mode, literal_format> get_literal_format_config() {
+        std::unique_lock lock(literal_format_config_mutex);
+        return {current_literal_format_mode, current_fixed_literal_format};
+    }
 
     // get current literal_format configuration for the thread
     [[nodiscard]] LIBASSERT_EXPORT literal_format get_thread_current_literal_format() {
@@ -45,16 +63,25 @@ namespace libassert::detail {
         bool integer_character
     ) {
         auto previous = get_thread_current_literal_format();
-        auto lformat = get_literal_format(a_str);
-        auto rformat = get_literal_format(b_str);
-        auto format = lformat | rformat;
-        if(integer_character) { // if one is a character and the other is not
-            format = format | literal_format::integer_character;
+        auto [mode, fixed_format] = get_literal_format_config();
+        if(mode == literal_format_mode::infer) {
+            auto lformat = get_literal_format(a_str);
+            auto rformat = get_literal_format(b_str);
+            auto format = lformat | rformat;
+            if(integer_character) { // if one is a character and the other is not
+                format = format | literal_format::integer_character;
+            }
+            if(is_bitwise(op)) {
+                format = format | literal_format::integer_binary;
+            }
+            set_thread_current_literal_format(format);
+        } else if(mode == literal_format_mode::no_variations) {
+            set_thread_current_literal_format(literal_format::default_format);
+        } else if(mode == literal_format_mode::fixed_variations) {
+            set_thread_current_literal_format(fixed_format);
+        } else {
+            LIBASSERT_PRIMITIVE_ASSERT(false);
         }
-        if(is_bitwise(op)) {
-            format = format | literal_format::integer_binary;
-        }
-        set_thread_current_literal_format(format);
         return previous;
     }
 
