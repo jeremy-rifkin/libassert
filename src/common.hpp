@@ -23,4 +23,11 @@
 #define BASIC_CYAN   ESC "36m"
 #define BASIC_PURPL  ESC "35m"
 
+#define IS_WINDOWS 0
+
+#if defined(_WIN32)
+ #undef IS_WINDOWS
+ #define IS_WINDOWS 1
+#endif
+
 #endif

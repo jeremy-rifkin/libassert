@@ -33,29 +33,6 @@
 #include "utils.hpp"
 #include "analysis.hpp"
 
-#define IS_WINDOWS 0
-
-#if defined(_WIN32)
- #undef IS_WINDOWS
- #define IS_WINDOWS 1
- #ifndef STDIN_FILENO
-  #define STDIN_FILENO _fileno(stdin)
-  #define STDOUT_FILENO _fileno(stdout)
-  #define STDERR_FILENO _fileno(stderr)
- #endif
- #include <windows.h>
- #include <io.h>
- #undef min // fucking windows headers, man
- #undef max
-#elif defined(__linux) || defined(__APPLE__) || defined(__unix__)
- #include <sys/ioctl.h>
- #include <unistd.h>
- // NOLINTNEXTLINE(misc-include-cleaner)
- #include <climits> // MAX_PATH
-#else
- #error "no"
-#endif
-
 #if LIBASSERT_IS_MSVC
  // wchar -> char string warning
  #pragma warning(disable : 4244)
@@ -64,68 +41,7 @@
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
-namespace libassert {
-    // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-    LIBASSERT_ATTR_COLD int terminal_width(int fd) {
-        if(fd < 0) {
-            return 0;
-        }
-        #if IS_WINDOWS
-         DWORD windows_handle = small_static_map(fd).lookup(
-             STDIN_FILENO, STD_INPUT_HANDLE,
-             STDOUT_FILENO, STD_OUTPUT_HANDLE,
-             STDERR_FILENO, STD_ERROR_HANDLE
-         );
-         CONSOLE_SCREEN_BUFFER_INFO csbi;
-         HANDLE h = GetStdHandle(windows_handle);
-         if(h == INVALID_HANDLE_VALUE) { return 0; }
-         if(!GetConsoleScreenBufferInfo(h, &csbi)) { return 0; }
-         return csbi.srWindow.Right - csbi.srWindow.Left + 1;
-        #else
-         struct winsize w;
-         // NOLINTNEXTLINE(misc-include-cleaner)
-         if(ioctl(fd, TIOCGWINSZ, &w) == -1) { return 0; }
-         return w.ws_col;
-        #endif
-    }
-}
-
 namespace libassert::detail {
-
-    /*
-     * system wrappers
-     */
-
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed() {
-        // enable colors / ansi processing if necessary
-        #if IS_WINDOWS
-         // https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing
-         #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
-          constexpr DWORD ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4;
-         #endif
-         HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-         DWORD dwMode = 0;
-         if(hOut == INVALID_HANDLE_VALUE) return;
-         if(!GetConsoleMode(hOut, &dwMode)) return;
-         if(dwMode != (dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-         if(!SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) return;
-        #endif
-    }
-
-    LIBASSERT_ATTR_COLD static bool isatty(int fd) {
-        #if IS_WINDOWS
-         return _isatty(fd);
-        #else
-         return ::isatty(fd);
-        #endif
-    }
-
-    // NOTE: Not thread-safe. Must be called in a thread-safe manner.
-    LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {
-        // NOLINTNEXTLINE(concurrency-mt-unsafe)
-        return strerror(e);
-    }
-
     LIBASSERT_ATTR_COLD
     opaque_trace::~opaque_trace() {
         delete static_cast<cpptrace::raw_trace*>(trace);
