@@ -1,7 +1,3 @@
-#ifndef _CRT_SECURE_NO_WARNINGS
-// NOLINTNEXTLINE(bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp)
-#define _CRT_SECURE_NO_WARNINGS // done only for strerror
-#endif
 #include <assert/assert.hpp>
 
 // Copyright (c) 2021-2024 Jeremy Rifkin under the MIT license
@@ -32,6 +28,7 @@
 #include "common.hpp"
 #include "utils.hpp"
 #include "analysis.hpp"
+#include "platform.hpp"
 
 #if LIBASSERT_IS_MSVC
  // wchar -> char string warning

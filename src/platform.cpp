@@ -1,16 +1,14 @@
-#include <string>
+#include "platform.hpp"
+
 #include <cerrno>
 #include <cstdio>
+#include <mutex>
+#include <string>
 
 #include "common.hpp"
 #include "utils.hpp"
 
 #if IS_WINDOWS
- #ifndef STDIN_FILENO
-  #define STDIN_FILENO _fileno(stdin)
-  #define STDOUT_FILENO _fileno(stdout)
-  #define STDERR_FILENO _fileno(stderr)
- #endif
  #include <windows.h>
  #include <io.h>
  #undef min // fucking windows headers, man
@@ -52,7 +50,9 @@ namespace libassert {
          return w.ws_col;
         #endif
     }
+}
 
+namespace libassert::detail {
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed() {
         // enable colors / ansi processing if necessary
         #if IS_WINDOWS
@@ -69,7 +69,7 @@ namespace libassert {
         #endif
     }
 
-    LIBASSERT_ATTR_COLD static bool isatty(int fd) {
+    LIBASSERT_ATTR_COLD bool isatty(int fd) {
         #if IS_WINDOWS
          return _isatty(fd);
         #else
@@ -77,7 +77,10 @@ namespace libassert {
         #endif
     }
 
+    std::mutex strerror_mutex;
+
     LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {
+        std::unique_lock lock(strerror_mutex);
         // NOLINTNEXTLINE(concurrency-mt-unsafe)
         return strerror(e);
     }
