@@ -2,6 +2,7 @@
 
 #include <cerrno>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 #include <string>
 
