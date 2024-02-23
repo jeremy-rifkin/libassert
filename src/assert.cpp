@@ -29,6 +29,8 @@
 #include "utils.hpp"
 #include "analysis.hpp"
 #include "platform.hpp"
+#include "paths.hpp"
+#include "printing.hpp"
 
 #if LIBASSERT_IS_MSVC
  // wchar -> char string warning
@@ -53,196 +55,6 @@ namespace libassert::detail {
      * stack trace printing
      */
 
-    struct column_t {
-        size_t width;
-        std::vector<highlight_block> blocks;
-        bool right_align = false;
-        LIBASSERT_ATTR_COLD column_t(size_t _width, std::vector<highlight_block> _blocks, bool _right_align = false)
-                                               : width(_width), blocks(std::move(_blocks)), right_align(_right_align) {}
-        LIBASSERT_ATTR_COLD column_t(const column_t&) = default;
-        LIBASSERT_ATTR_COLD column_t(column_t&&) = default;
-        LIBASSERT_ATTR_COLD ~column_t() = default;
-        LIBASSERT_ATTR_COLD column_t& operator=(const column_t&) = default;
-        LIBASSERT_ATTR_COLD column_t& operator=(column_t&&) = default;
-    };
-
-    using path_components = std::vector<std::string>;
-
-    LIBASSERT_ATTR_COLD
-    static path_components parse_path(const std::string_view path) {
-        #if IS_WINDOWS
-         constexpr std::string_view path_delim = "/\\";
-        #else
-         constexpr std::string_view path_delim = "/";
-        #endif
-        // Some cases to consider
-        // projects/libassert/demo.cpp               projects   libassert  demo.cpp
-        // /glibc-2.27/csu/../csu/libc-start.c  /  glibc-2.27 csu      libc-start.c
-        // ./demo.exe                           .  demo.exe
-        // ./../demo.exe                        .. demo.exe
-        // ../x.hpp                             .. x.hpp
-        // /foo/./x                                foo        x
-        // /foo//x                                 f          x
-        path_components parts;
-        for(const std::string& part : split(path, path_delim)) {
-            if(parts.empty()) {
-                // first gets added no matter what
-                parts.push_back(part);
-            } else {
-                if(part.empty()) {
-                    // nop
-                } else if(part == ".") {
-                    // nop
-                } else if(part == "..") {
-                    // cases where we have unresolvable ..'s, e.g. ./../../demo.exe
-                    if(parts.back() == "." || parts.back() == "..") {
-                        parts.push_back(part);
-                    } else {
-                        parts.pop_back();
-                    }
-                } else {
-                    parts.push_back(part);
-                }
-            }
-        }
-        LIBASSERT_PRIMITIVE_ASSERT(!parts.empty());
-        LIBASSERT_PRIMITIVE_ASSERT(parts.back() != "." && parts.back() != "..");
-        return parts;
-    }
-
-    class path_trie {
-        // Backwards path trie structure
-        // e.g.:
-        // a/b/c/d/e     disambiguate to -> c/d/e
-        // a/b/f/d/e     disambiguate to -> f/d/e
-        //  2   2   1   1   1
-        // e - d - c - b - a
-        //      \   1   1   1
-        //       \ f - b - a
-        // Nodes are marked with the number of downstream branches
-        size_t downstream_branches = 1;
-        std::string root;
-        std::unordered_map<std::string, std::unique_ptr<path_trie>> edges;
-    public:
-        LIBASSERT_ATTR_COLD
-        explicit path_trie(std::string _root) : root(std::move(_root)) {};
-        LIBASSERT_ATTR_COLD
-        void insert(const path_components& path) {
-            LIBASSERT_PRIMITIVE_ASSERT(path.back() == root);
-            insert(path, (int)path.size() - 2);
-        }
-        LIBASSERT_ATTR_COLD
-        path_components disambiguate(const path_components& path) {
-            path_components result;
-            path_trie* current = this;
-            LIBASSERT_PRIMITIVE_ASSERT(path.back() == root);
-            result.push_back(current->root);
-            for(size_t i = path.size() - 2; i >= 1; i--) {
-                LIBASSERT_PRIMITIVE_ASSERT(current->downstream_branches >= 1);
-                if(current->downstream_branches == 1) {
-                    break;
-                }
-                const std::string& component = path[i];
-                LIBASSERT_PRIMITIVE_ASSERT(current->edges.count(component));
-                current = current->edges.at(component).get();
-                result.push_back(current->root);
-            }
-            std::reverse(result.begin(), result.end());
-            return result;
-        }
-    private:
-        LIBASSERT_ATTR_COLD
-        void insert(const path_components& path, int i) {
-            if(i < 0) {
-                return;
-            }
-            if(!edges.count(path[i])) {
-                if(!edges.empty()) {
-                    downstream_branches++; // this is to deal with making leaves have count 1
-                }
-                edges.insert({path[i], std::make_unique<path_trie>(path[i])});
-            }
-            downstream_branches -= edges.at(path[i])->downstream_branches;
-            edges.at(path[i])->insert(path, i - 1);
-            downstream_branches += edges.at(path[i])->downstream_branches;
-        }
-    };
-
-    LIBASSERT_ATTR_COLD
-    // TODO
-    // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    static std::string wrapped_print(const std::vector<column_t>& columns, color_scheme scheme) {
-        // 2d array rows/columns
-        struct line_content {
-            size_t length;
-            std::string content;
-        };
-        std::vector<std::vector<line_content>> lines;
-        lines.emplace_back(columns.size());
-        // populate one column at a time
-        for(size_t i = 0; i < columns.size(); i++) {
-            auto [width, blocks, _] = columns[i];
-            size_t current_line = 0;
-            for(auto& block : blocks) {
-                size_t block_i = 0;
-                // digest block
-                while(block_i != block.content.size()) {
-                    if(lines.size() == current_line) {
-                        lines.emplace_back(columns.size());
-                    }
-                    // number of characters we can extract from the block
-                    size_t extract = std::min(width - lines[current_line][i].length, block.content.size() - block_i);
-                    LIBASSERT_PRIMITIVE_ASSERT(block_i + extract <= block.content.size());
-                    auto substr = std::string_view(block.content).substr(block_i, extract);
-                    // handle newlines
-                    if(auto x = substr.find('\n'); x != std::string_view::npos) {
-                        substr = substr.substr(0, x);
-                        extract = x + 1; // extract newline but don't print
-                    }
-                    // append
-                    lines[current_line][i].content += block.color;
-                    lines[current_line][i].content += substr;
-                    lines[current_line][i].content += block.color.empty() ? "" : scheme.reset;
-                    // advance
-                    block_i += extract;
-                    lines[current_line][i].length += extract;
-                    // new line if necessary
-                    // substr.size() != extract iff newline
-                    if(lines[current_line][i].length >= width || substr.size() != extract) {
-                        current_line++;
-                    }
-                }
-            }
-        }
-        // print
-        std::string output;
-        for(auto& line : lines) {
-            // don't print empty columns with no content in subsequent columns and more importantly
-            // don't print empty spaces they'll mess up lines after terminal resizing even more
-            size_t last_col = 0;
-            for(size_t i = 0; i < line.size(); i++) {
-                if(!line[i].content.empty()) {
-                    last_col = i;
-                }
-            }
-            for(size_t i = 0; i <= last_col; i++) {
-                auto& content = line[i];
-                if(columns[i].right_align) {
-                    output += stringf("%-*s%s%s",
-                                      i == last_col ? 0 : int(columns[i].width - content.length), "",
-                                      content.content.c_str(),
-                                      i == last_col ? "\n" : " ");
-                } else {
-                    output += stringf("%s%-*s%s",
-                                      content.content.c_str(),
-                                      i == last_col ? 0 : int(columns[i].width - content.length), "",
-                                      i == last_col ? "\n" : " ");
-                }
-            }
-        }
-        return output;
-    }
-
     LIBASSERT_ATTR_COLD
     auto get_trace_window(const cpptrace::stacktrace& trace) {
         // Two boundaries: assert_detail and main
@@ -261,37 +73,6 @@ namespace libassert::detail {
         return std::pair(start, end);
     }
 
-    LIBASSERT_ATTR_COLD
-    auto process_paths(const cpptrace::stacktrace& trace, size_t start, size_t end) {
-        // raw full path -> components
-        std::unordered_map<std::string, path_components> parsed_paths;
-        // base file name -> path trie
-        std::unordered_map<std::string, path_trie> tries;
-        for(size_t i = start; i <= end; i++) {
-            const auto& source_path = trace.frames[i].filename;
-            if(!parsed_paths.count(source_path)) {
-                auto parsed_path = parse_path(source_path);
-                auto& file_name = parsed_path.back();
-                parsed_paths.insert({source_path, parsed_path});
-                if(tries.count(file_name) == 0) {
-                    tries.insert({file_name, path_trie(file_name)});
-                }
-                tries.at(file_name).insert(parsed_path);
-            }
-        }
-        // raw full path -> minified path
-        std::unordered_map<std::string, std::string> files;
-        size_t longest_file_width = 0;
-        for(auto& [raw, parsed_path] : parsed_paths) {
-            const std::string new_path = join(tries.at(parsed_path.back()).disambiguate(parsed_path), "/");
-            internal_verify(files.insert({raw, new_path}).second);
-            if(new_path.size() > longest_file_width) {
-                longest_file_width = new_path.size();
-            }
-        }
-        return std::pair(files, std::min(longest_file_width, size_t(50)));
-    }
-
     LIBASSERT_ATTR_COLD [[nodiscard]]
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -307,7 +88,11 @@ namespace libassert::detail {
             }
             // path preprocessing
             constexpr size_t max_file_length = 50;
-            auto [files, longest_file_width] = process_paths(trace, start, end);
+            std::vector<std::string> paths;
+            for(std::size_t i = start; i <= end; i++) {
+                paths.push_back(trace.frames[i].filename);
+            }
+            auto [files, longest_file_width] = process_paths(paths);
             // figure out column widths
             const auto max_line_number =
                 std::max_element(

@@ -85,6 +85,8 @@ target_sources(
   src/formatting_and_type_tools.cpp
   src/stringification.cpp
   src/platform.cpp
+  src/printing.cpp
+  src/paths.cpp
 )
 
 # link dependencies
