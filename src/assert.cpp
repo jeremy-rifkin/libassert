@@ -391,7 +391,7 @@ namespace libassert {
         output_colors = enable;
     }
 
-    LIBASSERT_EXPORT color_scheme ansi_basic {
+    LIBASSERT_EXPORT color_scheme color_scheme::ansi_basic {
         BASIC_GREEN, /* string */
         BASIC_BLUE, /* escape */
         BASIC_PURPL, /* keyword */
@@ -405,7 +405,7 @@ namespace libassert {
         RESET
     };
 
-    LIBASSERT_EXPORT color_scheme ansi_rgb {
+    LIBASSERT_EXPORT color_scheme color_scheme::ansi_rgb {
         RGB_GREEN, /* string */
         RGB_BLUE, /* escape */
         RGB_PURPL, /* keyword */
@@ -419,10 +419,10 @@ namespace libassert {
         RESET
     };
 
-    LIBASSERT_EXPORT color_scheme blank_color_scheme;
+    LIBASSERT_EXPORT color_scheme color_scheme::blank;
 
     std::mutex color_scheme_mutex;
-    color_scheme current_color_scheme = ansi_rgb;
+    color_scheme current_color_scheme = color_scheme::ansi_rgb;
 
     LIBASSERT_EXPORT void set_color_scheme(color_scheme scheme) {
         std::unique_lock lock(color_scheme_mutex);
@@ -438,13 +438,13 @@ namespace libassert {
         LIBASSERT_ATTR_COLD
         void libassert_default_failure_handler(
             assert_type type,
-            const assertion_printer& printer
+            const assertion_info& printer
         ) {
             // TODO: Just throw instead of all of this?
             enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-            std::string message = printer(
+            std::string message = printer.to_string(
                 terminal_width(STDERR_FILENO),
-                isatty(STDERR_FILENO) && output_colors ? get_color_scheme() : blank_color_scheme
+                isatty(STDERR_FILENO) && output_colors ? get_color_scheme() : color_scheme::blank
             );
             std::cerr << message << std::endl;
             switch(type) {
@@ -468,12 +468,12 @@ namespace libassert {
     static std::atomic failure_handler = detail::libassert_default_failure_handler;
 
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
-    void set_failure_handler(void (*handler)(assert_type, const assertion_printer&)) {
+    void set_failure_handler(void (*handler)(assert_type, const assertion_info&)) {
         failure_handler = handler;
     }
 
     namespace detail {
-        LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void fail(assert_type type, const assertion_printer& printer) {
+        LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void fail(assert_type type, const assertion_info& printer) {
             failure_handler.load()(type, printer);
         }
     }
@@ -486,7 +486,7 @@ namespace libassert {
         return "VERIFY() call failed";
     }
 
-    LIBASSERT_ATTR_COLD assertion_printer::assertion_printer(
+    LIBASSERT_ATTR_COLD assertion_info::assertion_info(
         const assert_static_parameters* _params,
         const extra_diagnostics& _processed_args,
         binary_diagnostics_descriptor& _binary_diagnostics,
@@ -499,12 +499,12 @@ namespace libassert {
         raw_trace(_raw_trace),
         sizeof_args(_sizeof_args) {}
 
-    LIBASSERT_ATTR_COLD assertion_printer::~assertion_printer() {
+    LIBASSERT_ATTR_COLD assertion_info::~assertion_info() {
         auto* trace = static_cast<cpptrace::raw_trace*>(raw_trace);
         delete trace;
     }
 
-    LIBASSERT_ATTR_COLD std::string assertion_printer::operator()(int width, color_scheme scheme) const {
+    LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, color_scheme scheme) const {
         const auto& [ name, type, expr_str, location, args_strings ] = *params;
         const auto& [ message, extra_diagnostics, pretty_function ] = processed_args;
         std::string output;
@@ -555,7 +555,7 @@ namespace libassert {
     }
 
     LIBASSERT_ATTR_COLD
-    std::tuple<const char*, int, std::string, const char*> assertion_printer::get_assertion_info() const {
+    std::tuple<const char*, int, std::string, const char*> assertion_info::get_assertion_info() const {
         const auto& location = params->location;
         auto function = prettify_type(processed_args.pretty_function);
         return {location.file, location.line, std::move(function), processed_args.message.c_str()};

@@ -950,13 +950,13 @@ namespace libassert {
         std::string_view identifier;
         std::string_view accent;
         std::string_view reset;
+        LIBASSERT_EXPORT static color_scheme ansi_basic;
+        LIBASSERT_EXPORT static color_scheme ansi_rgb;
+        LIBASSERT_EXPORT static color_scheme blank;
     };
 
-    LIBASSERT_EXPORT extern color_scheme ansi_basic;
-    LIBASSERT_EXPORT extern color_scheme ansi_rgb;
-    LIBASSERT_EXPORT extern color_scheme blank;
-
     LIBASSERT_EXPORT void set_color_scheme(color_scheme);
+    LIBASSERT_EXPORT color_scheme get_color_scheme();
 
     enum class literal_format : unsigned {
         // integers and floats are decimal by default, chars are of course chars, and everything else only has one
@@ -1008,15 +1008,14 @@ namespace libassert {
         panic
     };
 
-    class assertion_printer;
+    class assertion_info;
 
-    LIBASSERT_EXPORT void set_failure_handler(void (*handler)(assert_type, const assertion_printer&));
+    LIBASSERT_EXPORT void set_failure_handler(void (*handler)(assert_type, const assertion_info&));
 }
 
 // =====================================================================================================================
 // || Library core                                                                                                    ||
 // =====================================================================================================================
-
 
 namespace libassert::detail {
     /*
@@ -1226,27 +1225,27 @@ namespace libassert {
         [[nodiscard]] virtual const char* what() const noexcept final override;
     };
 
-    class LIBASSERT_EXPORT assertion_printer {
+    class LIBASSERT_EXPORT assertion_info {
         const detail::assert_static_parameters* params;
         const detail::extra_diagnostics& processed_args;
         detail::binary_diagnostics_descriptor& binary_diagnostics;
         void* raw_trace;
         size_t sizeof_args;
     public:
-        assertion_printer() = delete;
-        assertion_printer(
+        assertion_info() = delete;
+        assertion_info(
             const detail::assert_static_parameters* params,
             const detail::extra_diagnostics& processed_args,
             detail::binary_diagnostics_descriptor& binary_diagnostics,
             void* raw_trace,
             size_t sizeof_args
         );
-        ~assertion_printer();
-        assertion_printer(const assertion_printer&) = delete;
-        assertion_printer(assertion_printer&&) = delete;
-        assertion_printer& operator=(const assertion_printer&) = delete;
-        assertion_printer& operator=(assertion_printer&&) = delete;
-        [[nodiscard]] std::string operator()(int width, color_scheme) const;
+        ~assertion_info();
+        assertion_info(const assertion_info&) = delete;
+        assertion_info(assertion_info&&) = delete;
+        assertion_info& operator=(const assertion_info&) = delete;
+        assertion_info& operator=(assertion_info&&) = delete;
+        [[nodiscard]] std::string to_string(int width = 0, color_scheme scheme = get_color_scheme()) const;
         // filename, line, function, message
         [[nodiscard]] std::tuple<const char*, int, std::string, const char*> get_assertion_info() const;
     };
@@ -1259,7 +1258,7 @@ namespace libassert {
 namespace libassert::detail {
     LIBASSERT_EXPORT size_t count_args_strings(const char* const*);
 
-    LIBASSERT_EXPORT void fail(assert_type type, const assertion_printer& printer);
+    LIBASSERT_EXPORT void fail(assert_type type, const assertion_info& printer);
 
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
@@ -1308,7 +1307,7 @@ namespace libassert::detail {
         // send off
         void* trace = raw_trace.trace;
         raw_trace.trace = nullptr; // TODO: Feels ugly
-        assertion_printer printer {
+        assertion_info printer {
             params,
             processed_args,
             binary_diagnostics,
@@ -1340,7 +1339,7 @@ namespace libassert::detail {
         // send off
         void* trace = raw_trace.trace;
         raw_trace.trace = nullptr; // TODO: Feels ugly
-        assertion_printer printer {
+        assertion_info printer {
             params,
             processed_args,
             binary_diagnostics,
