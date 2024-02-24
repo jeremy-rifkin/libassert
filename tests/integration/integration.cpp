@@ -385,7 +385,7 @@ public:
         }
 
         SECTION("Panics");
-        #line 3600
+        #line 3700
         {
             const std::vector<std::string> vec{"foo", "bar", "baz"};
             PANIC("message", vec);
