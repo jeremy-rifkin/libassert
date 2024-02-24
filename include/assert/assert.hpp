@@ -139,7 +139,7 @@
 // || Core utilities                                                                                                  ||
 // =====================================================================================================================
 
-namespace libassert::detail {
+namespace libassert {
     // Lightweight helper, eventually may use C++20 std::source_location if this library no longer
     // targets C++17. Note: __builtin_FUNCTION only returns the name, so __PRETTY_FUNCTION__ is
     // still needed.
@@ -153,7 +153,9 @@ namespace libassert::detail {
             int _line         = __builtin_LINE()
         ) : file(_file), /*function(_function),*/ line(_line) {}
     };
+}
 
+namespace libassert::detail {
     // bootstrap with primitive implementations
     LIBASSERT_EXPORT void primitive_assert_impl(
         bool condition,
@@ -505,6 +507,7 @@ namespace libassert::detail {
         template<typename T> inline constexpr bool stringifiable = has_basic_stringify<T>::value || stringifiable_container<T>();
 
         template<typename T> constexpr bool stringifiable_container() {
+            // TODO: Guard against std::expected....?
             if constexpr(has_value_type<T>::value) {
                 return stringifiable<typename T::value_type>;
             } else if constexpr(std::is_array_v<typename std::remove_reference_t<T>>) { // C arrays
@@ -1011,6 +1014,81 @@ namespace libassert {
     class assertion_info;
 
     LIBASSERT_EXPORT void set_failure_handler(void (*handler)(assert_type, const assertion_info&));
+
+    struct LIBASSERT_EXPORT verification_failure : std::exception {
+        // I must just this once
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
+        [[nodiscard]] virtual const char* what() const noexcept final override;
+    };
+
+    struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
+        std::string lstring;
+        std::string rstring;
+        std::string a_str;
+        std::string b_str;
+        bool multiple_formats;
+        bool present = false;
+        binary_diagnostics_descriptor(); // = default; in the .cpp
+        binary_diagnostics_descriptor(
+            std::string&& lstrings,
+            std::string&& rstrings,
+            std::string a_str,
+            std::string b_str,
+            bool multiple_formats
+        );
+        ~binary_diagnostics_descriptor(); // = default; in the .cpp
+        binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = delete;
+        binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
+        binary_diagnostics_descriptor& operator=(const binary_diagnostics_descriptor&) = delete;
+        binary_diagnostics_descriptor&
+        operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID); // = default; in the .cpp
+    };
+
+    struct LIBASSERT_EXPORT extra_diagnostics {
+        std::string message;
+        std::vector<std::pair<std::string, std::string>> entries;
+        const char* pretty_function = "<error>";
+        extra_diagnostics();
+        ~extra_diagnostics();
+        extra_diagnostics(const extra_diagnostics&) = delete;
+        extra_diagnostics(extra_diagnostics&&) noexcept; // = default; in the .cpp
+        extra_diagnostics& operator=(const extra_diagnostics&) = delete;
+        extra_diagnostics& operator=(extra_diagnostics&&) = delete;
+    };
+
+    // collection of assertion data that can be put in static storage and all passed by a single pointer
+    struct LIBASSERT_EXPORT assert_static_parameters {
+        const char* name;
+        assert_type type;
+        const char* expr_str;
+        source_location location;
+        const char* const* args_strings;
+    };
+
+    class LIBASSERT_EXPORT assertion_info {
+        const assert_static_parameters* params;
+        const extra_diagnostics& processed_args;
+        binary_diagnostics_descriptor& binary_diagnostics;
+        void* raw_trace;
+        size_t sizeof_args;
+    public:
+        assertion_info() = delete;
+        assertion_info(
+            const assert_static_parameters* params,
+            const extra_diagnostics& processed_args,
+            binary_diagnostics_descriptor& binary_diagnostics,
+            void* raw_trace,
+            size_t sizeof_args
+        );
+        ~assertion_info();
+        assertion_info(const assertion_info&) = delete;
+        assertion_info(assertion_info&&) = delete;
+        assertion_info& operator=(const assertion_info&) = delete;
+        assertion_info& operator=(assertion_info&&) = delete;
+        [[nodiscard]] std::string to_string(int width = 0, color_scheme scheme = get_color_scheme()) const;
+        // filename, line, function, message
+        [[nodiscard]] std::tuple<const char*, int, std::string, const char*> get_assertion_info() const;
+    };
 }
 
 // =====================================================================================================================
@@ -1069,29 +1147,6 @@ namespace libassert::detail {
      * assert diagnostics generation
      */
 
-    struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
-        std::string lstring;
-        std::string rstring;
-        std::string a_str;
-        std::string b_str;
-        bool multiple_formats;
-        bool present = false;
-        binary_diagnostics_descriptor(); // = default; in the .cpp
-        binary_diagnostics_descriptor(
-            std::string&& lstrings,
-            std::string&& rstrings,
-            std::string a_str,
-            std::string b_str,
-            bool multiple_formats
-        );
-        ~binary_diagnostics_descriptor(); // = default; in the .cpp
-        binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = delete;
-        binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
-        binary_diagnostics_descriptor& operator=(const binary_diagnostics_descriptor&) = delete;
-        binary_diagnostics_descriptor&
-        operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID); // = default; in the .cpp
-    };
-
     template<typename A, typename B>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     binary_diagnostics_descriptor generate_binary_diagnostic(
@@ -1125,18 +1180,6 @@ namespace libassert::detail {
     constexpr const std::string_view errno_expansion = LIBASSERT_Y(errno);
     #undef LIBASSERT_Y
     #undef LIBASSERT_X
-
-    struct LIBASSERT_EXPORT extra_diagnostics {
-        std::string message;
-        std::vector<std::pair<std::string, std::string>> entries;
-        const char* pretty_function = "<error>";
-        extra_diagnostics();
-        ~extra_diagnostics();
-        extra_diagnostics(const extra_diagnostics&) = delete;
-        extra_diagnostics(extra_diagnostics&&) noexcept; // = default; in the .cpp
-        extra_diagnostics& operator=(const extra_diagnostics&) = delete;
-        extra_diagnostics& operator=(extra_diagnostics&&) = delete;
-    };
 
     struct pretty_function_name_wrapper {
         const char* pretty_function;
@@ -1199,56 +1242,6 @@ namespace libassert::detail {
         (void)args_strings;
         return entry;
     }
-
-    /*
-     * actual assertion handling, finally
-     */
-
-    // collection of assertion data that can be put in static storage and all passed by a single pointer
-    struct LIBASSERT_EXPORT assert_static_parameters {
-        const char* name;
-        assert_type type;
-        const char* expr_str;
-        source_location location;
-        const char* const* args_strings;
-    };
-}
-
-/*
- * Public constructs
- */
-
-namespace libassert {
-    struct LIBASSERT_EXPORT verification_failure : std::exception {
-        // I must just this once
-        // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
-        [[nodiscard]] virtual const char* what() const noexcept final override;
-    };
-
-    class LIBASSERT_EXPORT assertion_info {
-        const detail::assert_static_parameters* params;
-        const detail::extra_diagnostics& processed_args;
-        detail::binary_diagnostics_descriptor& binary_diagnostics;
-        void* raw_trace;
-        size_t sizeof_args;
-    public:
-        assertion_info() = delete;
-        assertion_info(
-            const detail::assert_static_parameters* params,
-            const detail::extra_diagnostics& processed_args,
-            detail::binary_diagnostics_descriptor& binary_diagnostics,
-            void* raw_trace,
-            size_t sizeof_args
-        );
-        ~assertion_info();
-        assertion_info(const assertion_info&) = delete;
-        assertion_info(assertion_info&&) = delete;
-        assertion_info& operator=(const assertion_info&) = delete;
-        assertion_info& operator=(assertion_info&&) = delete;
-        [[nodiscard]] std::string to_string(int width = 0, color_scheme scheme = get_color_scheme()) const;
-        // filename, line, function, message
-        [[nodiscard]] std::tuple<const char*, int, std::string, const char*> get_assertion_info() const;
-    };
 }
 
 /*
@@ -1531,7 +1524,7 @@ namespace libassert {
     /* LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS because msvc */ \
     /* Trailing return type here to work around a gcc <= 9.2 bug */ \
     /* Oddly only affecting builds under -DNDEBUG https://godbolt.org/z/5Treozc4q */ \
-    using libassert_params_t = libassert::detail::assert_static_parameters; \
+    using libassert_params_t = libassert::assert_static_parameters; \
     /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
     const libassert_params_t* libassert_params = []() -> const libassert_params_t* { \
         static constexpr const char* const libassert_arg_strings[] = { \

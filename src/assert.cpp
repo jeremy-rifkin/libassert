@@ -175,26 +175,6 @@ namespace libassert::detail {
         return stacktrace;
     }
 
-    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
-    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
-        std::string&& _lstring,
-        std::string&& _rstring,
-        std::string _a_str,
-        std::string _b_str,
-        bool _multiple_formats
-    ):
-        lstring(_lstring),
-        rstring(_rstring),
-        a_str(std::move(_a_str)),
-        b_str(std::move(_b_str)),
-        multiple_formats(_multiple_formats),
-        present(true) {}
-    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
-    LIBASSERT_ATTR_COLD
-    binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
-    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor&
-    binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID) = default;
-
     LIBASSERT_ATTR_COLD
     static std::string print_values(const std::vector<std::string>& vec, size_t lw, color_scheme scheme) {
         LIBASSERT_PRIMITIVE_ASSERT(!vec.empty());
@@ -356,10 +336,6 @@ namespace libassert::detail {
         return output;
     }
 
-    LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics() = default;
-    LIBASSERT_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
-    LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) noexcept = default;
-
     LIBASSERT_ATTR_COLD
     const char* assert_type_name(assert_type t) {
         switch(t) {
@@ -477,6 +453,30 @@ namespace libassert {
             failure_handler.load()(type, printer);
         }
     }
+
+    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
+    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
+        std::string&& _lstring,
+        std::string&& _rstring,
+        std::string _a_str,
+        std::string _b_str,
+        bool _multiple_formats
+    ):
+        lstring(_lstring),
+        rstring(_rstring),
+        a_str(std::move(_a_str)),
+        b_str(std::move(_b_str)),
+        multiple_formats(_multiple_formats),
+        present(true) {}
+    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
+    LIBASSERT_ATTR_COLD
+    binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
+    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor&
+    binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID) = default;
+
+    LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics() = default;
+    LIBASSERT_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
+    LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) noexcept = default;
 }
 
 namespace libassert {
