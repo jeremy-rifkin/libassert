@@ -48,7 +48,7 @@ int main() {
     #else
     ASSERT(generate_stringification(map) == R"(std::map<int, int>: [[1, 2], [3, 4]])");
     #endif
-    std::tuple<int, float, std::string, std::array<int, 5>> tuple = {1, 1.25, "good", arr};
+    std::tuple<int, float, std::string, std::array<int, 5>> tuple = {1, 1.25f, "good", arr};
     // ASSERT(generate_stringification(tuple) == R"([1, 1.25, \"good\", [1, 2, 3, 4, 5]])"); // TODO fix
     std::optional<int> opt;
     ASSERT(generate_stringification(opt) == R"(std::optional<int>: nullopt)");
