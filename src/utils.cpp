@@ -48,6 +48,22 @@ namespace libassert::detail {
         }
     }
 
+    [[noreturn]] LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void primitive_panic_impl(
+        const char* signature,
+        source_location location,
+        const char* message
+    ) {
+        std::string out_message = stringf(
+            "PANIC failed at %s:%d: %s: %s\n",
+            location.file,
+            location.line,
+            signature,
+            message
+        );
+        out_message += "    primitive_panic(...);\n";
+        throw cpptrace::runtime_error(std::move(out_message));
+    }
+
     /*
      * string utilities
      */

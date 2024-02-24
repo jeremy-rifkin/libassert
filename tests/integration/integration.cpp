@@ -19,8 +19,11 @@ using namespace std::literals;
 
 void test_path_differentiation();
 
-void custom_fail(libassert::assert_type, const libassert::assertion_printer& printer) {
+void custom_fail(libassert::assert_type type, const libassert::assertion_printer& printer) {
     std::cout<<printer(0, {})<<std::endl<<std::endl;
+    if(type == libassert::assert_type::panic) {
+        throw std::runtime_error("foobar");
+    }
 }
 
 template<typename T>
@@ -388,7 +391,9 @@ public:
         #line 3700
         {
             const std::vector<std::string> vec{"foo", "bar", "baz"};
-            PANIC("message", vec);
+            try {
+                PANIC("message", vec);
+            } catch(...) {}
         }
     }
 

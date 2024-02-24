@@ -164,12 +164,20 @@ namespace libassert::detail {
         const char* message = nullptr
     );
 
+    [[noreturn]] LIBASSERT_EXPORT void primitive_panic_impl (
+        const char* signature,
+        source_location location,
+        const char* message
+    );
+
     #ifndef NDEBUG
      #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) \
         libassert::detail::primitive_assert_impl(c, false, #c, LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
     #else
      #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) LIBASSERT_PHONY_USE(c)
     #endif
+
+    #define LIBASSERT_PRIMITIVE_PANIC(message) libassert::detail::primitive_panic_impl(LIBASSERT_PFUNC, {}, message)
 }
 
 // =====================================================================================================================
@@ -1311,7 +1319,7 @@ namespace libassert::detail {
     }
 
     template<typename... Args>
-    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
+    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE [[noreturn]]
     // TODO: Re-evaluate forwarding here.
     void process_panic(
         const assert_static_parameters* params,
@@ -1340,6 +1348,7 @@ namespace libassert::detail {
             sizeof_extra_diagnostics
         };
         fail(params->type, printer);
+        LIBASSERT_PRIMITIVE_PANIC("Failure handler returned for PANIC");
     }
 
     // TODO: Re-evaluate benefit of this at all in non-cold path code
