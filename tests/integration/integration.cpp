@@ -383,6 +383,13 @@ public:
             const volatile std::vector<std::string>* ptr = nullptr;
             test_complex_typing(ptr, nullptr, "foo", nullptr, nullptr);
         }
+
+        SECTION("Panics");
+        #line 3600
+        {
+            const std::vector<std::string> vec{"foo", "bar", "baz"};
+            PANIC("message", vec);
+        }
     }
 
     #line 600

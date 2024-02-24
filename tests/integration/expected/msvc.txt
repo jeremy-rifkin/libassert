@@ -1097,3 +1097,18 @@ Stack trace:
       at integration.cpp:402
 
 
+===================== [Panics] =====================
+Panic at integration/integration.cpp:3602: void __cdecl test_class<int>::something_else(void): message
+    PANIC(...);
+    Extra diagnostics:
+        vec => std::vector<std::string>: ["foo", "bar", "baz"]
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3602
+# 2 test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1004
+# 3 main()
+      at integration.cpp:402
+
+

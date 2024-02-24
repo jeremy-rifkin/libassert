@@ -1093,3 +1093,18 @@ Stack trace:
       at integration.cpp:402
 
 
+===================== [Panics] =====================
+Panic at integration/integration.cpp:3602: void test_class<T>::something_else() [with T = int]: message
+    PANIC(...);
+    Extra diagnostics:
+        vec => std::vector<std::string>: ["foo", "bar", "baz"]
+
+Stack trace:
+# 1 test_class<int>::something_else()
+      at integration.cpp:3602
+# 2 void test_class<int>::something<N>(std::pair<N, int>)
+      at integration.cpp:1004
+# 3 main
+      at integration.cpp:402
+
+

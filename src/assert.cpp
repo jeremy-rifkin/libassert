@@ -363,10 +363,11 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     const char* assert_type_name(assert_type t) {
         switch(t) {
-            case assert_type::debug_assertion: return "Debug Assertion";
-            case assert_type::assertion:       return "Assertion";
-            case assert_type::assumption:      return "Assumption";
-            case assert_type::verification:    return "Verification";
+            case assert_type::debug_assertion: return "Debug Assertion failed";
+            case assert_type::assertion:       return "Assertion failed";
+            case assert_type::assumption:      return "Assumption failed";
+            case assert_type::verification:    return "Verification failed";
+            case assert_type::panic:           return "Panic";
             default:
                 LIBASSERT_PRIMITIVE_ASSERT(false);
                 return "";
@@ -511,7 +512,7 @@ namespace libassert {
         const auto function = prettify_type(pretty_function);
         if(!message.empty()) {
             output += stringf(
-                "%s failed at %s:%d: %s: %s\n",
+                "%s at %s:%d: %s: %s\n",
                 assert_type_name(type),
                 location.file,
                 location.line,
@@ -520,7 +521,7 @@ namespace libassert {
             );
         } else {
             output += stringf(
-                "%s failed at %s:%d: %s:\n",
+                "%s at %s:%d: %s:\n",
                 assert_type_name(type),
                 location.file,
                 location.line,
@@ -534,7 +535,7 @@ namespace libassert {
                     "%s(%s%s);",
                     name,
                     expr_str,
-                    sizeof_args > 0 ? ", ..." : ""
+                    sizeof_args > 0 ? (strlen(expr_str) == 0 ? "..." : ", ...") : ""
                 ),
                 scheme
             ).c_str()

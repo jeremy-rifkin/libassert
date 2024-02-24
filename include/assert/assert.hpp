@@ -982,21 +982,22 @@ namespace libassert {
     // format will always be used along with others
     LIBASSERT_EXPORT void set_fixed_literal_format(literal_format);
 
-    // enum class path_mode {
-    //     // full path is used
-    //     full,
-    //     // only enough folders needed to disambiguate are provided
-    //     disambiguated, // TODO: Maybe just a bad idea
-    //     // only the file name is used
-    //     basename,
-    // };
-    // ASSERT_EXPORT void set_path_mode(path_mode mode);
+    enum class path_mode {
+        // full path is used
+        full,
+        // only enough folders needed to disambiguate are provided
+        disambiguated, // TODO: Maybe just a bad idea...?
+        // only the file name is used
+        basename,
+    };
+    LIBASSERT_EXPORT void set_path_mode(path_mode mode);
 
     enum class assert_type {
         debug_assertion,
         assertion,
         assumption,
-        verification
+        verification,
+        panic
     };
 
     class assertion_printer;
@@ -1309,6 +1310,38 @@ namespace libassert::detail {
         fail(params->type, printer);
     }
 
+    template<typename... Args>
+    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
+    // TODO: Re-evaluate forwarding here.
+    void process_panic(
+        const assert_static_parameters* params,
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
+        Args&&... args
+    ) {
+        const auto* args_strings = params->args_strings;
+        const size_t args_strings_count = count_args_strings(args_strings);
+        const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
+        LIBASSERT_PRIMITIVE_ASSERT(
+            (sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
+        );
+        // process_args needs to be called as soon as possible in case errno needs to be read
+        const auto processed_args = process_args(args_strings, args...);
+        opaque_trace raw_trace = get_stacktrace_opaque();
+        // generate header
+        binary_diagnostics_descriptor binary_diagnostics;
+        // send off
+        void* trace = raw_trace.trace;
+        raw_trace.trace = nullptr; // TODO: Feels ugly
+        assertion_printer printer {
+            params,
+            processed_args,
+            binary_diagnostics,
+            trace,
+            sizeof_extra_diagnostics
+        };
+        fail(params->type, printer);
+    }
+
     // TODO: Re-evaluate benefit of this at all in non-cold path code
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE [[nodiscard]]
@@ -1548,14 +1581,14 @@ namespace libassert {
             failaction \
             LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
             if constexpr(sizeof libassert_decomposer > 32) { \
-                process_assert_fail( \
+                libassert::detail::process_assert_fail( \
                     libassert_decomposer, \
                     libassert_params \
                     LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
                 ); \
             } else { \
                 /* std::move it to assert_fail_m, will be moved back to r */ \
-                process_assert_fail_n( \
+                libassert::detail::process_assert_fail_n( \
                     std::move(libassert_decomposer), \
                     libassert_params \
                     LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
@@ -1563,6 +1596,16 @@ namespace libassert {
             } \
         } \
         LIBASSERT_WARNING_PRAGMA_POP_CLANG \
+    } while(false) \
+
+#define LIBASSERT_INVOKE_PANIC(...) \
+    do { \
+        libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
+        LIBASSERT_STATIC_DATA("PANIC", libassert::assert_type::panic, "", __VA_ARGS__) \
+        process_panic( \
+            libassert_params \
+            LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
+        ); \
     } while(false) \
 
 // Workaround for gcc bug 105734 / libassert bug #24
@@ -1617,14 +1660,14 @@ namespace libassert {
                 failaction \
                 LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
                 if constexpr(sizeof libassert_decomposer > 32) { \
-                    process_assert_fail( \
+                    libassert::detail::process_assert_fail( \
                         libassert_decomposer, \
                         libassert_params \
                         LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG \
                     ); \
                 } else { \
                     /* std::move it to assert_fail_m, will be moved back to r */ \
-                    auto libassert_r = process_assert_fail_m( \
+                    auto libassert_r = libassert::detail::process_assert_fail_m( \
                         std::move(libassert_decomposer), \
                         libassert_params \
                         LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG \
@@ -1675,6 +1718,13 @@ namespace libassert {
 
 // Assume
 #define ASSUME(expr, ...) LIBASSERT_INVOKE(expr, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
+
+// Panic
+#ifndef NDEBUG
+ #define PANIC(...) LIBASSERT_INVOKE_PANIC(__VA_ARGS__)
+#else
+ #define PANIC(...) LIBASSERT_UNREACHABLE
+#endif
 
 // value variants
 
