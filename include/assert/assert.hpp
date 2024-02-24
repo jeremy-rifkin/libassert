@@ -1319,7 +1319,7 @@ namespace libassert::detail {
     }
 
     template<typename... Args>
-    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE [[noreturn]]
+    LIBASSERT_ATTR_COLD [[noreturn]] LIBASSERT_ATTR_NOINLINE
     // TODO: Re-evaluate forwarding here.
     void process_panic(
         const assert_static_parameters* params,
