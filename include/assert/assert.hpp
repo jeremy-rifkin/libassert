@@ -681,12 +681,22 @@ namespace libassert::detail {
         #if __cplusplus >= 202002L
          LIBASSERT_GEN_OP_BOILERPLATE(spaceship, <=>);
         #endif
+        #ifdef LIBASSERT_SAFE_COMPARISONS
+        // TODO: Make a SAFE() wrapper...
         LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(eq,   ==, cmp_equal);
         LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(neq,  !=, cmp_not_equal);
         LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(gt,    >, cmp_greater);
         LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(lt,    <, cmp_less);
         LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(gteq, >=, cmp_greater_equal);
         LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(lteq, <=, cmp_less_equal);
+        #else
+        LIBASSERT_GEN_OP_BOILERPLATE(eq,   ==);
+        LIBASSERT_GEN_OP_BOILERPLATE(neq,  !=);
+        LIBASSERT_GEN_OP_BOILERPLATE(gt,    >);
+        LIBASSERT_GEN_OP_BOILERPLATE(lt,    <);
+        LIBASSERT_GEN_OP_BOILERPLATE(gteq, >=);
+        LIBASSERT_GEN_OP_BOILERPLATE(lteq, <=);
+        #endif
         LIBASSERT_GEN_OP_BOILERPLATE(band,   &);
         LIBASSERT_GEN_OP_BOILERPLATE(bxor,   ^);
         LIBASSERT_GEN_OP_BOILERPLATE(bor,    |);
