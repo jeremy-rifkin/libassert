@@ -1037,6 +1037,8 @@ namespace libassert {
         std::string left_expression;
         std::string right_expression;
         bool multiple_formats;
+        // binary diagnostic descriptors might not be present if the expression is not decomposable and the expression
+        // type is boolean
         bool present = false;
         binary_diagnostics_descriptor(); // = default; in the .cpp
         binary_diagnostics_descriptor(
@@ -1054,18 +1056,6 @@ namespace libassert {
         operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID); // = default; in the .cpp
     };
 
-    struct LIBASSERT_EXPORT extra_diagnostics {
-        std::string message;
-        std::vector<std::pair<std::string, std::string>> entries;
-        const char* pretty_function = "<error>";
-        extra_diagnostics();
-        ~extra_diagnostics();
-        extra_diagnostics(const extra_diagnostics&) = delete;
-        extra_diagnostics(extra_diagnostics&&) noexcept; // = default; in the .cpp
-        extra_diagnostics& operator=(const extra_diagnostics&) = delete;
-        extra_diagnostics& operator=(extra_diagnostics&&) = delete;
-    };
-
     // collection of assertion data that can be put in static storage and all passed by a single pointer
     struct LIBASSERT_EXPORT assert_static_parameters {
         const char* name;
@@ -1075,18 +1065,27 @@ namespace libassert {
         const char* const* args_strings;
     };
 
-    class LIBASSERT_EXPORT assertion_info {
-        const assert_static_parameters* params;
-        const extra_diagnostics& processed_args;
-        binary_diagnostics_descriptor& binary_diagnostics;
-        void* raw_trace;
+    struct extra_diagnostic {
+        std::string_view expression;
+        std::string stringification;
+    };
+
+    struct LIBASSERT_EXPORT assertion_info {
+        const assert_static_parameters* static_params; // TODO: Expand...?
+        std::string message;
+        binary_diagnostics_descriptor binary_diagnostics;
+        std::vector<extra_diagnostic> extra_diagnostics;
+        std::string_view pretty_function = "<error>";
+        void* raw_trace; // TODO: Actual cpptrace::stacktrace/raw_trace....?
         size_t sizeof_args;
     public:
         assertion_info() = delete;
         assertion_info(
-            const assert_static_parameters* params,
-            const extra_diagnostics& processed_args,
-            binary_diagnostics_descriptor& binary_diagnostics,
+            const assert_static_parameters* static_params,
+            std::string message,
+            binary_diagnostics_descriptor&& binary_diagnostics,
+            std::vector<extra_diagnostic> extra_diagnostics,
+            std::string_view pretty_function,
             void* raw_trace,
             size_t sizeof_args
         );
@@ -1196,19 +1195,19 @@ namespace libassert::detail {
     };
 
     inline void process_arg(
-        extra_diagnostics& entry,
+        assertion_info& info,
         size_t,
         const char* const* const,
         const pretty_function_name_wrapper& t
     ) {
-        entry.pretty_function = t.pretty_function;
+        info.pretty_function = t.pretty_function;
     }
 
     template<typename T>
     LIBASSERT_ATTR_COLD
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    void process_arg(extra_diagnostics& entry, size_t i, const char* const* const args_strings, const T& t) {
+    void process_arg(assertion_info& info, size_t i, const char* const* const args_strings, const T& t) {
         // three cases to handle: assert message, errno, and regular diagnostics
         #if LIBASSERT_IS_MSVC
          #pragma warning(push)
@@ -1224,33 +1223,31 @@ namespace libassert::detail {
             if constexpr(isa<T, strip<decltype(errno)>>) {
             // errno will expand to something hideous like (*__errno_location()),
             // may as well replace it with "errno"
-            entry.entries.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
+            info.extra_diagnostics.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
             }
         } else {
             if constexpr(is_string_type<T>) {
                 if(i == 0) {
                     if constexpr(std::is_pointer_v<T>) {
                         if(t == nullptr) {
-                            entry.message = "(nullptr)";
+                            info.message = "(nullptr)";
                             return;
                         }
                     }
-                    entry.message = t;
+                    info.message = t;
                     return;
                 }
             }
-            entry.entries.push_back({ args_strings[i], generate_stringification(t) });
+            info.extra_diagnostics.push_back({ args_strings[i], generate_stringification(t) });
         }
     }
 
     template<typename... Args>
-    LIBASSERT_ATTR_COLD [[nodiscard]]
-    extra_diagnostics process_args(const char* const* const args_strings, Args&... args) {
-        extra_diagnostics entry;
+    LIBASSERT_ATTR_COLD
+    void process_args(assertion_info& info, const char* const* const args_strings, Args&... args) {
         size_t i = 0;
-        (process_arg(entry, i++, args_strings, args), ...);
+        (process_arg(info, i++, args_strings, args), ...);
         (void)args_strings;
-        return entry;
     }
 }
 
@@ -1261,7 +1258,7 @@ namespace libassert::detail {
 namespace libassert::detail {
     LIBASSERT_EXPORT size_t count_args_strings(const char* const*);
 
-    LIBASSERT_EXPORT void fail(assert_type type, const assertion_info& printer);
+    LIBASSERT_EXPORT void fail(assert_type type, const assertion_info& info);
 
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
@@ -1279,8 +1276,20 @@ namespace libassert::detail {
             (sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
         );
         // process_args needs to be called as soon as possible in case errno needs to be read
-        const auto processed_args = process_args(args_strings, args...);
+        assertion_info info {
+            params,
+            {}, // message, will be filled in by process_args
+            {}, // binary_diagnostics, will be filled in below by generate_binary_diagnostic
+            {}, // extra diagnostics, will be filled in by process_args
+            {}, // pretty_function, will be filled in by process_args
+            {}, // trace, will be filled in shortly
+            sizeof_extra_diagnostics
+        };
+        process_args(info, args_strings, args...);
         opaque_trace raw_trace = get_stacktrace_opaque();
+        void* trace = raw_trace.trace;
+        info.raw_trace = trace;
+        raw_trace.trace = nullptr; // TODO: Feels ugly
         // generate header
         binary_diagnostics_descriptor binary_diagnostics;
         // generate binary diagnostics
@@ -1307,17 +1316,9 @@ namespace libassert::detail {
                 C::op_string
             );
         }
+        info.binary_diagnostics = std::move(binary_diagnostics);
         // send off
-        void* trace = raw_trace.trace;
-        raw_trace.trace = nullptr; // TODO: Feels ugly
-        assertion_info printer {
-            params,
-            processed_args,
-            binary_diagnostics,
-            trace,
-            sizeof_extra_diagnostics
-        };
-        fail(params->type, printer);
+        fail(params->type, info);
     }
 
     template<typename... Args>
@@ -1335,21 +1336,24 @@ namespace libassert::detail {
             (sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
         );
         // process_args needs to be called as soon as possible in case errno needs to be read
-        const auto processed_args = process_args(args_strings, args...);
+        assertion_info info {
+            params,
+            {}, // message, will be filled in by process_args
+            {}, // binary_diagnostics
+            {}, // extra diagnostics, will be filled in by process_args
+            {}, // pretty_function, will be filled in by process_args
+            {}, // trace, will be filled in shortly
+            sizeof_extra_diagnostics
+        };
+        process_args(info, args_strings, args...);
         opaque_trace raw_trace = get_stacktrace_opaque();
+        void* trace = raw_trace.trace;
+        info.raw_trace = trace;
+        raw_trace.trace = nullptr; // TODO: Feels ugly
         // generate header
         binary_diagnostics_descriptor binary_diagnostics;
         // send off
-        void* trace = raw_trace.trace;
-        raw_trace.trace = nullptr; // TODO: Feels ugly
-        assertion_info printer {
-            params,
-            processed_args,
-            binary_diagnostics,
-            trace,
-            sizeof_extra_diagnostics
-        };
-        fail(params->type, printer);
+        fail(params->type, info);
         LIBASSERT_PRIMITIVE_PANIC("Failure handler returned for PANIC");
     }
 

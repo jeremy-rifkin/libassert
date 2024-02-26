@@ -223,7 +223,7 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_binary_diagnostics(
-        binary_diagnostics_descriptor& diagnostics,
+        const binary_diagnostics_descriptor& diagnostics,
         size_t term_width,
         color_scheme scheme
     ) {
@@ -307,34 +307,34 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_extra_diagnostics(
-        const decltype(extra_diagnostics::entries)& extra_diagnostics,
+        const std::vector<extra_diagnostic>& extra_diagnostics,
         size_t term_width,
         color_scheme scheme
     ) {
         std::string output = "    Extra diagnostics:\n";
         size_t lw = 0;
         for(const auto& entry : extra_diagnostics) {
-            lw = std::max(lw, entry.first.size());
+            lw = std::max(lw, entry.expression.size());
         }
         for(const auto& entry : extra_diagnostics) {
             if(term_width >= min_term_width) {
                 output += wrapped_print(
                     {
                         { 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
-                        { lw, highlight_blocks(entry.first, scheme) },
+                        { lw, highlight_blocks(entry.expression, scheme) },
                         { 2, {{"", "=>"}} },
-                        { term_width - lw - 8 /* indent */ - 4 /* arrow */, highlight_blocks(entry.second, scheme) }
+                        { term_width - lw - 8 /* indent */ - 4 /* arrow */, highlight_blocks(entry.stringification, scheme) }
                     },
                     scheme
                 );
             } else {
                 output += stringf(
                     "        %s%*s => %s\n",
-                    highlight(entry.first, scheme).c_str(),
-                    int(lw - entry.first.length()),
+                    highlight(entry.expression, scheme).c_str(),
+                    int(lw - entry.expression.length()),
                     "",
                     indent(
-                        highlight(entry.second, scheme),
+                        highlight(entry.stringification, scheme),
                         8 + lw + 4,
                         ' ',
                         true
@@ -458,8 +458,8 @@ namespace libassert {
     }
 
     namespace detail {
-        LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void fail(assert_type type, const assertion_info& printer) {
-            failure_handler.load()(type, printer);
+        LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void fail(assert_type type, const assertion_info& info) {
+            failure_handler.load()(type, info);
         }
     }
 
@@ -482,10 +482,6 @@ namespace libassert {
     binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor&
     binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID) = default;
-
-    LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics() = default;
-    LIBASSERT_ATTR_COLD extra_diagnostics::~extra_diagnostics() = default;
-    LIBASSERT_ATTR_COLD extra_diagnostics::extra_diagnostics(extra_diagnostics&&) noexcept = default;
 }
 
 namespace libassert {
@@ -496,15 +492,19 @@ namespace libassert {
     }
 
     LIBASSERT_ATTR_COLD assertion_info::assertion_info(
-        const assert_static_parameters* _params,
-        const extra_diagnostics& _processed_args,
-        binary_diagnostics_descriptor& _binary_diagnostics,
+        const assert_static_parameters* _static_params,
+        std::string _message,
+        binary_diagnostics_descriptor&& _binary_diagnostics,
+        std::vector<extra_diagnostic> _extra_diagnostics,
+        std::string_view _pretty_function,
         void* _raw_trace,
         size_t _sizeof_args
     ) :
-        params(_params),
-        processed_args(_processed_args),
-        binary_diagnostics(_binary_diagnostics),
+        static_params(_static_params),
+        message(std::move(_message)),
+        binary_diagnostics(std::move(_binary_diagnostics)),
+        extra_diagnostics(std::move(_extra_diagnostics)),
+        pretty_function(_pretty_function),
         raw_trace(_raw_trace),
         sizeof_args(_sizeof_args) {}
 
@@ -514,11 +514,11 @@ namespace libassert {
     }
 
     LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, color_scheme scheme) const {
-        const auto& [ name, type, expr_str, location, args_strings ] = *params;
-        const auto& [ message, extra_diagnostics, pretty_function ] = processed_args;
+        const auto& [ name, type, expr_str, location, args_strings ] = *static_params;
+        // const auto& [ message, extra_diagnostics, pretty_function ] = processed_args;
         std::string output;
         // generate header
-        const auto function = prettify_type(pretty_function);
+        const auto function = prettify_type(std::string(pretty_function));
         if(!message.empty()) {
             output += stringf(
                 "%s at %s:%d: %s: %s\n",
@@ -565,9 +565,9 @@ namespace libassert {
 
     LIBASSERT_ATTR_COLD
     std::tuple<const char*, int, std::string, const char*> assertion_info::get_assertion_info() const {
-        const auto& location = params->location;
-        auto function = prettify_type(processed_args.pretty_function);
-        return {location.file, location.line, std::move(function), processed_args.message.c_str()};
+        const auto& location = static_params->location;
+        auto function = prettify_type(std::string(pretty_function));
+        return {location.file, location.line, std::move(function), message.c_str()};
     }
 }
 
