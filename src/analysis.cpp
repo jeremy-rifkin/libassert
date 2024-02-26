@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 #include "common.hpp"
 #include "utils.hpp"

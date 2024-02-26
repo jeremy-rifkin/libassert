@@ -4,7 +4,7 @@
 #include <optional>
 #include <type_traits>
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 std::optional<float> foo() {
     return 2.5f;

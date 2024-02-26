@@ -1,4 +1,4 @@
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 int main() {
     ASSERT(true);

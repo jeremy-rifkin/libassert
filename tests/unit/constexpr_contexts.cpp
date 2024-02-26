@@ -1,4 +1,4 @@
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 template<int X> void foo() {}
 

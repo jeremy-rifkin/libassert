@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 #include <cpptrace/cpptrace.hpp>
 
 #include "utils.hpp"

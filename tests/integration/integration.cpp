@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 using namespace std::literals;
 

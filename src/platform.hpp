@@ -18,7 +18,7 @@
  #include <unistd.h>
 #endif
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 namespace libassert::detail {
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed();

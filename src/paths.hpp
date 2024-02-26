@@ -8,7 +8,7 @@
 
 #include "utils.hpp"
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 namespace libassert::detail {
     using path_components = std::vector<std::string>;

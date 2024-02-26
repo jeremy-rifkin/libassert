@@ -13,7 +13,7 @@
 #include <vector>
 #include <type_traits>
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 namespace libassert::detail {
     // Still present in release mode, nonfatal

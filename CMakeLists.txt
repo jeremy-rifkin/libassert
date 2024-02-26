@@ -72,7 +72,7 @@ add_library(libassert::assert ALIAS ${target_name})
 target_sources(
   ${target_name} PRIVATE
   # include
-  include/assert/assert.hpp
+  include/libassert/assert.hpp
 )
 
 # add /src files to target

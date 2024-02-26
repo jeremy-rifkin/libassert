@@ -1,6 +1,6 @@
 #undef ASSERT_LOWERCASE
 #include <cassert>
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 #include <cstdlib>
 #include <iostream>

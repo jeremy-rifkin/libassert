@@ -6,7 +6,7 @@
 #include "analysis.hpp"
 #include "utils.hpp"
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 namespace libassert::detail {
     struct column_t {

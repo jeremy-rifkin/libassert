@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 int main() {
     bool success = true;

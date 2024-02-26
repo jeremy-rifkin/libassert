@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 #define ESC "\033["
 #define RED ESC "1;31m"

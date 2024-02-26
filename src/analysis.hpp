@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 namespace libassert::detail {
     struct highlight_block {

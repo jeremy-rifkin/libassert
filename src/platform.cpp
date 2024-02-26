@@ -23,7 +23,7 @@
  #error "Libassert doesn't recognize this system, please open an issue at https://github.com/jeremy-rifkin/libassert"
 #endif
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 // All platform-specific/system code lives here
 

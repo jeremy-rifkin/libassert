@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 using namespace libassert::detail;
 using namespace std::literals;

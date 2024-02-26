@@ -1,7 +1,7 @@
 #include <cstdarg>
 #include <cstdio>
 
-#include <assert/assert.hpp>
+#include <libassert/assert.hpp>
 
 namespace libassert::detail {
     // to save template instantiation work in TUs a variadic stringf is used
