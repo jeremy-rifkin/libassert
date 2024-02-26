@@ -143,6 +143,11 @@ target_compile_features(
   PUBLIC cxx_std_17
 )
 
+if(SANITIZER_BUILD)
+  add_compile_options(-fsanitize=address)
+  add_link_options(-fsanitize=address)
+endif()
+
 if(ASSERT_BUILD_TESTING) # TODO: Maybe remove
   set(ASSERT_USE_MAGIC_ENUM ON)
 endif()
