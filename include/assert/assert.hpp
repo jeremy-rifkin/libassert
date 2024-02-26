@@ -1077,7 +1077,7 @@ namespace libassert {
         binary_diagnostics_descriptor binary_diagnostics;
         std::vector<extra_diagnostic> extra_diagnostics;
         std::string_view pretty_function;
-        cpptrace::raw_trace raw_trace; // TODO: Actual cpptrace::stacktrace/raw_trace....?
+        cpptrace::raw_trace raw_trace;
         size_t sizeof_args;
     public:
         assertion_info() = delete;
@@ -1192,7 +1192,7 @@ namespace libassert::detail {
          #pragma warning(push)
          #pragma warning(disable: 4127) // MSVC thinks constexpr should be used here. It should not.
         #endif
-        // TODO: Maybe just unconditionally capture errno and handle later...
+        // TODO: Maybe handle later...
         if(isa<T, strip<decltype(errno)>> && args_strings[i] == errno_expansion) {
         #if LIBASSERT_IS_MSVC
          #pragma warning(pop)
