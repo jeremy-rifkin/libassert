@@ -1032,18 +1032,18 @@ namespace libassert {
     };
 
     struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
-        std::string lstring;
-        std::string rstring;
-        std::string a_str;
-        std::string b_str;
+        std::string left_stringification;
+        std::string right_stringification;
+        std::string left_expression;
+        std::string right_expression;
         bool multiple_formats;
         bool present = false;
         binary_diagnostics_descriptor(); // = default; in the .cpp
         binary_diagnostics_descriptor(
-            std::string&& lstrings,
-            std::string&& rstrings,
-            std::string a_str,
-            std::string b_str,
+            std::string&& left_stringification,
+            std::string&& right_stringification,
+            std::string_view left_expression,
+            std::string_view right_expression,
             bool multiple_formats
         );
         ~binary_diagnostics_descriptor(); // = default; in the .cpp
@@ -1117,8 +1117,8 @@ namespace libassert::detail {
     LIBASSERT_EXPORT void set_thread_current_literal_format(literal_format format);
 
     LIBASSERT_EXPORT literal_format set_literal_format(
-        const char* a_str,
-        const char* b_str,
+        std::string_view left_expression,
+        std::string_view right_expression,
         std::string_view op,
         bool integer_character
     );
@@ -1160,25 +1160,25 @@ namespace libassert::detail {
     template<typename A, typename B>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     binary_diagnostics_descriptor generate_binary_diagnostic(
-        const A& a,
-        const B& b,
-        const char* a_str, // TODO: Why is op a string view but these are not
-        const char* b_str,
+        const A& left,
+        const B& right,
+        std::string_view left_str,
+        std::string_view right_str,
         std::string_view op
     ) {
         constexpr bool either_is_character = isa<A, char> || isa<B, char>;
         constexpr bool either_is_arithmetic = is_arith_not_bool_char<A> || is_arith_not_bool_char<B>;
         literal_format previous_format = set_literal_format(
-            a_str,
-            b_str,
+            left_str,
+            right_str,
             op,
             either_is_character && either_is_arithmetic
         );
         binary_diagnostics_descriptor descriptor(
-            generate_stringification(a),
-            generate_stringification(b),
-            a_str,
-            b_str,
+            generate_stringification(left),
+            generate_stringification(right),
+            left_str,
+            right_str,
             has_multiple_formats()
         );
         restore_literal_format(previous_format);
@@ -1298,12 +1298,12 @@ namespace libassert::detail {
                 );
             }
         } else {
-            auto [a_str, b_str] = decompose_expression(params->expr_str, C::op_string);
+            auto [left_expression, right_expression] = decompose_expression(params->expr_str, C::op_string);
             binary_diagnostics = generate_binary_diagnostic(
                 decomposer.a,
                 decomposer.b,
-                a_str.c_str(),
-                b_str.c_str(),
+                left_expression,
+                right_expression,
                 C::op_string
             );
         }

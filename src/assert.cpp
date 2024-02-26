@@ -227,12 +227,17 @@ namespace libassert::detail {
         size_t term_width,
         color_scheme scheme
     ) {
-        auto& [ lstring, rstring, a_sstr, b_sstr, multiple_formats, _ ] = diagnostics;
-        const std::string& a_str = a_sstr;
-        const std::string& b_str = b_sstr;
+        auto& [
+            left_stringification,
+            right_stringification,
+            left_expression,
+            right_expression,
+            multiple_formats,
+            _
+        ] = diagnostics;
         // TODO: Temporary hack while reworking
-        std::vector<std::string> lstrings = { lstring };
-        std::vector<std::string> rstrings = { rstring };
+        std::vector<std::string> lstrings = { left_stringification };
+        std::vector<std::string> rstrings = { right_stringification };
         LIBASSERT_PRIMITIVE_ASSERT(!lstrings.empty());
         LIBASSERT_PRIMITIVE_ASSERT(!rstrings.empty());
         // pad all columns where there is overlap
@@ -247,15 +252,19 @@ namespace libassert::detail {
         }
         // determine whether we actually gain anything from printing a where clause (e.g. exclude "1 => 1")
         const struct { bool left, right; } has_useful_where_clause = {
-            multiple_formats || lstrings.size() > 1 || (a_str != lstrings[0] && trim_suffix(a_str) != lstrings[0]),
-            multiple_formats || rstrings.size() > 1 || (b_str != rstrings[0] && trim_suffix(b_str) != rstrings[0])
+            multiple_formats
+                || lstrings.size() > 1
+                || (left_expression != lstrings[0] && trim_suffix(left_expression) != lstrings[0]),
+            multiple_formats
+                || rstrings.size() > 1
+                || (right_expression != rstrings[0] && trim_suffix(right_expression) != rstrings[0])
         };
         // print where clause
         std::string where;
         if(has_useful_where_clause.left || has_useful_where_clause.right) {
             size_t lw = std::max(
-                has_useful_where_clause.left  ? a_str.size() : 0,
-                has_useful_where_clause.right ? b_str.size() : 0
+                has_useful_where_clause.left  ? left_expression.size() : 0,
+                has_useful_where_clause.right ? right_expression.size() : 0
             );
             // Limit lw to about half the screen. TODO: Re-evaluate what we want to do here.
             if(term_width > 0) {
@@ -263,7 +272,7 @@ namespace libassert::detail {
             }
             where += "    Where:\n";
             auto print_clause = [term_width, lw, &where, &scheme](
-                const std::string& expr_str,
+                std::string_view expr_str,
                 const std::vector<std::string>& expr_strs
             ) {
                 if(term_width >= min_term_width) {
@@ -287,10 +296,10 @@ namespace libassert::detail {
                 }
             };
             if(has_useful_where_clause.left) {
-                print_clause(a_str, lstrings);
+                print_clause(left_expression, lstrings);
             }
             if(has_useful_where_clause.right) {
-                print_clause(b_str, rstrings);
+                print_clause(right_expression, rstrings);
             }
         }
         return where;
@@ -456,16 +465,16 @@ namespace libassert {
 
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
-        std::string&& _lstring,
-        std::string&& _rstring,
-        std::string _a_str,
-        std::string _b_str,
+        std::string&& _left_stringification,
+        std::string&& _right_stringification,
+        std::string_view _left_expression,
+        std::string_view _right_expression,
         bool _multiple_formats
     ):
-        lstring(_lstring),
-        rstring(_rstring),
-        a_str(std::move(_a_str)),
-        b_str(std::move(_b_str)),
+        left_stringification(std::move(_left_stringification)),
+        right_stringification(std::move(_right_stringification)),
+        left_expression(_left_expression),
+        right_expression(_right_expression),
         multiple_formats(_multiple_formats),
         present(true) {}
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;

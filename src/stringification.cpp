@@ -57,16 +57,16 @@ namespace libassert::detail {
     }
 
     LIBASSERT_EXPORT literal_format set_literal_format(
-        const char* a_str,
-        const char* b_str,
+        std::string_view left_expression,
+        std::string_view right_expression,
         std::string_view op,
         bool integer_character
     ) {
         auto previous = get_thread_current_literal_format();
         auto [mode, fixed_format] = get_literal_format_config();
         if(mode == literal_format_mode::infer) {
-            auto lformat = get_literal_format(a_str);
-            auto rformat = get_literal_format(b_str);
+            auto lformat = get_literal_format(left_expression);
+            auto rformat = get_literal_format(right_expression);
             auto format = lformat | rformat;
             if(integer_character) { // if one is a character and the other is not
                 format = format | literal_format::integer_character;

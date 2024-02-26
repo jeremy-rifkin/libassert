@@ -5,6 +5,8 @@
 
 #include <assert/assert.hpp>
 
+#include "../../src/analysis.hpp"
+
 #define ESC "\033["
 #define RED ESC "1;31m"
 #define GREEN ESC "1;32m"
@@ -13,10 +15,6 @@
 #define PURPL ESC "1;35m"
 #define DARK ESC "1;30m"
 #define RESET ESC "0m"
-
-namespace libassert::detail {
-    [[nodiscard]] std::string highlight(const std::string& expression, color_scheme);
-}
 
 int main() {
     std::tuple<std::string, std::string_view, bool> tests[] = {

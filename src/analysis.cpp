@@ -325,11 +325,11 @@ namespace libassert::detail {
         }
 
         LIBASSERT_ATTR_COLD
-        std::vector<token_t> tokenize(const std::string& expression, bool decompose_shr = false) {
+        std::vector<token_t> tokenize(std::string_view expression, bool decompose_shr = false) {
             std::vector<token_t> tokens;
             size_t i = 0;
             while(i < expression.length()) {
-                std::smatch match;
+                std::cmatch match;
                 bool at_least_one_matched = false;
                 for(const auto& [ type, re ] : rules) {
                     // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
@@ -381,7 +381,7 @@ namespace libassert::detail {
         LIBASSERT_ATTR_COLD
         // TODO: Refactor
         // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-        std::vector<highlight_block> highlight(const std::string& expression, color_scheme scheme) try {
+        std::vector<highlight_block> highlight(std::string_view expression, color_scheme scheme) try {
             const auto tokens = tokenize(expression);
             std::vector<highlight_block> output;
             for(size_t i = 0; i < tokens.size(); i++) {
@@ -437,13 +437,13 @@ namespace libassert::detail {
             }
             return output;
         } catch(...) {
-            return {{"", expression}};
+            return {{"", std::string(expression)}};
         }
 
         LIBASSERT_ATTR_COLD
-        literal_format get_literal_format(const std::string& expression) {
+        literal_format get_literal_format(std::string_view expression) {
             for(auto& [ re, type ] : literal_formats) {
-                if(std::regex_match(expression, re)) {
+                if(std::regex_match(expression.begin(), expression.end(), re)) {
                     return type;
                 }
             }
@@ -726,7 +726,7 @@ namespace libassert::detail {
     std::mutex analysis::singleton_mutex;
 
     LIBASSERT_ATTR_COLD
-    std::string highlight(const std::string& expression, color_scheme scheme) {
+    std::string highlight(std::string_view expression, color_scheme scheme) {
         #ifdef NCOLOR
         return expression;
         #else
@@ -744,7 +744,7 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
-    std::vector<highlight_block> highlight_blocks(const std::string& expression, color_scheme scheme) {
+    std::vector<highlight_block> highlight_blocks(std::string_view expression, color_scheme scheme) {
         #ifdef NCOLOR
         return expression;
         #else
@@ -752,11 +752,11 @@ namespace libassert::detail {
         #endif
     }
 
-    LIBASSERT_ATTR_COLD literal_format get_literal_format(const std::string& expression) {
+    LIBASSERT_ATTR_COLD literal_format get_literal_format(std::string_view expression) {
         return analysis::get().get_literal_format(expression);
     }
 
-    LIBASSERT_ATTR_COLD std::string trim_suffix(const std::string& expression) {
+    LIBASSERT_ATTR_COLD std::string_view trim_suffix(std::string_view expression) {
         return expression.substr(0, expression.find_last_not_of("FfUuLlZz") + 1);
     }
 

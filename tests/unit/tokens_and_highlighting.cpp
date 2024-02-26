@@ -5,9 +5,7 @@
 
 #include <assert/assert.hpp>
 
-namespace libassert::detail {
-    [[nodiscard]] LIBASSERT_EXPORT std::string highlight(const std::string& expression, color_scheme);
-}
+#include "../../src/analysis.hpp"
 
 int main() {
     std::ifstream file("tests/test_program.cpp"); // just a test program that doesn't have preprocessor directives, which we don't tokenize

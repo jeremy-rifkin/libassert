@@ -14,14 +14,14 @@ namespace libassert::detail {
     };
 
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT /* FIXME */
-    std::string highlight(const std::string& expression, color_scheme scheme);
+    std::string highlight(std::string_view expression, color_scheme scheme);
 
     LIBASSERT_ATTR_COLD
-    std::vector<highlight_block> highlight_blocks(const std::string& expression, color_scheme scheme);
+    std::vector<highlight_block> highlight_blocks(std::string_view expression, color_scheme scheme);
 
-    LIBASSERT_ATTR_COLD literal_format get_literal_format(const std::string& expression);
+    LIBASSERT_ATTR_COLD literal_format get_literal_format(std::string_view expression);
 
-    LIBASSERT_ATTR_COLD std::string trim_suffix(const std::string& expression);
+    LIBASSERT_ATTR_COLD std::string_view trim_suffix(std::string_view expression);
 
     LIBASSERT_ATTR_COLD bool is_bitwise(std::string_view op);
 }
