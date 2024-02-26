@@ -332,8 +332,9 @@ namespace libassert::detail {
                 std::cmatch match;
                 bool at_least_one_matched = false;
                 for(const auto& [ type, re ] : rules) {
+                    // std::string_view::iterator is const char* on libc++ and libstdc++, but in msvc it's a class.
                     // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
-                    if(std::regex_match(std::begin(expression) + i, std::end(expression), match, re)) {
+                    if(std::regex_match(&expression.front() + i, &expression.back() + 1, match, re)) {
                         #ifdef _0_DEBUG_ASSERT_TOKENIZATION
                          fprintf(stderr, "%s\n", match[1].str().c_str());
                          fflush(stdout);

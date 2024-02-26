@@ -1021,7 +1021,7 @@ namespace libassert {
         panic
     };
 
-    class assertion_info;
+    struct assertion_info;
 
     LIBASSERT_EXPORT void set_failure_handler(void (*handler)(assert_type, const assertion_info&));
 
