@@ -1271,15 +1271,13 @@ namespace libassert::detail {
             sizeof_extra_diagnostics
         };
         process_args(info, args_strings, args...);
-        // generate header
-        binary_diagnostics_descriptor binary_diagnostics;
         // generate binary diagnostics
         if constexpr(is_nothing<C>) {
             static_assert(is_nothing<B> && !is_nothing<A>);
             if constexpr(isa<A, bool>) {
                 (void)decomposer; // suppress warning in msvc
             } else {
-                binary_diagnostics = generate_binary_diagnostic(
+                info.binary_diagnostics = generate_binary_diagnostic(
                     decomposer.a,
                     true,
                     params->expr_str,
@@ -1289,7 +1287,7 @@ namespace libassert::detail {
             }
         } else {
             auto [left_expression, right_expression] = decompose_expression(params->expr_str, C::op_string);
-            binary_diagnostics = generate_binary_diagnostic(
+            info.binary_diagnostics = generate_binary_diagnostic(
                 decomposer.a,
                 decomposer.b,
                 left_expression,
@@ -1297,7 +1295,6 @@ namespace libassert::detail {
                 C::op_string
             );
         }
-        info.binary_diagnostics = std::move(binary_diagnostics);
         // send off
         fail(params->type, info);
     }
@@ -1326,8 +1323,6 @@ namespace libassert::detail {
             sizeof_extra_diagnostics
         };
         process_args(info, args_strings, args...);
-        // generate header
-        binary_diagnostics_descriptor binary_diagnostics;
         // send off
         fail(params->type, info);
         LIBASSERT_PRIMITIVE_PANIC("Failure handler returned for PANIC");
