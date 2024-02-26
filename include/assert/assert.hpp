@@ -1077,17 +1077,13 @@ namespace libassert {
         std::string message;
         binary_diagnostics_descriptor binary_diagnostics;
         std::vector<extra_diagnostic> extra_diagnostics;
-        std::string_view pretty_function = "<error>";
+        std::string_view pretty_function;
         cpptrace::raw_trace raw_trace; // TODO: Actual cpptrace::stacktrace/raw_trace....?
         size_t sizeof_args;
     public:
         assertion_info() = delete;
         assertion_info(
             const assert_static_parameters* static_params,
-            std::string message,
-            binary_diagnostics_descriptor&& binary_diagnostics,
-            std::vector<extra_diagnostic> extra_diagnostics,
-            std::string_view pretty_function,
             cpptrace::raw_trace&& raw_trace,
             size_t sizeof_args
         );
@@ -1261,15 +1257,12 @@ namespace libassert::detail {
         LIBASSERT_PRIMITIVE_ASSERT(
             (sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
         );
-        assertion_info info {
+        assertion_info info(
             params,
-            {}, // message, will be filled in by process_args
-            {}, // binary_diagnostics, will be filled in below by generate_binary_diagnostic
-            {}, // extra diagnostics, will be filled in by process_args
-            {}, // pretty_function, will be filled in by process_args
             cpptrace::generate_raw_trace(),
             sizeof_extra_diagnostics
-        };
+        );
+        // process_args fills in the message, extra_diagnostics, and pretty_function
         process_args(info, args_strings, args...);
         // generate binary diagnostics
         if constexpr(is_nothing<C>) {
@@ -1313,15 +1306,12 @@ namespace libassert::detail {
         LIBASSERT_PRIMITIVE_ASSERT(
             (sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
         );
-        assertion_info info {
+        assertion_info info(
             params,
-            {}, // message, will be filled in by process_args
-            {}, // binary_diagnostics
-            {}, // extra diagnostics, will be filled in by process_args
-            {}, // pretty_function, will be filled in by process_args
             cpptrace::generate_raw_trace(),
             sizeof_extra_diagnostics
-        };
+        );
+        // process_args fills in the message, extra_diagnostics, and pretty_function
         process_args(info, args_strings, args...);
         // send off
         fail(params->type, info);

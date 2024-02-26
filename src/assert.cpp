@@ -411,10 +411,7 @@ namespace libassert {
 
     namespace detail {
         LIBASSERT_ATTR_COLD
-        void libassert_default_failure_handler(
-            assert_type type,
-            const assertion_info& printer
-        ) {
+        void libassert_default_failure_handler(assert_type type, const assertion_info& printer) {
             // TODO: Just throw instead of all of this?
             enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
             std::string message = printer.to_string(
@@ -425,7 +422,8 @@ namespace libassert {
             switch(type) {
                 case assert_type::debug_assertion:
                 case assert_type::assertion:
-                    case assert_type::assumption: // switch-if-case, cursed!
+                case assert_type::assumption:
+                case assert_type::panic:
                     (void)fflush(stderr);
                     std::abort();
                     // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
@@ -483,18 +481,11 @@ namespace libassert {
 
     LIBASSERT_ATTR_COLD assertion_info::assertion_info(
         const assert_static_parameters* _static_params,
-        std::string _message,
-        binary_diagnostics_descriptor&& _binary_diagnostics,
-        std::vector<extra_diagnostic> _extra_diagnostics,
-        std::string_view _pretty_function,
         cpptrace::raw_trace&& _raw_trace,
         size_t _sizeof_args
     ) :
         static_params(_static_params),
-        message(std::move(_message)),
-        binary_diagnostics(std::move(_binary_diagnostics)),
-        extra_diagnostics(std::move(_extra_diagnostics)),
-        pretty_function(_pretty_function),
+        pretty_function("<error>"),
         raw_trace(std::move(_raw_trace)),
         sizeof_args(_sizeof_args) {}
 
