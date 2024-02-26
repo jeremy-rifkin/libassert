@@ -44,6 +44,8 @@
  #endif
 #endif
 
+#include <cpptrace/cpptrace.hpp>
+
 // Ever seen an assertion library with a 1500+ line header? :)
 // Block comments are used to create some visual separation and try to break the library into more manageable parts.
 // I've tried as much as I can to keep logically connected parts together but there is some bootstrapping necessary.
@@ -1076,7 +1078,7 @@ namespace libassert {
         binary_diagnostics_descriptor binary_diagnostics;
         std::vector<extra_diagnostic> extra_diagnostics;
         std::string_view pretty_function = "<error>";
-        void* raw_trace; // TODO: Actual cpptrace::stacktrace/raw_trace....?
+        cpptrace::raw_trace raw_trace; // TODO: Actual cpptrace::stacktrace/raw_trace....?
         size_t sizeof_args;
     public:
         assertion_info() = delete;
@@ -1086,7 +1088,7 @@ namespace libassert {
             binary_diagnostics_descriptor&& binary_diagnostics,
             std::vector<extra_diagnostic> extra_diagnostics,
             std::string_view pretty_function,
-            void* raw_trace,
+            cpptrace::raw_trace&& raw_trace,
             size_t sizeof_args
         );
         ~assertion_info();
@@ -1135,22 +1137,6 @@ namespace libassert::detail {
      */
 
     [[nodiscard]] LIBASSERT_EXPORT std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
-
-    /*
-     * Stacktrace implementation
-     */
-
-    struct LIBASSERT_EXPORT opaque_trace {
-        void* trace;
-        ~opaque_trace();
-        opaque_trace(void* t) : trace(t) {}
-        opaque_trace(const opaque_trace&) = delete;
-        opaque_trace(opaque_trace&&) = delete;
-        opaque_trace& operator=(const opaque_trace&) = delete;
-        opaque_trace& operator=(opaque_trace&&) = delete;
-    };
-
-    LIBASSERT_EXPORT opaque_trace get_stacktrace_opaque();
 
     /*
      * assert diagnostics generation
@@ -1275,21 +1261,16 @@ namespace libassert::detail {
         LIBASSERT_PRIMITIVE_ASSERT(
             (sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
         );
-        // process_args needs to be called as soon as possible in case errno needs to be read
         assertion_info info {
             params,
             {}, // message, will be filled in by process_args
             {}, // binary_diagnostics, will be filled in below by generate_binary_diagnostic
             {}, // extra diagnostics, will be filled in by process_args
             {}, // pretty_function, will be filled in by process_args
-            {}, // trace, will be filled in shortly
+            cpptrace::generate_raw_trace(),
             sizeof_extra_diagnostics
         };
         process_args(info, args_strings, args...);
-        opaque_trace raw_trace = get_stacktrace_opaque();
-        void* trace = raw_trace.trace;
-        info.raw_trace = trace;
-        raw_trace.trace = nullptr; // TODO: Feels ugly
         // generate header
         binary_diagnostics_descriptor binary_diagnostics;
         // generate binary diagnostics
@@ -1335,21 +1316,16 @@ namespace libassert::detail {
         LIBASSERT_PRIMITIVE_ASSERT(
             (sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
         );
-        // process_args needs to be called as soon as possible in case errno needs to be read
         assertion_info info {
             params,
             {}, // message, will be filled in by process_args
             {}, // binary_diagnostics
             {}, // extra diagnostics, will be filled in by process_args
             {}, // pretty_function, will be filled in by process_args
-            {}, // trace, will be filled in shortly
+            cpptrace::generate_raw_trace(),
             sizeof_extra_diagnostics
         };
         process_args(info, args_strings, args...);
-        opaque_trace raw_trace = get_stacktrace_opaque();
-        void* trace = raw_trace.trace;
-        info.raw_trace = trace;
-        raw_trace.trace = nullptr; // TODO: Feels ugly
         // generate header
         binary_diagnostics_descriptor binary_diagnostics;
         // send off

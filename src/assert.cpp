@@ -41,16 +41,6 @@ using namespace std::string_literals;
 using namespace std::string_view_literals;
 
 namespace libassert::detail {
-    LIBASSERT_ATTR_COLD
-    opaque_trace::~opaque_trace() {
-        delete static_cast<cpptrace::raw_trace*>(trace);
-    }
-
-    LIBASSERT_ATTR_COLD
-    opaque_trace get_stacktrace_opaque() {
-        return {new cpptrace::raw_trace(cpptrace::generate_raw_trace())};
-    }
-
     /*
      * stack trace printing
      */
@@ -76,10 +66,10 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD [[nodiscard]]
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    std::string print_stacktrace(const cpptrace::raw_trace* raw_trace, int term_width, color_scheme scheme) {
+    std::string print_stacktrace(const cpptrace::raw_trace raw_trace, int term_width, color_scheme scheme) {
         std::string stacktrace;
-        if(raw_trace && !raw_trace->empty()) {
-            auto trace = raw_trace->resolve();
+        if(!raw_trace.empty()) {
+            auto trace = raw_trace.resolve();
             // [start, end] is an inclusive range
             auto [start, end] = get_trace_window(trace);
             // prettify signatures
@@ -497,7 +487,7 @@ namespace libassert {
         binary_diagnostics_descriptor&& _binary_diagnostics,
         std::vector<extra_diagnostic> _extra_diagnostics,
         std::string_view _pretty_function,
-        void* _raw_trace,
+        cpptrace::raw_trace&& _raw_trace,
         size_t _sizeof_args
     ) :
         static_params(_static_params),
@@ -505,13 +495,10 @@ namespace libassert {
         binary_diagnostics(std::move(_binary_diagnostics)),
         extra_diagnostics(std::move(_extra_diagnostics)),
         pretty_function(_pretty_function),
-        raw_trace(_raw_trace),
+        raw_trace(std::move(_raw_trace)),
         sizeof_args(_sizeof_args) {}
 
-    LIBASSERT_ATTR_COLD assertion_info::~assertion_info() {
-        auto* trace = static_cast<cpptrace::raw_trace*>(raw_trace);
-        delete trace;
-    }
+    LIBASSERT_ATTR_COLD assertion_info::~assertion_info() = default;
 
     LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, color_scheme scheme) const {
         const auto& [ name, type, expr_str, location, args_strings ] = *static_params;
@@ -559,7 +546,7 @@ namespace libassert {
         }
         // generate stack trace
         output += "\nStack trace:\n";
-        output += print_stacktrace(static_cast<cpptrace::raw_trace*>(raw_trace), width, scheme);
+        output += print_stacktrace(raw_trace, width, scheme);
         return output;
     }
 

@@ -91,7 +91,7 @@ target_sources(
 
 # link dependencies
 target_link_libraries(
-  ${target_name} PRIVATE
+  ${target_name} PUBLIC
   cpptrace::cpptrace
 )
 
