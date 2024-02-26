@@ -1019,7 +1019,6 @@ namespace libassert {
         debug_assertion,
         assertion,
         assumption,
-        verification,
         panic
     };
 
@@ -1027,7 +1026,7 @@ namespace libassert {
 
     LIBASSERT_EXPORT void set_failure_handler(void (*handler)(assert_type, const assertion_info&));
 
-    struct LIBASSERT_EXPORT verification_failure : std::exception {
+    struct LIBASSERT_EXPORT assertion_failure : std::exception {
         // I must just this once
         // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
         [[nodiscard]] virtual const char* what() const noexcept final override;
@@ -1718,7 +1717,7 @@ namespace libassert {
 
 #define ASSUME_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSUME_VAL", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
 
-#define ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSERT_VAL", verification, , __VA_ARGS__)
+#define ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSERT_VAL", assertion, , __VA_ARGS__)
 
 #ifdef LIBASSERT_LOWERCASE
  #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "assert_val", assertion, , __VA_ARGS__)

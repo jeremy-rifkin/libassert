@@ -341,7 +341,6 @@ namespace libassert::detail {
             case assert_type::debug_assertion: return "Debug Assertion failed";
             case assert_type::assertion:       return "Assertion failed";
             case assert_type::assumption:      return "Assumption failed";
-            case assert_type::verification:    return "Verification failed";
             case assert_type::panic:           return "Panic";
             default:
                 LIBASSERT_PRIMITIVE_ASSERT(false);
@@ -420,17 +419,15 @@ namespace libassert {
             );
             std::cerr << message << std::endl;
             switch(type) {
-                case assert_type::debug_assertion:
                 case assert_type::assertion:
+                    throw assertion_failure();
+                case assert_type::debug_assertion:
                 case assert_type::assumption:
                 case assert_type::panic:
                     (void)fflush(stderr);
                     std::abort();
                     // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
                     // this library (on top of preventing fallthrough from nonfatal libassert)
-                    break;
-                case assert_type::verification:
-                    throw verification_failure();
                     break;
                 default:
                     LIBASSERT_PRIMITIVE_ASSERT(false);
@@ -475,8 +472,8 @@ namespace libassert {
 namespace libassert {
     using namespace detail;
 
-    const char* verification_failure::what() const noexcept {
-        return "VERIFY() call failed";
+    const char* assertion_failure::what() const noexcept {
+        return "ASSERT() call failed";
     }
 
     LIBASSERT_ATTR_COLD assertion_info::assertion_info(
