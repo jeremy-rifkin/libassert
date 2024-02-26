@@ -1093,8 +1093,6 @@ namespace libassert {
         assertion_info& operator=(const assertion_info&) = delete;
         assertion_info& operator=(assertion_info&&) = delete;
         [[nodiscard]] std::string to_string(int width = 0, color_scheme scheme = get_color_scheme()) const;
-        // filename, line, function, message
-        [[nodiscard]] std::tuple<const char*, int, std::string, const char*> get_assertion_info() const;
     };
 }
 

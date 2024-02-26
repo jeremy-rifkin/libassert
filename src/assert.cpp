@@ -540,13 +540,6 @@ namespace libassert {
         output += print_stacktrace(raw_trace, width, scheme);
         return output;
     }
-
-    LIBASSERT_ATTR_COLD
-    std::tuple<const char*, int, std::string, const char*> assertion_info::get_assertion_info() const {
-        const auto& location = static_params->location;
-        auto function = prettify_type(std::string(pretty_function));
-        return {location.file, location.line, std::move(function), message.c_str()};
-    }
 }
 
 namespace libassert {
