@@ -774,7 +774,7 @@ Functionality other languages / their standard libraries provide:
 | Automatic expression decomposition |  ❌   |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
 | Sub-expression strings             |  ❌   |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
 
-`*`: Possible through string formatting but that is sub-ideal.
+`*`: Possible through string formatting but that is sub-ideal. <br/>
 `**`: `assert(expression && "message")` is commonly used but this is sub-ideal and only allows string literal messages.
 
 Extras:
