@@ -1019,7 +1019,8 @@ namespace libassert {
         debug_assertion,
         assertion,
         assumption,
-        panic
+        panic,
+        unreachable
     };
 
     struct assertion_info;
@@ -1306,7 +1307,7 @@ namespace libassert::detail {
         process_args(info, args_strings, args...);
         // send off
         fail(params->type, info);
-        LIBASSERT_PRIMITIVE_PANIC("Failure handler returned for PANIC");
+        LIBASSERT_PRIMITIVE_PANIC("PANIC/UNREACHABLE failure handler returned");
     }
 
     // TODO: Re-evaluate benefit of this at all in non-cold path code
@@ -1565,11 +1566,11 @@ namespace libassert {
         LIBASSERT_WARNING_PRAGMA_POP_CLANG \
     } while(false) \
 
-#define LIBASSERT_INVOKE_PANIC(...) \
+#define LIBASSERT_INVOKE_PANIC(name, type, ...) \
     do { \
         libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
-        LIBASSERT_STATIC_DATA("PANIC", libassert::assert_type::panic, "", __VA_ARGS__) \
-        process_panic( \
+        LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, "", __VA_ARGS__) \
+        libassert::detail::process_panic( \
             libassert_params \
             LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
         ); \
@@ -1687,10 +1688,13 @@ namespace libassert {
 #define ASSUME(expr, ...) LIBASSERT_INVOKE(expr, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
 
 // Panic
+#define PANIC(...) LIBASSERT_INVOKE_PANIC("PANIC", panic, __VA_ARGS__)
+
+// Unreachable
 #ifndef NDEBUG
- #define PANIC(...) LIBASSERT_INVOKE_PANIC(__VA_ARGS__)
+ #define UNREACHABLE(...) LIBASSERT_INVOKE_PANIC("UNREACHABLE", unreachable, __VA_ARGS__)
 #else
- #define PANIC(...) LIBASSERT_UNREACHABLE
+ #define UNREACHABLE(...) LIBASSERT_UNREACHABLE
 #endif
 
 // value variants

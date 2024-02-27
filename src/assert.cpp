@@ -423,6 +423,7 @@ namespace libassert {
                 case assert_type::debug_assertion:
                 case assert_type::assumption:
                 case assert_type::panic:
+                case assert_type::unreachable:
                     (void)fflush(stderr);
                     std::abort();
                     // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
