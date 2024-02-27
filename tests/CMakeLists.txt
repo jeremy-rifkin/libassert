@@ -25,6 +25,14 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       "-DLIBASSERT_USE_MAGIC_ENUM"
       "-DLIBASSERT_LOWERCASE"
     )
+    target_compile_features(
+      demo
+      PUBLIC cxx_std_20
+    )
+    target_compile_definitions(
+      demo
+      PUBLIC LIBASSERT_SAFE_COMPARISONS
+    )
 
     add_executable(integration tests/integration/integration.cpp tests/integration/a.cpp tests/integration/x/a.cpp)
     # Temporary workaround for Visual Studio 2022 bug with __builtin_LINE() and __builtin_FILE()

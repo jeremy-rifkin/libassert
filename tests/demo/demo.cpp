@@ -139,11 +139,11 @@ auto min_items() {
     return 10;
 }
 
-void zoog(std::map<std::string, int> map) {
+void zoog(const std::map<std::string, int>& map) {
     #if __cplusplus >= 202002L
-     debug_assert(map.contains("foo"), "expected key not found", map);
+     DEBUG_ASSERT(map.contains("foo"), "expected key not found", map);
     #else
-     debug_assert(map.count("foo") != 1, "expected key not found", map);
+     DEBUG_ASSERT(map.count("foo") != 1, "expected key not found", map);
     #endif
     DEBUG_ASSERT(map.at("bar") >= 0, "unexpected value for foo in the map", map);
 }
@@ -203,7 +203,7 @@ public:
 
         {
             std::map<int, int> map {{1,1}};
-            debug_assert(map.count(1) == 2);
+            DEBUG_ASSERT(map.count(1) == 2);
             debug_assert(map.count(1) >= 2 * garple(), "Error while doing XYZ");
         }
         debug_assert(0, 2 == garple());
@@ -246,16 +246,16 @@ public:
 
         recursive_a(10);
 
-        debug_assert(18446744073709551606ULL == -10);
+        ASSERT(18446744073709551606ULL == -10);
 
-        debug_assert(get_mask() == 0b00001101);
+        ASSERT(get_mask() == 0b00001101);
         debug_assert(0xf == 16);
 
         {
             std::string s = "test\n";
             int i = 0;
             debug_assert(s == "test");
-            debug_assert(s[i] == 'c', "", s, i);
+            ASSERT(s[i] == 'c', "", s, i);
         }
         {
             debug_assert(S<S<int>>(2) == S<S<int>>(4));
