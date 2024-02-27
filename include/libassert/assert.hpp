@@ -1724,7 +1724,7 @@ namespace libassert {
 #endif
 
 // Intentionally done outside the include guard. Libc++ leaks `assert` (among other things), so the include for
-// assert.hpp should go after other includes when using -DASSERT_LOWERCASE.
+// assert.hpp should go after other includes when using -DLIBASSERT_LOWERCASE.
 #ifdef LIBASSERT_LOWERCASE
  #ifdef assert
   #undef assert

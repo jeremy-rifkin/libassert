@@ -32,21 +32,21 @@ endif()
 
 # ---- Project Dependencies ----
 
-set(ASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
-set(ASSERT_MAGIC_ENUM_TAG "e55b9b54d5cf61f8e117cafb17846d7d742dd3b4") # v0.9.5
+set(LIBASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
+set(LIBASSERT_MAGIC_ENUM_TAG "e55b9b54d5cf61f8e117cafb17846d7d742dd3b4") # v0.9.5
 
-set(ASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
-set(ASSERT_CPPTRACE_TAG "7fda402638875e6a265ba5e6ed376dcee4bd29fa") # v0.4.0
+set(LIBASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
+set(LIBASSERT_CPPTRACE_TAG "7fda402638875e6a265ba5e6ed376dcee4bd29fa") # v0.4.0
 
 # obtain cpptrace
-if(ASSERT_USE_EXTERNAL_CPPTRACE)
+if(LIBASSERT_USE_EXTERNAL_CPPTRACE)
   find_package(cpptrace REQUIRED)
 else()
   include(FetchContent)
   FetchContent_Declare(
     cpptrace
-    GIT_REPOSITORY "${ASSERT_CPPTRACE_REPO}"
-    GIT_TAG        "${ASSERT_CPPTRACE_TAG}"
+    GIT_REPOSITORY "${LIBASSERT_CPPTRACE_REPO}"
+    GIT_TAG        "${LIBASSERT_CPPTRACE_TAG}"
   )
   FetchContent_MakeAvailable(cpptrace)
 endif()
@@ -148,21 +148,21 @@ if(SANITIZER_BUILD)
   add_link_options(-fsanitize=address)
 endif()
 
-if(ASSERT_BUILD_TESTING) # TODO: Maybe remove
-  set(ASSERT_USE_MAGIC_ENUM ON)
+if(LIBASSERT_BUILD_TESTING) # TODO: Maybe remove
+  set(LIBASSERT_USE_MAGIC_ENUM ON)
 endif()
 
 # add pre-processor definitions corresponding to CMake options
 # fixme: supposedly generator expressions should work for this
-if(ASSERT_USE_MAGIC_ENUM)
+if(LIBASSERT_USE_MAGIC_ENUM)
   set(MAGIC_ENUM_OPT_INSTALL ON)
-  if(ASSERT_USE_EXTERNAL_MAGIC_ENUM)
+  if(LIBASSERT_USE_EXTERNAL_MAGIC_ENUM)
     find_package(magic_enum REQUIRED)
   else()
     include(FetchContent)
     FetchContent_Declare(magic_enum
-      GIT_REPOSITORY "${ASSERT_MAGIC_ENUM_REPO}"
-      GIT_TAG        "${ASSERT_MAGIC_ENUM_TAG}")
+      GIT_REPOSITORY "${LIBASSERT_MAGIC_ENUM_REPO}"
+      GIT_TAG        "${LIBASSERT_MAGIC_ENUM_TAG}")
     FetchContent_MakeAvailable(magic_enum)
   endif()
   target_link_libraries(${target_name} PUBLIC magic_enum::magic_enum)
@@ -183,7 +183,7 @@ endif()
 
 # ---- Setup Tests ----
 
-if(ASSERT_BUILD_TESTING)
+if(LIBASSERT_BUILD_TESTING)
 
   # need to enable testing in case BUILD_TESTING is disabled
   # ctest expects that the top level project enables testing
@@ -192,8 +192,8 @@ if(ASSERT_BUILD_TESTING)
   endif()
 
   # tell unit tests where our files are
-  set(ASSERT_BINARY_DIR "${PROJECT_BINARY_DIR}")
-  set(ASSERT_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
+  set(LIBASSERT_BINARY_DIR "${PROJECT_BINARY_DIR}")
+  set(LIBASSERT_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
 
   # include test project
   # add_subdirectory(tests)

@@ -4,20 +4,20 @@
 
 # ---- Options Summary ----
 
-# ---------------------------------------------------------------------------------------------------
-# | Option                          | Availability  | Default                                       |
-# |=================================|===============|===============================================|
-# | BUILD_SHARED_LIBS               | Top-Level     | OFF                                           |
-# | BUILD_TESTING                   | Top-Level     | OFF                                           |
-# | CMAKE_INSTALL_INCLUDEDIR        | Top-Level     | include/${package_name}-${PROJECT_VERSION}    |
-# |---------------------------------|---------------|-----------------------------------------------|
-# | ASSERT_BUILD_SHARED             | Always        | ${BUILD_SHARED_LIBS}                          |
-# | ASSERT_BUILD_TESTING            | Always        | ${BUILD_TESTING} AND ${PROJECT_IS_TOP_LEVEL}  |
-# | ASSERT_INCLUDES_WITH_SYSTEM     | Not Top-Level | ON                                            |
-# | ASSERT_INSTALL_CMAKEDIR         | Always        | ${CMAKE_INSTALL_LIBDIR}/cmake/${package_name} |
-# | ASSERT_USE_EXTERNAL_CPPTRACE    | Always        | OFF                                           |
-# | ASSERT_USE_MAGIC_ENUM           | Always        | OFF                                           |
-# ---------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------
+# | Option                             | Availability  | Default                                       |
+# |====================================|===============|===============================================|
+# | BUILD_SHARED_LIBS                  | Top-Level     | OFF                                           |
+# | BUILD_TESTING                      | Top-Level     | OFF                                           |
+# | CMAKE_INSTALL_INCLUDEDIR           | Top-Level     | include/${package_name}-${PROJECT_VERSION}    |
+# |------------------------------------|---------------|-----------------------------------------------|
+# | LIBASSERT_BUILD_SHARED             | Always        | ${BUILD_SHARED_LIBS}                          |
+# | LIBASSERT_BUILD_TESTING            | Always        | ${BUILD_TESTING} AND ${PROJECT_IS_TOP_LEVEL}  |
+# | LIBASSERT_INCLUDES_WITH_SYSTEM     | Not Top-Level | ON                                            |
+# | LIBASSERT_INSTALL_CMAKEDIR         | Always        | ${CMAKE_INSTALL_LIBDIR}/cmake/${package_name} |
+# | LIBASSERT_USE_EXTERNAL_CPPTRACE    | Always        | OFF                                           |
+# | LIBASSERT_USE_MAGIC_ENUM           | Always        | OFF                                           |
+# ------------------------------------------------------------------------------------------------------
 
 
 # ---- Build Shared ----
@@ -28,13 +28,13 @@ if(PROJECT_IS_TOP_LEVEL)
   option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 endif()
 option(
-  ASSERT_BUILD_SHARED
+  LIBASSERT_BUILD_SHARED
   "Override BUILD_SHARED_LIBS for ${package_name} library"
   ${BUILD_SHARED_LIBS}
 )
-mark_as_advanced(ASSERT_BUILD_SHARED)
+mark_as_advanced(LIBASSERT_BUILD_SHARED)
 set(build_type STATIC)
-if(ASSERT_BUILD_SHARED)
+if(LIBASSERT_BUILD_SHARED)
   set(build_type SHARED)
 endif()
 
@@ -48,12 +48,12 @@ endif()
 set(warning_guard )
 if(NOT PROJECT_IS_TOP_LEVEL)
   option(
-    ASSERT_INCLUDES_WITH_SYSTEM
+    LIBASSERT_INCLUDES_WITH_SYSTEM
     "Use SYSTEM modifier for ${package_name}'s includes, disabling warnings"
     ON
   )
-  mark_as_advanced(ASSERT_INCLUDES_WITH_SYSTEM)
-  if(ASSERT_INCLUDES_WITH_SYSTEM)
+  mark_as_advanced(LIBASSERT_INCLUDES_WITH_SYSTEM)
+  if(LIBASSERT_INCLUDES_WITH_SYSTEM)
     set(warning_guard SYSTEM)
   endif()
 endif()
@@ -73,12 +73,12 @@ if(PROJECT_IS_TOP_LEVEL AND BUILD_TESTING)
   set(build_testing ON)
 endif()
 option(
-  ASSERT_BUILD_TESTING
+  LIBASSERT_BUILD_TESTING
   "Override BUILD_TESTING for ${package_name} library"
   ${build_testing}
 )
 set(build_testing )
-mark_as_advanced(ASSERT_BUILD_TESTING)
+mark_as_advanced(LIBASSERT_BUILD_TESTING)
 
 
 # ---- Install Include Directory ----
@@ -114,15 +114,15 @@ include(GNUInstallDirs)
 # the CMake configs.
 # This doesn't affects include paths used by consumers of this project.
 # The variable type is STRING rather than PATH, because otherwise passing
-# -DASSERT_INSTALL_CMAKEDIR=lib/cmake on the command line would expand to an
+# -DLIBASSERT_INSTALL_CMAKEDIR=lib/cmake on the command line would expand to an
 # absolute path with the base being the current CMake directory, leading to
 # unexpected errors.
 set(
-  ASSERT_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/${package_name}"
+  LIBASSERT_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/${package_name}"
   CACHE STRING "CMake package config location relative to the install prefix"
 )
 # depends on CMAKE_INSTALL_LIBDIR which is marked as advanced in GNUInstallDirs
-mark_as_advanced(ASSERT_INSTALL_CMAKEDIR)
+mark_as_advanced(LIBASSERT_INSTALL_CMAKEDIR)
 
 
 # ---- Use External CppTrace ----
@@ -130,7 +130,7 @@ mark_as_advanced(ASSERT_INSTALL_CMAKEDIR)
 # Enables obtaining cpptrace via find_package instead of using FetchContent to
 # obtain it from the official GitHub repo
 option(
-  ASSERT_USE_EXTERNAL_CPPTRACE
+  LIBASSERT_USE_EXTERNAL_CPPTRACE
   "Obtain cpptrace via find_package instead of FetchContent"
   OFF
 )
@@ -143,8 +143,8 @@ option(
 # Because magic_enum is used in the our public header file, magic_enum is
 # packaged alongside the library when installed if this option is enabled.
 option(
-  ASSERT_USE_MAGIC_ENUM
+  LIBASSERT_USE_MAGIC_ENUM
   "Use magic_enum library to print better diagnostics for enum classes (will also be included in ${package_name} package installation)"
   OFF
 )
-option(ASSERT_USE_EXTERNAL_MAGIC_ENUM "Obtain magic_enum via find_package instead of FetchContent" OFF)
+option(LIBASSERT_USE_EXTERNAL_MAGIC_ENUM "Obtain magic_enum via find_package instead of FetchContent" OFF)
