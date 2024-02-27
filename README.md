@@ -11,7 +11,7 @@
 <p align="center">The most over-engineered C++ assertion library</p>
 
 > [!IMPORTANT]
-> The current page corresponds to the pre-release to version 2.0. For version 1 refer to https://github.com/jeremy-rifkin/libassert/tree/v1.2.2.
+> The current page corresponds to a pre-release for version 2.0. For version 1 refer to https://github.com/jeremy-rifkin/libassert/tree/v1.2.2.
 
 ## Table of Contents: <!-- omit in toc -->
 - [30-Second Overview](#30-second-overview)
@@ -593,7 +593,7 @@ you when installing new libraries.
 
 ```ps1
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v0.4.0
+git checkout v2.0.0-alpha
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
