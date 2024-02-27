@@ -1026,12 +1026,6 @@ namespace libassert {
 
     LIBASSERT_EXPORT void set_failure_handler(void (*handler)(assert_type, const assertion_info&));
 
-    struct LIBASSERT_EXPORT assertion_failure : std::exception {
-        // I must just this once
-        // NOLINTNEXTLINE(cppcoreguidelines-explicit-virtual-functions,modernize-use-override)
-        [[nodiscard]] virtual const char* what() const noexcept final override;
-    };
-
     struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
         std::string left_stringification;
         std::string right_stringification;

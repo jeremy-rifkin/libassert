@@ -420,7 +420,6 @@ namespace libassert {
             std::cerr << message << std::endl;
             switch(type) {
                 case assert_type::assertion:
-                    throw assertion_failure();
                 case assert_type::debug_assertion:
                 case assert_type::assumption:
                 case assert_type::panic:
@@ -471,10 +470,6 @@ namespace libassert {
 
 namespace libassert {
     using namespace detail;
-
-    const char* assertion_failure::what() const noexcept {
-        return "ASSERT() call failed";
-    }
 
     LIBASSERT_ATTR_COLD assertion_info::assertion_info(
         const assert_static_parameters* _static_params,
