@@ -248,7 +248,7 @@ namespace libassert::detail {
     template<typename T>
     inline constexpr bool is_arith_not_bool_char =
             std::is_arithmetic_v<strip<T>>
-            && !isany<T, bool, char, unsigned char, signed char, wchar_t, char8_t, char16_t, char32_t>;
+            && !isany<T, bool, char, wchar_t, char8_t, char16_t, char32_t>;
 
     template<typename T>
     inline constexpr bool is_c_string = isany<std::decay_t<strip<T>>, char*, const char*>;
