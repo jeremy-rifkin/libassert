@@ -143,7 +143,7 @@ target_compile_features(
   PUBLIC cxx_std_17
 )
 
-if(SANITIZER_BUILD)
+if(LIBSANITIZER_BUILD)
   add_compile_options(-fsanitize=address)
   add_link_options(-fsanitize=address)
 endif()

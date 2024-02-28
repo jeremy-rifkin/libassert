@@ -67,7 +67,7 @@ endif()
 # for users to want to run the tests of their dependencies.
 if(PROJECT_IS_TOP_LEVEL)
   option(BUILD_TESTING "Build tests" OFF)
-  option(SANITIZER_BUILD "Build with sanitizers" OFF)
+  option(LIBSANITIZER_BUILD "Build with sanitizers" OFF)
 endif()
 if(PROJECT_IS_TOP_LEVEL AND BUILD_TESTING)
   set(build_testing ON)
