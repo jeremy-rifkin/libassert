@@ -73,8 +73,8 @@ float f = *ASSERT_VAL(get_param());
 - `ASSUME`: Checked in debug and serves as an optimization hint in release
 
 Unconditional assertions, essentially shortcuts for `ASSERT(false, ...)`:
-- `PANIC`: Checked in both debug and release
-- `UNREACHABLE`: Checked in debug, marked as unreachable in release
+- `PANIC`: Triggers in both debug and release
+- `UNREACHABLE`: Triggers in debug, marked as unreachable in release
 
 **Prefer lowecase `assert`?**
 
@@ -89,8 +89,9 @@ You can enable the lowercase `debug_assert` and `assert` aliases with `-DLIBASSE
 - Stack traces
 - `DEBUG_ASSERT_VAL` and `ASSERT_VAL` variants that return a value so they can be integrated seamlessly into code, e.g.
   `FILE* f = ASSERT_VAL(fopen(path, "r") != nullptr)`.
-- Literal formatting
+- Smart literal formatting
 - Stringification of user-defined types
+- Custom failure handlers
 
 ## CMake FetchContent Usage
 
@@ -140,53 +141,6 @@ into assertions while also providing a quick and easy interface for the develope
 Version 2 of this library takes lessons learned from version 1 to create a tool that I personally have found
 indispensable in development.
 
-# Methodology
-
-Libassert provides three types of assertions, each varying slightly depending on when it should be checked and how it
-should be interpreted:
-
-| Name           | When to Use                                          | Effect                                                                               |
-| -------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `DEBUG_ASSERT` | Core assumptions                                     | Checked in debug, no codegen in release                                              |
-| `ASSERT`       | Checks that are good to have even in release         | Checked in both debug and release builds                                             |
-| `ASSUME`       | Assumptions that can serve as hints to the optimizer | Checked in debug, `if(!(expr)) { __builtin_unreachable(); }` in release              |
-
-Unconditional assertions
-| Name          | When to Use                                     | Effect                                                                                                                                   |
-| ------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `PANIC`       | Something that should never happen has happened | Panic is like `ASSERT(false, ...)`, but the compiler gets `[[noreturn]]` information                                                     |
-| `UNREACHABLE` | For code paths that can't be taken              | Panic is like `ASSERT(false, ...)`, but the compiler gets `[[noreturn]]` information and the code path is marked unreachable in release. |
-
-`ASSUME` marks the fail path as unreachable in release, potentially providing helpful information to the optimizer. This
-isn't the default behavior for all assertions because the immediate consequence of this is that assertion failure in
-`-DNDEBUG` can lead to UB and it's better to make this very explicit.
-
-Assertion variants that can be used in-line in an expression, such as
-`FILE* file = VERIFY_VAL(fopen(path, "r"), "Failed to open file");`, are also available:
-
-| Name               | When to Use                                          | Effect                                                                  |
-| ------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| `DEBUG_ASSERT_VAL` | Core assumptions                                     | Checked in debug, must be evaluated in both debug and release           |
-| `ASSERT_VAl`       | Checks that are good to have even in release         | Checked in both debug and release builds                                |
-| `ASSUME_VAL`       | Assumptions that can serve as hints to the optimizer | Checked in debug, `if(!(expr)) { __builtin_unreachable(); }` in release |
-
-Note: Even in release builds the expression for `DEBUG_ASSERT_VAL` must still be evaluated, unlike `DEBUG_ASSERT`. Of
-course, if the result is unused and produces no side effects it will be optimized away.
-
-# Considerations
-
-Automatic expression decomposition requires a lot of template metaprogramming shenanigans. This adds a lot of work at
-the callsite just to setup an assertion expression. These calls are swiftly inlined in an optimized build, but it is a
-consideration for unoptimized builds.
-
-As far as runtime performance goes, the impact at callsites is very minimal under `-Og` or higher.
-
-Additionally, there is a compile-time cost associated with all the template instantiations required for this library's
-magic. In my experience the build time impact is not egregious.
-
-A lot of work is required to process assertion failures once they happen. However, since failures should be
-*extremely rare* this should not matter.
-
 # Features
 
 ## Automatic Expression Decomposition <!-- omit in toc -->
@@ -231,9 +185,59 @@ differentiate paths are printed.
 
 ![](screenshots/wubble_trace.png)
 
-Another feature worth pointing out is that the stack traces will fold deep recursion traces:
+Another feature worth pointing out is that the stack traces will fold traces with deep recursion:
 
 ![](screenshots/recursion_fold.png)
+
+## Syntax Highlighting <!-- omit in toc -->
+
+The assertion handler applies syntax highlighting wherever appropriate, as seen in all the
+screenshots above. This is to help enhance readability.
+
+## Custom Failure Handlers
+
+Libassert supports custom assertion failure handlers:
+
+```cpp
+void handler(assert_type type, const assertion_info& info) {
+    throw std::runtime_error("Assertion failed:\n" + assertion.to_string());
+}
+
+int main() {
+    libassert::set_failure_handler(handler);
+}
+```
+
+## Debug Stringification <!-- omit in toc -->
+
+A lot of care is given to producing debug stringifications of values as effectively as possible: Strings, characters,
+numbers, should all be printed as you'd expect. Additionally containers, tuples, std::optional, smart pointers, etc. are
+all stringified to show as much information as possible. If a user defined type overloads `operator<<(std::ostream& o,
+const S& s)`, that overload will be called. Otherwise it a default message will be printed. Additionally, a
+stringification customiztaion point is provided:
+
+```cpp
+template<> struct libassert::stringifier<MyObject> {
+    std::string stringify(const MyObject& type) {
+        return ...;
+    }
+};
+```
+
+![](screenshots/object_printing.png)
+
+![](screenshots/custom_object_printing.png)
+
+## Smart literal formatting
+
+Assertion values are printed in hex or binary as well as decimal if hex/binary are used on either
+side of an assertion expression:
+
+```cpp
+ASSERT(get_mask() == 0b00001101);
+```
+
+![](screenshots/literal_formatting.png)
 
 ## Safe Comparisons <!-- omit in toc -->
 
@@ -246,29 +250,54 @@ ASSERT(18446744073709551606ULL == -10);
 
 ![](screenshots/safe_comparison.png)
 
-## Syntax Highlighting <!-- omit in toc -->
+# Methodology
 
-The assertion handler applies syntax highlighting wherever appropriate, as seen in all the
-screenshots above. This is to help enhance readability.
+Libassert provides three types of assertions, each varying slightly depending on when it should be checked and how it
+should be interpreted:
 
-## Object Printing <!-- omit in toc -->
+| Name           | Effect                                                                               |
+| -------------- | ------------------------------------------------------------------------------------ |
+| `DEBUG_ASSERT` | Checked in debug, no codegen in release                                              |
+| `ASSERT`       | Checked in both debug and release builds                                             |
+| `ASSUME`       | Checked in debug, `if(!(expr)) { __builtin_unreachable(); }` in release              |
 
-A lot of care is given to printing values as effectively as possible: Strings, characters, numbers,
-should all be printed as you'd expect. If a user defined type overloads `operator<<(std::ostream& o,
-const S& s)`, that overload will be called. Otherwise it a default message will be printed.
+Unconditional assertions
+| Name          | Effect                                                |
+| ------------- | ----------------------------------------------------- |
+| `PANIC`       | Triggers in both debug and release                    |
+| `UNREACHABLE` | Triggered in debug, marked as unreachable in release. |
 
-![](screenshots/object_printing.png)
+One benefit to `PANIC` and `UNREACHABLE` over `ASSERT(false, ...)` is that the compiler gets `[[noreturn]]` information.
 
-![](screenshots/custom_object_printing.png)
+`ASSUME` marks the fail path as unreachable in release, potentially providing helpful information to the optimizer. This
+isn't the default behavior for all assertions because the immediate consequence of this is that assertion failure in
+`-DNDEBUG` can lead to UB and it's better to make this very explicit.
 
-Assertion values are printed in hex or binary as well as decimal if hex/binary are used on either
-side of an assertion expression:
+Assertion variants that can be used in-line in an expression, such as
+`FILE* file = ASSERT_VAL(fopen(path, "r"), "Failed to open file");`, are also available:
 
-```cpp
-ASSERT(get_mask() == 0b00001101);
-```
+| Name               | Effect                                                                  |
+| ------------------ | ----------------------------------------------------------------------- |
+| `DEBUG_ASSERT_VAL` | Checked in debug, must be evaluated in both debug and release           |
+| `ASSERT_VAl`       | Checked in both debug and release builds                                |
+| `ASSUME_VAL`       | Checked in debug, `if(!(expr)) { __builtin_unreachable(); }` in release |
 
-![](screenshots/literal_formatting.png)
+Note: Even in release builds the expression for `DEBUG_ASSERT_VAL` must still be evaluated, unlike `DEBUG_ASSERT`. Of
+course, if the result is unused and produces no side effects it will be optimized away.
+
+# Considerations
+
+Automatic expression decomposition requires a lot of template metaprogramming shenanigans. This adds a lot of work at
+the callsite just to setup an assertion expression. These calls are swiftly inlined in an optimized build, but it is a
+consideration for unoptimized builds.
+
+As far as runtime performance goes, the impact at callsites is very minimal under `-Og` or higher.
+
+Additionally, there is a compile-time cost associated with all the template instantiations required for this library's
+magic. In my experience the build time impact is not egregious.
+
+A lot of work is required to process assertion failures once they happen. However, since failures should be
+*extremely rare* this should not matter.
 
 # In-Depth Library Documentation
 
@@ -295,7 +324,7 @@ void UNREACHABLE([optional message], [optional extra diagnostics, ...]);
 
 #### `expression` <!-- omit in toc -->
 
-The `<expression>` is automatically decomposed so diagnostic information can be provided. The resultant type must be
+The `expression` is automatically decomposed so diagnostic information can be provided. The resultant type must be
 convertible to boolean.
 
 The operation between left and right hand sides of the top-level operation in the expression tree is evaluated by a
@@ -507,15 +536,70 @@ namespace libassert {
 }
 ```
 
+## Stringification
+
+Libassert provides a customization point for user-defined types?
+
+```cpp
+template<> struct libassert::stringifier<MyObject> {
+    std::string stringify(const MyObject& type) {
+        return ...;
+    }
+};
+```
+
+Additionally, any types with an ostream `operator<<` overload can be stringified as well as any container-like
+user-defined types.
+
+If stringification is not possible the library will just stringify a value as `<instance of T>`.
+
 ## Custom Failure Handlers
 
 ```cpp
 namespace libassert {
+    enum class assert_type {
+        debug_assertion,
+        assertion,
+        assumption,
+        panic,
+        unreachable
+    };
     void set_failure_handler(void (*handler)(assert_type, const assertion_info&));
 }
 ```
 
-- `set_failure_handler`: Sets the assertion handler for the program. Failure handlers must
+- `set_failure_handler`: Sets the assertion handler for the program. Note: Failure handlers must exit for `PANIC` and
+  `UNREACHABLE`.
+
+An example assertion handler similar to the default handler:
+
+```cpp
+void libassert_default_failure_handler(assert_type type, const assertion_info& printer) {
+    std::cerr
+        << printer.to_string(
+            libassert::terminal_width(STDERR_FILENO),
+            libassert::isatty(STDERR_FILENO) ? libassert::get_color_scheme() : libassert::color_scheme::blank
+        )
+        << std::endl;
+    switch(type) {
+        case assert_type::assertion:
+        case assert_type::debug_assertion:
+        case assert_type::assumption:
+        case assert_type::panic:
+        case assert_type::unreachable:
+            (void)fflush(stderr);
+            std::abort();
+            // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
+            // this library (on top of preventing fallthrough from nonfatal libassert)
+            break;
+        default:
+            throw cpptrace::runtime_error("Unexpected assertion type");
+    }
+}
+```
+
+By default libassert aborts from all assertion types. However, it may be desirable to throw an exception from some or
+all assertion types instead of aborting.
 
 ## Other configurations
 
@@ -524,6 +608,8 @@ Set these either at CMake or with `-D` for the compiler.
 - `LIBASSERT_USE_MAGIC_ENUM`
 - `LIBASSERT_DECOMPOSE_BINARY_LOGICAL`
 - `LIBASSERT_SAFE_COMPARISONS`
+- `LIBASSERT_USE_EXTERNAL_CPPTRACE`
+- `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`
 
 # Usage
 
@@ -740,6 +826,10 @@ should not be an issue for any sane compiler.
 ## Does it have spell-check? <!-- omit in toc -->
 
 No, not yet.
+
+# Cool projects using libassert
+
+- [Morwenn's `cpp-sort`](https://github.com/Morwenn/cpp-sort)
 
 # Comparison With Other Languages
 
