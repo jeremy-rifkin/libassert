@@ -144,6 +144,12 @@
  #pragma warning(disable: 4251; disable: 4275)
 #endif
 
+#if __cplusplus >= 2020002 // C++20
+ #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
+#else
+ #define LIBASSERT_VA_ARGS(...) ,##__VA_ARGS__
+#endif
+
 // =====================================================================================================================
 // || Core utilities                                                                                                  ||
 // =====================================================================================================================
@@ -183,7 +189,7 @@ namespace libassert::detail {
 
     #ifndef NDEBUG
      #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) \
-        libassert::detail::primitive_assert_impl(c, false, #c, LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
+        libassert::detail::primitive_assert_impl(c, false, #c, LIBASSERT_PFUNC, {} LIBASSERT_VA_ARGS(__VA_ARGS__))
     #else
      #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) LIBASSERT_PHONY_USE(c)
     #endif
@@ -216,42 +222,50 @@ namespace libassert::detail {
 namespace libassert::detail {
     struct nothing {};
 
-    template<typename T> inline constexpr bool is_nothing = std::is_same_v<T, nothing>;
+    template<typename T>
+    inline constexpr bool is_nothing = std::is_same_v<T, nothing>;
 
     // Hack to get around static_assert(false); being evaluated before any instantiation, even under
     // an if-constexpr branch
     // Also used for PHONY_USE
-    template<typename T> inline constexpr bool always_false = false;
+    template<typename T>
+    inline constexpr bool always_false = false;
 
-    template<typename T> using strip = std::remove_cv_t<std::remove_reference_t<T>>;
+    template<typename T>
+    using strip = std::remove_cv_t<std::remove_reference_t<T>>;
 
     // intentionally not stripping B
-    template<typename A, typename B> inline constexpr bool isa = std::is_same_v<strip<A>, B>;
+    template<typename A, typename B>
+    inline constexpr bool isa = std::is_same_v<strip<A>, B>;
+
+    template<typename A, typename... Bs>
+    inline constexpr bool isany = (... || isa<A, Bs>);
 
     // Is integral but not boolean
-    template<typename T> inline constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
+    template<typename T>
+    inline constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
 
     template<typename T>
-    inline constexpr bool is_arith_not_bool_char = std::is_arithmetic_v<strip<T>> && !isa<T, bool> && !isa<T, char>;
+    inline constexpr bool is_arith_not_bool_char =
+            std::is_arithmetic_v<strip<T>>
+            && !isany<T, bool, char, unsigned char, signed char, wchar_t, char8_t, char16_t, char32_t>;
 
     template<typename T>
-    inline constexpr bool is_c_string =
-           isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
-            || isa<std::decay_t<strip<T>>, const char*>;
+    inline constexpr bool is_c_string = isany<std::decay_t<strip<T>>, char*, const char*>;
+            // char* covers literals (i.e. const char(&)[N]) too
 
     template<typename T>
-    inline constexpr bool is_string_type =
-           isa<T, std::string>
-            || isa<T, std::string_view>
-            || is_c_string<T>;
+    inline constexpr bool is_string_type = isany<T, std::string, std::string_view> || is_c_string<T>;
 
     // char(&)[20], const char(&)[20], const char(&)[]
-    template<typename T> inline constexpr bool is_string_literal =
+    template<typename T>
+    inline constexpr bool is_string_literal =
            std::is_lvalue_reference_v<T>
             && std::is_array_v<typename std::remove_reference_t<T>>
             && isa<typename std::remove_extent_t<typename std::remove_reference_t<T>>, char>;
 
-    template<typename T> typename std::add_lvalue_reference_t<T> decllval() noexcept;
+    template<typename T>
+    typename std::add_lvalue_reference_t<T> decllval() noexcept;
 }
 
 // =====================================================================================================================
@@ -283,6 +297,7 @@ namespace libassert::detail {
 
         namespace adl {
             using std::begin, std::end; // ADL
+
             template<typename T, typename = void> class is_container : public std::false_type {};
             template<typename T>
             class is_container<
@@ -292,6 +307,7 @@ namespace libassert::detail {
                     decltype(end(decllval<T>()))
                 >
             > : public std::true_type {};
+
             template<typename T, typename = void> class is_begin_deref : public std::false_type {};
             template<typename T>
             class is_begin_deref<
@@ -1474,14 +1490,6 @@ namespace libassert::detail {
  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
-#endif
-
-#if LIBASSERT_IS_GCC
- // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
- #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
-#else
- // clang properly eats the comma with ##__VA_ARGS__
- #define LIBASSERT_VA_ARGS(...) , ##__VA_ARGS__
 #endif
 
 namespace libassert {
