@@ -98,7 +98,7 @@ namespace libassert::detail {
             const size_t max_frame_width = n_digits(end - start);
             // do the actual trace
             for(size_t i = start; i <= end; i++) {
-                const auto& [address, line, col, source_path, signature, is_inline] = trace.frames[i];
+                const auto& [raw_address, obj_address, line, col, source_path, signature, is_inline] = trace.frames[i];
                 const std::string line_number = line.has_value() ? std::to_string(line.value()) : "?";
                 // look for repeats, i.e. recursion we can fold
                 size_t recursion_folded = 0;
