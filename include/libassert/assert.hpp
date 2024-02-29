@@ -142,7 +142,7 @@
  #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
 #else
  // clang properly eats the comma with ##__VA_ARGS__
- #define LIBASSERT_VA_ARGS(...) ,##__VA_ARGS__
+ #define LIBASSERT_VA_ARGS(...) , ##__VA_ARGS__
 #endif
 
 // =====================================================================================================================
