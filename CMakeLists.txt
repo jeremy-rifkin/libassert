@@ -22,6 +22,13 @@ include(cmake/ProjectIsTopLevel.cmake)
 include(cmake/OptionVariables.cmake)
 
 if(PROJECT_IS_TOP_LEVEL)
+  find_program(CCACHE_FOUND ccache)
+  if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+  endif()
+endif()
+
+if(PROJECT_IS_TOP_LEVEL)
   if(CMAKE_GENERATOR STREQUAL "Ninja")
     if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
       SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
