@@ -137,6 +137,12 @@
  #pragma warning(disable: 4251; disable: 4275)
 #endif
 
+#if __cplusplus >= 2020002
+ #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
+#else
+ #define LIBASSERT_VA_ARGS(...) ,##__VA_ARGS__
+#endif
+
 // =====================================================================================================================
 // || Core utilities                                                                                                  ||
 // =====================================================================================================================
@@ -176,7 +182,7 @@ namespace libassert::detail {
 
     #ifndef NDEBUG
      #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) \
-        libassert::detail::primitive_assert_impl(c, false, #c, LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
+        libassert::detail::primitive_assert_impl(c, false, #c, LIBASSERT_PFUNC, {} LIBASSERT_VA_ARGS(__VA_ARGS__))
     #else
      #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) LIBASSERT_PHONY_USE(c)
     #endif
@@ -1467,14 +1473,6 @@ namespace libassert::detail {
  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
-#endif
-
-#if LIBASSERT_IS_GCC
- // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
- #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
-#else
- // clang properly eats the comma with ##__VA_ARGS__
- #define LIBASSERT_VA_ARGS(...) , ##__VA_ARGS__
 #endif
 
 namespace libassert {
