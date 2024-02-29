@@ -99,12 +99,19 @@
  #define LIBASSERT_PFUNC __extension__ __PRETTY_FUNCTION__
  #define LIBASSERT_ATTR_COLD     [[gnu::cold]]
  #define LIBASSERT_ATTR_NOINLINE [[gnu::noinline]]
- #define LIBASSERT_UNREACHABLE __builtin_unreachable()
 #else
  #define LIBASSERT_PFUNC __FUNCSIG__
  #define LIBASSERT_ATTR_COLD
  #define LIBASSERT_ATTR_NOINLINE __declspec(noinline)
- #define LIBASSERT_UNREACHABLE __assume(false)
+#endif
+
+#if __cplusplus >= 202302L
+ #include <utility>
+ #define LIBASSERT_UNREACHABLE() ::std::unreachable()
+#elif LIBASSERT_IS_MSVC
+ #define LIBASSERT_UNREACHABLE() __assume(false)
+#else
+ #define LIBASSERT_UNREACHABLE() __builtin_unreachable()
 #endif
 
 #if LIBASSERT_IS_MSVC
@@ -1658,7 +1665,7 @@ namespace libassert {
     LIBASSERT_WARNING_PRAGMA_POP_CLANG
 
 #ifdef NDEBUG
- #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE;
+ #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE();
 #else
  #define LIBASSERT_ASSUME_ACTION
 #endif
@@ -1694,7 +1701,7 @@ namespace libassert {
 #ifndef NDEBUG
  #define UNREACHABLE(...) LIBASSERT_INVOKE_PANIC("UNREACHABLE", unreachable, __VA_ARGS__)
 #else
- #define UNREACHABLE(...) LIBASSERT_UNREACHABLE
+ #define UNREACHABLE(...) LIBASSERT_UNREACHABLE()
 #endif
 
 // value variants
