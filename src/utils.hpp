@@ -17,7 +17,7 @@
 
 namespace libassert::detail {
     // Still present in release mode, nonfatal
-    #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
+    #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, {} LIBASSERT_VA_ARGS(__VA_ARGS__))
 
     /*
      * string utilities
