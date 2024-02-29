@@ -726,19 +726,21 @@ To use the library without cmake first follow the installation instructions at
 [System-Wide Installation](#system-wide-installation), [Local User Installation](#local-user-installation),
 or [Package Managers](#package-managers).
 
-You'll need to tell the compiler where to look for include headers and library files. For more information on linking
-with cpptrace refer to the [cpptrace documentation](https://github.com/jeremy-rifkin/cpptrace?tab=readme-ov-file#use-without-cmake).
+Use the following arguments to compile with libassert:
 
-| Compiler                | Platform         | Dependencies                                         |
-| ----------------------- | ---------------- | ---------------------------------------------------- |
-| gcc, clang, intel, etc. | Linux/macos/unix | `-libassert -lcpptrace -ldwarf -lz -lzstd -ldl`      |
-| gcc                     | Windows          | `-libassert -lcpptrace -ldbghelp -ldwarf -lz -lzstd` |
-| msvc                    | Windows          | `assert.lib cpptrace.lib dbghelp.lib`             |
-| clang                   | Windows          | `-libassert -lcpptrace -ldbghelp`                    |
+| Compiler                | Platform         | Dependencies                                              |
+| ----------------------- | ---------------- | --------------------------------------------------------- |
+| gcc, clang, intel, etc. | Linux/macos/unix | `-libassert -I[path] [cpptrace args]` |
+| mingw                   | Windows          | `-libassert -I[path] [cpptrace args]` |
+| msvc                    | Windows          | `assert.lib /I[path] [cpptrace args]` |
+| clang                   | Windows          | `-libassert -I[path] [cpptrace args]` |
 
-Note: Newer libdwarf requires `-lzstd`, older libdwarf does not.
+For the `[path]` placeholder in `-I[path]` and `/I[path]`, specify the path to the include folder containing
+`libassert/assert.hpp`.
 
-Dependencies may differ if different back-ends are manually selected.
+If you are linking statically, you will additionally need to specify `-DLIBASSERT_STATIC_DEFINE`.
+
+For the `[cpptrace args]` placeholder refer to the [cpptrace documentation](https://github.com/jeremy-rifkin/cpptrace?tab=readme-ov-file#use-without-cmake).
 
 ## Package Managers
 
