@@ -221,22 +221,22 @@ namespace libassert::detail {
     // intentionally not stripping B
     template<typename A, typename B> inline constexpr bool isa = std::is_same_v<strip<A>, B>;
 
+    template<typename A, typename... B> inline constexpr bool isany = (... || isa<A, B>);
+
     // Is integral but not boolean
     template<typename T> inline constexpr bool is_integral_and_not_bool = std::is_integral_v<strip<T>> && !isa<T, bool>;
 
     template<typename T>
-    inline constexpr bool is_arith_not_bool_char = std::is_arithmetic_v<strip<T>> && !isa<T, bool> && !isa<T, char>;
+    inline constexpr bool is_arith_not_bool_char =
+           std::is_arithmetic_v<strip<T>>
+            && !isany<T, bool, char, wchar_t, char8_t, char16_t, char32_t>;
 
     template<typename T>
-    inline constexpr bool is_c_string =
-           isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
-            || isa<std::decay_t<strip<T>>, const char*>;
+    inline constexpr bool is_c_string = isany<std::decay_t<strip<T>>, char*, const char*>;
+           // char* covers literals (i.e. const char(&)[N]) too
 
     template<typename T>
-    inline constexpr bool is_string_type =
-           isa<T, std::string>
-            || isa<T, std::string_view>
-            || is_c_string<T>;
+    inline constexpr bool is_string_type = isany<T, std::string, std::string_view> || is_c_string<T>;
 
     // char(&)[20], const char(&)[20], const char(&)[]
     template<typename T> inline constexpr bool is_string_literal =
@@ -1139,7 +1139,9 @@ namespace libassert::detail {
         std::string_view right_str,
         std::string_view op
     ) {
-        constexpr bool either_is_character = isa<A, char> || isa<B, char>;
+        constexpr bool either_is_character =
+               isany<A, char, wchar_t, char8_t, char16_t, char32_t>
+                || isany<B, char, wchar_t, char8_t, char16_t, char32_t>;
         constexpr bool either_is_arithmetic = is_arith_not_bool_char<A> || is_arith_not_bool_char<B>;
         literal_format previous_format = set_literal_format(
             left_str,
