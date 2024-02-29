@@ -63,18 +63,18 @@
 #endif
 
 #ifdef LIBASSERT_STATIC_DEFINE
-#  define LIBASSERT_EXPORT
-#  define LIBASSERT_NO_EXPORT
+ #define LIBASSERT_EXPORT
+ #define LIBASSERT_NO_EXPORT
 #else
-#  ifndef LIBASSERT_EXPORT
-#    ifdef libassert_lib_EXPORTS
-        /* We are building this library */
-#      define LIBASSERT_EXPORT LIBASSERT_EXPORT_ATTR
-#    else
-        /* We are using this library */
-#      define LIBASSERT_EXPORT LIBASSERT_IMPORT_ATTR
-#    endif
-#  endif
+ #ifndef LIBASSERT_EXPORT
+  #ifdef libassert_lib_EXPORTS
+   /* We are building this library */
+   #define LIBASSERT_EXPORT LIBASSERT_EXPORT_ATTR
+  #else
+   /* We are using this library */
+   #define LIBASSERT_EXPORT LIBASSERT_IMPORT_ATTR
+  #endif
+ #endif
 #endif
 
 #define LIBASSERT_IS_CLANG 0
