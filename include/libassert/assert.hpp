@@ -106,7 +106,6 @@
 #endif
 
 #if __cplusplus >= 202302L
- #include <utility>
  #define LIBASSERT_UNREACHABLE() ::std::unreachable()
 #elif LIBASSERT_IS_MSVC
  #define LIBASSERT_UNREACHABLE() __assume(false)
