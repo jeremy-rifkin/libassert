@@ -137,9 +137,11 @@
  #pragma warning(disable: 4251; disable: 4275)
 #endif
 
-#if __cplusplus >= 2020002
+#if LIBASSERT_IS_GCC || __cplusplus >= 2020002L
+ // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
  #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
 #else
+ // clang properly eats the comma with ##__VA_ARGS__
  #define LIBASSERT_VA_ARGS(...) ,##__VA_ARGS__
 #endif
 
