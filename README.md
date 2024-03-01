@@ -136,8 +136,8 @@ allow for speedy triage. Unfortunately, existing language and library tooling pr
 
 For example with stdlib assertions an assertion such as `assert(n <= 12);` provides no information upon failure about
 why it failed or what lead to its failure. Providing a stack trace and the value of `n` greatley improves triage and
-debugging. Ideally an assertion failure should provide enough diagnostic information that the programmmer does's have to
-rerun in a debugger to pinpoint the problem.
+debugging. Ideally an assertion failure should provide enough diagnostic information that the programmmer doesn't have
+to rerun in a debugger to pinpoint the problem.
 
 Version 1 of this library was an exploration looking at how much helpful information and functionality could be packed
 into assertions while also providing a quick and easy interface for the developer.
