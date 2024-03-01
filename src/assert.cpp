@@ -536,8 +536,8 @@ namespace libassert {
 }
 
 namespace libassert {
-    LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int) {
+    LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int width, color_scheme scheme) {
         auto trace = cpptrace::generate_raw_trace();
-        return ""; //print_stacktrace(&trace, width); // TODO FIXME
+        return print_stacktrace(trace, width, scheme);
     }
 }

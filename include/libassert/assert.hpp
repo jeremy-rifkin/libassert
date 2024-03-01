@@ -934,8 +934,10 @@ namespace libassert {
     // returns the width of the terminal represented by fd, will be 0 on error
     [[nodiscard]] LIBASSERT_EXPORT int terminal_width(int fd);
 
+    struct color_scheme; // TODO: Remove need to forward declare this
+
     // generates a stack trace, formats to the given width
-    [[nodiscard]] LIBASSERT_EXPORT std::string stacktrace(int width);
+    [[nodiscard]] LIBASSERT_EXPORT std::string stacktrace(int width, color_scheme scheme);
 
     // returns the type name of T
     template<typename T>
