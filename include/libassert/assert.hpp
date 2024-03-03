@@ -1190,38 +1190,24 @@ namespace libassert::detail {
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void process_arg(assertion_info& info, size_t i, const char* const* const args_strings, const T& t) {
-        // three cases to handle: assert message, errno, and regular diagnostics
-        #if LIBASSERT_IS_MSVC
-         #pragma warning(push)
-         #pragma warning(disable: 4127) // MSVC thinks constexpr should be used here. It should not.
-        #endif
-        // TODO: Maybe handle later...
-        if(isa<T, strip<decltype(errno)>> && args_strings[i] == errno_expansion) {
-        #if LIBASSERT_IS_MSVC
-         #pragma warning(pop)
-        #endif
-            // this is redundant and useless but the body for errno handling needs to be in an
-            // if constexpr wrapper
-            if constexpr(isa<T, strip<decltype(errno)>>) {
-            // errno will expand to something hideous like (*__errno_location()),
-            // may as well replace it with "errno"
-            info.extra_diagnostics.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
+        if constexpr(isa<T, strip<decltype(errno)>>) {
+            if(args_strings[i] == errno_expansion) {
+                info.extra_diagnostics.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
+                return;
             }
-        } else {
-            if constexpr(is_string_type<T>) {
-                if(i == 0) {
-                    if constexpr(std::is_pointer_v<T>) {
-                        if(t == nullptr) {
-                            info.message = "(nullptr)";
-                            return;
-                        }
+        } else if constexpr(is_string_type<T>) {
+            if(i == 0) {
+                if constexpr(std::is_pointer_v<T>) {
+                    if(t == nullptr) {
+                        info.message = "(nullptr)";
+                        return;
                     }
-                    info.message = t;
-                    return;
                 }
+                info.message = t;
+                return;
             }
-            info.extra_diagnostics.push_back({ args_strings[i], generate_stringification(t) });
         }
+        info.extra_diagnostics.push_back({ args_strings[i], generate_stringification(t) });
     }
 
     template<typename... Args>
