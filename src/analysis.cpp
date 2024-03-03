@@ -265,7 +265,7 @@ namespace libassert::detail {
         }
 
         LIBASSERT_ATTR_COLD
-        std::vector<highlight_block> highlight_string(std::string_view str, color_scheme scheme) const {
+        std::vector<highlight_block> highlight_string(std::string_view str, const color_scheme& scheme) const {
             std::vector<highlight_block> output;
             std::cmatch match;
             std::size_t i = 0;
@@ -289,7 +289,7 @@ namespace libassert::detail {
         LIBASSERT_ATTR_COLD
         // TODO: Refactor
         // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-        std::vector<highlight_block> highlight(std::string_view expression, color_scheme scheme) try {
+        std::vector<highlight_block> highlight(std::string_view expression, const color_scheme& scheme) try {
             const auto tokens = tokenize(expression);
             std::vector<highlight_block> output;
             for(size_t i = 0; i < tokens.size(); i++) {
@@ -638,7 +638,7 @@ namespace libassert::detail {
     std::mutex analysis::singleton_mutex;
 
     LIBASSERT_ATTR_COLD
-    std::string highlight(std::string_view expression, color_scheme scheme) {
+    std::string highlight(std::string_view expression, const color_scheme& scheme) {
         #ifdef NCOLOR
         return expression;
         #else
@@ -656,7 +656,7 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
-    std::vector<highlight_block> highlight_blocks(std::string_view expression, color_scheme scheme) {
+    std::vector<highlight_block> highlight_blocks(std::string_view expression, const color_scheme& scheme) {
         #ifdef NCOLOR
         return expression;
         #else

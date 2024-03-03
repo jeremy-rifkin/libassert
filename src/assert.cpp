@@ -66,7 +66,7 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD [[nodiscard]]
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    std::string print_stacktrace(const cpptrace::raw_trace raw_trace, int term_width, color_scheme scheme) {
+    std::string print_stacktrace(const cpptrace::raw_trace raw_trace, int term_width, const color_scheme& scheme) {
         std::string stacktrace;
         if(!raw_trace.empty()) {
             auto trace = raw_trace.resolve();
@@ -166,7 +166,7 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
-    static std::string print_values(const std::vector<std::string>& vec, size_t lw, color_scheme scheme) {
+    static std::string print_values(const std::vector<std::string>& vec, size_t lw, const color_scheme& scheme) {
         LIBASSERT_PRIMITIVE_ASSERT(!vec.empty());
         std::string values;
         if(vec.size() == 1) {
@@ -187,7 +187,7 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
-    static std::vector<highlight_block> get_values(const std::vector<std::string>& vec, color_scheme scheme) {
+    static std::vector<highlight_block> get_values(const std::vector<std::string>& vec, const color_scheme& scheme) {
         LIBASSERT_PRIMITIVE_ASSERT(!vec.empty());
         if(vec.size() == 1) {
             return highlight_blocks(vec[0], scheme);
@@ -215,7 +215,7 @@ namespace libassert::detail {
     std::string print_binary_diagnostics(
         const binary_diagnostics_descriptor& diagnostics,
         size_t term_width,
-        color_scheme scheme
+        const color_scheme& scheme
     ) {
         auto& [
             left_stringification,
@@ -299,7 +299,7 @@ namespace libassert::detail {
     std::string print_extra_diagnostics(
         const std::vector<extra_diagnostic>& extra_diagnostics,
         size_t term_width,
-        color_scheme scheme
+        const color_scheme& scheme
     ) {
         std::string output = "    Extra diagnostics:\n";
         size_t lw = 0;
@@ -400,7 +400,7 @@ namespace libassert {
     std::mutex color_scheme_mutex;
     color_scheme current_color_scheme = color_scheme::ansi_rgb;
 
-    LIBASSERT_EXPORT void set_color_scheme(color_scheme scheme) {
+    LIBASSERT_EXPORT void set_color_scheme(const color_scheme& scheme) {
         std::unique_lock lock(color_scheme_mutex);
         current_color_scheme = scheme;
     }
@@ -486,7 +486,7 @@ namespace libassert {
 
     LIBASSERT_ATTR_COLD assertion_info::~assertion_info() = default;
 
-    LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, color_scheme scheme) const {
+    LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, const color_scheme& scheme) const {
         const auto& [ name, type, expr_str, location, args_strings ] = *static_params;
         // const auto& [ message, extra_diagnostics, pretty_function ] = processed_args;
         std::string output;
@@ -538,7 +538,7 @@ namespace libassert {
 }
 
 namespace libassert {
-    LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int width, color_scheme scheme) {
+    LIBASSERT_ATTR_COLD [[nodiscard]] std::string stacktrace(int width, const color_scheme& scheme) {
         auto trace = cpptrace::generate_raw_trace();
         return print_stacktrace(trace, width, scheme);
     }

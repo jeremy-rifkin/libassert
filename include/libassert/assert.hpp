@@ -937,7 +937,7 @@ namespace libassert {
     struct color_scheme; // TODO: Remove need to forward declare this
 
     // generates a stack trace, formats to the given width
-    [[nodiscard]] LIBASSERT_EXPORT std::string stacktrace(int width, color_scheme scheme);
+    [[nodiscard]] LIBASSERT_EXPORT std::string stacktrace(int width, const color_scheme& scheme);
 
     // returns the type name of T
     template<typename T>
@@ -981,7 +981,7 @@ namespace libassert {
         LIBASSERT_EXPORT static color_scheme blank;
     };
 
-    LIBASSERT_EXPORT void set_color_scheme(color_scheme);
+    LIBASSERT_EXPORT void set_color_scheme(const color_scheme&);
     LIBASSERT_EXPORT color_scheme get_color_scheme();
 
     enum class literal_format : unsigned {
@@ -1097,7 +1097,7 @@ namespace libassert {
         assertion_info(assertion_info&&) = delete;
         assertion_info& operator=(const assertion_info&) = delete;
         assertion_info& operator=(assertion_info&&) = delete;
-        [[nodiscard]] std::string to_string(int width = 0, color_scheme scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string to_string(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
     };
 }
 
