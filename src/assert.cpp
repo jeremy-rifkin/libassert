@@ -222,8 +222,7 @@ namespace libassert::detail {
             right_stringification,
             left_expression,
             right_expression,
-            multiple_formats,
-            _
+            multiple_formats
         ] = diagnostics;
         // TODO: Temporary hack while reworking
         std::vector<std::string> lstrings = { left_stringification };
@@ -462,8 +461,7 @@ namespace libassert {
         right_stringification(std::move(_right_stringification)),
         left_expression(_left_expression),
         right_expression(_right_expression),
-        multiple_formats(_multiple_formats),
-        present(true) {}
+        multiple_formats(_multiple_formats) {}
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
     LIBASSERT_ATTR_COLD
     binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
@@ -523,8 +521,8 @@ namespace libassert {
             ).c_str()
         );
         // generate binary diagnostics
-        if(binary_diagnostics.present) {
-            output += print_binary_diagnostics(binary_diagnostics, width, scheme);
+        if(binary_diagnostics) {
+            output += print_binary_diagnostics(*binary_diagnostics, width, scheme);
         }
         // generate extra diagnostics
         if(!extra_diagnostics.empty()) {

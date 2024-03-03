@@ -1044,9 +1044,6 @@ namespace libassert {
         std::string left_expression;
         std::string right_expression;
         bool multiple_formats;
-        // binary diagnostic descriptors might not be present if the expression is not decomposable and the expression
-        // type is boolean
-        bool present = false;
         binary_diagnostics_descriptor(); // = default; in the .cpp
         binary_diagnostics_descriptor(
             std::string&& left_stringification,
@@ -1080,7 +1077,7 @@ namespace libassert {
     struct LIBASSERT_EXPORT assertion_info {
         const assert_static_parameters* static_params; // TODO: Expand...?
         std::string message;
-        binary_diagnostics_descriptor binary_diagnostics;
+        std::optional<binary_diagnostics_descriptor> binary_diagnostics;
         std::vector<extra_diagnostic> extra_diagnostics;
         std::string_view pretty_function;
         cpptrace::raw_trace raw_trace;
