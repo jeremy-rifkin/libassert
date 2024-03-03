@@ -101,6 +101,7 @@ target_sources(
   src/platform.cpp
   src/printing.cpp
   src/paths.cpp
+  src/tokenizer.cpp
 )
 
 # link dependencies

@@ -376,6 +376,7 @@ namespace libassert {
         BASIC_YELLOW, /* scope_resolution_identifier */
         BASIC_BLUE, /* identifier */
         BASIC_BLUE, /* accent */
+        BASIC_RED, /* unknown */
         RESET
     };
 
@@ -390,6 +391,7 @@ namespace libassert {
         RGB_YELLOW, /* scope_resolution_identifier */
         RGB_BLUE, /* identifier */
         RGB_BLUE, /* accent */
+        RGB_RED, /* unknown */
         RESET
     };
 

@@ -11,6 +11,7 @@ namespace libassert::detail {
     struct highlight_block {
         std::string_view color;
         std::string content;
+        highlight_block(std::string_view color_, std::string_view content_) : color(color_), content(content_) {}
     };
 
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT /* FIXME */

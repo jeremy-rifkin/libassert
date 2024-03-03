@@ -20,6 +20,7 @@
 #include "common.hpp"
 #include "utils.hpp"
 #include "analysis.hpp"
+#include "tokenizer.hpp"
 
 namespace libassert::detail {
     /*
@@ -75,21 +76,6 @@ namespace libassert::detail {
     }
 
     class analysis {
-        enum class token_e {
-            keyword,
-            punctuation,
-            number,
-            string,
-            named_literal,
-            identifier,
-            whitespace
-        };
-
-        struct token_t {
-            token_e token_type;
-            std::string str;
-        };
-
     public:
         // Analysis singleton, lazy-initialize all the regex nonsense
         // 8 BSS bytes and <512 bytes heap bytes not a problem
@@ -103,8 +89,6 @@ namespace libassert::detail {
             return *analysis_singleton;
         }
 
-        // could all be const but I don't want to try to pack everything into an init list
-        std::vector<std::pair<token_e, std::regex>> rules; // could be std::array but I don't want to hard-code a size
         std::regex escapes_re;
         std::unordered_map<std::string_view, int> precedence;
         std::unordered_map<std::string_view, std::string_view> braces = {
@@ -177,8 +161,6 @@ namespace libassert::detail {
             // https://eel.is/c++draft/lex.pptoken#3.2
             *std::find(std::begin(punctuators), std::end(punctuators), "<:") += "(?!:[^:>])";
             // regular expressions
-            std::string keywords_re    = "(?:" + join(keywords, "|") + ")\\b";
-            std::string punctuators_re = join(punctuators, "|");
             // numeric literals
             const std::string optional_integer_suffix = "(?:[Uu](?:LL?|ll?|Z|z)?|(?:LL?|ll?|Z|z)[Uu]?)?";
             const std::string int_binary  = "0[Bb][01](?:'?[01])*" + optional_integer_suffix;
@@ -221,49 +203,7 @@ namespace libassert::detail {
             // char and string literals
             const std::string escapes = R"(\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.)";
             const std::string char_literal = R"((?:u8|[UuL])?'(?:)" + escapes + R"(|[^\n'])*')";
-            const std::string string_literal = R"((?:u8|[UuL])?"(?:)" + escapes + R"(|[^\n"])*")";
-                                 // \2 because the first capture is the match without the rest of the file
-            const std::string raw_string_literal = R"((?:u8|[UuL])?R"([^ ()\\t\r\v\n]*)\((?:(?!\)\2\").)*\)\2")";
             escapes_re = std::regex(escapes);
-            // final rule set
-            // rules must be sequenced as a topological sort adhering to:
-            // keyword > identifier
-            // number > punctuation (for .1f)
-            // float > int (for 1.5 and hex floats)
-            // hex int > decimal int
-            // named_literal > identifier
-            // string > identifier (for R"(foobar)")
-            // punctuation > identifier (for "not" and other alternative operators)
-            const std::pair<token_e, std::string> rules_raw[] = {
-                { token_e::keyword    , keywords_re },
-                { token_e::number     , union_regexes({
-                    float_decimal,
-                    float_hex,
-                    int_binary,
-                    int_octal,
-                    int_hex,
-                    int_decimal
-                }) },
-                { token_e::punctuation, punctuators_re },
-                // nullopt added deliberately
-                { token_e::named_literal, "true|false|nullptr|nullopt" },
-                { token_e::string     , union_regexes({
-                    char_literal,
-                    raw_string_literal,
-                    string_literal
-                }) },
-                { token_e::identifier , R"((?!\d+)(?:[\da-zA-Z_\$]|\\u[\da-fA-F]{4}|\\U[\da-fA-F]{8})+)" },
-                { token_e::whitespace , R"(\s+)" }
-            };
-            rules.resize(std::size(rules_raw));
-            for(size_t i = 0; i < std::size(rules_raw); i++) {
-                                // [^] instead of . because . does not match newlines
-                const std::string str = stringf("^(%s)[^]*", rules_raw[i].second.c_str());
-                #ifdef _0_DEBUG_ASSERT_LEXER_RULES
-                 fprintf(stderr, "%s : %s\n", rules_raw[i].first.c_str(), str.c_str());
-                #endif
-                rules[i] = { rules_raw[i].first, std::regex(str) };
-            }
             // setup literal format rules
             literal_formats = {
                 { std::regex(int_binary),    literal_format::integer_binary },
@@ -325,45 +265,12 @@ namespace libassert::detail {
         }
 
         LIBASSERT_ATTR_COLD
-        std::vector<token_t> tokenize(std::string_view expression, bool decompose_shr = false) {
-            std::vector<token_t> tokens;
-            size_t i = 0;
-            while(i < expression.length()) {
-                std::cmatch match;
-                bool at_least_one_matched = false;
-                for(const auto& [ type, re ] : rules) {
-                    // std::string_view::iterator is const char* on libc++ and libstdc++, but in msvc it's a class.
-                    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
-                    if(std::regex_match(expression.data() + i, expression.data() + expression.size(), match, re)) {
-                        #ifdef _0_DEBUG_ASSERT_TOKENIZATION
-                         fprintf(stderr, "%s\n", match[1].str().c_str());
-                         fflush(stdout);
-                        #endif
-                        if(decompose_shr && match[1].str() == ">>") { // Do >> decomposition now for templates
-                            tokens.push_back({ type, ">" });
-                            tokens.push_back({ type, ">" });
-                        } else {
-                            tokens.push_back({ type, match[1].str() });
-                        }
-                        i += match[1].length();
-                        at_least_one_matched = true;
-                        break;
-                    }
-                }
-                if(!at_least_one_matched) {
-                    throw std::logic_error("error: invalid token");
-                }
-            }
-            return tokens;
-        }
-
-        LIBASSERT_ATTR_COLD
-        std::vector<highlight_block> highlight_string(const std::string& str, color_scheme scheme) const {
+        std::vector<highlight_block> highlight_string(std::string_view str, color_scheme scheme) const {
             std::vector<highlight_block> output;
-            std::smatch match;
+            std::cmatch match;
             std::size_t i = 0;
             // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
-            while(std::regex_search(str.cbegin() + i, str.cend(), match, escapes_re)) {
+            while(std::regex_search(str.data() + i, str.data() + str.size(), match, escapes_re)) {
                 // add string part
                 // TODO: I don't know why this assert was added, I might have done it in dev on a whim. Re-evaluate.
                 // LIBASSERT_PRIMITIVE_ASSERT(match.position() > 0);
@@ -390,7 +297,7 @@ namespace libassert::detail {
                 // Peek next non-whitespace token, return empty whitespace token if end is reached
                 const auto peek = [i, &tokens](size_t j = 1) {
                     for(size_t k = 1; j > 0 && i + k < tokens.size(); k++) {
-                        if(tokens[i + k].token_type != token_e::whitespace) {
+                        if(tokens[i + k].type != token_e::whitespace) {
                             if(--j == 0) {
                                 return tokens[i + k];
                             }
@@ -399,7 +306,7 @@ namespace libassert::detail {
                     LIBASSERT_PRIMITIVE_ASSERT(j != 0);
                     return token_t { token_e::whitespace, "" };
                 };
-                switch(token.token_type) {
+                switch(token.type) {
                     case token_e::keyword:
                         output.push_back({scheme.keyword, token.str});
                         break;
@@ -434,6 +341,9 @@ namespace libassert::detail {
                     case token_e::whitespace:
                         output.push_back({"", token.str});
                         break;
+                    case token_e::unknown:
+                        output.push_back({scheme.unknown, token.str});
+                        break;
                 }
             }
             return output;
@@ -455,7 +365,7 @@ namespace libassert::detail {
         static token_t find_last_non_ws(const std::vector<token_t>& tokens, size_t i) {
             // returns empty token_e::whitespace on failure
             while(i--) {
-                if(tokens[i].token_type != token_e::whitespace) {
+                if(tokens[i].type != token_e::whitespace) {
                     return tokens[i];
                 }
             }
@@ -517,7 +427,7 @@ namespace libassert::detail {
                             if(count-- == 0) {
                                 break;
                             }
-                        } else if(tokens[i].token_type != token_e::whitespace) {
+                        } else if(tokens[i].type != token_e::whitespace) {
                             empty = false;
                         }
                     }
@@ -526,7 +436,7 @@ namespace libassert::detail {
                     }
                     return empty;
                 };
-                switch(token.token_type) {
+                switch(token.type) {
                     case token_e::punctuation:
                         if(operators.count(token.str)) {
                             if(state == expecting_term) {
@@ -534,7 +444,7 @@ namespace libassert::detail {
                             } else {
                                 // template can only open with a < token, no need to check << or <<=
                                 // also must be preceeded by an identifier
-                                if(token.str == "<" && find_last_non_ws(tokens, i).token_type == token_e::identifier) {
+                                if(token.str == "<" && find_last_non_ws(tokens, i).type == token_e::identifier) {
                                     // branch 1: this is a template opening
                                     const bool success = pseudoparse(
                                         tokens,
@@ -620,6 +530,7 @@ namespace libassert::detail {
                     case token_e::number:
                     case token_e::string:
                     case token_e::identifier:
+                    case token_e::unknown:
                         state = expecting_operator;
                     case token_e::whitespace:
                         break;
@@ -707,11 +618,11 @@ namespace libassert::detail {
                 std::vector<std::string> right_strings;
                 const size_t m = *candidates.begin();
                 for(size_t i = 0; i < m; i++) {
-                    left_strings.push_back(tokens[i].str);
+                    left_strings.push_back(std::string(tokens[i].str));
                 }
                 // >> is decomposed and requires special handling (m will be the index of the first > token)
                 for(size_t i = m + 1 + (target_op == ">>" ? 1 : 0); i < tokens.size(); i++) {
-                    right_strings.push_back(tokens[i].str);
+                    right_strings.push_back(std::string(tokens[i].str));
                 }
                 return {
                     std::string(trim(join(left_strings, ""))),

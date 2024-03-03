@@ -90,24 +90,54 @@ namespace libassert::detail {
      */
 
     // Container utility
-    template<typename N> class small_static_map {
+    template<typename N> class needle {
         // TODO: Re-evaluate
-        const N& needle;
+        const N& needle_value;
     public:
-        explicit small_static_map(const N& n) : needle(n) {}
+        explicit needle(const N& n) : needle_value(n) {}
         template<typename K, typename V, typename... Rest>
         constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
-            if(needle == option) { return result; }
+            if(needle_value == option) { return result; }
             if constexpr(sizeof...(Rest) > 0) { return lookup(rest...); }
             else { LIBASSERT_PRIMITIVE_ASSERT(false); LIBASSERT_UNREACHABLE; }
         }
-        constexpr bool is_in() { return false; }
-        template<typename T, typename... Rest>
-        constexpr bool is_in(const T& option, const Rest&... rest) {
-            if(needle == option) { return true; }
-            return is_in(rest...);
+        template<typename... Args>
+        constexpr bool is_in(const Args&... option) {
+            return ((needle_value == option) || ... || false);
         }
     };
+
+    // copied from cppref
+    template<typename T, std::size_t N, std::size_t... I>
+    constexpr std::array<std::remove_cv_t<T>, N> to_array_impl(T(&&a)[N], std::index_sequence<I...>) {
+        return {{std::move(a[I])...}};
+    }
+
+    template<typename T, std::size_t N>
+    constexpr std::array<std::remove_cv_t<T>, N> to_array(T(&&a)[N]) {
+        return to_array_impl(std::move(a), std::make_index_sequence<N>{});
+    }
+
+    template<typename A, typename B>
+    constexpr void constexpr_swap(A& a, B& b) {
+        B tmp = std::move(b);
+        b = std::move(a);
+        a = std::move(tmp);
+    }
+
+    // cmp(a, b) should return whether a comes before b
+    template<typename T, std::size_t N, typename C>
+    constexpr void constexpr_sort(std::array<T, N>& arr, const C& cmp) {
+        // insertion sort is fine for small arrays
+        static_assert(N <= 65);
+        for(std::size_t i = 1; i < arr.size(); i++) {
+            for(std::size_t j = 0; j < i; j++) {
+                if(cmp(arr[j], arr[i])) {
+                    constexpr_swap(arr[i], arr[j]);
+                }
+            }
+        }
+    }
 
     template<typename T, typename std::enable_if<std::is_unsigned<T>::value, int>::type = 0>
     constexpr T popcount(T value) {
