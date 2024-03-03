@@ -974,6 +974,7 @@ namespace libassert {
         std::string_view scope_resolution_identifier;
         std::string_view identifier;
         std::string_view accent;
+        std::string_view unknown;
         std::string_view reset;
         LIBASSERT_EXPORT static color_scheme ansi_basic;
         LIBASSERT_EXPORT static color_scheme ansi_rgb;

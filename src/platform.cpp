@@ -34,7 +34,7 @@ namespace libassert {
             return 0;
         }
         #if IS_WINDOWS
-         DWORD windows_handle = detail::small_static_map(fd).lookup(
+         DWORD windows_handle = detail::needle(fd).lookup(
              STDIN_FILENO, STD_INPUT_HANDLE,
              STDOUT_FILENO, STD_OUTPUT_HANDLE,
              STDERR_FILENO, STD_ERROR_HANDLE
