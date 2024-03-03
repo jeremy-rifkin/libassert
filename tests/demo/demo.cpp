@@ -35,7 +35,7 @@
 void qux();
 void wubble();
 
-void custom_fail(libassert::assert_type, const libassert::assertion_info& assertion) {
+void custom_fail(const libassert::assertion_info& assertion) {
     std::cerr<<assertion.to_string(libassert::terminal_width(STDERR_FILENO), libassert::color_scheme::ansi_rgb)<<std::endl<<std::endl;
 }
 

@@ -411,15 +411,15 @@ namespace libassert {
 
     namespace detail {
         LIBASSERT_ATTR_COLD
-        void libassert_default_failure_handler(assert_type type, const assertion_info& printer) {
+        void libassert_default_failure_handler(const assertion_info& info) {
             // TODO: Just throw instead of all of this?
             enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-            std::string message = printer.to_string(
+            std::string message = info.to_string(
                 terminal_width(STDERR_FILENO),
                 isatty(STDERR_FILENO) && output_colors ? get_color_scheme() : color_scheme::blank
             );
             std::cerr << message << std::endl;
-            switch(type) {
+            switch(info.type()) {
                 case assert_type::assertion:
                 case assert_type::debug_assertion:
                 case assert_type::assumption:
@@ -439,13 +439,13 @@ namespace libassert {
     static std::atomic failure_handler = detail::libassert_default_failure_handler;
 
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
-    void set_failure_handler(void (*handler)(assert_type, const assertion_info&)) {
+    void set_failure_handler(void (*handler)(const assertion_info&)) {
         failure_handler = handler;
     }
 
     namespace detail {
-        LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void fail(assert_type type, const assertion_info& info) {
-            failure_handler.load()(type, info);
+        LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void fail(const assertion_info& info) {
+            failure_handler.load()(info);
         }
     }
 
@@ -483,6 +483,26 @@ namespace libassert {
         sizeof_args(_sizeof_args) {}
 
     LIBASSERT_ATTR_COLD assertion_info::~assertion_info() = default;
+
+    const char* assertion_info::assertion_name() const {
+        return static_params->name;
+    }
+
+    assert_type assertion_info::type() const {
+        return static_params->type;
+    }
+
+    const char* assertion_info::expr_str() const {
+        return static_params->expr_str;
+    }
+
+    source_location assertion_info::location() const {
+        return static_params->location;
+    }
+
+    const char* const* assertion_info::args_strings() const {
+        return static_params->args_strings;
+    }
 
     LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, const color_scheme& scheme) const {
         const auto& [ name, type, expr_str, location, args_strings ] = *static_params;

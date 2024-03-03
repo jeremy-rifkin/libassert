@@ -1036,7 +1036,7 @@ namespace libassert {
 
     struct assertion_info;
 
-    LIBASSERT_EXPORT void set_failure_handler(void (*handler)(assert_type, const assertion_info&));
+    LIBASSERT_EXPORT void set_failure_handler(void (*handler)(const assertion_info&));
 
     struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
         std::string left_stringification;
@@ -1094,6 +1094,14 @@ namespace libassert {
         assertion_info(assertion_info&&) = delete;
         assertion_info& operator=(const assertion_info&) = delete;
         assertion_info& operator=(assertion_info&&) = delete;
+
+        // accessors for static_params
+        const char* assertion_name() const;
+        assert_type type() const;
+        const char* expr_str() const;
+        source_location location() const;
+        const char* const* args_strings() const;
+
         [[nodiscard]] std::string to_string(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
     };
 }
@@ -1226,7 +1234,7 @@ namespace libassert::detail {
 namespace libassert::detail {
     LIBASSERT_EXPORT size_t count_args_strings(const char* const*);
 
-    LIBASSERT_EXPORT void fail(assert_type type, const assertion_info& info);
+    LIBASSERT_EXPORT void fail(const assertion_info& info);
 
     template<typename A, typename B, typename C, typename... Args>
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
@@ -1275,7 +1283,7 @@ namespace libassert::detail {
             );
         }
         // send off
-        fail(params->type, info);
+        fail(info);
     }
 
     template<typename... Args>
@@ -1300,7 +1308,7 @@ namespace libassert::detail {
         // process_args fills in the message, extra_diagnostics, and pretty_function
         process_args(info, args_strings, args...);
         // send off
-        fail(params->type, info);
+        fail(info);
         LIBASSERT_PRIMITIVE_PANIC("PANIC/UNREACHABLE failure handler returned");
     }
 
