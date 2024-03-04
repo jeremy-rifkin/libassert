@@ -99,7 +99,7 @@ namespace libassert::detail {
         constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
             if(needle_value == option) { return result; }
             if constexpr(sizeof...(Rest) > 0) { return lookup(rest...); }
-            else { LIBASSERT_PRIMITIVE_ASSERT(false); LIBASSERT_UNREACHABLE; }
+            else { LIBASSERT_PRIMITIVE_ASSERT(false); LIBASSERT_UNREACHABLE_CALL; }
         }
         template<typename... Args>
         constexpr bool is_in(const Args&... option) {

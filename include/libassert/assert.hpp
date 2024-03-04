@@ -99,12 +99,12 @@
  #define LIBASSERT_PFUNC __extension__ __PRETTY_FUNCTION__
  #define LIBASSERT_ATTR_COLD     [[gnu::cold]]
  #define LIBASSERT_ATTR_NOINLINE [[gnu::noinline]]
- #define LIBASSERT_UNREACHABLE __builtin_unreachable()
+ #define LIBASSERT_UNREACHABLE_CALL __builtin_unreachable()
 #else
  #define LIBASSERT_PFUNC __FUNCSIG__
  #define LIBASSERT_ATTR_COLD
  #define LIBASSERT_ATTR_NOINLINE __declspec(noinline)
- #define LIBASSERT_UNREACHABLE __assume(false)
+ #define LIBASSERT_UNREACHABLE_CALL __assume(false)
 #endif
 
 #if LIBASSERT_IS_MSVC
@@ -1652,7 +1652,7 @@ namespace libassert {
     LIBASSERT_WARNING_PRAGMA_POP_CLANG
 
 #ifdef NDEBUG
- #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE;
+ #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE_CALL;
 #else
  #define LIBASSERT_ASSUME_ACTION
 #endif
@@ -1661,10 +1661,54 @@ namespace libassert {
 
 // Debug assert
 #ifndef NDEBUG
- #define DEBUG_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "DEBUG_ASSERT", debug_assertion, , __VA_ARGS__)
+ #define LIBASSERT_DEBUG_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "DEBUG_ASSERT", debug_assertion, , __VA_ARGS__)
 #else
- #define DEBUG_ASSERT(expr, ...) (void)0
+ #define LIBASSERT_DEBUG_ASSERT(expr, ...) (void)0
 #endif
+
+// Assert
+#define LIBASSERT_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "ASSERT", assertion, , __VA_ARGS__)
+// lowercase version intentionally done outside of the include guard here
+
+// Assume
+#define LIBASSERT_ASSUME(expr, ...) LIBASSERT_INVOKE(expr, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
+
+// Panic
+#define LIBASSERT_PANIC(...) LIBASSERT_INVOKE_PANIC("PANIC", panic, __VA_ARGS__)
+
+// Unreachable
+#ifndef NDEBUG
+ #define LIBASSERT_UNREACHABLE(...) LIBASSERT_INVOKE_PANIC("UNREACHABLE", unreachable, __VA_ARGS__)
+#else
+ #define LIBASSERT_UNREACHABLE(...) LIBASSERT_UNREACHABLE_CALL
+#endif
+
+// value variants
+
+#ifndef NDEBUG
+ #define LIBASSERT_DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
+#else
+ #define LIBASSERT_DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, false, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
+#endif
+
+#define LIBASSERT_ASSUME_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSUME_VAL", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
+
+#define LIBASSERT_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSERT_VAL", assertion, , __VA_ARGS__)
+
+// non-prefixed versions
+
+#ifndef LIBASSERT_PREFIX_ASSERTIONS
+ #define DEBUG_ASSERT(...) LIBASSERT_DEBUG_ASSERT(__VA_ARGS__)
+ #define ASSERT(...) LIBASSERT_ASSERT(__VA_ARGS__)
+ #define ASSUME(...) LIBASSERT_ASSUME(__VA_ARGS__)
+ #define PANIC(...) LIBASSERT_PANIC(__VA_ARGS__)
+ #define UNREACHABLE(...) LIBASSERT_UNREACHABLE(__VA_ARGS__)
+ #define DEBUG_ASSERT_VAL(...) LIBASSERT_DEBUG_ASSERT_VAL(__VA_ARGS__)
+ #define ASSUME_VAL(...) LIBASSERT_ASSUME_VAL(__VA_ARGS__)
+ #define ASSERT_VAL(...) LIBASSERT_ASSERT_VAL(__VA_ARGS__)
+#endif
+
+// Lowercase variants
 
 #ifdef LIBASSERT_LOWERCASE
  #ifndef NDEBUG
@@ -1674,31 +1718,6 @@ namespace libassert {
  #endif
 #endif
 
-// Assert
-#define ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "ASSERT", assertion, , __VA_ARGS__)
-// lowercase version intentionally done outside of the include guard here
-
-// Assume
-#define ASSUME(expr, ...) LIBASSERT_INVOKE(expr, "ASSUME", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
-
-// Panic
-#define PANIC(...) LIBASSERT_INVOKE_PANIC("PANIC", panic, __VA_ARGS__)
-
-// Unreachable
-#ifndef NDEBUG
- #define UNREACHABLE(...) LIBASSERT_INVOKE_PANIC("UNREACHABLE", unreachable, __VA_ARGS__)
-#else
- #define UNREACHABLE(...) LIBASSERT_UNREACHABLE
-#endif
-
-// value variants
-
-#ifndef NDEBUG
- #define DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
-#else
- #define DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, false, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
-#endif
-
 #ifdef LIBASSERT_LOWERCASE
  #ifndef NDEBUG
   #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "debug_assert_val", debug_assertion, , __VA_ARGS__)
@@ -1706,10 +1725,6 @@ namespace libassert {
   #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, false, "debug_assert_val", debug_assertion, , __VA_ARGS__)
  #endif
 #endif
-
-#define ASSUME_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSUME_VAL", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
-
-#define ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSERT_VAL", assertion, , __VA_ARGS__)
 
 #ifdef LIBASSERT_LOWERCASE
  #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "assert_val", assertion, , __VA_ARGS__)
