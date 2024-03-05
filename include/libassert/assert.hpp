@@ -934,11 +934,6 @@ namespace libassert {
     // returns the width of the terminal represented by fd, will be 0 on error
     [[nodiscard]] LIBASSERT_EXPORT int terminal_width(int fd);
 
-    struct color_scheme; // TODO: Remove need to forward declare this
-
-    // generates a stack trace, formats to the given width
-    [[nodiscard]] LIBASSERT_EXPORT std::string stacktrace(int width, const color_scheme& scheme);
-
     // returns the type name of T
     template<typename T>
     [[nodiscard]] std::string_view type_name() noexcept {
@@ -983,6 +978,10 @@ namespace libassert {
 
     LIBASSERT_EXPORT void set_color_scheme(const color_scheme&);
     LIBASSERT_EXPORT color_scheme get_color_scheme();
+
+    // generates a stack trace, formats to the given width
+    [[nodiscard]] LIBASSERT_EXPORT LIBASSERT_ATTR_NOINLINE
+    std::string stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme(), std::size_t skip = 0);
 
     enum class literal_format : unsigned {
         // integers and floats are decimal by default, chars are of course chars, and everything else only has one
