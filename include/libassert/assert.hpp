@@ -956,9 +956,6 @@ namespace libassert {
     // }
     using detail::generate_stringification; // TODO
 
-    // configures whether the default assertion handler prints in color or not to tty devices (default true)
-    LIBASSERT_EXPORT void set_color_output(bool);
-
     // NOTE: string view underlying data should have static storage duration, or otherwise live as long as the scheme
     // is in use
     struct color_scheme {

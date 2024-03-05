@@ -358,12 +358,6 @@ namespace libassert::detail {
 }
 
 namespace libassert {
-    static std::atomic_bool output_colors = true;
-
-    LIBASSERT_ATTR_COLD void set_color_output(bool enable) {
-        output_colors = enable;
-    }
-
     LIBASSERT_EXPORT color_scheme color_scheme::ansi_basic {
         BASIC_GREEN, /* string */
         BASIC_BLUE, /* escape */
@@ -416,7 +410,7 @@ namespace libassert {
             enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
             std::string message = info.to_string(
                 terminal_width(STDERR_FILENO),
-                isatty(STDERR_FILENO) && output_colors ? get_color_scheme() : color_scheme::blank
+                isatty(STDERR_FILENO) ? get_color_scheme() : color_scheme::blank
             );
             std::cerr << message << std::endl;
             switch(info.type()) {
