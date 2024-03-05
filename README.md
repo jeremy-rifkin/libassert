@@ -203,7 +203,7 @@ screenshots above. This is to help enhance readability.
 Libassert supports custom assertion failure handlers:
 
 ```cpp
-void handler(assert_type type, const assertion_info& info) {
+void handler(assert_type type, const assertion_info& assertion) {
     throw std::runtime_error("Assertion failed:\n" + assertion.to_string());
 }
 
