@@ -51,9 +51,7 @@ namespace libassert {
          return w.ws_col;
         #endif
     }
-}
 
-namespace libassert::detail {
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed() {
         // enable colors / ansi processing if necessary
         #if IS_WINDOWS
@@ -69,7 +67,9 @@ namespace libassert::detail {
          if(!SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) return;
         #endif
     }
+}
 
+namespace libassert::detail {
     LIBASSERT_ATTR_COLD bool isatty(int fd) {
         #if IS_WINDOWS
          return _isatty(fd);

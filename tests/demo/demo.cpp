@@ -389,12 +389,8 @@ public:
     }
 };
 
-namespace libassert::detail {
-    LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed();
-}
-
 int main() {
-    libassert::detail::enable_virtual_terminal_processing_if_needed();
+    libassert::enable_virtual_terminal_processing_if_needed();
     libassert::set_failure_handler(custom_fail);
     foo f;
     f.bar<int>({});

@@ -934,6 +934,9 @@ namespace libassert {
     // returns the width of the terminal represented by fd, will be 0 on error
     [[nodiscard]] LIBASSERT_EXPORT int terminal_width(int fd);
 
+    // Enable virtual terminal processing on windows terminals
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed();
+
     // returns the type name of T
     template<typename T>
     [[nodiscard]] std::string_view type_name() noexcept {
