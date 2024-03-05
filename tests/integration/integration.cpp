@@ -21,7 +21,7 @@ void test_path_differentiation();
 
 void custom_fail(const libassert::assertion_info& assertion) {
     std::cout<<assertion.to_string(0, libassert::color_scheme::blank)<<std::endl<<std::endl;
-    if(assertion.type() == libassert::assert_type::panic) {
+    if(assertion.type == libassert::assert_type::panic) {
         throw std::runtime_error("foobar");
     }
 }

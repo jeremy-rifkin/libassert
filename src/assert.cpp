@@ -346,15 +346,6 @@ namespace libassert::detail {
                 return "";
         }
     }
-
-    LIBASSERT_ATTR_COLD
-    size_t count_args_strings(const char* const* const arr) {
-        size_t c = 0;
-        for(size_t i = 0; *arr[i] != 0; i++) {
-            c++;
-        }
-        return c + 1; // plus one, count the empty string
-    }
 }
 
 namespace libassert {
@@ -413,7 +404,7 @@ namespace libassert {
                 isatty(STDERR_FILENO) ? get_color_scheme() : color_scheme::blank
             );
             std::cerr << message << std::endl;
-            switch(info.type()) {
+            switch(info.type) {
                 case assert_type::assertion:
                 case assert_type::debug_assertion:
                 case assert_type::assumption:
@@ -467,40 +458,26 @@ namespace libassert {
     using namespace detail;
 
     LIBASSERT_ATTR_COLD assertion_info::assertion_info(
-        const assert_static_parameters* _static_params,
+        const assert_static_parameters* static_params,
         cpptrace::raw_trace&& _raw_trace,
         size_t _sizeof_args
     ) :
-        static_params(_static_params),
+        name(static_params->name),
+        type(static_params->type),
+        expression_string(static_params->expr_str),
+        file_name(static_params->location.file),
+        line(static_params->location.line),
+        args_strings(
+            static_params->args_strings.data,
+            static_params->args_strings.data + static_params->args_strings.size
+        ),
         pretty_function("<error>"),
         raw_trace(std::move(_raw_trace)),
         sizeof_args(_sizeof_args) {}
 
     LIBASSERT_ATTR_COLD assertion_info::~assertion_info() = default;
 
-    const char* assertion_info::assertion_name() const {
-        return static_params->name;
-    }
-
-    assert_type assertion_info::type() const {
-        return static_params->type;
-    }
-
-    const char* assertion_info::expr_str() const {
-        return static_params->expr_str;
-    }
-
-    source_location assertion_info::location() const {
-        return static_params->location;
-    }
-
-    const char* const* assertion_info::args_strings() const {
-        return static_params->args_strings;
-    }
-
     LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, const color_scheme& scheme) const {
-        const auto& [ name, type, expr_str, location, args_strings ] = *static_params;
-        // const auto& [ message, extra_diagnostics, pretty_function ] = processed_args;
         std::string output;
         // generate header
         const auto function = prettify_type(std::string(pretty_function));
@@ -508,8 +485,8 @@ namespace libassert {
             output += stringf(
                 "%s at %s:%d: %s: %s\n",
                 assert_type_name(type),
-                location.file,
-                location.line,
+                file_name.data(), // we know this is null-terminated
+                line,
                 highlight(function, scheme).c_str(),
                 message.c_str()
             );
@@ -517,8 +494,8 @@ namespace libassert {
             output += stringf(
                 "%s at %s:%d: %s:\n",
                 assert_type_name(type),
-                location.file,
-                location.line,
+                file_name.data(), // we know this is null-terminated
+                line,
                 highlight(function, scheme).c_str()
             );
         }
@@ -527,9 +504,9 @@ namespace libassert {
             highlight(
                 stringf(
                     "%s(%s%s);",
-                    name,
-                    expr_str,
-                    sizeof_args > 0 ? (strlen(expr_str) == 0 ? "..." : ", ...") : ""
+                    name.data(), // we know this is null-terminated
+                    expression_string.data(), // we know this is null-terminated
+                    sizeof_args > 0 ? (expression_string.empty() ? "..." : ", ...") : ""
                 ),
                 scheme
             ).c_str()

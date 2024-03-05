@@ -551,8 +551,8 @@ namespace libassert::detail {
 
         LIBASSERT_ATTR_COLD
         std::pair<std::string, std::string> decompose_expression(
-            const std::string& expression,
-            const std::string_view target_op
+            std::string_view expression,
+            std::string_view target_op
         ) {
             // While automatic decomposition allows something like `assert(foo(n) == bar<n> + n);`
             // treated as `assert_eq(foo(n), bar<n> + n);` we only get the full expression's string
@@ -678,8 +678,8 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD
     std::pair<std::string, std::string> decompose_expression(
-        const std::string& expression,
-        const std::string_view target_op
+        std::string_view expression,
+        std::string_view target_op
     ) {
         return analysis::get().decompose_expression(expression, target_op);
     }
