@@ -92,7 +92,7 @@
  #define LIBASSERT_IS_MSVC 1
  #include <iso646.h> // alternative operator tokens are standard but msvc requires the include or /permissive- or /Za
 #else
- #error "Unsupported compiler"
+ #error "Libassert: Unsupported compiler"
 #endif
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
