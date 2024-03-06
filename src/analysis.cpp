@@ -639,29 +639,26 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD
     std::string highlight(std::string_view expression, const color_scheme& scheme) {
-        #ifdef NCOLOR
-        return expression;
-        #else
-        auto blocks = analysis::get().highlight(expression, scheme);
-        std::string str;
-        for(auto& block : blocks) {
-            str += block.color;
-            str += block.content;
-            if(!block.color.empty()) {
-                str += scheme.reset;
+        if(scheme == libassert::color_scheme::blank) {
+            return std::string(expression);
+        } else {
+            auto blocks = analysis::get().highlight(expression, scheme);
+            std::string str;
+            for(auto& block : blocks) {
+                str += block.color;
+                str += block.content;
+                if(!block.color.empty()) {
+                    str += scheme.reset;
+                }
             }
+            return str;
         }
-        return str;
-        #endif
     }
 
     LIBASSERT_ATTR_COLD
     std::vector<highlight_block> highlight_blocks(std::string_view expression, const color_scheme& scheme) {
-        #ifdef NCOLOR
-        return expression;
-        #else
+        // TODO: Maybe check scheme == libassert::color_scheme::blank here? Have to consult ramifications.
         return analysis::get().highlight(expression, scheme);
-        #endif
     }
 
     LIBASSERT_ATTR_COLD literal_format get_literal_format(std::string_view expression) {

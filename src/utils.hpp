@@ -167,6 +167,21 @@ namespace libassert::detail {
     static_assert(n_digits(10) == 2);
     static_assert(n_digits(11) == 2);
     static_assert(n_digits(1024) == 4);
+
+    inline bool operator==(const color_scheme& a, const color_scheme& b) {
+        return a.string == b.string
+            && a.escape == b.escape
+            && a.keyword == b.keyword
+            && a.named_literal == b.named_literal
+            && a.number == b.number
+            && a.operator_token == b.operator_token
+            && a.call_identifier == b.call_identifier
+            && a.scope_resolution_identifier == b.scope_resolution_identifier
+            && a.identifier == b.identifier
+            && a.accent == b.accent
+            && a.unknown == b.unknown
+            && a.reset == b.reset;
+    }
 }
 
 #endif
