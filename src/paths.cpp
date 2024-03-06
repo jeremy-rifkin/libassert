@@ -21,10 +21,11 @@ namespace libassert::detail {
         // /foo/./x                                foo        x
         // /foo//x                                 f          x
         path_components parts;
-        for(const std::string& part : split(path, path_delim)) {
+        for(auto part : split(path, path_delim)) {
             if(parts.empty()) {
+                // TODO: Maybe it could be ok to use string_view's here, have to be careful about lifetime
                 // first gets added no matter what
-                parts.push_back(part);
+                parts.emplace_back(part);
             } else {
                 if(part.empty()) {
                     // nop
@@ -33,12 +34,12 @@ namespace libassert::detail {
                 } else if(part == "..") {
                     // cases where we have unresolvable ..'s, e.g. ./../../demo.exe
                     if(parts.back() == "." || parts.back() == "..") {
-                        parts.push_back(part);
+                        parts.emplace_back(part);
                     } else {
                         parts.pop_back();
                     }
                 } else {
-                    parts.push_back(part);
+                    parts.emplace_back(part);
                 }
             }
         }

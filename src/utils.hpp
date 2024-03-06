@@ -34,7 +34,7 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
-    std::vector<std::string> split(std::string_view s, std::string_view delims);
+    std::vector<std::string_view> split(std::string_view s, std::string_view delims);
 
     template<typename C>
     LIBASSERT_ATTR_COLD
@@ -69,21 +69,6 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD
     std::string indent(std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
-
-    template<size_t N>
-    LIBASSERT_ATTR_COLD
-    std::optional<std::array<std::string, N>> match(const std::string& s, const std::regex& r) {
-        std::smatch match;
-        if(std::regex_match(s, match, r)) {
-            std::array<std::string, N> arr;
-            for(size_t i = 0; i < N; i++) {
-                arr[i] = match[i + 1].str();
-            }
-            return arr;
-        } else {
-            return {};
-        }
-    }
 
     /*
      * Other
