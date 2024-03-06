@@ -119,20 +119,22 @@ namespace libassert::detail {
                 if(term_width >= 50) {
                     auto sig = highlight_blocks(signature + "(", scheme); // hack for the highlighter
                     sig.pop_back();
-                    const size_t left = 2 + max_frame_width;
+                    const size_t left = 1 + max_frame_width;
                     // todo: is this looking right...?
-                    const size_t middle = std::max(line_number.size(), max_line_number_width);
-                    const size_t remaining_width = term_width - (left + middle + 3 /* spaces */);
-                    LIBASSERT_PRIMITIVE_ASSERT(remaining_width >= 2);
+                    const size_t line_number_width = std::max(line_number.size(), max_line_number_width);
+                    const size_t remaining_width = term_width - (left + line_number_width + 2 /* spaces */ + 1 /* : */);
                     const size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
+                    LIBASSERT_PRIMITIVE_ASSERT(remaining_width >= 2);
                     const size_t sig_width = remaining_width - file_width;
+                    std::vector<highlight_block> location_blocks = concat(
+                        {{"", files.at(source_path) + ":"}},
+                        highlight_blocks(line_number, scheme)
+                    );
                     stacktrace += wrapped_print(
                         {
-                            { 1,          {{"", "#"}} },
-                            { left - 2,   highlight_blocks(std::to_string(frame_number), scheme), true },
-                            { file_width, {{"", files.at(source_path)}} },
-                            { middle,     highlight_blocks(line_number, scheme), true }, // intentionally not coloring "?"
-                            { sig_width,  sig }
+                            { left, {{"", "#"}, {scheme.number, std::to_string(frame_number)}}, true },
+                            { file_width + 1 + line_number_width, location_blocks },
+                            { sig_width, sig }
                         },
                         scheme
                     );

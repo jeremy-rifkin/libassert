@@ -52,6 +52,17 @@ namespace libassert::detail {
         return str;
     }
 
+    template<typename T>
+    LIBASSERT_ATTR_COLD
+    std::vector<T> concat(std::vector<T> a, std::vector<T> b) {
+        a.insert(
+            a.end(),
+            std::make_move_iterator(b.begin()),
+            std::make_move_iterator(b.end())
+        );
+        return a;
+    }
+
     LIBASSERT_ATTR_COLD
     std::string_view trim(std::string_view s);
 
