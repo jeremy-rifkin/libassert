@@ -208,8 +208,8 @@ namespace libassert::detail {
     }
 
     constexpr int min_term_width = 50;
-    constexpr size_t arrow_width = " => "sv.size();
     constexpr size_t where_indent = 8;
+    std::string arrow = "=>";
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_binary_diagnostics(
@@ -257,7 +257,7 @@ namespace libassert::detail {
             );
             // Limit lw to about half the screen. TODO: Re-evaluate what we want to do here.
             if(term_width > 0) {
-                lw = std::min(lw, term_width / 2 - where_indent - arrow_width);
+                lw = std::min(lw, term_width / 2 - where_indent - (arrow.size() + 2));
             }
             where += "    Where:\n";
             auto print_clause = [term_width, lw, &where, &scheme](
@@ -269,17 +269,18 @@ namespace libassert::detail {
                         {
                             { where_indent - 1, {{"", ""}} }, // 8 space indent, wrapper will add a space
                             { lw, highlight_blocks(expr_str, scheme) },
-                            { 2, {{"", "=>"}} },
+                            { arrow.size(), {{"", arrow}} },
                             { term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(expr_strs, scheme) }
                         },
                         scheme
                     );
                 } else {
                     where += stringf(
-                        "        %s%*s => ",
+                        "        %s%*s %s ",
                         highlight(expr_str, scheme).c_str(),
                         int(lw - expr_str.size()),
-                        ""
+                        "",
+                        arrow.c_str()
                     );
                     where += print_values(expr_strs, lw, scheme);
                 }
@@ -311,17 +312,18 @@ namespace libassert::detail {
                     {
                         { 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
                         { lw, highlight_blocks(entry.expression, scheme) },
-                        { 2, {{"", "=>"}} },
+                        { arrow.size(), {{"", arrow}} },
                         { term_width - lw - 8 /* indent */ - 4 /* arrow */, highlight_blocks(entry.stringification, scheme) }
                     },
                     scheme
                 );
             } else {
                 output += stringf(
-                    "        %s%*s => %s\n",
+                    "        %s%*s %s %s\n",
                     highlight(entry.expression, scheme).c_str(),
                     int(lw - entry.expression.length()),
                     "",
+                    arrow.c_str(),
                     indent(
                         highlight(entry.stringification, scheme),
                         8 + lw + 4,
@@ -392,6 +394,10 @@ namespace libassert {
     LIBASSERT_EXPORT color_scheme get_color_scheme() {
         std::unique_lock lock(color_scheme_mutex);
         return current_color_scheme;
+    }
+
+    LIBASSERT_EXPORT void set_separator(std::string_view separator) {
+        detail::arrow = separator;
     }
 
     namespace detail {

@@ -979,6 +979,10 @@ namespace libassert {
     LIBASSERT_EXPORT void set_color_scheme(const color_scheme&);
     LIBASSERT_EXPORT color_scheme get_color_scheme();
 
+    // set separator used for diagnostics, by default it is "=>"
+    // note: not thread-safe
+    LIBASSERT_EXPORT void set_separator(std::string_view separator);
+
     // generates a stack trace, formats to the given width
     [[nodiscard]] LIBASSERT_EXPORT LIBASSERT_ATTR_NOINLINE
     std::string stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme(), std::size_t skip = 0);
