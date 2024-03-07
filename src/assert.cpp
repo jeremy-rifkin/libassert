@@ -63,13 +63,21 @@ namespace libassert::detail {
         return std::pair(start, end);
     }
 
+    struct stacktrace_result {
+        std::string printed;
+    };
+
     LIBASSERT_ATTR_COLD [[nodiscard]]
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    std::string print_stacktrace(const cpptrace::raw_trace raw_trace, int term_width, const color_scheme& scheme) {
+    std::string print_stacktrace(
+        cpptrace::stacktrace& trace,
+        int term_width,
+        const color_scheme& scheme,
+        path_handler* path_handler
+    ) {
         std::string stacktrace;
-        if(!raw_trace.empty()) {
-            auto trace = raw_trace.resolve();
+        if(!trace.empty()) {
             // [start, end] is an inclusive range
             auto [start, end] = get_trace_window(trace);
             // prettify signatures
@@ -77,12 +85,15 @@ namespace libassert::detail {
                 frame.symbol = prettify_type(frame.symbol);
             }
             // path preprocessing
-            constexpr size_t max_file_length = 50;
-            std::vector<std::string> paths;
+            constexpr size_t hard_max_file_length = 50;
+            size_t max_file_length = 0;
             for(std::size_t i = start; i <= end; i++) {
-                paths.push_back(trace.frames[i].filename);
+                max_file_length = std::max(
+                    path_handler->resolve_path(trace.frames[i].filename).size(),
+                    max_file_length
+                );
             }
-            auto [files, longest_file_width] = process_paths(paths);
+            max_file_length = std::min(max_file_length, hard_max_file_length);
             // figure out column widths
             const auto max_line_number =
                 std::max_element(
@@ -123,11 +134,11 @@ namespace libassert::detail {
                     // todo: is this looking right...?
                     const size_t line_number_width = std::max(line_number.size(), max_line_number_width);
                     const size_t remaining_width = term_width - (left + line_number_width + 2 /* spaces */ + 1 /* : */);
-                    const size_t file_width = std::min({longest_file_width, remaining_width / 2, max_file_length});
+                    const size_t file_width = std::min({max_file_length, remaining_width / 2, max_file_length});
                     LIBASSERT_PRIMITIVE_ASSERT(remaining_width >= 2);
                     const size_t sig_width = remaining_width - file_width;
                     std::vector<highlight_block> location_blocks = concat(
-                        {{"", files.at(source_path) + ":"}},
+                        {{"", std::string(path_handler->resolve_path(source_path)) + ":"}},
                         highlight_blocks(line_number, scheme)
                     );
                     stacktrace += wrapped_print(
@@ -147,7 +158,7 @@ namespace libassert::detail {
                         (int)frame_number,
                         std::string(scheme.reset).c_str(),
                         sig.c_str(),
-                        files.at(source_path).c_str(),
+                        path_handler->resolve_path(source_path).data(), // will be null-terminated
                         std::string(scheme.number).c_str(),
                         line_number.c_str(),
                         std::string(scheme.reset).c_str() // yes this is excessive; intentionally coloring "?"
@@ -402,7 +413,26 @@ namespace libassert {
         detail::arrow = separator;
     }
 
+    std::atomic<path_mode> current_path_mode = path_mode::disambiguated;
+
+    LIBASSERT_EXPORT void set_path_mode(path_mode mode) {
+        current_path_mode = mode;
+    }
+
     namespace detail {
+        LIBASSERT_ATTR_COLD
+        std::unique_ptr<detail::path_handler> get_path_handler() {
+            switch(current_path_mode.load()) {
+                case path_mode::disambiguated:
+                    return std::make_unique<disambiguating_path_handler>();
+                case path_mode::basename:
+                    return std::make_unique<basename_path_handler>();
+                case path_mode::full:
+                default:
+                    return std::make_unique<identity_path_handler>();
+            }
+        }
+
         LIBASSERT_ATTR_COLD
         void libassert_default_failure_handler(const assertion_info& info) {
             // TODO: Just throw instead of all of this?
@@ -486,6 +516,17 @@ namespace libassert {
     LIBASSERT_ATTR_COLD assertion_info::~assertion_info() = default;
 
     LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, const color_scheme& scheme) const {
+        auto trace = raw_trace.resolve();
+        // first handle path disambiguation and whatnot
+        std::unique_ptr<path_handler> path_handler = get_path_handler();
+        if(path_handler->has_add_path()) {
+            path_handler->add_path(file_name);
+            for(const auto& frame : trace.frames) {
+                path_handler->add_path(frame.filename);
+            }
+            path_handler->finalize();
+        }
+        // now do output
         std::string output;
         // generate header
         const auto function = prettify_type(std::string(pretty_function));
@@ -493,7 +534,7 @@ namespace libassert {
             output += stringf(
                 "%s at %s:%d: %s: %s\n",
                 assert_type_name(type),
-                file_name.data(), // we know this is null-terminated
+                path_handler->resolve_path(file_name).data(), // we know this will be null-terminated
                 line,
                 highlight(function, scheme).c_str(),
                 message.c_str()
@@ -502,7 +543,7 @@ namespace libassert {
             output += stringf(
                 "%s at %s:%d: %s:\n",
                 assert_type_name(type),
-                file_name.data(), // we know this is null-terminated
+                path_handler->resolve_path(file_name).data(), // we know this will be null-terminated
                 line,
                 highlight(function, scheme).c_str()
             );
@@ -529,7 +570,7 @@ namespace libassert {
         }
         // generate stack trace
         output += "\nStack trace:\n";
-        output += print_stacktrace(raw_trace, width, scheme);
+        output += print_stacktrace(trace, width, scheme, path_handler.get());
         return output;
     }
 }
@@ -537,7 +578,8 @@ namespace libassert {
 namespace libassert {
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE [[nodiscard]]
     std::string stacktrace(int width, const color_scheme& scheme, std::size_t skip) {
-        auto trace = cpptrace::generate_raw_trace(skip + 1);
-        return print_stacktrace(trace, width, scheme);
+        auto trace = cpptrace::generate_trace(skip + 1);
+        detail::identity_path_handler handler;
+        return print_stacktrace(trace, width, scheme, &handler);
     }
 }

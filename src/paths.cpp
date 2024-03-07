@@ -5,13 +5,14 @@
 namespace libassert::detail {
     using path_components = std::vector<std::string>;
 
+    #if IS_WINDOWS
+     constexpr std::string_view path_delim = "/\\";
+    #else
+     constexpr std::string_view path_delim = "/";
+    #endif
+
     LIBASSERT_ATTR_COLD
     path_components parse_path(const std::string_view path) {
-        #if IS_WINDOWS
-         constexpr std::string_view path_delim = "/\\";
-        #else
-         constexpr std::string_view path_delim = "/";
-        #endif
         // Some cases to consider
         // projects/libassert/demo.cpp               projects   libassert  demo.cpp
         // /glibc-2.27/csu/../csu/libc-start.c  /  glibc-2.27 csu      libc-start.c
@@ -90,8 +91,39 @@ namespace libassert::detail {
         downstream_branches += edges.at(path[i])->downstream_branches;
     }
 
+    bool path_handler::has_add_path() const {
+        return false;
+    }
+
+    void path_handler::add_path(std::string_view) {
+        LIBASSERT_PRIMITIVE_ASSERT(false, "Improper path_handler::add_path");
+    }
+
+    void path_handler::finalize() {
+        LIBASSERT_PRIMITIVE_ASSERT(false, "Improper path_handler::finalize");
+    }
+
     LIBASSERT_ATTR_COLD
-    parsed_paths process_paths(const std::vector<std::string>& paths) {
+    std::string_view identity_path_handler::resolve_path(std::string_view path) {
+        return path;
+    }
+
+    LIBASSERT_ATTR_COLD
+    std::string_view disambiguating_path_handler::resolve_path(std::string_view path) {
+        return path_map.at(std::string(path));
+    }
+
+    bool disambiguating_path_handler::has_add_path() const {
+        return true;
+    }
+
+    LIBASSERT_ATTR_COLD
+    void disambiguating_path_handler::add_path(std::string_view path) {
+        paths.emplace_back(path);
+    }
+
+    LIBASSERT_ATTR_COLD
+    void disambiguating_path_handler::finalize() {
         // raw full path -> components
         std::unordered_map<std::string, path_components> parsed_paths;
         // base file name -> path trie
@@ -109,14 +141,22 @@ namespace libassert::detail {
         }
         // raw full path -> minified path
         std::unordered_map<std::string, std::string> files;
-        size_t longest_file_width = 0;
         for(auto& [raw, parsed_path] : parsed_paths) {
             const std::string new_path = join(tries.at(parsed_path.back()).disambiguate(parsed_path), "/");
             internal_verify(files.insert({raw, new_path}).second);
-            if(new_path.size() > longest_file_width) {
-                longest_file_width = new_path.size();
-            }
         }
-        return {files, std::min(longest_file_width, size_t(50))};
+        path_map = std::move(files);
+        // return {files, std::min(longest_file_width, size_t(50))};
+    }
+
+    LIBASSERT_ATTR_COLD
+    std::string_view basename_path_handler::resolve_path(std::string_view path) {
+        auto last = path.find_last_of(path_delim);
+        if(last == path.npos) {
+            last = 0;
+        } else {
+            last++; // go after the delim
+        }
+        return path.substr(last);
     }
 }
