@@ -5,7 +5,7 @@
 
 #include <libassert/assert.hpp>
 
-#include "../../src/analysis.hpp"
+#include "analysis.hpp"
 
 #define ESC "\033["
 #define RED ESC "1;31m"

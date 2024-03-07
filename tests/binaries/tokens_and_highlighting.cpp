@@ -5,7 +5,7 @@
 
 #include <libassert/assert.hpp>
 
-#include "../../src/analysis.hpp"
+#include "analysis.hpp"
 
 int main() {
     std::ifstream file("tests/test_program.cpp"); // just a test program that doesn't have preprocessor directives, which we don't tokenize
