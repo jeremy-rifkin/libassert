@@ -29,7 +29,8 @@ public:
 
 void failure_handler(const libassert::assertion_info& info) {
     std::string message = "";
-    throw std::runtime_error(info.to_string(0));
+    // catch line wrapping has issues with ansi sequences https://github.com/catchorg/Catch2/issues/2833
+    throw std::runtime_error(info.to_string(0, libassert::color_scheme::blank));
 }
 
 auto pre_main = [] () {
@@ -44,7 +45,10 @@ uint32_t factorial( uint32_t number ) {
 TEST_CASE( "Factorials are computed", "[factorial]" ) {
     REQUIRE( factorial( 1) == 1 );
     REQUIRE( factorial( 2) == 2 );
-    LIBASSERT_ASSERT(22 == 40, "foobar");
+    // LIBASSERT_ASSERT(22 == 40, "foobar");
+    std::vector<int> vec{1,2,3,4,5,6,7,8};
+    int max_size = 5;
+    ASSERT(vec.size() < max_size, "foobar");
     REQUIRE( factorial( 3) == 60 );
     REQUIRE( factorial(10) == 3'628'800 );
 }
