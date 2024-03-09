@@ -254,9 +254,9 @@ namespace libassert::detail {
 
 namespace libassert {
     // customization point
-    template<typename T> struct stringifier /*{
-        std::convertible_to<std::string> stringify(const T&);
-    }*/;
+    template<typename T> struct stringifier {
+        std::string stringify(const T& v);
+    };
 }
 
 namespace libassert::detail {
@@ -313,15 +313,13 @@ namespace libassert::detail {
         template<typename T>
         class has_stream_overload<
             T,
-            std::void_t<decltype(std::declval<std::ostringstream>() << std::declval<T>())>
+            std::void_t<decltype(std::declval<std::ostream>() << std::declval<T>())>
         > : public std::true_type {};
 
-        template<typename T, typename = void> class has_stringifier : public std::false_type {};
         template<typename T>
-        class has_stringifier<
-            T,
-            std::void_t<decltype(stringifier<strip<T>>{}.stringify(std::declval<T>()))>
-        > : public std::true_type {};
+        std::string stringifier(const T& v) {
+            return libassert::stringifier<T>{}.stringify(v);
+        }
 
         //
         // Basic types
@@ -350,86 +348,32 @@ namespace libassert::detail {
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::weak_ordering);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::partial_ordering);
         #endif
-        [[nodiscard]] LIBASSERT_EXPORT
-        std::string stringify_pointer_value(const void*);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const void*);
 
-        template<
-            typename T,
-            typename std::enable_if_t<
-                has_stream_overload<T>::value
-                    && !has_stringifier<T>::value
-                    && !is_string_type<T>
-                    && !std::is_enum_v<strip<T>>
-                    && !std::is_pointer_v<strip<typename std::decay_t<T>>>,
-                int
-            > = 0
-        >
-        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_by_ostream(const T& t) {
             // clang-tidy bug here
             // NOLINTNEXTLINE(misc-const-correctness)
-            std::ostringstream oss;
-            oss<<t;
-            return std::move(oss).str();
+            std::stringbuf buf(std::ios_base::out);
+            std::ostream os(&buf);
+            os<<t;
+            return std::move(buf).str();
         }
 
-        template<
-            typename T,
-            typename std::enable_if_t<
-                has_stringifier<T>::value,
-                int
-            > = 0
-        >
-        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
-            return stringifier<strip<T>>{}.stringify(t);
-        }
-
-        #ifdef LIBASSERT_USE_MAGIC_ENUM
-        template<typename T, typename std::enable_if_t<std::is_enum_v<strip<T>>, int> = 0>
-        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify_enum(const T& t) {
+            #ifdef LIBASSERT_USE_MAGIC_ENUM
             std::string_view name = magic_enum::enum_name(t);
             if(!name.empty()) {
                 return std::string(name);
-            } else {
-                return bstringf(
-                    "enum %s: %s",
-                    prettify_type(std::string(type_name<T>())).c_str(),
-                    stringify(static_cast<typename std::underlying_type<T>::type>(t)).c_str()
-                );
             }
-        }
-        #else
-        template<typename T, typename std::enable_if_t<std::is_enum_v<strip<T>>, int> = 0>
-        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
+            #endif
             return bstringf(
                 "enum %s: %s",
                 prettify_type(std::string(type_name<T>())).c_str(),
-                stringify(static_cast<typename std::underlying_type_t<T>>(t)).c_str()
+                stringifier(static_cast<typename std::underlying_type<T>::type>(t)).c_str()
             );
-        }
-        #endif
-
-        // pointers
-        template<
-            typename T,
-            typename std::enable_if_t<
-                (
-                    std::is_pointer_v<strip<typename std::decay_t<T>>> && (
-                        isa<typename std::remove_pointer_t<typename std::decay_t<T>>, char>
-                            || !adl::is_container<T>::value
-                    )
-                ) || std::is_function_v<strip<T>>,
-                int
-            > = 0
-        >
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify(const T& t) {
-            if constexpr(isa<typename std::remove_pointer_t<typename std::decay_t<T>>, char>) { // strings
-                const void* v = t; // circumvent -Wnonnull-compare
-                if(v != nullptr) {
-                    return stringify(std::string_view(t)); // not printing type for now, TODO: reconsider?
-                }
-            }
-            return stringify_pointer_value(reinterpret_cast<const void*>(t));
         }
 
         //
@@ -438,7 +382,7 @@ namespace libassert::detail {
         #ifdef __cpp_lib_expected
         template<typename E>
         [[nodiscard]] std::string stringify(const std::unexpected<E>& x) {
-            return "unexpected " + stringify(x.error());
+            return "unexpected " + stringifier(x.error());
         }
 
         template<typename T, typename E>
@@ -447,88 +391,38 @@ namespace libassert::detail {
                 if constexpr(std::is_void_v<T>) {
                     return "expected void";
                 } else {
-                    return "expected " + stringify(*x);
+                    return "expected " + stringifier(*x);
                 }
             } else {
-                return "unexpected " + stringify(x.error());
+                return "unexpected " + stringifier(x.error());
             }
         }
         #endif
 
-        // deferrable wrappers, these need to be implemented after stringify(container)
-        template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify_optional(const T&);
-
-        template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify_smart_ptr(const T&);
-
         template<typename T>
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify(const std::optional<T>& t) {
-            return stringify_optional(t);
-        }
-
-        template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify(const std::unique_ptr<T>& t) {
-            return stringify_smart_ptr(t);
-        }
-
-        template<typename T, size_t... I>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify_tuple_like(const T& t, std::index_sequence<I...>);
-
-        template<
-            typename T,
-            typename std::enable_if_t<is_tuple_like<T>::value && !adl::is_container<T>::value, int> = 0
-        >
-        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify(const T& t) {
-            return stringify_tuple_like(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
-        }
-
-        template<typename T, typename = void>
-        class has_basic_stringify : public std::false_type {};
-        template<typename T>
-        class has_basic_stringify<
-            T,
-            std::void_t<decltype(stringify(std::declval<T>()))>
-        > : public std::true_type {};
-
-        template<typename T, typename = void>
-        class has_value_type : public std::false_type {};
-        template<typename T>
-        class has_value_type<
-            T,
-            std::void_t<typename T::value_type>
-        > : public std::true_type {};
-
-        template<typename T> constexpr bool stringifiable_container();
-
-        template<typename T> inline constexpr bool stringifiable = has_basic_stringify<T>::value || stringifiable_container<T>();
-
-        template<typename T> constexpr bool stringifiable_container() {
-            // TODO: Guard against std::expected....?
-            if constexpr(has_value_type<T>::value) {
-                return stringifiable<typename T::value_type>;
-            } else if constexpr(std::is_array_v<typename std::remove_reference_t<T>>) { // C arrays
-                return stringifiable<decltype(std::declval<T>()[0])>;
+            if(t) {
+                return stringifier(t.value());
             } else {
-                return false;
+                return "nullopt";
+            }
+        }
+
+        template<typename T, typename D>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify(const std::unique_ptr<T, D>& t) {
+            if(t) {
+                return stringifier(*t);
+            } else {
+                return "nullptr";
             }
         }
 
         // containers
-        template<
-            typename T,
-            typename std::enable_if_t<
-                adl::is_container<T>::value && stringifiable_container<T>() && !is_c_string<T>,
-                int
-            > = 0
-        >
+        template<typename T>
         LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify(const T& container) {
+        std::string stringify_container(const T& container) {
             using std::begin, std::end; // ADL
             std::string str = "[";
             const auto begin_it = begin(container);
@@ -536,38 +430,23 @@ namespace libassert::detail {
                 if(it != begin_it) {
                     str += ", ";
                 }
-                str += stringify(*it);
+                str += stringifier(*it);
             }
             str += "]";
             return str;
         }
 
-        // deferred impls
         // I'm going to assume at least one index because is_tuple_like requires index 0 to exist
         template<typename T, size_t... I>
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify_tuple_like(const T& t, std::index_sequence<I...>) {
-            return "[" + (stringify(std::get<0>(t)) + ... + (", " + stringify(std::get<I + 1>(t)))) + "]";
+            return "[" + (stringifier(std::get<0>(t)) + ... + (", " + stringifier(std::get<I + 1>(t)))) + "]";
         }
 
         template<typename T>
         LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify_optional(const T& t) {
-            if(t) {
-                return stringify(t.value());
-            } else {
-                return "nullopt";
-            }
-        }
-
-        template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
-        std::string stringify_smart_ptr(const T& t) {
-            if(t) {
-                return stringify(*t);
-            } else {
-                return "nullptr";
-            }
+        std::string stringify_tuple_like(const T& t) {
+            return stringify_tuple_like(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
         }
     }
 
@@ -580,22 +459,45 @@ namespace libassert::detail {
     > : public std::true_type {};
 
     // Top-level stringify utility
-    template<typename T, typename std::enable_if_t<can_stringify<T>::value, int> = 0>
+    template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string generate_stringification(const T& v) {
         if constexpr(stringification::is_container_like<T> && !is_string_type<T>) {
-            return prettify_type(std::string(type_name<T>())) + ": " + stringification::stringify(v);
-        } else if constexpr(std::is_pointer_v<T> && !is_string_type<T>) {
-            return prettify_type(std::string(type_name<T>())) + ": " + stringification::stringify(v);
+            return prettify_type(std::string(type_name<T>())) + ": " + stringification::stringifier(v);
         } else {
-            return stringification::stringify(v);
+            return stringification::stringifier(v);
         }
     }
+}
 
-    template<typename T, typename std::enable_if_t<!can_stringify<T>::value, int> = 0>
-    LIBASSERT_ATTR_COLD [[nodiscard]]
-    std::string generate_stringification(const T&) {
-        return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
+namespace libassert {
+    template<typename T>
+    std::string stringifier<T>::stringify(const T& v) {
+        using namespace detail;
+        using namespace stringification;
+        using detail::stringification::stringify;
+
+        if constexpr(std::is_convertible_v<T, std::string_view>) {
+            return stringify(std::string_view(v));
+        } else if constexpr(std::is_pointer_v<T> || std::is_function_v<T>) {
+            return stringify(reinterpret_cast<const void*>(v));
+        } else if constexpr(std::is_error_code_enum_v<T>) {
+            return stringify(std::error_code(v));
+        } else if constexpr(std::is_error_condition_enum_v<T>) {
+            return stringify(std::error_condition(v));
+        } else if constexpr(std::is_enum_v<T>) {
+            return stringify_enum(v);
+        } else if constexpr(is_tuple_like<T>::value) {
+            return stringify_tuple_like(v);
+        } else if constexpr(adl::is_container<T>::value) {
+            return stringify_container(v);
+        } else if constexpr(can_stringify<T>::value) {
+            return stringify(v);
+        } else if constexpr(has_stream_overload<T>::value) {
+            return stringify_by_ostream(v);
+        } else {
+            return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
+        }
     }
 }
 
