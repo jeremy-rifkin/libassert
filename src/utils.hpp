@@ -15,6 +15,20 @@
 
 #include <libassert/assert.hpp>
 
+#if !defined(LIBASSERT_BUILD_TESTING) || defined(LIBASSERT_STATIC_DEFINE)
+ #define LIBASSERT_EXPORT_TESTING
+#else
+ #ifndef LIBASSERT_EXPORT_TESTING
+  #ifdef libassert_lib_EXPORTS
+   /* We are building this library */
+   #define LIBASSERT_EXPORT_TESTING LIBASSERT_EXPORT_ATTR
+  #else
+   /* We are using this library */
+   #define LIBASSERT_EXPORT_TESTING LIBASSERT_IMPORT_ATTR
+  #endif
+ #endif
+#endif
+
 namespace libassert::detail {
     // Still present in release mode, nonfatal
     #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, {} LIBASSERT_VA_ARGS(__VA_ARGS__))

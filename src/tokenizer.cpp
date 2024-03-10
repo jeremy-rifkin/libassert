@@ -10,7 +10,6 @@
 #include "utils.hpp"
 
 namespace libassert::detail {
-
     // http://eel.is/c++draft/lex.name#nt:identifier
     bool is_identifier_start(char c) {
         return isalpha(c) || c == '$' || c == '_';
@@ -38,36 +37,21 @@ namespace libassert::detail {
             "=",        "+=",       "-=",       "*=",       "/=",       "%=",       "^=",       "&=",       "|=",
             "==",       "!=",       "<",        ">",        "<=",       ">=",       "<=>",      "&&",       "||",
             "<<",       ">>",       "<<=",      ">>=",      "++",       "--",       ",",
+            // "and",      "or",       "xor",      "not",      "bitand",   "bitor",    "compl",
+            // "and_eq",   "or_eq",    "xor_eq",   "not_eq",
+        });
+        constexpr_sort(arr, [](std::string_view a, std::string_view b) { return a.size() < b.size(); });
+        return arr;
+    } ();
+
+    constexpr std::array alternative_operators = []() constexpr {
+        std::array arr = to_array<std::string_view>({
             "and",      "or",       "xor",      "not",      "bitand",   "bitor",    "compl",
             "and_eq",   "or_eq",    "xor_eq",   "not_eq",
         });
         constexpr_sort(arr, [](std::string_view a, std::string_view b) { return a.size() < b.size(); });
         return arr;
     } ();
-
-    // constexpr std::array punctuators = []() constexpr {
-    //     std::array arr = to_array<std::string_view>({
-    //         "{",        "}",        "[",        "]",        "(",        ")",
-    //         "<:",       ":>",       "<%",       "%>",       ";",        ":",        "...",
-    //         "?",        "::",       ".",        ".*",       "->",       "->*",      ","
-    //     });
-    //     constexpr_sort(arr, [](std::string_view a, std::string_view b) { return a.size() < b.size(); });
-    //     return arr;
-    // } ();
-
-    // constexpr std::array operators = []() constexpr {
-    //     std::array arr = to_array<std::string_view>({
-    //         "~",
-    //         "!",        "+",        "-",        "*",        "/",        "%",        "^",        "&",        "|",
-    //         "=",        "+=",       "-=",       "*=",       "/=",       "%=",       "^=",       "&=",       "|=",
-    //         "==",       "!=",       "<",        ">",        "<=",       ">=",       "<=>",      "&&",       "||",
-    //         "<<",       ">>",       "<<=",      ">>=",      "++",       "--",
-    //         "and",      "or",       "xor",      "not",      "bitand",   "bitor",    "compl",
-    //         "and_eq",   "or_eq",    "xor_eq",   "not_eq"
-    //     });
-    //     constexpr_sort(arr, [](std::string_view a, std::string_view b) { return a.size() < b.size(); });
-    //     return arr;
-    // } ();
 
     // key#nt:keyword
     // [...temp0.querySelectorAll("span.keyword, span.literal")].map(node => `"${node.innerHTML.replace(`<span class="shy"></span>`, "")}",`).join("\n")
@@ -173,28 +157,16 @@ namespace libassert::detail {
                 } else if(peek("/*")) {
                     read_multi_line_comment();
                 }
+                // -----------------------------------------------------------------------------------------------------
                 // There are five kinds of tokens: identifiers, keywords, literals, operators, and other separators
                 // http://eel.is/c++draft/lex.token#1.sentence-1
                 // check in the following order:
-                // 1. punctuators    must come before identifiers due to and/or/not/bitand/etc
-                // 2. literals       must come before identifiers due to R"()" and stuff
+                // 1. literals       must come before identifiers due to R"()" and similar, must come before punctuation
+                //                   due to .1
+                // 2. punctuators    must come before identifiers due to and/or/not/bitand/etc
                 // 3. identifiers and keywords
-                else if(auto punctuator = peek_any(punctuators_and_operators)) {
-                    advance(punctuator->size());
-                    // handle <:: edge case https://eel.is/c++draft/lex.pptoken#3.2
-                    if(punctuator == "<:" && peek() == ':' && !needle(peek(1)).is_in(':', '>')) {
-                        rollback(1);
-                        tokens.push_back({token_e::punctuation, "<"});
-                    }
-                    // handle >> decomposition for templates
-                    else if(decompose_shr && punctuator == ">>") {
-                        tokens.push_back({token_e::punctuation, ">"});
-                        tokens.push_back({token_e::punctuation, ">"});
-                    } else {
-                        tokens.push_back({token_e::punctuation, *punctuator});
-                    }
-                }
-                // 2. literals
+                // -----------------------------------------------------------------------------------------------------
+                // 1. literals
                 //      integer-literal          all start with digits
                 //      character-literal        a prefix (u8  u  U  L) followed by ''
                 //      floating-point-literal   all start with digits
@@ -202,7 +174,10 @@ namespace libassert::detail {
                 //      boolean-literal          true/false
                 //      pointer-literal          nullptr
                 //      user-defined-literal     integer/float/string/char literal followed by a ud-suffix
-                else if(auto named_literal = peek_any(to_array<std::string_view>({"false", "true", "nullptr"}))) {
+                else if(
+                    auto named_literal = peek_any(to_array<std::string_view>({"false", "true", "nullptr"}));
+                    named_literal && !is_identifier_continue(peek(named_literal->size()))
+                ) {
                     advance(named_literal->size());
                     tokens.push_back({token_e::named_literal, *named_literal});
                 }
@@ -231,11 +206,35 @@ namespace libassert::detail {
                     auto end = pos();
                     tokens.push_back({token_e::string, std::string_view(source.data() + begin, end - begin)});
                 }
-                else if(isdigit(peek())) { // integer, float, or UDL
+                else if(isdigit(peek()) || (peek() == '.' && isdigit(peek(1)))) { // integer, float
                     auto begin = pos();
                     read_numeric_literal();
                     auto end = pos();
                     tokens.push_back({token_e::number, std::string_view(source.data() + begin, end - begin)});
+                }
+                // 2. punctuation
+                //     handle normal punctuation and alternative operators separately
+                else if(auto punctuator = peek_any(punctuators_and_operators)) {
+                    advance(punctuator->size());
+                    // handle <:: edge case https://eel.is/c++draft/lex.pptoken#3.2
+                    if(punctuator == "<:" && peek() == ':' && !needle(peek(1)).is_in(':', '>')) {
+                        rollback(1);
+                        tokens.push_back({token_e::punctuation, "<"});
+                    }
+                    // handle >> decomposition for templates
+                    else if(decompose_shr && punctuator == ">>") {
+                        tokens.push_back({token_e::punctuation, ">"});
+                        tokens.push_back({token_e::punctuation, ">"});
+                    } else {
+                        tokens.push_back({token_e::punctuation, *punctuator});
+                    }
+                }
+                else if(
+                    auto alternative_operator = peek_any(alternative_operators);
+                    alternative_operator && !is_identifier_continue(peek(alternative_operator->size()))
+                ) {
+                    advance(alternative_operator->size());
+                    tokens.push_back({token_e::punctuation, *alternative_operator});
                 }
                 // 3. identifiers
                 else if(is_identifier_start(peek())) {
@@ -274,18 +273,26 @@ namespace libassert::detail {
             return {token_e::whitespace, std::string_view(source.data() + begin, count)};
         }
         void read_comment() {
-            while(!end() && peek() != '\n') advance();
+            while(!end() && peek() != '\n') {
+                advance();
+            }
         }
         void read_multi_line_comment() {
-            while(!end() && peek() != '*' && peek(1) != '/') advance();
+            while(!end() && !(peek() == '*' && peek(1) == '/')) {
+                advance();
+            }
+            expect('*');
+            expect('/');
         }
         void read_identifier_or_keyword() {
-            while(!end() && is_identifier_continue(peek())) advance();
+            while(!end() && is_identifier_continue(peek())) {
+                advance();
+            }
         }
         void read_char_literal() {
             // http://eel.is/c++draft/lex.ccon
             expect('\'');
-            while(peek() != '\'') {
+            while(!end() && peek() != '\'') {
                 if(peek() == '\\') {
                     read_escape_sequence();
                 } else {
@@ -293,11 +300,12 @@ namespace libassert::detail {
                 }
             }
             expect('\'');
+            read_optional_udl_suffix();
         }
         void read_string_literal() {
             // string#nt:string-literal
             expect('"');
-            while(peek() != '"') {
+            while(!end() && peek() != '"') {
                 if(peek() == '\\') {
                     read_escape_sequence();
                 } else {
@@ -305,6 +313,7 @@ namespace libassert::detail {
                 }
             }
             expect('"');
+            read_optional_udl_suffix();
         }
         void read_raw_string_literal() {
             // string#nt:string-literal
@@ -313,7 +322,7 @@ namespace libassert::detail {
             // read d-char sequence
             // we'll be much more permissive about what is allowed as a d-char, we'll allow anything that's not a (
             auto d_begin = pos();
-            while(peek() != '(') {
+            while(!end() && peek() != '(') {
                 advance();
             }
             auto d_char_sequence = std::string_view(source.data() + d_begin, pos() - d_begin);
@@ -321,7 +330,8 @@ namespace libassert::detail {
             while(!end()) {
                 if(peek() == ')' && peek(d_char_sequence, 1) && peek(1 + d_char_sequence.size()) == '"') {
                     // end of string
-                    advance(1 + d_char_sequence.size() + 1);
+                    advance(1 + d_char_sequence.size());
+                    break;
                 } else {
                     advance();
                 }
@@ -348,18 +358,26 @@ namespace libassert::detail {
             // since we can assume a valid token, and we'll treat it as a pp-number....
             // http://eel.is/c++draft/lex.ppnumber
             // just read [0-9a-zA-Z'\.]+, essentially, with special handling for exponents/sign
-            while(isdigit(peek()) || isalpha(peek()) || peek() == '\'' ||  peek() == '.') {
+            while(!end() && (isdigit(peek()) || isalpha(peek()) || peek() == '\'' ||  peek() == '.')) {
                 if(needle(peek()).is_in('e', 'E', 'p', 'P') && needle(peek(1)).is_in('-', '+')) {
                     advance(2);
                 } else {
                     advance();
                 }
             }
+            // non-underscore udls will already be handled above, catch remaining here
+            read_optional_udl_suffix();
+        }
+        void read_optional_udl_suffix() {
+            // http://eel.is/c++draft/lex.ext#nt:ud-suffix
+            if(is_identifier_start(peek())) {
+                read_identifier_or_keyword();
+            }
         }
         // reads a {...}
         void read_braced_sequence() {
             expect('{');
-            while(peek() != '}') {
+            while(!end() && peek() != '}') {
                 advance();
             }
             expect('}');
@@ -427,5 +445,4 @@ namespace libassert::detail {
             // return {};
         // }
     }
-
 }

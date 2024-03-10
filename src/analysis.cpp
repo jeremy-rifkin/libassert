@@ -201,6 +201,7 @@ namespace libassert::detail {
                 suffix.c_str()
             );
             // char and string literals
+            // TODO: This needs to be updated
             const std::string escapes = R"(\\[0-7]{1,3}|\\x[\da-fA-F]+|\\.)";
             const std::string char_literal = R"((?:u8|[UuL])?'(?:)" + escapes + R"(|[^\n'])*')";
             escapes_re = std::regex(escapes);

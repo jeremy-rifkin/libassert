@@ -4,6 +4,8 @@
 #include <string_view>
 #include <vector>
 
+#include "utils.hpp"
+
 namespace libassert::detail {
     enum class token_e {
         keyword,
@@ -20,11 +22,15 @@ namespace libassert::detail {
         token_e type;
         std::string_view str;
         token_t(token_e type_, std::string_view str_) : type(type_), str(str_) {}
+
+        bool operator==(const token_t& other) const {
+            return type == other.type && str == other.str;
+        }
     };
 
     // lifetime notes: token_t's store string_views to data with at least the same lifetime as the source string_view's
     // data
-    std::vector<token_t> tokenize(std::string_view source, bool decompose_shr = false);
+    LIBASSERT_EXPORT_TESTING std::vector<token_t> tokenize(std::string_view source, bool decompose_shr = false);
 }
 
 #endif

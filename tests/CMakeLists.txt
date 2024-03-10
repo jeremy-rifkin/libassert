@@ -97,7 +97,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       unit_test_sources
       tests/unit/constexpr_contexts.cpp
       tests/unit/disambiguation.cpp
-      # tests/unit/lexer.cpp
+      tests/unit/lexer.cpp
       tests/unit/literals.cpp
       tests/unit/test_public_utilities.cpp
       tests/unit/test_type_prettier.cpp
@@ -108,13 +108,13 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       get_filename_component(test_name ${test_file} NAME_WE)
       list(APPEND all_targets ${test_name})
       add_executable(${test_name} ${test_file})
-      target_link_libraries(${test_name} libassert-lib)
+      target_link_libraries(${test_name} PRIVATE libassert-lib)
       target_include_directories(${test_name} PRIVATE src)
       add_test(NAME ${test_name} COMMAND ${test_name})
       list(APPEND dsym_targets ${test_name})
     endforeach(test_file ${unit_test_sources})
 
-    # target_link_libraries(lexer GTest::gtest_main)
+    target_link_libraries(lexer PRIVATE GTest::gtest_main)
 
     set(
       binary_sources
@@ -127,13 +127,13 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       get_filename_component(test_name ${test_file} NAME_WE)
       list(APPEND all_targets ${test_name})
       add_executable(${test_name} ${test_file})
-      target_link_libraries(${test_name} libassert-lib)
+      target_link_libraries(${test_name} PRIVATE libassert-lib)
       target_include_directories(${test_name} PRIVATE src)
       list(APPEND dsym_targets ${test_name})
     endforeach(test_file ${binary_sources})
 
-    target_link_libraries(gtest-demo GTest::gtest_main)
-    target_link_libraries(catch2-demo Catch2::Catch2WithMain)
+    target_link_libraries(gtest-demo PRIVATE GTest::gtest_main)
+    target_link_libraries(catch2-demo PRIVATE Catch2::Catch2WithMain)
 
     if(APPLE)
       foreach(target ${dsym_targets})
