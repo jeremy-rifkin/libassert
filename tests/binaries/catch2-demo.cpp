@@ -24,7 +24,9 @@ public:
 
 // #define CHECK(...) do { try { LIBASSERT_ASSERT(__VA_ARGS__); CHECK_THAT(1, LibassertMatcher()); } catch(std::exception& e) { CHECK_THAT(false, LibassertMatcher(e.what())); } } while(false)
 // #define REQUIRE(...) do { try { LIBASSERT_ASSERT(__VA_ARGS__); REQUIRE_THAT(1, LibassertMatcher()); } catch(std::exception& e) { REQUIRE_THAT(false, LibassertMatcher(e.what())); } } while(false)
-
+#if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL != 0
+ #error "Libassert integration does not work with MSVC's non-conformant preprocessor. /Zc:preprocessor must be used."
+#endif
 #define ASSERT(...) do { try { LIBASSERT_ASSERT(__VA_ARGS__); REQUIRE_THAT(1, LibassertMatcher()); } catch(std::exception& e) { REQUIRE_THAT(false, LibassertMatcher(e.what())); } } while(false)
 
 void failure_handler(const libassert::assertion_info& info) {

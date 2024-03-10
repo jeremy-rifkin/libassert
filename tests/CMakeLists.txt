@@ -115,6 +115,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     endforeach(test_file ${unit_test_sources})
 
     target_link_libraries(lexer PRIVATE GTest::gtest_main)
+    target_compile_options(lexer PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
 
     set(
       binary_sources
@@ -133,7 +134,9 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     endforeach(test_file ${binary_sources})
 
     target_link_libraries(gtest-demo PRIVATE GTest::gtest_main)
+    target_compile_options(gtest-demo PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
     target_link_libraries(catch2-demo PRIVATE Catch2::Catch2WithMain)
+    target_compile_options(catch2-demo PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
 
     if(APPLE)
       foreach(target ${dsym_targets})
