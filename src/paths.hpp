@@ -41,15 +41,6 @@ namespace libassert::detail {
         void insert(const path_components& path, int i);
     };
 
-    class path_handler {
-    public:
-        virtual ~path_handler() = default;
-        virtual std::string_view resolve_path(std::string_view) = 0;
-        virtual bool has_add_path() const;
-        virtual void add_path(std::string_view);
-        virtual void finalize();
-    };
-
     class identity_path_handler : public path_handler {
     public:
         std::string_view resolve_path(std::string_view) override;

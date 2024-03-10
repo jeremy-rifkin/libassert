@@ -30,7 +30,7 @@ public:
 void failure_handler(const libassert::assertion_info& info) {
     std::string message = "";
     // catch line wrapping has issues with ansi sequences https://github.com/catchorg/Catch2/issues/2833
-    throw std::runtime_error(info.to_string(0, libassert::color_scheme::blank));
+    throw std::runtime_error(info.header(0, libassert::color_scheme::blank));
 }
 
 auto pre_main = [] () {

@@ -16,6 +16,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 #ifdef __cpp_lib_expected
  #include <expected>
@@ -1070,7 +1071,7 @@ namespace libassert {
 
     // collection of assertion data that can be put in static storage and all passed by a single pointer
     struct LIBASSERT_EXPORT assert_static_parameters {
-        std::string_view name;
+        std::string_view macro_name;
         assert_type type;
         std::string_view expr_str;
         source_location location;
@@ -1082,31 +1083,56 @@ namespace libassert {
         std::string stringification;
     };
 
+    namespace detail {
+        class path_handler {
+        public:
+            virtual ~path_handler() = default;
+            virtual std::string_view resolve_path(std::string_view) = 0;
+            virtual bool has_add_path() const;
+            virtual void add_path(std::string_view);
+            virtual void finalize();
+        };
+    }
+
     struct LIBASSERT_EXPORT assertion_info {
-        std::string_view name;
+        std::string_view macro_name;
         assert_type type;
         std::string_view expression_string;
         std::string_view file_name;
         std::uint32_t line;
-        std::vector<std::string_view> args_strings;
-        std::string message;
+        std::string_view function;
+        std::optional<std::string> message;
         std::optional<binary_diagnostics_descriptor> binary_diagnostics;
         std::vector<extra_diagnostic> extra_diagnostics;
-        std::string_view pretty_function;
-        cpptrace::raw_trace raw_trace;
-        size_t sizeof_args;
+        size_t n_args;
+    private:
+        mutable std::variant<cpptrace::raw_trace, cpptrace::stacktrace> trace; // lazy, resolved when needed
+        mutable std::unique_ptr<detail::path_handler> path_handler;
+        detail::path_handler* get_path_handler() const; // will get and setup the path handler
     public:
         assertion_info() = delete;
         assertion_info(
             const assert_static_parameters* static_params,
             cpptrace::raw_trace&& raw_trace,
-            size_t sizeof_args
+            size_t n_args
         );
         ~assertion_info();
         assertion_info(const assertion_info&) = delete;
-        assertion_info(assertion_info&&) = delete;
+        assertion_info(assertion_info&&);
         assertion_info& operator=(const assertion_info&) = delete;
-        assertion_info& operator=(assertion_info&&) = delete;
+        assertion_info& operator=(assertion_info&&);
+
+        std::string_view action() const;
+
+        const cpptrace::raw_trace& get_raw_trace() const;
+        const cpptrace::stacktrace& get_stacktrace() const;
+
+        std::string header(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+        std::string tagline(const color_scheme& scheme = get_color_scheme()) const;
+        std::string statement(const color_scheme& scheme = get_color_scheme()) const;
+        std::string print_binary_diagnostics(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+        std::string print_extra_diagnostics(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+        std::string print_stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
 
         [[nodiscard]] std::string to_string(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
     };
@@ -1196,7 +1222,7 @@ namespace libassert::detail {
         sv_span,
         const pretty_function_name_wrapper& t
     ) {
-        info.pretty_function = t.pretty_function;
+        info.function = t.pretty_function;
     }
 
     template<typename T>

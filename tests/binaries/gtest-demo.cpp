@@ -10,7 +10,7 @@
 
 void failure_handler(const libassert::assertion_info& info) {
     std::string message = "";
-    throw std::runtime_error(info.to_string());
+    throw std::runtime_error(info.header());
 }
 
 auto pre_main = [] () {

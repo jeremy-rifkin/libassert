@@ -71,7 +71,7 @@ namespace libassert::detail {
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     std::string print_stacktrace(
-        cpptrace::stacktrace& trace,
+        const cpptrace::stacktrace& trace,
         int term_width,
         const color_scheme& scheme,
         path_handler* path_handler
@@ -80,10 +80,6 @@ namespace libassert::detail {
         if(!trace.empty()) {
             // [start, end] is an inclusive range
             auto [start, end] = get_trace_window(trace);
-            // prettify signatures
-            for(auto& frame : trace) {
-                frame.symbol = prettify_type(frame.symbol);
-            }
             // path preprocessing
             constexpr size_t hard_max_file_length = 50;
             size_t max_file_length = 0;
@@ -109,7 +105,7 @@ namespace libassert::detail {
             const size_t max_frame_width = n_digits(end - start);
             // do the actual trace
             for(size_t i = start; i <= end; i++) {
-                const auto& [raw_address, obj_address, line, col, source_path, signature, is_inline] = trace.frames[i];
+                const auto& [raw_address, obj_address, line, col, source_path, signature_, is_inline] = trace.frames[i];
                 const std::string line_number = line.has_value() ? std::to_string(line.value()) : "?";
                 // look for repeats, i.e. recursion we can fold
                 size_t recursion_folded = 0;
@@ -125,6 +121,7 @@ namespace libassert::detail {
                     }
                 }
                 const size_t frame_number = i - start + 1;
+                auto signature = prettify_type(signature_);
                 // pretty print with columns for wide terminals
                 // split printing for small terminals
                 if(term_width >= 50) {
@@ -348,19 +345,6 @@ namespace libassert::detail {
         }
         return output;
     }
-
-    LIBASSERT_ATTR_COLD
-    const char* assert_type_name(assert_type t) {
-        switch(t) {
-            case assert_type::debug_assertion: return "Debug Assertion failed";
-            case assert_type::assertion:       return "Assertion failed";
-            case assert_type::assumption:      return "Assumption failed";
-            case assert_type::panic:           return "Panic";
-            default:
-                LIBASSERT_PRIMITIVE_ASSERT(false);
-                return "";
-        }
-    }
 }
 
 namespace libassert {
@@ -421,8 +405,9 @@ namespace libassert {
 
     namespace detail {
         LIBASSERT_ATTR_COLD
-        std::unique_ptr<detail::path_handler> get_path_handler() {
-            switch(current_path_mode.load()) {
+        std::unique_ptr<detail::path_handler> new_path_handler() {
+            auto mode = current_path_mode.load();
+            switch(mode) {
                 case path_mode::disambiguated:
                     return std::make_unique<disambiguating_path_handler>();
                 case path_mode::basename:
@@ -498,79 +483,144 @@ namespace libassert {
     LIBASSERT_ATTR_COLD assertion_info::assertion_info(
         const assert_static_parameters* static_params,
         cpptrace::raw_trace&& _raw_trace,
-        size_t _sizeof_args
+        size_t _n_args
     ) :
-        name(static_params->name),
+        macro_name(static_params->macro_name),
         type(static_params->type),
         expression_string(static_params->expr_str),
         file_name(static_params->location.file),
         line(static_params->location.line),
-        args_strings(
-            static_params->args_strings.data,
-            static_params->args_strings.data + static_params->args_strings.size
-        ),
-        pretty_function("<error>"),
-        raw_trace(std::move(_raw_trace)),
-        sizeof_args(_sizeof_args) {}
+        function("<error>"),
+        n_args(_n_args),
+        trace(std::move(_raw_trace)) {}
 
     LIBASSERT_ATTR_COLD assertion_info::~assertion_info() = default;
 
-    LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, const color_scheme& scheme) const {
-        auto trace = raw_trace.resolve();
-        // first handle path disambiguation and whatnot
-        std::unique_ptr<path_handler> path_handler = get_path_handler();
-        if(path_handler->has_add_path()) {
-            path_handler->add_path(file_name);
-            for(const auto& frame : trace.frames) {
-                path_handler->add_path(frame.filename);
+    assertion_info::assertion_info(assertion_info&&) = default;
+    assertion_info& assertion_info::operator=(assertion_info&&) = default;
+
+    path_handler* assertion_info::get_path_handler() const {
+        if(!path_handler) {
+            path_handler = new_path_handler();
+            // if this is a disambiguating handler or similar it needs to be fed all paths
+            if(path_handler->has_add_path()) {
+                path_handler->add_path(file_name);
+                const auto& stacktrace = get_stacktrace();
+                for(const auto& frame : stacktrace.frames) {
+                    path_handler->add_path(frame.filename);
+                }
             }
             path_handler->finalize();
         }
-        // now do output
-        std::string output;
-        // generate header
-        const auto function = prettify_type(std::string(pretty_function));
-        if(!message.empty()) {
-            output += stringf(
+        return path_handler.get();
+    }
+
+    LIBASSERT_ATTR_COLD std::string_view assertion_info::action() const {
+        switch(type) {
+            case assert_type::debug_assertion: return "Debug Assertion failed";
+            case assert_type::assertion:       return "Assertion failed";
+            case assert_type::assumption:      return "Assumption failed";
+            case assert_type::panic:           return "Panic";
+            case assert_type::unreachable:     return "Unreachable reached";
+            default:
+                return "Unknown assertion";
+        }
+    }
+
+    LIBASSERT_ATTR_COLD const cpptrace::raw_trace& assertion_info::get_raw_trace() const {
+        try {
+            return std::get<cpptrace::raw_trace>(trace);
+        } catch(std::bad_variant_access& e) {
+            throw cpptrace::runtime_error("assertion_info::get_raw_trace may only be called before assertion_info::get_stacktrace is called because that resoles the trace internally");
+        }
+    }
+
+    LIBASSERT_ATTR_COLD const cpptrace::stacktrace& assertion_info::get_stacktrace() const {
+        if(trace.index() == 0) {
+            // do resolution
+            auto raw_trace = std::move(std::get<cpptrace::raw_trace>(trace));
+            trace = raw_trace.resolve();
+        }
+        return std::get<cpptrace::stacktrace>(trace);
+    }
+
+    std::string assertion_info::header(int width, const color_scheme& scheme) const {
+        return tagline(scheme)
+            + statement(scheme)
+            + print_binary_diagnostics(width, scheme)
+            + print_extra_diagnostics(width, scheme);
+    }
+
+    std::string assertion_info::tagline(const color_scheme& scheme) const {
+        const auto prettified_function = prettify_type(std::string(function));
+        if(message && !message->empty()) {
+            return stringf(
                 "%s at %s:%d: %s: %s\n",
-                assert_type_name(type),
-                path_handler->resolve_path(file_name).data(), // we know this will be null-terminated
+                action().data(), // we know it's null-terminated
+                get_path_handler()->resolve_path(file_name).data(), // we know this will be null-terminated
                 line,
-                highlight(function, scheme).c_str(),
-                message.c_str()
+                highlight(prettified_function, scheme).c_str(),
+                message->c_str()
             );
         } else {
-            output += stringf(
+            return stringf(
                 "%s at %s:%d: %s:\n",
-                assert_type_name(type),
-                path_handler->resolve_path(file_name).data(), // we know this will be null-terminated
+                action().data(), // we know it's null-terminated
+                get_path_handler()->resolve_path(file_name).data(), // we know this will be null-terminated
                 line,
-                highlight(function, scheme).c_str()
+                highlight(prettified_function, scheme).c_str()
             );
         }
-        output += stringf(
+    }
+
+    std::string assertion_info::statement(const color_scheme& scheme) const {
+        return stringf(
             "    %s\n",
             highlight(
                 stringf(
                     "%s(%s%s);",
-                    name.data(), // we know this is null-terminated
+                    macro_name.data(), // we know this is null-terminated
                     expression_string.data(), // we know this is null-terminated
-                    sizeof_args > 0 ? (expression_string.empty() ? "..." : ", ...") : ""
+                    n_args > 0 ? (expression_string.empty() ? "..." : ", ...") : ""
                 ),
                 scheme
             ).c_str()
         );
-        // generate binary diagnostics
+    }
+
+    std::string assertion_info::print_binary_diagnostics(int width, const color_scheme& scheme) const {
         if(binary_diagnostics) {
-            output += print_binary_diagnostics(*binary_diagnostics, width, scheme);
+            return libassert::detail::print_binary_diagnostics(*binary_diagnostics, width, scheme);
+        } else {
+            return "";
         }
-        // generate extra diagnostics
+    }
+
+    std::string assertion_info::print_extra_diagnostics(int width, const color_scheme& scheme) const {
         if(!extra_diagnostics.empty()) {
-            output += print_extra_diagnostics(extra_diagnostics, width, scheme);
+            return libassert::detail::print_extra_diagnostics(extra_diagnostics, width, scheme);
+        } else {
+            return "";
         }
+    }
+
+    std::string assertion_info::print_stacktrace(int width, const color_scheme& scheme) const {
+        std::string output = "Stack trace:\n";
+        return libassert::detail::print_stacktrace(get_stacktrace(), width, scheme, get_path_handler());
+    }
+
+    LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, const color_scheme& scheme) const {
+        // auto& stacktrace = get_stacktrace(); // TODO
+        // now do output
+        std::string output;
+        // generate statement
+        output += tagline(scheme);
+        output += statement(scheme);
+        output += print_binary_diagnostics(width, scheme);
+        output += print_extra_diagnostics(width, scheme);
         // generate stack trace
         output += "\nStack trace:\n";
-        output += print_stacktrace(trace, width, scheme, path_handler.get());
+        output += print_stacktrace(width, scheme);
         return output;
     }
 }

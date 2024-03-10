@@ -29,6 +29,7 @@
   - [Utilities](#utilities)
   - [Configuration](#configuration)
   - [Assertion information](#assertion-information)
+    - [Anatomy of Assertion Information](#anatomy-of-assertion-information)
   - [Stringification](#stringification)
   - [Custom Failure Handlers](#custom-failure-handlers-1)
   - [Other configurations](#other-configurations)
@@ -538,6 +539,91 @@ namespace libassert {
         [[nodiscard]] std::string to_string(int width = 0, color_scheme scheme = get_color_scheme()) const;
     };
 }
+```
+
+### Anatomy of Assertion Information
+
+```
+Debug Assertion failed at demo.cpp:194: void foo::baz(): Internal error with foobars
+    debug_assert(open(path, 0) >= 0, ...);
+    Where:
+        open(path, 0) => -1
+    Extra diagnostics:
+        errno =>  2 "No such file or directory"
+        path  => "/home/foobar/baz"
+
+Stack trace:
+#1 demo.cpp:194 foo::baz()
+#2 demo.cpp:172 void foo::bar<int>(std::pair<int, int>)
+#3 demo.cpp:396 main
+```
+
+- `Debug Assertion failed`: `assertion_info.action()`
+- `demo.cpp:194`: `assertion_info.file_name` and `assertion_info.line`
+- `void foo::baz()`: `assertion_info.pretty_function`
+- `Internal error with foobars`: `assertion_info.message`
+- `debug_assert`: `assertion_info.macro_name`
+- `open(path, 0) >= 0`: `assertion_info.expression_string`
+- `...`: determined by `assertion_info.n_args` which has the total number of arguments passed to the assertion macro
+- Where clause
+  - `open(path, 0)`: `assertion_info.binary_diagnostics.left_expression`
+  - `-1`: `assertion_info.binary_diagnostics.left_stringification`
+  - Same for the right side (omitted in this case because `0 => 0` isn't useful)
+- Extra diagnostics
+  - `errno`: `assertion_info.extra_diagnostics[0].expression`
+  - `2 "No such file or directory"`: `assertion_info.extra_diagnostics[0].stringification`
+  - ... etc.
+- Stack trace
+  - `assertion_info.get_stacktrace()`, or `assertion_info.get_raw_trace()` to get the trace without resolving it
+
+**Helpers:**
+
+`assertion_info.header()`:
+
+```
+Debug Assertion failed at demo.cpp:194: void foo::baz(): Internal error with foobars
+    debug_assert(open(path, 0) >= 0, ...);
+    Where:
+        open(path, 0) => -1
+    Extra diagnostics:
+        errno =>  2 "No such file or directory"
+        path  => "/home/foobar/baz"
+```
+
+`assertion_info.tagline()`:
+
+```
+Debug Assertion failed at demo.cpp:194: void foo::baz(): Internal error with foobars
+```
+
+`assertion_info.statement()`:
+
+```
+    debug_assert(open(path, 0) >= 0, ...);
+```
+
+`assertion_info.print_binary_diagnostics()`:
+
+```
+    Where:
+        open(path, 0) => -1
+```
+
+`assertion_info.print_extra_diagnostics()`:
+
+```
+    Extra diagnostics:
+        errno =>  2 "No such file or directory"
+        path  => "/home/foobar/baz"
+```
+
+`assertion_info.print_stacktrace()`:
+
+```
+Stack trace:
+#1 demo.cpp:194 foo::baz()
+#2 demo.cpp:172 void foo::bar<int>(std::pair<int, int>)
+#3 demo.cpp:396 main
 ```
 
 ## Stringification
