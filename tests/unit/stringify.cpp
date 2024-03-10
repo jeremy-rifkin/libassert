@@ -36,7 +36,7 @@ int main() {
     ASSERT(generate_stringification("foobar"sv) == R"("foobar")");
     ASSERT(generate_stringification("foobar"s) == R"("foobar")");
     ASSERT(generate_stringification(char(42)) == R"('*')");
-    // ASSERT(generate_stringification(R"("foobar")") == R"xx(R\\\"("foobar")")xx"); // TODO: Don't escape in raw strings
+    ASSERT(generate_stringification(R"("foobar")") == R"xx("\"foobar\"")xx");
     // containers
     std::array arr{1,2,3,4,5};
     static_assert(can_stringify<std::array<int, 5>>::value);
@@ -49,7 +49,7 @@ int main() {
     ASSERT(generate_stringification(map) == R"(std::map<int, int>: [[1, 2], [3, 4]])");
     #endif
     std::tuple<int, float, std::string, std::array<int, 5>> tuple = {1, 1.25f, "good", arr};
-    // ASSERT(generate_stringification(tuple) == R"([1, 1.25, \"good\", [1, 2, 3, 4, 5]])"); // TODO fix
+    ASSERT(generate_stringification(tuple) == R"(std::tuple<int, float, std::string, std::array<int, 5>>: [1, 1.25, "good", [1, 2, 3, 4, 5]])");
     std::optional<int> opt;
     ASSERT(generate_stringification(opt) == R"(std::optional<int>: nullopt)");
     opt = 63;
