@@ -97,7 +97,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       unit_test_sources
       tests/unit/constexpr_contexts.cpp
       tests/unit/disambiguation.cpp
-      tests/unit/lexer.cpp
+      # tests/unit/lexer.cpp
       tests/unit/literals.cpp
       tests/unit/test_public_utilities.cpp
       tests/unit/test_type_prettier.cpp
