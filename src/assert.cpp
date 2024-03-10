@@ -530,7 +530,7 @@ namespace libassert {
     LIBASSERT_ATTR_COLD const cpptrace::raw_trace& assertion_info::get_raw_trace() const {
         try {
             return std::get<cpptrace::raw_trace>(trace);
-        } catch(std::bad_variant_access& e) {
+        } catch(std::bad_variant_access&) {
             throw cpptrace::runtime_error("assertion_info::get_raw_trace may only be called before assertion_info::get_stacktrace is called because that resoles the trace internally");
         }
     }
