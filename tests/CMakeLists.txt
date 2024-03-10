@@ -116,6 +116,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 
     target_link_libraries(lexer PRIVATE GTest::gtest_main)
     target_compile_options(lexer PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
+    target_compile_options(stringify PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
 
     set(
       binary_sources

@@ -36,6 +36,8 @@ int main() {
     ASSERT(generate_stringification("foobar"sv) == R"("foobar")");
     ASSERT(generate_stringification("foobar"s) == R"("foobar")");
     ASSERT(generate_stringification(char(42)) == R"('*')");
+    // Note: There's buggy behavior here with how MSVC stringizes the raw string literal when /Zc:preprocessor is not
+    // used. https://godbolt.org/z/13acEWTGc
     ASSERT(generate_stringification(R"("foobar")") == R"xx("\"foobar\"")xx");
     // containers
     std::array arr{1,2,3,4,5};
