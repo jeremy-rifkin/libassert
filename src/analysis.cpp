@@ -51,6 +51,10 @@ namespace libassert::detail {
         // class C -> C for msvc
         static const std::regex class_re(R"(\b(class|struct)\s+)");
         replace_all(type, class_re, "");
+        // `anonymous namespace' -> (anonymous namespace) for msvc
+        // this brings it in-line with other compilers and prevents any tokenization/highlighting issues
+        static const std::regex msvc_anonymous_namespace("`anonymous namespace'");
+        replace_all(type, msvc_anonymous_namespace, "(anonymous namespace)");
         // rules to replace std::basic_string -> std::string and std::basic_string_view -> std::string_view
         // rule to replace ", std::allocator<whatever>"
         static const std::pair<std::regex, std::string_view> basic_string = {
