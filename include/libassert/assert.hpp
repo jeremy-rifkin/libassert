@@ -379,9 +379,7 @@ namespace libassert::detail {
         //
         // Basic types
         //
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::string&); // TODO: Remove
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::string_view&); // TODO: Not const ref
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const char*); // TODO: Remove
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::string_view);
         // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::nullptr_t);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(char);
@@ -529,7 +527,7 @@ namespace libassert::detail {
         if constexpr(stringification::has_stringifier<T>::value) {
             return stringifier<strip<T>>{}.stringify(v);
         } else if constexpr(std::is_convertible_v<T, std::string_view>) {
-            if constexpr(std::is_pointer_v<T> || std::is_same_v<T, nullptr_t>) {
+            if constexpr(std::is_pointer_v<T> || std::is_same_v<T, std::nullptr_t>) {
                 if(v == nullptr) {
                     return "nullptr";
                 }
