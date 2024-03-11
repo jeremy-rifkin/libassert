@@ -255,12 +255,19 @@ namespace libassert::detail {
 namespace libassert {
     // customization point
     template<typename T> struct stringifier {
-        std::string stringify(const T& v);
+        /*std::convertible_to<std::string>*/ auto stringify(const T& v);
     };
 }
 
 namespace libassert::detail {
     namespace stringification {
+        struct NonStringifiable {
+            std::string s;
+            explicit NonStringifiable(std::string str) : s(std::move(str)) {}
+            operator const std::string&() const& { return s; }
+            operator std::string() && { return std::move(s); }
+        };
+
         //
         // General traits
         //
@@ -317,7 +324,7 @@ namespace libassert::detail {
         > : public std::true_type {};
 
         template<typename T>
-        std::string stringifier(const T& v) {
+        auto stringifier(const T& v) {
             return libassert::stringifier<T>{}.stringify(v);
         }
 
@@ -425,12 +432,21 @@ namespace libassert::detail {
         std::string stringify_container(const T& container) {
             using std::begin, std::end; // ADL
             std::string str = "[";
+            std::size_t n = 0;
             const auto begin_it = begin(container);
             for(auto it = begin_it; it != end(container); it++) {
-                if(it != begin_it) {
-                    str += ", ";
+                if constexpr(isa<decltype(stringifier(*begin_it)), NonStringifiable>) {
+                    ++n;
+                } else {
+                    if(it != begin_it) {
+                        str += ", ";
+                    }
+                    str += stringifier(*it);
                 }
-                str += stringifier(*it);
+            }
+            if constexpr(isa<decltype(stringifier(*begin_it)), NonStringifiable>) {
+                str += "size = ";
+                str += std::to_string(n);
             }
             str += "]";
             return str;
@@ -472,7 +488,7 @@ namespace libassert::detail {
 
 namespace libassert {
     template<typename T>
-    std::string stringifier<T>::stringify(const T& v) {
+    /*std::convertible_to<std::string>*/ auto stringifier<T>::stringify(const T& v) {
         using namespace detail;
         using namespace stringification;
         using detail::stringification::stringify;
@@ -496,7 +512,7 @@ namespace libassert {
         } else if constexpr(has_stream_overload<T>::value) {
             return stringify_by_ostream(v);
         } else {
-            return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
+            return NonStringifiable(bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str()));
         }
     }
 }
