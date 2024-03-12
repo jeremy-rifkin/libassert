@@ -514,12 +514,47 @@ namespace libassert::detail {
     }
 
     template<typename T, typename = void>
-    class can_stringify : public std::false_type {};
+    class has_value_type : public std::false_type {};
     template<typename T>
-    class can_stringify<
+    class has_value_type<
+        T,
+        std::void_t<typename T::value_type>
+    > : public std::true_type {};
+
+    template<typename T> constexpr bool is_smart_pointer =
+        is_specialization<T, std::unique_ptr>::value
+        || is_specialization<T, std::shared_ptr>::value; // TODO: Handle weak_ptr too?
+
+    template<typename T, typename = void>
+    class can_basic_stringify : public std::false_type {};
+    template<typename T>
+    class can_basic_stringify<
         T,
         std::void_t<decltype(stringification::stringify(std::declval<T>()))>
     > : public std::true_type {};
+
+    template<typename T> constexpr bool stringifiable_container();
+
+    template<typename T> inline constexpr bool stringifiable =
+        stringification::has_stringifier<T>::value
+        || std::is_convertible_v<T, std::string_view>
+        || (std::is_pointer_v<T> || std::is_function_v<T>)
+        || std::is_enum_v<T>
+        || stringification::is_tuple_like<T>::value
+        || (stringification::adl::is_container<T>::value && stringifiable_container<T>())
+        || can_basic_stringify<T>::value
+        || stringifiable_container<T>();
+
+    template<typename T> constexpr bool stringifiable_container() {
+        // TODO: Guard against std::expected....?
+        if constexpr(has_value_type<T>::value) {
+            return stringifiable<typename T::value_type>;
+        } else if constexpr(std::is_array_v<typename std::remove_reference_t<T>>) { // C arrays
+            return stringifiable<decltype(std::declval<T>()[0])>;
+        } else {
+            return false;
+        }
+    }
 
     template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
@@ -541,9 +576,9 @@ namespace libassert::detail {
             return stringification::stringify_enum(v);
         } else if constexpr(stringification::is_tuple_like<T>::value) {
             return stringification::stringify_tuple_like(v);
-        } else if constexpr(stringification::adl::is_container<T>::value) {
+        } else if constexpr(stringification::adl::is_container<T>::value && stringifiable_container<T>()) {
             return stringification::stringify_container(v);
-        } else if constexpr(can_stringify<T>::value) {
+        } else if constexpr(can_basic_stringify<T>::value) {
             return stringification::stringify(v);
         } else if constexpr(stringification::has_ostream_overload<T>::value) {
             return stringification::stringify_by_ostream(v);
@@ -557,9 +592,11 @@ namespace libassert::detail {
     template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string generate_stringification(const T& v) {
-        if constexpr(stringification::is_container_like<T> && !is_string_type<T>) {
+        if constexpr(stringification::is_container_like<T> && !is_string_type<T> && stringifiable_container<T>()) {
             return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);
-        } else if constexpr(std::is_pointer_v<T> && !is_string_type<T>) {
+        } else if constexpr(stringification::is_tuple_like<T>::value /*stringifiable_container<T>()*/) {
+            return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);
+        } else if constexpr((std::is_pointer_v<T> && !is_string_type<T>) || is_smart_pointer<T>) {
             return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);
         } else {
             return do_stringify(v);
