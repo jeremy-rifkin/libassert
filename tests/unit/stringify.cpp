@@ -16,6 +16,10 @@ using namespace std::literals;
 struct S {};
 struct S2 {};
 
+struct A {};
+struct B {};
+struct C {};
+
 int main() {
     // primitive types
     ASSERT(generate_stringification(false) == R"(false)");
@@ -93,6 +97,11 @@ int main() {
     libassert::detail::set_literal_format("", "", "", false);
     ASSERT(generate_stringification(100) == "100 0x64 0144");
     libassert::set_literal_format_mode(libassert::literal_format_mode::infer);
+
+    std::tuple<A, B, C> tuple2;
+    ASSERT(generate_stringification(tuple2) == R"(<instance of std::tuple<A, B, C>>)");
+    std::tuple<A, B, float, C> tuple3 = {{}, {}, 1.2, {}};
+    ASSERT(generate_stringification(tuple3) == R"(std::tuple<A, B, float, C>: [<instance of A>, <instance of B>, 1.20000005, <instance of C>])");
 
     // error codes
     // customization point objects
