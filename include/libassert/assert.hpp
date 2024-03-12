@@ -418,7 +418,7 @@ namespace libassert::detail {
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify_smart_ptr(const T& t) {
             if(t) {
-                return stringify(*t);
+                return do_stringify(*t);
             } else {
                 return "nullptr";
             }
@@ -592,8 +592,12 @@ namespace libassert::detail {
             return stringification::stringify(std::string_view(v));
         } else if constexpr(std::is_pointer_v<T> || std::is_function_v<T>) {
             return stringification::stringify_pointer_value(reinterpret_cast<const void*>(v));
-        } else if constexpr(is_specialization<T, std::unique_ptr>::value) {
-            return stringification::stringify_smart_ptr(v);
+        } else if constexpr(is_smart_pointer<T>) {
+            if(stringifiable<typename T::element_type>) {
+                return stringification::stringify_smart_ptr(v);
+            } else {
+                return stringification::stringify_pointer_value(v.get());
+            }
         } else if constexpr(std::is_enum_v<T>) {
             return stringification::stringify_enum(v);
         } else if constexpr(stringification::is_tuple_like<T>::value) {
@@ -627,6 +631,8 @@ namespace libassert::detail {
         } else if constexpr(stringification::is_tuple_like<T>::value && stringifiable_container<T>()) {
             return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);
         } else if constexpr((std::is_pointer_v<T> && !is_string_type<T>) || is_smart_pointer<T>) {
+            return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);
+        } else if constexpr(is_specialization<T, std::optional>::value) {
             return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);
         } else {
             return do_stringify(v);

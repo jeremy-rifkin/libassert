@@ -35,6 +35,9 @@ int main() {
     auto uptr = std::make_unique<int>(62);
     ASSERT(generate_stringification(uptr) == R"(std::unique_ptr<int>: 62)");
     ASSERT(generate_stringification(std::unique_ptr<int>()) == R"(std::unique_ptr<int>: nullptr)");
+    ASSERT(generate_stringification(std::make_unique<S>()).find(R"(std::unique_ptr<S>: 0x)") == 0, generate_stringification(std::make_unique<S>()));
+    std::unique_ptr<std::vector<int>> uptr2(new std::vector<int>{1,2,3,4});
+    ASSERT(generate_stringification(uptr2) == R"(std::unique_ptr<std::vector<int>>: [1, 2, 3, 4])");
     // strings and chars
     ASSERT(generate_stringification("foobar") == R"("foobar")");
     ASSERT(generate_stringification("foobar"sv) == R"("foobar")");
@@ -59,6 +62,7 @@ int main() {
     ASSERT(generate_stringification(opt) == R"(std::optional<int>: nullopt)");
     opt = 63;
     ASSERT(generate_stringification(opt) == R"(std::optional<int>: 63)");
+    ASSERT(generate_stringification(std::optional<S>(S{})) == R"(std::optional<S>: <instance of S>)");
     std::vector<int> vec2 {2, 42, {}, 60};
     ASSERT(generate_stringification(vec2) == R"(std::vector<int>: [2, 42, 0, 60])");
     std::vector<std::optional<int>> vec {2, 42, {}, 60};
