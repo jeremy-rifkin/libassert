@@ -1023,7 +1023,7 @@ namespace libassert {
     LIBASSERT_EXPORT void set_separator(std::string_view separator);
 
     // generates a stack trace, formats to the given width
-    [[nodiscard]] LIBASSERT_EXPORT LIBASSERT_ATTR_NOINLINE
+    [[nodiscard]] LIBASSERT_ATTR_NOINLINE LIBASSERT_EXPORT
     std::string stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme(), std::size_t skip = 0);
 
     enum class literal_format : unsigned {
