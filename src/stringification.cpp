@@ -127,11 +127,7 @@ namespace libassert::detail {
     }
 
     namespace stringification {
-        LIBASSERT_ATTR_COLD std::string stringify(const std::string& value) {
-            return escape_string(value, '"');
-        }
-
-        LIBASSERT_ATTR_COLD std::string stringify(const std::string_view& value) {
+        LIBASSERT_ATTR_COLD std::string stringify(std::string_view value) {
             return escape_string(value, '"');
         }
 
