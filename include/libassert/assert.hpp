@@ -300,8 +300,7 @@ namespace libassert::detail {
     //  - instance of catch all
     // Containers are only stringified if their value_type is stringifiable
     // TODO: Some sort of limit on stringification for containers... First 1000 items?
-    // TODO check whether extra work is needed for unique_ptr<T, D> support
-    // TODO shared pointers / weak pointers
+    // TODO Weak pointers?
 
     template<typename Test, template<typename...> class Ref>
     struct is_specialization : std::false_type {};

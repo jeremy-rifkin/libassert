@@ -38,6 +38,10 @@ int main() {
     ASSERT(generate_stringification(std::make_unique<S>()).find(R"(std::unique_ptr<S>: 0x)") == 0, generate_stringification(std::make_unique<S>()));
     std::unique_ptr<std::vector<int>> uptr2(new std::vector<int>{1,2,3,4});
     ASSERT(generate_stringification(uptr2) == R"(std::unique_ptr<std::vector<int>>: [1, 2, 3, 4])");
+    auto d = [](int*) {};
+    std::unique_ptr<int, decltype(d)> uptr3(nullptr, d);
+    ASSERT(generate_stringification(uptr3).find("std::unique_ptr<int,") == 0);
+    ASSERT(generate_stringification(uptr3).find("nullptr") != std::string::npos);
     // strings and chars
     ASSERT(generate_stringification("foobar") == R"("foobar")");
     ASSERT(generate_stringification("foobar"sv) == R"("foobar")");
