@@ -491,17 +491,24 @@ namespace libassert::detail {
             }
         }
 
+        inline constexpr std::size_t max_container_print_items = 1000;
+
         template<typename T>
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify_container(const T& container) {
             using std::begin, std::end; // ADL
             std::string str = "[";
             const auto begin_it = begin(container);
+            std::size_t count = 0;
             for(auto it = begin_it; it != end(container); it++) {
                 if(it != begin_it) {
                     str += ", ";
                 }
                 str += do_stringify(*it);
+                if(++count == max_container_print_items) {
+                    str += ", ...";
+                    break;
+                }
             }
             str += "]";
             return str;

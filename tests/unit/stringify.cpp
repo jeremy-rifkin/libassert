@@ -73,6 +73,14 @@ int main() {
     ASSERT(generate_stringification(vec) == R"(std::vector<std::optional<int>>: [2, 42, nullopt, 60])");
     std::vector<std::optional<std::vector<std::pair<int, float>>>> vovp {{{{2, 1.2f}}}, {}, {{{20, 6.2f}}}};
     ASSERT(generate_stringification(vovp) == R"(std::vector<std::optional<std::vector<std::pair<int, float>>>>: [[[2, 1.20000005]], nullopt, [[20, 6.19999981]]])");
+    std::vector<int> vlong(1100);
+    #define TEN "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "
+    #define HUNDRED TEN TEN TEN TEN TEN TEN TEN TEN TEN TEN
+    ASSERT(
+        generate_stringification(vlong) == "std::vector<int>: ["
+            HUNDRED HUNDRED HUNDRED HUNDRED HUNDRED HUNDRED HUNDRED HUNDRED HUNDRED HUNDRED "..."
+        "]"
+    );
     int carr[] = {1, 1, 2, 3, 5, 8};
     static_assert(stringifiable<int[5]>);
     static_assert(stringifiable_container<int[5]>());
