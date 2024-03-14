@@ -573,6 +573,10 @@ namespace libassert {
         }
     }
 
+    std::string assertion_info::location() const {
+        return stringf("%s:%d", get_path_handler()->resolve_path(file_name).data(), line);
+    }
+
     std::string assertion_info::statement(const color_scheme& scheme) const {
         return stringf(
             "    %s\n",

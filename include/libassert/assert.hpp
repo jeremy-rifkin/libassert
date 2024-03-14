@@ -1165,6 +1165,7 @@ namespace libassert {
 
         std::string header(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
         std::string tagline(const color_scheme& scheme = get_color_scheme()) const;
+        std::string location() const;
         std::string statement(const color_scheme& scheme = get_color_scheme()) const;
         std::string print_binary_diagnostics(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
         std::string print_extra_diagnostics(int width = 0, const color_scheme& scheme = get_color_scheme()) const;

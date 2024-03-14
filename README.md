@@ -596,6 +596,15 @@ Debug Assertion failed at demo.cpp:194: void foo::baz(): Internal error with foo
 Debug Assertion failed at demo.cpp:194: void foo::baz(): Internal error with foobars
 ```
 
+`assertion_info.location()`:
+
+> [!NOTE]
+> Path processing will be performed according to the path mode
+
+```
+demo.cpp:194
+```
+
 `assertion_info.statement()`:
 
 ```
