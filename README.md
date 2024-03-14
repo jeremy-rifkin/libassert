@@ -700,6 +700,49 @@ void libassert_default_failure_handler(assert_type type, const assertion_info& p
 By default libassert aborts from all assertion types. However, it may be desirable to throw an exception from some or
 all assertion types instead of aborting.
 
+## Integration with test libraries
+
+> [!NOTE]
+> Because of MSVC's non-conformant preprocessor there is no easy way to provide assertion wrappers. In order to use test
+> library integrations `/Zc:preprocessor` is required.
+
+### Catch2
+
+Libassert provides a catch2 integration in `libassert/assert-catch2.hpp`:
+
+```cpp
+#include <libassert/assert-catch2.hpp>
+
+TEST_CASE("1 + 1 is 2") {
+    ASSERT(1 + 1 == 3);
+}
+```
+
+![](screenshots/catch2.png)
+
+Currently the only macro provided is `ASSERT`, which will perform a `REQUIRE` internally.
+
+This isn't as pretty as I would like, however, it gets the job done. I'd like to support syntax highlighting however
+unfortunately catch2's line wrapping does not take into account ANSI escape sequences at the moment.
+
+### GoogleTest
+
+Libassert provides a gtest integration in `libassert/assert-gtest.hpp`:
+
+```cpp
+#include <libassert/assert-gtest.hpp>
+
+TEST(Addition, Arithmetic) {
+    ASSERT(1 + 1 == 3);
+}
+```
+
+![](screenshots/gtest.png)
+
+Currently libassert provides `ASSERT` and `EXPECT` macros for gtest.
+
+This isn't as pretty as I would like, however, it gets the job done.
+
 ## Other configurations
 
 Set these either at CMake or with `-D` for the compiler.
@@ -709,6 +752,7 @@ Set these either at CMake or with `-D` for the compiler.
 - `LIBASSERT_SAFE_COMPARISONS`
 - `LIBASSERT_USE_EXTERNAL_CPPTRACE`
 - `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`
+- `LIBASSERT_PREFIX_ASSERTIONS`
 
 # Usage
 
@@ -959,7 +1003,7 @@ Functionality other languages / their standard libraries provide:
 | Expression string                  | ✔️  |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
 | Location                           | ✔️  | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |     ✔️     |
 | Stack trace                        |  ❌   | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |     ✔️     |
-| Assertion message                  |  ❌**   | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |     ✔️     |
+| Assertion message                  | ❌**  | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |     ✔️     |
 | Extra diagnostics                  |  ❌   | ❌*  | ❌*  |  ❌  |  ❌*   |    ❌*     |     ✔️     |
 | Binary specializations             |  ❌   | ✔️ |  ❌  |  ❌  |   ❌   |    ✔️    |     ✔️     |
 | Automatic expression decomposition |  ❌   |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
