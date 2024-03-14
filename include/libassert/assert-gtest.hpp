@@ -15,8 +15,15 @@
 #define EXPECT(...) do { try { LIBASSERT_ASSERT(__VA_ARGS__); ASSERT_TRUE(true); } catch(std::exception& e) { EXPECT_TRUE(false) << e.what(); } } while(false)
 
 inline void libassert_failure_handler(const libassert::assertion_info& info) {
-    std::string message = "";
-    throw std::runtime_error(info.header());
+    std::string message = std::string(info.action()) + " at " + info.location() + ":";
+    if(info.message) {
+        message += " " + *info.message;
+    }
+    message += "\n";
+    message += info.statement()
+             + info.print_binary_diagnostics(0)
+             + info.print_extra_diagnostics(0);
+    throw std::runtime_error(std::move(message));
 }
 
 inline auto libassert_pre_main = [] () {
