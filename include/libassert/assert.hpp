@@ -856,7 +856,7 @@ namespace libassert::detail {
         constexpr decltype(auto) get_value() {
             if constexpr(is_nothing<C>) {
                 static_assert(is_nothing<B> && !is_nothing<A>);
-                return (((((((((((((((((((a)))))))))))))))))));
+                return (a);
             } else {
                 return C()(a, b);
             }
