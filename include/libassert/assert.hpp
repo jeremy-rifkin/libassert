@@ -356,11 +356,6 @@ namespace libassert::detail {
             >
         > : public std::true_type {};
 
-        template<typename T>
-        constexpr inline bool is_container_like = is_deref<T>::value
-                                                    || adl::is_begin_deref<T>::value
-                                                    || is_tuple_like<T>::value;
-
         template<typename T, typename = void> class has_ostream_overload : public std::false_type {};
         template<typename T>
         class has_ostream_overload<
@@ -632,7 +627,11 @@ namespace libassert::detail {
     template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string generate_stringification(const T& v) {
-        if constexpr(stringification::is_container_like<T> && !is_string_type<T> && stringifiable_container<T>()) {
+        if constexpr(
+            stringification::adl::is_container<T>::value
+            && !is_string_type<T>
+            && stringifiable_container<T>()
+        ) {
             return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);
         } else if constexpr(stringification::is_tuple_like<T>::value && stringifiable_container<T>()) {
             return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);
