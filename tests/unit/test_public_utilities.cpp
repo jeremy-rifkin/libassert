@@ -22,11 +22,11 @@ int main() {
     DEBUG_ASSERT(pretty_name.find("basic_string") == std::string::npos);
     DEBUG_ASSERT(pretty_name.find("allocator") == std::string::npos);
     // stringification tests
-    DEBUG_ASSERT(generate_stringification(12) == "12");
-    DEBUG_ASSERT(generate_stringification('x') == "'x'");
+    DEBUG_ASSERT(stringify(12) == "12");
+    DEBUG_ASSERT(stringify('x') == "'x'");
     DEBUG_ASSERT(
         replace(
-            replace(generate_stringification(std::make_pair("foobar", 20)), "char const", "const char"),
+            replace(stringify(std::make_pair("foobar", 20)), "char const", "const char"),
             "char *",
             "char*"
         ) == R"(std::pair<const char*, int>: ["foobar", 20])"

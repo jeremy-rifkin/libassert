@@ -25,7 +25,7 @@ auto pre_main = [] () {
 
 template<> struct libassert::stringifier<token_t> {
     std::string stringify(const token_t& token) {
-        return libassert::generate_stringification(token.type) + " \"" + std::string(token.str) + "\"";
+        return libassert::stringify(token.type) + " \"" + std::string(token.str) + "\"";
     }
 };
 

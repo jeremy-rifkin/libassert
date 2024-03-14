@@ -988,11 +988,10 @@ namespace libassert {
     }
 
     // returns a debug stringification of t
-    // template<typename T>
-    // [[nodiscard]] std::string stringify(const T& t) {
-    //     return detail::generate_stringification(t);
-    // }
-    using detail::generate_stringification; // TODO
+    template<typename T>
+    [[nodiscard]] std::string stringify(const T& t) {
+        return detail::generate_stringification(t);
+    }
 
     // NOTE: string view underlying data should have static storage duration, or otherwise live as long as the scheme
     // is in use
