@@ -30,22 +30,24 @@ public:
 #endif
 #define ASSERT(...) do { try { LIBASSERT_ASSERT(__VA_ARGS__); REQUIRE_THAT(1, LibassertMatcher()); } catch(std::exception& e) { REQUIRE_THAT(false, LibassertMatcher(e.what())); } } while(false)
 
-inline void libassert_failure_handler(const libassert::assertion_info& info) {
-    std::string message = std::string(info.action()) + " at " + info.location() + ":";
-    if(info.message) {
-        message += " " + *info.message;
+namespace libassert::detail {
+    inline void catch2_failure_handler(const assertion_info& info) {
+        std::string message = std::string(info.action()) + " at " + info.location() + ":";
+        if(info.message) {
+            message += " " + *info.message;
+        }
+        message += "\n";
+        message += info.statement(color_scheme::blank)
+                + info.print_binary_diagnostics(0, color_scheme::blank)
+                + info.print_extra_diagnostics(0, color_scheme::blank);
+        // catch line wrapping has issues with ansi sequences https://github.com/catchorg/Catch2/issues/2833
+        throw std::runtime_error(std::move(message));
     }
-    message += "\n";
-    message += info.statement(libassert::color_scheme::blank)
-             + info.print_binary_diagnostics(0, libassert::color_scheme::blank)
-             + info.print_extra_diagnostics(0, libassert::color_scheme::blank);
-    // catch line wrapping has issues with ansi sequences https://github.com/catchorg/Catch2/issues/2833
-    throw std::runtime_error(std::move(message));
-}
 
-inline auto libassert_pre_main = [] () {
-    libassert::set_failure_handler(libassert_failure_handler);
-    return 1;
-} ();
+    inline auto pre_main = [] () {
+        set_failure_handler(catch2_failure_handler);
+        return 1;
+    } ();
+}
 
 #endif
