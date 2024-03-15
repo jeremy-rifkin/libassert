@@ -1079,17 +1079,17 @@ namespace libassert {
     LIBASSERT_EXPORT void set_failure_handler(void (*handler)(const assertion_info&));
 
     struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
-        std::string left_stringification;
-        std::string right_stringification;
         std::string left_expression;
         std::string right_expression;
+        std::string left_stringification;
+        std::string right_stringification;
         bool multiple_formats;
         binary_diagnostics_descriptor(); // = default; in the .cpp
         binary_diagnostics_descriptor(
-            std::string&& left_stringification,
-            std::string&& right_stringification,
             std::string_view left_expression,
             std::string_view right_expression,
+            std::string&& left_stringification,
+            std::string&& right_stringification,
             bool multiple_formats
         );
         ~binary_diagnostics_descriptor(); // = default; in the .cpp
@@ -1233,10 +1233,10 @@ namespace libassert::detail {
             either_is_character && either_is_arithmetic
         );
         binary_diagnostics_descriptor descriptor(
-            generate_stringification(left),
-            generate_stringification(right),
             left_str,
             right_str,
+            generate_stringification(left),
+            generate_stringification(right),
             has_multiple_formats()
         );
         restore_literal_format(previous_format);

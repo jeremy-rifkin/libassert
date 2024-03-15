@@ -228,10 +228,10 @@ namespace libassert::detail {
         const color_scheme& scheme
     ) {
         auto& [
-            left_stringification,
-            right_stringification,
             left_expression,
             right_expression,
+            left_stringification,
+            right_stringification,
             multiple_formats
         ] = diagnostics;
         // TODO: Temporary hack while reworking
@@ -459,16 +459,16 @@ namespace libassert {
 
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
-        std::string&& _left_stringification,
-        std::string&& _right_stringification,
         std::string_view _left_expression,
         std::string_view _right_expression,
+        std::string&& _left_stringification,
+        std::string&& _right_stringification,
         bool _multiple_formats
     ):
-        left_stringification(std::move(_left_stringification)),
-        right_stringification(std::move(_right_stringification)),
         left_expression(_left_expression),
         right_expression(_right_expression),
+        left_stringification(std::move(_left_stringification)),
+        right_stringification(std::move(_right_stringification)),
         multiple_formats(_multiple_formats) {}
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
     LIBASSERT_ATTR_COLD
