@@ -45,6 +45,10 @@
  #endif
 #endif
 
+#ifdef LIBASSERT_USE_FMT
+ #include <fmt/format.h>
+#endif
+
 #include <cpptrace/cpptrace.hpp>
 
 // Ever seen an assertion library with a 1500+ line header? :)
@@ -290,16 +294,15 @@ namespace libassert::detail {
     //  - std::expected TODO
     //  - tuples and tuple-likes
     //  - anything container-like (std::vector, std::array, std::unordered_map, C arrays, .....)
-    //
     // Priorities:
     //  - libassert::stringifier
     //  - default formatters
     //  - fmt
-    //  - std fmt
+    //  - std fmt TODO
     //  - osteam format
     //  - instance of catch all
-    // Containers are only stringified if their value_type is stringifiable
-    // TODO: Some sort of limit on stringification for containers... First 1000 items?
+    // Other logistics:
+    //  - Containers are only stringified if their value_type is stringifiable
     // TODO Weak pointers?
 
     template<typename Test, template<typename...> class Ref>
@@ -617,7 +620,13 @@ namespace libassert::detail {
             return stringification::stringify(v);
         } else if constexpr(stringification::has_ostream_overload<T>::value) {
             return stringification::stringify_by_ostream(v);
-        } else {
+        }
+        #ifdef LIBASSERT_USE_FMT
+        else if constexpr(fmt::is_formattable<T>::value) {
+            return fmt::format("{}", v);
+        }
+        #endif
+        else {
             return stringification::stringify_unknown<T>();
         }
         // TODO fmt / std fmt

@@ -753,6 +753,7 @@ Set these either at CMake or with `-D` for the compiler.
 - `LIBASSERT_USE_EXTERNAL_CPPTRACE`
 - `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`
 - `LIBASSERT_PREFIX_ASSERTIONS`
+- `LIBASSERT_USE_FMT`
 
 # Usage
 

@@ -38,10 +38,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     # Temporary workaround for Visual Studio 2022 bug with __builtin_LINE() and __builtin_FILE()
     # https://developercommunity.visualstudio.com/t/__builtin_LINE-function-is-reporting-w/10439054?space=62&q=__builtin_function
     # TODO: Workaround in the header for end users?
-    target_compile_features(
-      integration
-      PUBLIC cxx_std_20
-    )
+    target_compile_features(integration PUBLIC cxx_std_20)
     target_link_libraries(integration PRIVATE libassert-lib)
     target_compile_options(
       integration
@@ -73,7 +70,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     FetchContent_Declare(
       googletest
       GIT_REPOSITORY "https://github.com/google/googletest.git"
-      GIT_TAG        "v1.14.0"
+      GIT_TAG        f8d7d77c06936315286eb55f8de22cd23c188571 # v1.14.0
     )
     # For Windows: Prevent overriding the parent project's compiler/linker settings
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -84,9 +81,18 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       Catch2
       GIT_SHALLOW    TRUE
       GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-      GIT_TAG        v3.5.3
+      GIT_TAG        8ac8190e494a381072c89f5e161b92a08d98b37b # v3.5.3
     )
     FetchContent_MakeAvailable(Catch2)
+
+    include(FetchContent)
+    FetchContent_Declare(
+      fmt
+      GIT_SHALLOW    TRUE
+      GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+      GIT_TAG        e69e5f977d458f2650bb346dadf2ad30c5320281 # v10.2.1
+    )
+    FetchContent_MakeAvailable(fmt)
 
     # For catch 2 only
     # list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/contrib)
@@ -103,6 +109,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       tests/unit/test_type_prettier.cpp
       tests/unit/type_handling.cpp
       tests/unit/stringify.cpp
+      tests/unit/fmt-test.cpp
     )
     foreach(test_file ${unit_test_sources})
       get_filename_component(test_name ${test_file} NAME_WE)
@@ -115,6 +122,8 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     endforeach(test_file ${unit_test_sources})
 
     target_link_libraries(lexer PRIVATE GTest::gtest_main)
+    target_link_libraries(fmt-test PRIVATE GTest::gtest_main fmt::fmt)
+    target_compile_definitions(fmt-test PRIVATE LIBASSERT_USE_FMT)
     target_compile_options(lexer PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
     target_compile_options(stringify PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
 
