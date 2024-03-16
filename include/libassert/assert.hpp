@@ -598,7 +598,11 @@ namespace libassert::detail {
         } else if constexpr(std::is_pointer_v<T> || std::is_function_v<T>) {
             return stringification::stringify_pointer_value(reinterpret_cast<const void*>(v));
         } else if constexpr(is_smart_pointer<T>) {
-            if(stringifiable<typename T::element_type>) {
+            #ifndef LIBASSERT_NO_STRINGIFY_SMART_POINTER_OBJECTS
+             if(stringifiable<typename T::element_type>) {
+            #else
+             if(false) {
+            #endif
                 return stringification::stringify_smart_ptr(v);
             } else {
                 return stringification::stringify_pointer_value(v.get());
