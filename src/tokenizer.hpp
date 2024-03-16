@@ -1,6 +1,7 @@
 #ifndef TOKENIZER_HPP
 #define TOKENIZER_HPP
 
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -30,7 +31,8 @@ namespace libassert::detail {
 
     // lifetime notes: token_t's store string_views to data with at least the same lifetime as the source string_view's
     // data
-    LIBASSERT_EXPORT_TESTING std::vector<token_t> tokenize(std::string_view source, bool decompose_shr = false);
+    LIBASSERT_EXPORT_TESTING
+    std::optional<std::vector<token_t>> tokenize(std::string_view source, bool decompose_shr = false);
 }
 
 #endif

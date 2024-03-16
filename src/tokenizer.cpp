@@ -2,10 +2,11 @@
 
 #include <array>
 #include <cctype>
-#include <string_view>
-#include <vector>
 #include <optional>
+#include <string_view>
 #include <unordered_set>
+#include <variant>
+#include <vector>
 
 #include "utils.hpp"
 
@@ -52,6 +53,10 @@ namespace libassert::detail {
         constexpr_sort(arr, [](std::string_view a, std::string_view b) { return a.size() < b.size(); });
         return arr;
     } ();
+
+    struct lexer_error {};
+
+    #define TRY(expr) do if(std::optional<lexer_error> res = (expr); res.has_value()) { return res.value(); } while(0)
 
     // key#nt:keyword
     // [...temp0.querySelectorAll("span.keyword, span.literal")].map(node => `"${node.innerHTML.replace(`<span class="shy"></span>`, "")}",`).join("\n")
@@ -142,9 +147,11 @@ namespace libassert::detail {
     class tokenizer {
         std::string_view source;
         std::string_view::iterator it;
+        bool error = false;
     public:
         tokenizer(std::string_view source_) : source(source_), it(source.begin()) {}
-        std::vector<token_t> tokenize(bool decompose_shr = false) {
+
+        std::variant<std::vector<token_t>, lexer_error> tokenize(bool decompose_shr = false) {
             std::vector<token_t> tokens;
             while(!end()) {
                 // Blanks, horizontal and vertical tabs, newlines, formfeeds, and comments (collectively, “whitespace”), as
@@ -153,9 +160,9 @@ namespace libassert::detail {
                 if(isspace(peek())) {
                     tokens.push_back(read_whitespace());
                 } else if(peek("//")) { // comments can't show up here but may as well
-                    read_comment();
+                    TRY(read_comment());
                 } else if(peek("/*")) {
-                    read_multi_line_comment();
+                    TRY(read_multi_line_comment());
                 }
                 // -----------------------------------------------------------------------------------------------------
                 // There are five kinds of tokens: identifiers, keywords, literals, operators, and other separators
@@ -187,7 +194,7 @@ namespace libassert::detail {
                 ) {
                     auto begin = pos();
                     advance(prefix.value_or("").size());
-                    read_char_literal();
+                    TRY(read_char_literal());
                     auto end = pos();
                     tokens.push_back({token_e::string, std::string_view(source.data() + begin, end - begin)});
                 }
@@ -199,16 +206,16 @@ namespace libassert::detail {
                     auto begin = pos();
                     advance(prefix.value_or("").size());
                     if(peek() == 'R') {
-                        read_raw_string_literal();
+                        TRY(read_raw_string_literal());
                     } else {
-                        read_string_literal();
+                        TRY(read_string_literal());
                     }
                     auto end = pos();
                     tokens.push_back({token_e::string, std::string_view(source.data() + begin, end - begin)});
                 }
                 else if(isdigit(peek()) || (peek() == '.' && isdigit(peek(1)))) { // integer, float
                     auto begin = pos();
-                    read_numeric_literal();
+                    TRY(read_numeric_literal());
                     auto end = pos();
                     tokens.push_back({token_e::number, std::string_view(source.data() + begin, end - begin)});
                 }
@@ -239,7 +246,7 @@ namespace libassert::detail {
                 // 3. identifiers
                 else if(is_identifier_start(peek())) {
                     auto begin = pos();
-                    read_identifier_or_keyword();
+                    TRY(read_identifier_or_keyword());
                     auto end = pos();
                     std::string_view contents = std::string_view(source.data() + begin, end - begin);
                     tokens.push_back({
@@ -251,7 +258,6 @@ namespace libassert::detail {
                     tokens.push_back({token_e::unknown, std::string_view(source.data(), 1)});
                     advance();
                 }
-
                 // // universal character escapes like \U0001F60A get stringified so we have to handle them
                 // // http://eel.is/c++draft/lex#charset-3
                 // // fortunately we don't have to worry about unicode spellings of basic character set characters
@@ -260,7 +266,11 @@ namespace libassert::detail {
                 //     // tokens.push_back(read_universal_character_name());
                 // }
             }
-            return tokens;
+            if(error) {
+                return lexer_error{};
+            } else {
+                return tokens;
+            }
         }
     private:
         token_t read_whitespace() {
@@ -272,53 +282,68 @@ namespace libassert::detail {
             }
             return {token_e::whitespace, std::string_view(source.data() + begin, count)};
         }
-        void read_comment() {
+
+        [[nodiscard]] std::optional<lexer_error> read_comment() {
             while(!end() && peek() != '\n') {
                 advance();
             }
+            return std::nullopt;
         }
-        void read_multi_line_comment() {
+
+        [[nodiscard]] std::optional<lexer_error> read_multi_line_comment() {
             while(!end() && !(peek() == '*' && peek(1) == '/')) {
                 advance();
             }
-            expect('*');
-            expect('/');
+            TRY(expect('*'));
+            TRY(expect('/'));
+            return std::nullopt;
         }
-        void read_identifier_or_keyword() {
+
+        [[nodiscard]] std::optional<lexer_error> read_identifier_or_keyword() {
             while(!end() && is_identifier_continue(peek())) {
                 advance();
             }
+            return std::nullopt;
         }
-        void read_char_literal() {
+
+        [[nodiscard]] std::optional<lexer_error> read_char_literal() {
             // http://eel.is/c++draft/lex.ccon
-            expect('\'');
-            while(!end() && peek() != '\'') {
-                if(peek() == '\\') {
-                    read_escape_sequence();
-                } else {
-                    advance();
-                }
+            TRY(expect('\''));
+            // make sure this isn't an invalid char literal
+            if(peek() == '\'') {
+                return lexer_error{};
             }
-            expect('\'');
-            read_optional_udl_suffix();
+            // read one character, or an escape sequence
+            if(peek() == '\\') {
+                TRY(read_escape_sequence());
+            } else {
+                advance();
+            }
+            // expect end of char literal
+            TRY(expect('\''));
+            TRY(read_optional_udl_suffix());
+            return std::nullopt;
         }
-        void read_string_literal() {
+
+        [[nodiscard]] std::optional<lexer_error> read_string_literal() {
             // string#nt:string-literal
-            expect('"');
+            TRY(expect('"'));
             while(!end() && peek() != '"') {
                 if(peek() == '\\') {
-                    read_escape_sequence();
+                    TRY(read_escape_sequence());
                 } else {
                     advance();
                 }
             }
-            expect('"');
-            read_optional_udl_suffix();
+            TRY(expect('"'));
+            TRY(read_optional_udl_suffix());
+            return std::nullopt;
         }
-        void read_raw_string_literal() {
+
+        [[nodiscard]] std::optional<lexer_error> read_raw_string_literal() {
             // string#nt:string-literal
-            expect('R');
-            expect('"');
+            TRY(expect('R'));
+            TRY(expect('"'));
             // read d-char sequence
             // we'll be much more permissive about what is allowed as a d-char, we'll allow anything that's not a (
             auto d_begin = pos();
@@ -336,25 +361,29 @@ namespace libassert::detail {
                     advance();
                 }
             }
-            expect('"');
+            TRY(expect('"'));
+            return std::nullopt;
         }
-        void read_escape_sequence() {
+
+        [[nodiscard]] std::optional<lexer_error> read_escape_sequence() {
             // http://eel.is/c++draft/lex.ccon#nt:escape-sequence
             // escape-sequence:
             //   simple-escape-sequence
             //   numeric-escape-sequence
             //   conditional-escape-sequence
-            expect('\\');
+            TRY(expect('\\'));
             // the only escape sequences we really need to parse are those that could contain ' or "
             if(peek() == 'N' && peek(1) == '{') {
                 advance();
-                read_braced_sequence();
+                TRY(read_braced_sequence());
             } else {
                 // read it as though it's a simple-escape-sequence
                 advance();
             }
+            return std::nullopt;
         }
-        void read_numeric_literal() {
+
+        [[nodiscard]] std::optional<lexer_error> read_numeric_literal() {
             // since we can assume a valid token, and we'll treat it as a pp-number....
             // http://eel.is/c++draft/lex.ppnumber
             // just read [0-9a-zA-Z'\.]+, essentially, with special handling for exponents/sign
@@ -366,27 +395,34 @@ namespace libassert::detail {
                 }
             }
             // non-underscore udls will already be handled above, catch remaining here
-            read_optional_udl_suffix();
+            TRY(read_optional_udl_suffix());
+            return std::nullopt;
         }
-        void read_optional_udl_suffix() {
+
+        [[nodiscard]] std::optional<lexer_error> read_optional_udl_suffix() {
             // http://eel.is/c++draft/lex.ext#nt:ud-suffix
             if(is_identifier_start(peek())) {
-                read_identifier_or_keyword();
+                TRY(read_identifier_or_keyword());
             }
+            return std::nullopt;
         }
+
         // reads a {...}
-        void read_braced_sequence() {
-            expect('{');
+        [[nodiscard]] std::optional<lexer_error> read_braced_sequence() {
+            TRY(expect('{'));
             while(!end() && peek() != '}') {
                 advance();
             }
-            expect('}');
+            TRY(expect('}'));
+            return std::nullopt;
         }
     private:
-        std::size_t pos() const {
+
+        [[nodiscard]] std::size_t pos() const {
             return it - source.begin();
         }
-        char peek(std::size_t count = 0) const {
+
+        [[nodiscard]] char peek(std::size_t count = 0) const {
             auto pos = it - source.begin();
             if(pos + count < source.size()) {
                 return *(it + count);
@@ -394,7 +430,8 @@ namespace libassert::detail {
                 return 0;
             }
         }
-        bool peek(std::string_view pattern, std::size_t offset = 0) const {
+
+        [[nodiscard]] bool peek(std::string_view pattern, std::size_t offset = 0) const {
             for(std::size_t i = 0; i < pattern.size(); i++) {
                 if(peek(offset + i) != pattern[i]) {
                     return false;
@@ -402,7 +439,9 @@ namespace libassert::detail {
             }
             return true;
         }
+
         template<std::size_t N>
+        [[nodiscard]]
         std::optional<std::string_view> peek_any(const std::array<std::string_view, N>& candidates) const {
             for(auto entry : candidates) {
                 if(peek(entry)) {
@@ -411,6 +450,7 @@ namespace libassert::detail {
             }
             return std::nullopt;
         }
+
         char advance() {
             if(it != source.end()) {
                 return *it++;
@@ -418,31 +458,42 @@ namespace libassert::detail {
                 return 0;
             }
         }
+
         void advance(std::size_t count) {
             while(it != source.end() && count--) {
                 it++;
             }
         }
+
         void rollback(std::size_t count) {
             while(count--) {
                 internal_verify(it != source.begin(), "Tokenizer rollback() failed, please report this bug");
                 it--;
             }
         }
-        void expect(char c) {
-            internal_verify(peek() == c, "Tokenizer expect() failed, please report this bug");
+
+        [[nodiscard]] std::optional<lexer_error> expect(char c) {
+            if(peek() != c) {
+                error = true;
+                return lexer_error{};
+            }
             advance();
+            return std::nullopt;
         }
-        bool end() const {
-            return it == source.end();
+
+        // returns true if the end of the input has been reached or if tokenization should otherwise stop
+        [[nodiscard]] bool end() const {
+            return it == source.end() || error;
         }
     };
 
-    std::vector<token_t> tokenize(std::string_view source, bool decompose_shr) {
-        // try {
-            return tokenizer(source).tokenize(decompose_shr);
-        // } catch(...) {
-            // return {};
-        // }
+    std::optional<std::vector<token_t>> tokenize(std::string_view source, bool decompose_shr) {
+        auto res = tokenizer(source).tokenize(decompose_shr);
+        if(res.index() == 0) {
+            return std::move(std::get<std::vector<token_t>>(res));
+        } else {
+            internal_verify(res.index() == 1);
+            return std::nullopt;
+        }
     }
 }

@@ -30,16 +30,31 @@ template<> struct libassert::stringifier<token_t> {
 };
 
 template<typename T>
-void check_vector(const std::vector<T>& output, const std::vector<T>& expected) {
-    for(std::size_t i = 0; i < std::max(output.size(), expected.size()); i++) {
-        if(i >= output.size()) {
-            ASSERT(false, "expected item not in vector", expected[i], i, expected, output);
-        } else if(i >= expected.size()) {
-            ASSERT(false, "unexpected item in vector", output[i], i, expected, output);
-        } else {
-            ASSERT(output[i] == expected[i], i, expected, output);
+void check_vector(const std::optional<std::vector<T>>& output_opt, const std::optional<std::vector<T>>& expected_opt) {
+    if(output_opt.has_value() && expected_opt.has_value()) {
+        const auto& [output, expected] = std::make_pair(*output_opt, *expected_opt);
+        for(std::size_t i = 0; i < std::max(output.size(), expected.size()); i++) {
+            if(i >= output.size()) {
+                ASSERT(false, "expected item not in vector", expected[i], i, expected, output);
+            } else if(i >= expected.size()) {
+                ASSERT(false, "unexpected item in vector", output[i], i, expected, output);
+            } else {
+                ASSERT(output[i] == expected[i], i, expected, output);
+            }
         }
+    } else {
+        ASSERT(output_opt.has_value() == expected_opt.has_value(), output_opt, expected_opt);
     }
+}
+
+template<typename T>
+void check_vector(const std::optional<std::vector<T>>& output, const std::vector<T>& expected) {
+    check_vector(output, std::optional{expected});
+}
+
+template<typename T>
+void check_vector(const std::optional<std::vector<T>>& output, std::nullopt_t expected) {
+    check_vector<T>(output, std::optional<std::vector<T>>{});
 }
 
 TEST(LexerTests, Operators) {
@@ -174,7 +189,7 @@ TEST(LexerTests, NamedLiterals) {
 }
 
 TEST(LexerTests, CharLiterals) {
-    std::string str = R"('f''f'12 '\n' u8'\u1212''foobar''\N{foo'bar}' L'W''foo\'foo')";
+    std::string str = R"('f''f'12 '\n' u8'\u1212''\N{foo'bar}' L'W''\'')";
     auto vec = tokenize(str);
     std::vector<token_t> expected = {
         token_t(token_e::string, "'f'"),
@@ -184,13 +199,13 @@ TEST(LexerTests, CharLiterals) {
         token_t(token_e::string, "'\\n'"),
         token_t(token_e::whitespace, " "),
         token_t(token_e::string, "u8'\\u1212'"),
-        token_t(token_e::string, "'foobar'"),
         token_t(token_e::string, "'\\N{foo'bar}'"),
         token_t(token_e::whitespace, " "),
         token_t(token_e::string, "L'W'"),
-        token_t(token_e::string, "'foo\\'foo'"),
+        token_t(token_e::string, "'\\''"),
     };
     check_vector(vec, expected);
+    check_vector(tokenize("'foo'"), std::nullopt);
 }
 
 TEST(LexerTests, StringLiterals) {
@@ -301,4 +316,11 @@ TEST(LexerTests, IdentifiersAndKeywords) {
         token_t(token_e::keyword, "char"),
     };
     check_vector(vec, expected);
+}
+
+TEST(LexerTests, InvalidInputIsRejected) {
+    auto vec1 = tokenize(R"TT(Error: Didn't return the correct result)TT");
+    check_vector(vec1, std::nullopt);
+    auto vec2 = tokenize(R"TT(Error: Didn't return the correct result, or didn't return the right result)TT");
+    check_vector(vec2, std::nullopt);
 }

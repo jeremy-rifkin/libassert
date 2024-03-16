@@ -295,7 +295,11 @@ namespace libassert::detail {
         // TODO: Refactor
         // NOLINTNEXTLINE(readability-function-cognitive-complexity)
         std::vector<highlight_block> highlight(std::string_view expression, const color_scheme& scheme) try {
-            const auto tokens = tokenize(expression);
+            const auto res = tokenize(expression);
+            if(!res) {
+                return {{"", expression}};
+            }
+            const auto& tokens = *res;
             std::vector<highlight_block> output;
             for(size_t i = 0; i < tokens.size(); i++) {
                 const auto& token = tokens[i];
@@ -319,7 +323,7 @@ namespace libassert::detail {
                         if(highlight_ops.count(token.str)) {
                             output.push_back({scheme.operator_token, token.str});
                         } else {
-                            output.push_back({"", token.str});
+                            output.push_back({scheme.punctuation, token.str});
                         }
                         break;
                     case token_e::named_literal:
@@ -600,7 +604,11 @@ namespace libassert::detail {
             // initial tokenization so we can pass the token vector by reference and avoid copying
             // for every recursive path (O(t^2)). This does not create an issue for syntax
             // highlighting as long as >> and > are highlighted the same.
-            const auto tokens = tokenize(expression, true);
+            const auto res = tokenize(expression, true);
+            if(!res) {
+                return { "left", "right" };
+            }
+            const auto& tokens = *res;
             // We're only looking for the split, we can just store a set of split indices. No need
             // to store a vector<pair<vector<token_t>, vector<token_t>>>
             std::set<int> candidates;
