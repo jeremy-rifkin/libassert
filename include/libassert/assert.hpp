@@ -1561,11 +1561,31 @@ namespace libassert {
 
 // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
 // name, not signature
+// The arg strings at the very least must be static constexpr. Unfortunately static constexpr variables are not allowed
+// in constexpr functions pre-C++23.
+// TODO: Try to do a hybrid in C++20 with std::is_constant_evaluated?
+#if defined(__cpp_constexpr) && __cpp_constexpr >= 202211L
+// Can just use static constexpr everywhere
 #define LIBASSERT_STATIC_DATA(name, type, expr_str, ...) \
     /* extra string here because of extra comma from map, also serves as terminator */ \
     /* LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS because msvc */ \
     /* Trailing return type here to work around a gcc <= 9.2 bug */ \
     /* Oddly only affecting builds under -DNDEBUG https://godbolt.org/z/5Treozc4q */ \
+    using libassert_params_t = libassert::assert_static_parameters; \
+    /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
+    static constexpr std::string_view libassert_arg_strings[] = { \
+        LIBASSERT_MAP(LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS(__VA_ARGS__)) "" \
+    }; \
+    static constexpr libassert_params_t _libassert_params = { \
+        name LIBASSERT_COMMA \
+        type LIBASSERT_COMMA \
+        expr_str LIBASSERT_COMMA \
+        {} LIBASSERT_COMMA \
+        {libassert_arg_strings, sizeof(libassert_arg_strings) / sizeof(std::string_view)} LIBASSERT_COMMA \
+    }; \
+    const libassert_params_t* libassert_params = &_libassert_params;
+#else
+#define LIBASSERT_STATIC_DATA(name, type, expr_str, ...) \
     using libassert_params_t = libassert::assert_static_parameters; \
     /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
     const libassert_params_t* libassert_params = []() -> const libassert_params_t* { \
@@ -1581,6 +1601,7 @@ namespace libassert {
         }; \
         return &_libassert_params; \
     }();
+#endif
 
 // Note about statement expressions: These are needed for two reasons. The first is putting the arg string array and
 // source location structure in .rodata rather than on the stack, the second is a _Pragma for warnings which isn't
