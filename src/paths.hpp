@@ -41,13 +41,25 @@ namespace libassert::detail {
         void insert(const path_components& path, int i);
     };
 
-    struct parsed_paths {
-        std::unordered_map<std::string, std::string> paths_map;
-        std::size_t longest_path;
+    class identity_path_handler : public path_handler {
+    public:
+        std::string_view resolve_path(std::string_view) override;
     };
 
-    LIBASSERT_ATTR_COLD
-    parsed_paths process_paths(const std::vector<std::string>& paths);
+    class disambiguating_path_handler : public path_handler {
+        std::vector<std::string> paths;
+        std::unordered_map<std::string, std::string> path_map;
+    public:
+        std::string_view resolve_path(std::string_view) override;
+        bool has_add_path() const override;
+        void add_path(std::string_view) override;
+        void finalize() override;
+    };
+
+    class basename_path_handler : public path_handler {
+    public:
+        std::string_view resolve_path(std::string_view) override;
+    };
 }
 
 #endif

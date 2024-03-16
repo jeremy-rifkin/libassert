@@ -23,7 +23,7 @@ namespace libassert::detail {
     };
 
     LIBASSERT_ATTR_COLD
-    std::string wrapped_print(const std::vector<column_t>& columns, color_scheme scheme);
+    std::string wrapped_print(const std::vector<column_t>& columns, const color_scheme& scheme);
 }
 
 #endif

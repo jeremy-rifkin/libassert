@@ -69,8 +69,8 @@ namespace libassert::detail {
      */
 
     LIBASSERT_ATTR_COLD
-    std::vector<std::string> split(std::string_view s, std::string_view delims) {
-        std::vector<std::string> vec;
+    std::vector<std::string_view> split(std::string_view s, std::string_view delims) {
+        std::vector<std::string_view> vec;
         size_t old_pos = 0;
         size_t pos = 0;
         while((pos = s.find_first_of(delims, old_pos)) != std::string::npos) {

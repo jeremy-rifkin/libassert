@@ -34,7 +34,7 @@ namespace libassert {
             return 0;
         }
         #if IS_WINDOWS
-         DWORD windows_handle = detail::small_static_map(fd).lookup(
+         DWORD windows_handle = detail::needle(fd).lookup(
              STDIN_FILENO, STD_INPUT_HANDLE,
              STDOUT_FILENO, STD_OUTPUT_HANDLE,
              STDERR_FILENO, STD_ERROR_HANDLE
@@ -51,9 +51,7 @@ namespace libassert {
          return w.ws_col;
         #endif
     }
-}
 
-namespace libassert::detail {
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed() {
         // enable colors / ansi processing if necessary
         #if IS_WINDOWS
@@ -77,7 +75,9 @@ namespace libassert::detail {
          return ::isatty(fd);
         #endif
     }
+}
 
+namespace libassert::detail {
     std::mutex strerror_mutex;
 
     LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {

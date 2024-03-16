@@ -1,9 +1,36 @@
+- [libassert 2.0.0-beta](#libassert-200-beta)
 - [libassert 2.0.0-alpha](#libassert-200-alpha)
 - [libassert 1.2.2](#libassert-122)
 - [libassert 1.2.1](#libassert-121)
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.0.0-beta
+
+Changes:
+- Catch2 and GoogleTest integrations
+- Implemented alternative path modes
+- {fmt} support with `LIBASSERT_USE_FMT`
+- Reworked stringification again
+- Overhauled C++ tokenizer to use a much better implementation
+- Added `libassert::enable_virtual_terminal_processing_if_needed()` to the public interface
+- Added `libassert::isatty` to the public interface as well as stdin/stdout/stderr constants
+- Renamed `libassert::generate_stringification` to `libassert::stringify`
+- Added setting for output separator with `libassert::set_separator`
+- Updated parameter passing for `libassert::set_color_scheme`
+- Updated `libassert::stacktrace` to take color scheme and skip parameters
+- Added C++23 specialization for how static assertion information is stored which is hopefully faster for compile times
+- Added `LIBASSERT_PREFIX_ASSERTIONS` option to only add assertion macros with a `LIBASSERT_` prefix
+- Added normalization for msvc ``​`anonymous namespace'``
+- Added `LIBASSERT_NO_STRINGIFY_SMART_POINTER_OBJECTS` option
+- Improved how data is stored in `binary_diagnostics_descriptor`, `assert_static_parameters`, and `assertion_info`
+- Simplified up failure handler signature
+- Added limit to the number of items stringified for containers
+- Resolved long-standing bug related to libc++'s std::regex implementation
+- Added methods for getting parts of assertion info outputs for easier custom failure handler implementation
+- Improved internal argument processing
+- Cmake fixes and improvements
 
 ## libassert 2.0.0-alpha
 

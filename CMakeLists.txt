@@ -22,6 +22,13 @@ include(cmake/ProjectIsTopLevel.cmake)
 include(cmake/OptionVariables.cmake)
 
 if(PROJECT_IS_TOP_LEVEL)
+  find_program(CCACHE_FOUND ccache)
+  if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+  endif()
+endif()
+
+if(PROJECT_IS_TOP_LEVEL)
   if(CMAKE_GENERATOR STREQUAL "Ninja")
     if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
       SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
@@ -43,7 +50,7 @@ set(LIBASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
 set(LIBASSERT_MAGIC_ENUM_TAG "e55b9b54d5cf61f8e117cafb17846d7d742dd3b4") # v0.9.5
 
 set(LIBASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
-set(LIBASSERT_CPPTRACE_TAG "7fda402638875e6a265ba5e6ed376dcee4bd29fa") # v0.4.0
+set(LIBASSERT_CPPTRACE_TAG "58992cbeb6417764ceb190ad40d1207d929f1402") # v0.4.1
 
 # obtain cpptrace
 if(LIBASSERT_USE_EXTERNAL_CPPTRACE)
@@ -94,6 +101,7 @@ target_sources(
   src/platform.cpp
   src/printing.cpp
   src/paths.cpp
+  src/tokenizer.cpp
 )
 
 # link dependencies
@@ -150,7 +158,7 @@ target_compile_features(
   PUBLIC cxx_std_17
 )
 
-if(LIBSANITIZER_BUILD)
+if(LIBASSERT_SANITIZER_BUILD)
   add_compile_options(-fsanitize=address)
   add_link_options(-fsanitize=address)
 endif()
@@ -197,6 +205,11 @@ if(LIBASSERT_BUILD_TESTING)
   if(PROJECT_IS_TOP_LEVEL)
       enable_testing()
   endif()
+
+  target_compile_definitions(
+    ${target_name} PUBLIC
+    LIBASSERT_BUILD_TESTING
+  )
 
   # tell unit tests where our files are
   set(LIBASSERT_BINARY_DIR "${PROJECT_BINARY_DIR}")

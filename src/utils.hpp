@@ -15,9 +15,23 @@
 
 #include <libassert/assert.hpp>
 
+#if !defined(LIBASSERT_BUILD_TESTING) || defined(LIBASSERT_STATIC_DEFINE)
+ #define LIBASSERT_EXPORT_TESTING
+#else
+ #ifndef LIBASSERT_EXPORT_TESTING
+  #ifdef libassert_lib_EXPORTS
+   /* We are building this library */
+   #define LIBASSERT_EXPORT_TESTING LIBASSERT_EXPORT_ATTR
+  #else
+   /* We are using this library */
+   #define LIBASSERT_EXPORT_TESTING LIBASSERT_IMPORT_ATTR
+  #endif
+ #endif
+#endif
+
 namespace libassert::detail {
     // Still present in release mode, nonfatal
-    #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, {}, ##__VA_ARGS__)
+    #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, {} LIBASSERT_VA_ARGS(__VA_ARGS__))
 
     /*
      * string utilities
@@ -34,7 +48,7 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
-    std::vector<std::string> split(std::string_view s, std::string_view delims);
+    std::vector<std::string_view> split(std::string_view s, std::string_view delims);
 
     template<typename C>
     LIBASSERT_ATTR_COLD
@@ -50,6 +64,17 @@ namespace libassert::detail {
             }
         }
         return str;
+    }
+
+    template<typename T>
+    LIBASSERT_ATTR_COLD
+    std::vector<T> concat(std::vector<T> a, std::vector<T> b) {
+        a.insert(
+            a.end(),
+            std::make_move_iterator(b.begin()),
+            std::make_move_iterator(b.end())
+        );
+        return a;
     }
 
     LIBASSERT_ATTR_COLD
@@ -70,44 +95,59 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     std::string indent(std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
 
-    template<size_t N>
-    LIBASSERT_ATTR_COLD
-    std::optional<std::array<std::string, N>> match(const std::string& s, const std::regex& r) {
-        std::smatch match;
-        if(std::regex_match(s, match, r)) {
-            std::array<std::string, N> arr;
-            for(size_t i = 0; i < N; i++) {
-                arr[i] = match[i + 1].str();
-            }
-            return arr;
-        } else {
-            return {};
-        }
-    }
-
     /*
      * Other
      */
 
     // Container utility
-    template<typename N> class small_static_map {
+    template<typename N> class needle {
         // TODO: Re-evaluate
-        const N& needle;
+        const N& needle_value;
     public:
-        explicit small_static_map(const N& n) : needle(n) {}
+        explicit needle(const N& n) : needle_value(n) {}
         template<typename K, typename V, typename... Rest>
         constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
-            if(needle == option) { return result; }
+            if(needle_value == option) { return result; }
             if constexpr(sizeof...(Rest) > 0) { return lookup(rest...); }
-            else { LIBASSERT_PRIMITIVE_ASSERT(false); LIBASSERT_UNREACHABLE; }
+            else { LIBASSERT_PRIMITIVE_ASSERT(false); LIBASSERT_UNREACHABLE_CALL; }
         }
-        constexpr bool is_in() { return false; }
-        template<typename T, typename... Rest>
-        constexpr bool is_in(const T& option, const Rest&... rest) {
-            if(needle == option) { return true; }
-            return is_in(rest...);
+        template<typename... Args>
+        constexpr bool is_in(const Args&... option) {
+            return ((needle_value == option) || ... || false);
         }
     };
+
+    // copied from cppref
+    template<typename T, std::size_t N, std::size_t... I>
+    constexpr std::array<std::remove_cv_t<T>, N> to_array_impl(T(&&a)[N], std::index_sequence<I...>) {
+        return {{std::move(a[I])...}};
+    }
+
+    template<typename T, std::size_t N>
+    constexpr std::array<std::remove_cv_t<T>, N> to_array(T(&&a)[N]) {
+        return to_array_impl(std::move(a), std::make_index_sequence<N>{});
+    }
+
+    template<typename A, typename B>
+    constexpr void constexpr_swap(A& a, B& b) {
+        B tmp = std::move(b);
+        b = std::move(a);
+        a = std::move(tmp);
+    }
+
+    // cmp(a, b) should return whether a comes before b
+    template<typename T, std::size_t N, typename C>
+    constexpr void constexpr_sort(std::array<T, N>& arr, const C& cmp) {
+        // insertion sort is fine for small arrays
+        static_assert(N <= 65);
+        for(std::size_t i = 1; i < arr.size(); i++) {
+            for(std::size_t j = 0; j < i; j++) {
+                if(cmp(arr[j], arr[i])) {
+                    constexpr_swap(arr[i], arr[j]);
+                }
+            }
+        }
+    }
 
     template<typename T, typename std::enable_if<std::is_unsigned<T>::value, int>::type = 0>
     constexpr T popcount(T value) {
@@ -137,6 +177,22 @@ namespace libassert::detail {
     static_assert(n_digits(10) == 2);
     static_assert(n_digits(11) == 2);
     static_assert(n_digits(1024) == 4);
+
+    inline bool operator==(const color_scheme& a, const color_scheme& b) {
+        return a.string == b.string
+            && a.escape == b.escape
+            && a.keyword == b.keyword
+            && a.named_literal == b.named_literal
+            && a.number == b.number
+            && a.punctuation == b.punctuation
+            && a.operator_token == b.operator_token
+            && a.call_identifier == b.call_identifier
+            && a.scope_resolution_identifier == b.scope_resolution_identifier
+            && a.identifier == b.identifier
+            && a.accent == b.accent
+            && a.unknown == b.unknown
+            && a.reset == b.reset;
+    }
 }
 
 #endif

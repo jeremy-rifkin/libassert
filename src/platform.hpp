@@ -20,9 +20,4 @@
 
 #include <libassert/assert.hpp>
 
-namespace libassert::detail {
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed();
-    LIBASSERT_ATTR_COLD bool isatty(int fd);
-}
-
 #endif

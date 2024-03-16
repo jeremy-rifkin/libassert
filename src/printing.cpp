@@ -4,7 +4,7 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    std::string wrapped_print(const std::vector<column_t>& columns, color_scheme scheme) {
+    std::string wrapped_print(const std::vector<column_t>& columns, const color_scheme& scheme) {
         // 2d array rows/columns
         struct line_content {
             size_t length;
