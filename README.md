@@ -78,11 +78,13 @@ float f = *ASSERT_VAL(get_param());
 
 **Types of assertions:**
 
+Conditional assertions:
+
 - `DEBUG_ASSERT`: Checked in debug but but does nothing in release (analogous to the standard library's `assert`)
 - `ASSERT`: Checked in both debug and release
 - `ASSUME`: Checked in debug and serves as an optimization hint in release
 
-Unconditional assertions, essentially shortcuts for `ASSERT(false, ...)`:
+Unconditional assertions:
 - `PANIC`: Triggers in both debug and release
 - `UNREACHABLE`: Triggers in debug, marked as unreachable in release
 
@@ -102,6 +104,8 @@ You can enable the lowercase `debug_assert` and `assert` aliases with `-DLIBASSE
 - Smart literal formatting
 - Stringification of user-defined types
 - Custom failure handlers
+- Catch2/Gtest integrations
+- {fmt} support
 
 ## CMake FetchContent Usage
 
@@ -110,7 +114,7 @@ include(FetchContent)
 FetchContent_Declare(
   libassert
   GIT_REPOSITORY https://github.com/jeremy-rifkin/libassert.git
-  GIT_TAG        v2.0.0-alpha # <HASH or TAG>
+  GIT_TAG        v2.0.0-beta # <HASH or TAG>
 )
 FetchContent_MakeAvailable(libassert)
 target_link_libraries(your_target libassert::assert)
@@ -790,7 +794,7 @@ include(FetchContent)
 FetchContent_Declare(
   libassert
   GIT_REPOSITORY https://github.com/jeremy-rifkin/libassert.git
-  GIT_TAG        v2.0.0-alpha # <HASH or TAG>
+  GIT_TAG        v2.0.0-beta # <HASH or TAG>
 )
 FetchContent_MakeAvailable(libassert)
 target_link_libraries(your_target libassert::assert)
@@ -805,7 +809,7 @@ information.
 
 ```sh
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v2.0.0-alpha
+git checkout v2.0.0-beta
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
@@ -841,7 +845,7 @@ you when installing new libraries.
 
 ```ps1
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v2.0.0-alpha
+git checkout v2.0.0-beta
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
