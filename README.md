@@ -32,6 +32,9 @@
     - [Anatomy of Assertion Information](#anatomy-of-assertion-information)
   - [Stringification](#stringification)
   - [Custom Failure Handlers](#custom-failure-handlers-1)
+  - [Integration with test libraries](#integration-with-test-libraries)
+    - [Catch2](#catch2)
+    - [GoogleTest](#googletest)
   - [Other configurations](#other-configurations)
 - [Usage](#usage)
   - [CMake FetchContent](#cmake-fetchcontent)
@@ -296,13 +299,12 @@ Automatic expression decomposition requires a lot of template metaprogramming sh
 the callsite just to setup an assertion expression. These calls are swiftly inlined in an optimized build, but it is a
 consideration for unoptimized builds.
 
-As far as runtime performance goes, the impact at callsites is very minimal under `-Og` or higher.
+As far as runtime performance goes, the impact at callsites is very minimal under `-Og` or higher. The fast-path in the
+code (i.e., where the assertion does not fail), will be fast. A lot of work is required to process assertion failures
+once they happen. However, since failures should be rare, this should not matter.
 
 Additionally, there is a compile-time cost associated with all the template instantiations required for this library's
-magic. In my experience the build time impact is not egregious.
-
-A lot of work is required to process assertion failures once they happen. However, since failures should be
-*extremely rare* this should not matter.
+magic.
 
 # In-Depth Library Documentation
 
@@ -637,7 +639,7 @@ Stack trace:
 
 ## Stringification
 
-Libassert provides a customization point for user-defined types?
+Libassert provides a customization point for user-defined types:
 
 ```cpp
 template<> struct libassert::stringifier<MyObject> {
