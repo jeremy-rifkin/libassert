@@ -1326,12 +1326,8 @@ namespace libassert::detail {
         // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         Args&&... args
     ) {
-        // const size_t args_strings_count = params->args_strings.size;
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
-        LIBASSERT_PRIMITIVE_ASSERT(
-            sizeof...(args) <= params->args_strings.size
-            //(sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
-        );
+        LIBASSERT_PRIMITIVE_ASSERT(sizeof...(args) <= params->args_strings.size);
         assertion_info info(
             params,
             cpptrace::generate_raw_trace(),
@@ -1375,12 +1371,8 @@ namespace libassert::detail {
         // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         Args&&... args
     ) {
-        // const size_t args_strings_count = params->args_strings.size;
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
-        LIBASSERT_PRIMITIVE_ASSERT(
-            sizeof...(args) <= params->args_strings.size
-            //(sizeof...(args) == 1 && args_strings_count == 2) || args_strings_count == sizeof_extra_diagnostics + 1
-        );
+        LIBASSERT_PRIMITIVE_ASSERT(sizeof...(args) <= params->args_strings.size);
         assertion_info info(
             params,
             cpptrace::generate_raw_trace(),
