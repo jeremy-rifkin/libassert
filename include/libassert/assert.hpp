@@ -1029,13 +1029,13 @@ namespace libassert {
         std::string_view accent;
         std::string_view unknown;
         std::string_view reset;
-        LIBASSERT_EXPORT static color_scheme ansi_basic;
-        LIBASSERT_EXPORT static color_scheme ansi_rgb;
-        LIBASSERT_EXPORT static color_scheme blank;
+        LIBASSERT_EXPORT const static color_scheme ansi_basic;
+        LIBASSERT_EXPORT const static color_scheme ansi_rgb;
+        LIBASSERT_EXPORT const static color_scheme blank;
     };
 
     LIBASSERT_EXPORT void set_color_scheme(const color_scheme&);
-    LIBASSERT_EXPORT color_scheme get_color_scheme();
+    LIBASSERT_EXPORT const color_scheme& get_color_scheme();
 
     // set separator used for diagnostics, by default it is "=>"
     // note: not thread-safe
@@ -1121,19 +1121,21 @@ namespace libassert {
         operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID); // = default; in the .cpp
     };
 
-    struct sv_span {
-        const std::string_view* data;
-        std::size_t size;
-    };
+    namespace detail {
+        struct sv_span {
+            const std::string_view* data;
+            std::size_t size;
+        };
 
-    // collection of assertion data that can be put in static storage and all passed by a single pointer
-    struct LIBASSERT_EXPORT assert_static_parameters {
-        std::string_view macro_name;
-        assert_type type;
-        std::string_view expr_str;
-        source_location location;
-        sv_span args_strings;
-    };
+        // collection of assertion data that can be put in static storage and all passed by a single pointer
+        struct LIBASSERT_EXPORT assert_static_parameters {
+            std::string_view macro_name;
+            assert_type type;
+            std::string_view expr_str;
+            source_location location;
+            sv_span args_strings;
+        };
+    }
 
     struct extra_diagnostic {
         std::string_view expression;
@@ -1169,7 +1171,7 @@ namespace libassert {
     public:
         assertion_info() = delete;
         assertion_info(
-            const assert_static_parameters* static_params,
+            const detail::assert_static_parameters* static_params,
             cpptrace::raw_trace&& raw_trace,
             size_t n_args
         );
@@ -1184,13 +1186,13 @@ namespace libassert {
         const cpptrace::raw_trace& get_raw_trace() const;
         const cpptrace::stacktrace& get_stacktrace() const;
 
-        std::string header(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
-        std::string tagline(const color_scheme& scheme = get_color_scheme()) const;
-        std::string location() const;
-        std::string statement(const color_scheme& scheme = get_color_scheme()) const;
-        std::string print_binary_diagnostics(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
-        std::string print_extra_diagnostics(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
-        std::string print_stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string header(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string tagline(const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string location() const;
+        [[nodiscard]] std::string statement(const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string print_binary_diagnostics(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string print_extra_diagnostics(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string print_stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
 
         [[nodiscard]] std::string to_string(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
     };
@@ -1570,7 +1572,7 @@ namespace libassert {
     /* LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS because msvc */ \
     /* Trailing return type here to work around a gcc <= 9.2 bug */ \
     /* Oddly only affecting builds under -DNDEBUG https://godbolt.org/z/5Treozc4q */ \
-    using libassert_params_t = libassert::assert_static_parameters; \
+    using libassert_params_t = libassert::detail::assert_static_parameters; \
     /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
     static constexpr std::string_view libassert_arg_strings[] = { \
         LIBASSERT_MAP(LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS(__VA_ARGS__)) "" \
@@ -1585,7 +1587,7 @@ namespace libassert {
     const libassert_params_t* libassert_params = &_libassert_params;
 #else
 #define LIBASSERT_STATIC_DATA(name, type, expr_str, ...) \
-    using libassert_params_t = libassert::assert_static_parameters; \
+    using libassert_params_t = libassert::detail::assert_static_parameters; \
     /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
     const libassert_params_t* libassert_params = []() -> const libassert_params_t* { \
         static constexpr std::string_view libassert_arg_strings[] = { \

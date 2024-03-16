@@ -348,7 +348,7 @@ namespace libassert::detail {
 }
 
 namespace libassert {
-    LIBASSERT_EXPORT color_scheme color_scheme::ansi_basic {
+    LIBASSERT_EXPORT const color_scheme color_scheme::ansi_basic {
         BASIC_GREEN, /* string */
         BASIC_BLUE, /* escape */
         BASIC_PURPL, /* keyword */
@@ -364,7 +364,7 @@ namespace libassert {
         RESET
     };
 
-    LIBASSERT_EXPORT color_scheme color_scheme::ansi_rgb {
+    LIBASSERT_EXPORT const color_scheme color_scheme::ansi_rgb {
         RGB_GREEN, /* string */
         RGB_BLUE, /* escape */
         RGB_PURPL, /* keyword */
@@ -380,7 +380,7 @@ namespace libassert {
         RESET
     };
 
-    LIBASSERT_EXPORT color_scheme color_scheme::blank;
+    LIBASSERT_EXPORT const color_scheme color_scheme::blank;
 
     std::mutex color_scheme_mutex;
     color_scheme current_color_scheme = color_scheme::ansi_rgb;
@@ -390,7 +390,7 @@ namespace libassert {
         current_color_scheme = scheme;
     }
 
-    LIBASSERT_EXPORT color_scheme get_color_scheme() {
+    LIBASSERT_EXPORT const color_scheme& get_color_scheme() {
         std::unique_lock lock(color_scheme_mutex);
         return current_color_scheme;
     }
@@ -422,7 +422,6 @@ namespace libassert {
 
         LIBASSERT_ATTR_COLD
         void libassert_default_failure_handler(const assertion_info& info) {
-            // TODO: Just throw instead of all of this?
             enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
             std::string message = info.to_string(
                 terminal_width(STDERR_FILENO),
