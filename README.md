@@ -20,22 +20,24 @@
 - [Features](#features)
   - [Custom Failure Handlers](#custom-failure-handlers)
   - [Smart literal formatting](#smart-literal-formatting)
+  - [Integrations with Catch2 and GoogleTest](#integrations-with-catch2-and-googletest)
 - [Methodology](#methodology)
 - [Considerations](#considerations)
 - [In-Depth Library Documentation](#in-depth-library-documentation)
   - [Assertion Macros](#assertion-macros)
     - [Parameters](#parameters)
     - [Return value](#return-value)
-  - [Utilities](#utilities)
+  - [General Utilities](#general-utilities)
+  - [Terminal Utilities](#terminal-utilities)
   - [Configuration](#configuration)
   - [Assertion information](#assertion-information)
     - [Anatomy of Assertion Information](#anatomy-of-assertion-information)
-  - [Stringification](#stringification)
+  - [Stringification of Custom Objects](#stringification-of-custom-objects)
   - [Custom Failure Handlers](#custom-failure-handlers-1)
-  - [Integration with test libraries](#integration-with-test-libraries)
-    - [Catch2](#catch2)
-    - [GoogleTest](#googletest)
   - [Other configurations](#other-configurations)
+- [Integration with test libraries](#integration-with-test-libraries)
+  - [Catch2](#catch2)
+  - [GoogleTest](#googletest)
 - [Usage](#usage)
   - [CMake FetchContent](#cmake-fetchcontent)
   - [System-Wide Installation](#system-wide-installation)
@@ -258,6 +260,18 @@ ASSERT(18446744073709551606ULL == -10);
 
 ![](screenshots/safe_comparison.png)
 
+
+## Integrations with Catch2 and GoogleTest
+
+Libassert provides two headers `<libassert/assert-catch2.hpp>` and `<libassert/assert-gtest.hpp>` for use with catch2
+and GoogleTest.
+
+Example output from gtest:
+
+![](screenshots/gtest.png)
+
+More information [below](#integration-with-test-libraries).
+
 # Methodology
 
 Libassert provides three types of assertions, each varying slightly depending on when it should be checked and how it
@@ -295,16 +309,17 @@ course, if the result is unused and produces no side effects it will be optimize
 
 # Considerations
 
-Automatic expression decomposition requires a lot of template metaprogramming shenanigans. This adds a lot of work at
-the callsite just to setup an assertion expression. These calls are swiftly inlined in an optimized build, but it is a
-consideration for unoptimized builds.
-
-As far as runtime performance goes, the impact at callsites is very minimal under `-Og` or higher. The fast-path in the
+**Performance:** As far as runtime performance goes, the impact at callsites is very minimal under `-Og` or higher. The fast-path in the
 code (i.e., where the assertion does not fail), will be fast. A lot of work is required to process assertion failures
 once they happen. However, since failures should be rare, this should not matter.
 
-Additionally, there is a compile-time cost associated with all the template instantiations required for this library's
+**Compile speeds:**, there is a compile-time cost associated with all the template instantiations required for this library's
 magic.
+
+**Other:**
+
+> [!NOTE]
+> Because of expression decomposition, `ASSERT(1 = 2);` compiles.
 
 # In-Depth Library Documentation
 
@@ -324,8 +339,11 @@ void PANIC      ([optional message], [optional extra diagnostics, ...]);
 void UNREACHABLE([optional message], [optional extra diagnostics, ...]);
 ```
 
-`-DLIBASSERT_LOWERCASE` can be used to enable the `debug_assert` and `assert` aliases for `DEBUG_ASSERT` and `ASSERT`. See:
-[Replacing &lt;cassert&gt;](#replacing-cassert).
+`-DLIBASSERT_PREFIX_ASSERTIONS` can be used to prefix these macros with `LIBASSERT_`. This is useful for wrapping
+libassert assertions.
+
+`-DLIBASSERT_LOWERCASE` can be used to enable the `debug_assert` and `assert` aliases for `DEBUG_ASSERT` and `ASSERT`.
+See: [Replacing &lt;cassert&gt;](#replacing-cassert).
 
 ### Parameters
 
@@ -376,55 +394,76 @@ If the value from the assertion expression selected to be returned is an lvalue,
 an lvalue reference. If the value from the assertion expression is an rvalue then the type of the call will be an
 rvalue.
 
-## Utilities
+## General Utilities
 
 ```cpp
 namespace libassert {
-    [[nodiscard]] int terminal_width(int fd);
-    [[nodiscard]] std::string stacktrace(int width);
+    [[nodiscard]] std::string stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme(), std::size_t skip = 0);
     template<typename T> [[nodiscard]] std::string_view type_name() noexcept;
     template<typename T> [[nodiscard]] std::string pretty_type_name() noexcept;
-    template<typename T> [[nodiscard]] std::string generate_stringification(const T& value);
+    template<typename T> [[nodiscard]] std::string stringify(const T& value);
 }
 ```
 
-- `terminal_width`: Returns the width of the terminal represented by fd, will be 0 on error
 - `stacktrace`: Generates a stack trace, formats to the given width (0 for no width formatting)
 - `type_name`: Returns the type name of T
 - `pretty_type_name`: Returns the prettified type name for T
-- `generate_stringification`: Produces a debug stringification of a value
+- `stringify`: Produces a debug stringification of a value
+
+## Terminal Utilities
+
+```cpp
+namespace libassert {
+    void enable_virtual_terminal_processing_if_needed();
+    inline constexpr int stdin_fileno = 0;
+    inline constexpr int stdout_fileno = 1;
+    inline constexpr int stderr_fileno = 2;
+    bool isatty(int fd);
+    [[nodiscard]] int terminal_width(int fd);
+}
+```
+
+- `enable_virtual_terminal_processing_if_needed`: Enable ANSI escape sequences for terminals on windows, needed for
+  color output.
+- `isatty`: Returns true if the file descriptor corresponds to a terminal
+- `terminal_width`: Returns the width of the terminal represented by fd or 0 on error
 
 ## Configuration
+
+### Color Scheme: <!-- omit in toc -->
 
 ```cpp
 namespace libassert {
     // NOTE: string view underlying data should have static storage duration, or otherwise live as long as the scheme
     // is in use
     struct color_scheme {
-        std::string_view string;
-        std::string_view escape;
-        std::string_view keyword;
-        std::string_view named_literal;
-        std::string_view number;
-        std::string_view operator_token;
-        std::string_view call_identifier;
-        std::string_view scope_resolution_identifier;
-        std::string_view identifier;
-        std::string_view accent;
-        std::string_view reset;
-        static color_scheme ansi_basic;
-        static color_scheme ansi_rgb;
-        static color_scheme blank;
+        std::string_view string, escape, keyword, named_literal, number, punctuation, operator_token,
+                         call_identifier, scope_resolution_identifier, identifier, accent, unknown, reset;
+        static const color_scheme ansi_basic;
+        static const color_scheme ansi_rgb;
+        static const color_scheme blank;
     };
-
-    void set_color_scheme(color_scheme);
-    color_scheme get_color_scheme();
-    void set_color_output(bool);
+    void set_color_scheme(const color_scheme&);
+    const color_scheme& get_color_scheme();
 }
 ```
 
+By default `color_scheme::ansi_rgb` is used. To disable colors, use `color_scheme::blank`.
+
 - `set_color_scheme`: Sets the color scheme for the default assertion handler when stderr is a terminal
-- `set_color_output`: Configures whether the default assertion handler prints in color or not to tty devices (default true)
+
+### Separator: <!-- omit in toc -->
+
+```cpp
+namespace libassert {
+    void set_separator(std::string_view separator);
+}
+```
+
+- `set_separator`: Sets the separator between expression and value in assertion diagnostic output. Default: `=>`. NOTE:
+  Not thread-safe.
+
+### Literal formatting mode: <!-- omit in toc -->
 
 ```cpp
 namespace libassert {
@@ -454,6 +493,8 @@ namespace libassert {
 - `set_fixed_literal_format`: Set a fixed literal format configuration, automatically changes the literal_format_mode;
   note that the default format will always be used along with others
 
+### Path mode: <!-- omit in toc -->
+
 ```cpp
 namespace libassert {
     enum class path_mode {
@@ -465,7 +506,7 @@ namespace libassert {
 }
 ```
 
-- `set_path_mode`: Not currently implemented
+- `set_path_mode`: Sets the path shortening mode for assertion output. Default: `path_mode::disambiguated`.
 
 ## Assertion information
 
@@ -479,38 +520,11 @@ namespace libassert {
         unreachable
     };
 
-    struct binary_diagnostics_descriptor {
-        std::string left_stringification;
-        std::string right_stringification;
+    struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
         std::string left_expression;
         std::string right_expression;
-        bool multiple_formats;
-        // binary diagnostic descriptors might not be present if the expression is not decomposable and the expression
-        // type is boolean
-        bool present = false;
-        binary_diagnostics_descriptor(); // = default; in the .cpp
-        binary_diagnostics_descriptor(
-            std::string&& left_stringification,
-            std::string&& right_stringification,
-            std::string_view left_expression,
-            std::string_view right_expression,
-            bool multiple_formats
-        );
-        ~binary_diagnostics_descriptor(); // = default; in the .cpp
-        binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = delete;
-        binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept; // = default; in the .cpp
-        binary_diagnostics_descriptor& operator=(const binary_diagnostics_descriptor&) = delete;
-        binary_diagnostics_descriptor&
-        operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID); // = default; in the .cpp
-    };
-
-    // collection of assertion data that can be put in static storage and all passed by a single pointer
-    struct assert_static_parameters {
-        const char* name;
-        assert_type type;
-        const char* expr_str;
-        source_location location;
-        const char* const* args_strings;
+        std::string left_stringification;
+        std::string right_stringification;
     };
 
     struct extra_diagnostic {
@@ -518,27 +532,32 @@ namespace libassert {
         std::string stringification;
     };
 
-    struct assertion_info {
-        const assert_static_parameters* static_params; // TODO: Expand...?
-        std::string message;
-        binary_diagnostics_descriptor binary_diagnostics;
+    struct LIBASSERT_EXPORT assertion_info {
+        std::string_view macro_name;
+        assert_type type;
+        std::string_view expression_string;
+        std::string_view file_name;
+        std::uint32_t line;
+        std::string_view function;
+        std::optional<std::string> message;
+        std::optional<binary_diagnostics_descriptor> binary_diagnostics;
         std::vector<extra_diagnostic> extra_diagnostics;
-        std::string_view pretty_function;
-        cpptrace::raw_trace raw_trace;
-        size_t sizeof_args;
-    public:
-        assertion_info() = delete;
-        assertion_info(
-            const assert_static_parameters* static_params,
-            cpptrace::raw_trace&& raw_trace,
-            size_t sizeof_args
-        );
-        ~assertion_info();
-        assertion_info(const assertion_info&) = delete;
-        assertion_info(assertion_info&&) = delete;
-        assertion_info& operator=(const assertion_info&) = delete;
-        assertion_info& operator=(assertion_info&&) = delete;
-        [[nodiscard]] std::string to_string(int width = 0, color_scheme scheme = get_color_scheme()) const;
+        size_t n_args;
+
+        std::string_view action() const;
+
+        const cpptrace::raw_trace& get_raw_trace() const;
+        const cpptrace::stacktrace& get_stacktrace() const;
+
+        [[nodiscard]] std::string header(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string tagline(const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string location() const;
+        [[nodiscard]] std::string statement(const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string print_binary_diagnostics(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string print_extra_diagnostics(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+        [[nodiscard]] std::string print_stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
+
+        [[nodiscard]] std::string to_string(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
     };
 }
 ```
@@ -637,7 +656,7 @@ Stack trace:
 #3 demo.cpp:396 main
 ```
 
-## Stringification
+## Stringification of Custom Objects
 
 Libassert provides a customization point for user-defined types:
 
@@ -649,52 +668,45 @@ template<> struct libassert::stringifier<MyObject> {
 };
 ```
 
-Additionally, any types with an ostream `operator<<` overload can be stringified as well as any container-like
-user-defined types.
+Additionally, `LIBASSERT_USE_FMT` can be used to turn on libfmt integration which will allow libassert to use
+`fmt::formatter`s.
 
-If stringification is not possible the library will just stringify a value as `<instance of T>`.
+Furthermore, any types with an ostream `operator<<` overload can be stringified as well as any container-like
+user-defined types.
 
 ## Custom Failure Handlers
 
 ```cpp
 namespace libassert {
-    enum class assert_type {
-        debug_assertion,
-        assertion,
-        assumption,
-        panic,
-        unreachable
-    };
-    void set_failure_handler(void (*handler)(assert_type, const assertion_info&));
+    void set_failure_handler(void (*handler)(const assertion_info&));
 }
 ```
 
-- `set_failure_handler`: Sets the assertion handler for the program. Note: Failure handlers must exit for `PANIC` and
-  `UNREACHABLE`.
+- `set_failure_handler`: Sets the assertion handler for the program.
 
 An example assertion handler similar to the default handler:
 
 ```cpp
-void libassert_default_failure_handler(assert_type type, const assertion_info& printer) {
-    std::cerr
-        << printer.to_string(
-            libassert::terminal_width(STDERR_FILENO),
-            libassert::isatty(STDERR_FILENO) ? libassert::get_color_scheme() : libassert::color_scheme::blank
-        )
-        << std::endl;
-    switch(type) {
-        case assert_type::assertion:
-        case assert_type::debug_assertion:
-        case assert_type::assumption:
-        case assert_type::panic:
-        case assert_type::unreachable:
+void libassert_default_failure_handler(const assertion_info& info) {
+    libassert::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
+    std::string message = info.to_string(
+        libassert::terminal_width(STDERR_FILENO),
+        libassert::isatty(STDERR_FILENO) ? libassert::get_color_scheme() : libassert::color_scheme::blank
+    );
+    std::cerr << message << std::endl;
+    switch(info.type) {
+        case libassert::assert_type::assertion:
+        case libassert::assert_type::debug_assertion:
+        case libassert::assert_type::assumption:
+        case libassert::assert_type::panic:
+        case libassert::assert_type::unreachable:
             (void)fflush(stderr);
             std::abort();
             // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
             // this library (on top of preventing fallthrough from nonfatal libassert)
             break;
         default:
-            throw cpptrace::runtime_error("Unexpected assertion type");
+            LIBASSERT_PRIMITIVE_ASSERT(false);
     }
 }
 ```
@@ -702,13 +714,29 @@ void libassert_default_failure_handler(assert_type type, const assertion_info& p
 By default libassert aborts from all assertion types. However, it may be desirable to throw an exception from some or
 all assertion types instead of aborting.
 
-## Integration with test libraries
+> [!IMPORTANT]
+> Failure handlers must not return for `assert_type::panic` and `assert_type::unreachable`.
+
+## Other configurations
+
+Set these either at CMake or with `-D` for the compiler.
+
+- `LIBASSERT_USE_MAGIC_ENUM`: Use magic enum for stringifying enum values
+- `LIBASSERT_DECOMPOSE_BINARY_LOGICAL`: Decompose `&&` and `||`
+- `LIBASSERT_SAFE_COMPARISONS`: Enable safe signed-unsigned comparisons for decomposed expressions
+- `LIBASSERT_USE_EXTERNAL_CPPTRACE`: Use an externam cpptrace instead of aquiring the library with FetchContent
+- `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`: Use an externam magic enum instead of aquiring the library with FetchContent
+- `LIBASSERT_PREFIX_ASSERTIONS`: Prefixes all assertion macros with `LIBASSERT_`
+- `LIBASSERT_USE_FMT`: Enables libfmt integration
+- `LIBASSERT_NO_STRINGIFY_SMART_POINTER_OBJECTS`: Disables stringification of smart pointer contents
+
+# Integration with test libraries
 
 > [!NOTE]
 > Because of MSVC's non-conformant preprocessor there is no easy way to provide assertion wrappers. In order to use test
 > library integrations `/Zc:preprocessor` is required.
 
-### Catch2
+## Catch2
 
 Libassert provides a catch2 integration in `libassert/assert-catch2.hpp`:
 
@@ -727,7 +755,7 @@ Currently the only macro provided is `ASSERT`, which will perform a `REQUIRE` in
 This isn't as pretty as I would like, however, it gets the job done. I'd like to support syntax highlighting however
 unfortunately catch2's line wrapping does not take into account ANSI escape sequences at the moment.
 
-### GoogleTest
+## GoogleTest
 
 Libassert provides a gtest integration in `libassert/assert-gtest.hpp`:
 
@@ -744,19 +772,6 @@ TEST(Addition, Arithmetic) {
 Currently libassert provides `ASSERT` and `EXPECT` macros for gtest.
 
 This isn't as pretty as I would like, however, it gets the job done.
-
-## Other configurations
-
-Set these either at CMake or with `-D` for the compiler.
-
-- `LIBASSERT_USE_MAGIC_ENUM`
-- `LIBASSERT_DECOMPOSE_BINARY_LOGICAL`
-- `LIBASSERT_SAFE_COMPARISONS`
-- `LIBASSERT_USE_EXTERNAL_CPPTRACE`
-- `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`
-- `LIBASSERT_PREFIX_ASSERTIONS`
-- `LIBASSERT_USE_FMT`
-- `LIBASSERT_NO_STRINGIFY_SMART_POINTER_OBJECTS`
 
 # Usage
 
