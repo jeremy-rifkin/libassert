@@ -125,6 +125,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     target_link_libraries(fmt-test PRIVATE GTest::gtest_main fmt::fmt)
     target_compile_definitions(fmt-test PRIVATE LIBASSERT_USE_FMT)
     target_compile_options(lexer PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
+    target_compile_options(fmt-test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
     target_compile_options(stringify PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
 
     set(
