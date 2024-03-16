@@ -17,8 +17,8 @@
 namespace libassert::detail {
     inline void gtest_failure_handler(const assertion_info& info) {
         enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-        auto width = terminal_width(STDERR_FILENO);
-        const auto& scheme = isatty(STDERR_FILENO) ? get_color_scheme() : color_scheme::blank;
+        auto width = terminal_width(stderr_fileno);
+        const auto& scheme = isatty(stderr_fileno) ? get_color_scheme() : color_scheme::blank;
         std::string message = std::string(info.action()) + " at " + info.location() + ":";
         if(info.message) {
             message += " " + *info.message;
