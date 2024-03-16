@@ -354,7 +354,8 @@ namespace libassert {
         BASIC_PURPL, /* keyword */
         BASIC_ORANGE, /* named_literal */
         BASIC_CYAN, /* number */
-        BASIC_PURPL, /* operator_token */
+        "",
+        BASIC_PURPL, /* operator */
         BASIC_BLUE, /* call_identifier */
         BASIC_YELLOW, /* scope_resolution_identifier */
         BASIC_BLUE, /* identifier */
@@ -369,7 +370,8 @@ namespace libassert {
         RGB_PURPL, /* keyword */
         RGB_ORANGE, /* named_literal */
         RGB_CYAN, /* number */
-        RGB_PURPL, /* operator_token */
+        "",
+        RGB_PURPL, /* operator */
         RGB_BLUE, /* call_identifier */
         RGB_YELLOW, /* scope_resolution_identifier */
         RGB_BLUE, /* identifier */

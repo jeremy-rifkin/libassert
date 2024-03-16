@@ -1015,6 +1015,7 @@ namespace libassert {
         std::string_view keyword;
         std::string_view named_literal;
         std::string_view number;
+        std::string_view punctuation;
         std::string_view operator_token;
         std::string_view call_identifier;
         std::string_view scope_resolution_identifier;

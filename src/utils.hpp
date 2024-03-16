@@ -184,6 +184,7 @@ namespace libassert::detail {
             && a.keyword == b.keyword
             && a.named_literal == b.named_literal
             && a.number == b.number
+            && a.punctuation == b.punctuation
             && a.operator_token == b.operator_token
             && a.call_identifier == b.call_identifier
             && a.scope_resolution_identifier == b.scope_resolution_identifier
