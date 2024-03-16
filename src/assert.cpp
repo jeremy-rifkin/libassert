@@ -510,8 +510,8 @@ namespace libassert {
                 for(const auto& frame : stacktrace.frames) {
                     path_handler->add_path(frame.filename);
                 }
+                path_handler->finalize();
             }
-            path_handler->finalize();
         }
         return path_handler.get();
     }
