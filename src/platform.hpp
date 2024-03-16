@@ -20,8 +20,4 @@
 
 #include <libassert/assert.hpp>
 
-namespace libassert::detail {
-    LIBASSERT_ATTR_COLD bool isatty(int fd);
-}
-
 #endif

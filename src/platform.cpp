@@ -67,9 +67,7 @@ namespace libassert {
          if(!SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) return;
         #endif
     }
-}
 
-namespace libassert::detail {
     LIBASSERT_ATTR_COLD bool isatty(int fd) {
         #if IS_WINDOWS
          return _isatty(fd);
@@ -77,7 +75,9 @@ namespace libassert::detail {
          return ::isatty(fd);
         #endif
     }
+}
 
+namespace libassert::detail {
     std::mutex strerror_mutex;
 
     LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {

@@ -989,6 +989,12 @@ namespace libassert {
     // Enable virtual terminal processing on windows terminals
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed();
 
+    inline constexpr int stdin_fileno = 0;
+    inline constexpr int stdout_fileno = 1;
+    inline constexpr int stderr_fileno = 2;
+
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT bool isatty(int fd);
+
     // returns the type name of T
     template<typename T>
     [[nodiscard]] std::string_view type_name() noexcept {
