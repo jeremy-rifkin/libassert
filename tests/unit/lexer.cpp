@@ -324,3 +324,23 @@ TEST(LexerTests, InvalidInputIsRejected) {
     auto vec2 = tokenize(R"TT(Error: Didn't return the correct result, or didn't return the right result)TT");
     check_vector(vec2, std::nullopt);
 }
+
+TEST(LexerTests, Regression1) {
+    auto vec = tokenize(R"TT(std::optional<std::vector<token_t>>: nullopt)TT");
+    std::vector<token_t> expected = {
+        token_t(token_e::identifier, "std"),
+        token_t(token_e::punctuation, "::"),
+        token_t(token_e::identifier, "optional"),
+        token_t(token_e::punctuation, "<"),
+        token_t(token_e::identifier, "std"),
+        token_t(token_e::punctuation, "::"),
+        token_t(token_e::identifier, "vector"),
+        token_t(token_e::punctuation, "<"),
+        token_t(token_e::identifier, "token_t"),
+        token_t(token_e::punctuation, ">>"),
+        token_t(token_e::punctuation, ":"),
+        token_t(token_e::whitespace, " "),
+        token_t(token_e::identifier, "nullopt"),
+    };
+    check_vector(vec, expected);
+}
