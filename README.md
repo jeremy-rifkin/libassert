@@ -944,7 +944,7 @@ vcpkg install libassert
 ```
 ```cmake
 find_package(libassert CONFIG REQUIRED)
-target_link_libraries(main PRIVATE libassert::assert)
+target_link_libraries(YOUR_TARGET PRIVATE libassert::assert)
 ```
 
 # Platform Logistics

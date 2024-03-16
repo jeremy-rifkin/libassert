@@ -437,7 +437,7 @@ namespace libassert {
                     (void)fflush(stderr);
                     std::abort();
                     // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
-                    // this library (on top of preventing fallthrough from nonfatal libassert)
+                    // this library
                     break;
                 default:
                     LIBASSERT_PRIMITIVE_ASSERT(false);
