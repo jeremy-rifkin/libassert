@@ -1,3 +1,4 @@
+- [libassert 2.0.0](#libassert-200)
 - [libassert 2.0.0-beta](#libassert-200-beta)
 - [libassert 2.0.0-alpha](#libassert-200-alpha)
 - [libassert 1.2.2](#libassert-122)
@@ -5,6 +6,94 @@
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.0.0
+
+Changes since v1:
+
+**Assertion macros:**
+- Replaced the previous `ASSERT`/`VERIFY` nomenclature with `DEBUG_ASSERT` and `ASSERT`
+- Updated assertion macros to no longer return a value by default
+  - Debug-only assertions no longer have to evaluate the assertion expression, and removed `NO_ASSERT_RELEASE_EVAL`
+- Added `DEBUG_ASSERT_VAL`, `ASSERT_VAL`, and `ASSUME_VAL` variants that return values
+- Added `PANIC` and `UNREACHABLE`
+- Added `LIBASSERT_PREFIX_ASSERTIONS` option to only add assertion macros with a `LIBASSERT_` prefix
+
+**Assertion behavior:**
+- Removed default throwing behavior for some assertion failures, all assertions now abort by default
+- Removed `libassert::verification_failure`
+- Removed non-fatal assertions
+
+**Custom failure handlers:**
+- Removed macro-based custom assertion failure handler system
+- Added `libassert::set_failure_handler`
+- Removed default safe signed-unsigned comparison behavior
+- Added `LIBASSERT_SAFE_COMPARISONS` to opt into safe signed-unsigned comparisons
+- Simplified assertion failure handler signatures
+
+**Assertion information:**
+- Removed `libassert::assertion_printer`
+- Added `libassert::assertion_info` with much more comprehensive information and methods for working with assertion
+  information
+
+**Testing library support:**
+- Added Catch2 and GoogleTest integrations
+
+**Library structure:**
+- Removed `libassert::utility` and `libassert::config` namespaces
+- Updated the library's cmake target name to `libassert::assert`
+- Updated the library's header to `<libasssert/assert.hpp>`
+
+**Configuration:**
+- Added configuration for literal formatting
+- Added configuration for path shortening modes
+- Added setting for output separator with `libassert::set_separator`
+- Removed `libassert::set_color_output` and `libassert::set_rgb_output`
+- Added `libassert::set_color_scheme`
+
+**Stringification:**
+- Improved stringification generation to handle more types and better decide when there is useful information to print
+- Added stringification customization point instead of relying on `operator<<(std::ostream, const T&)`
+- Added `LIBASSERT_NO_STRINGIFY_SMART_POINTER_OBJECTS` option
+- Added limit to the number of items stringified for containers
+- Added {fmt} support with `LIBASSERT_USE_FMT`
+
+**Utilities:**
+- Added `libassert::enable_virtual_terminal_processing_if_needed()` to the public interface
+- Added `libassert::isatty` to the public interface as well as stdin/stdout/stderr constants
+- Updated `libassert::stacktrace` to take color scheme and skip parameters
+- Removed `libassert::replace_rgb`
+- Removed `libassert::strip_colors`
+
+**Output:**
+- Improved stacktrace format to make "click to jump to source" possible in some IDEs
+
+**Analysis:**
+- Type prettifying
+  - Added normalization for `std::__cxx11::` to to `std::`
+  - Added normalization for msvc ``​`anonymous namespace'`` to `(anonymous namespace)`
+- Overhauled C++ tokenizer to use a much better implementation
+
+**Bug fixes:**
+- Resolved long-standing crash caused by libc++'s std::regex implementation
+
+**Internal improvements:**
+- Improved how data is stored in `binary_diagnostics_descriptor`, `assert_static_parameters`, and `assertion_info`
+- Improved internal argument processing
+- Improved assertion macro expansion
+- Added C++23 specialization for how static assertion information is stored which is hopefully faster for compile times
+- Improved handling of literal formatting
+- Removed the global lock used while processing assertions
+- Improved assertion processing logic
+- Lots of internal refactoring, cleanup, and changes to improve maintainability
+- Overhauled CMake thanks to a contributor, fixing a lot of issues and greatly improving the setup
+- Removed need for user to manually specify `LIBASSERT_STATIC` if using the project with cmake and a static build
+- Magic enum is now grabbed with FetchContent or externally from an existing install or package manager
+- Resolved inconsistent use of `ASSERT` vs `LIBASSERT` for the library's macro prefix
+- Updated internal error handling to use cpptrace exceptions
+- Added cmake integration testing on mingw to CI
+- General CI improvements
+- General testing improvements
 
 ## libassert 2.0.0-beta
 

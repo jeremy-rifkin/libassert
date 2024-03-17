@@ -12,9 +12,6 @@
 
 <p align="center">The most over-engineered C++ assertion library</p>
 
-> [!IMPORTANT]
-> The current page corresponds to a pre-release for version 2.0. For version 1 refer to https://github.com/jeremy-rifkin/libassert/tree/v1.2.2.
-
 ## Table of Contents: <!-- omit in toc -->
 - [30-Second Overview](#30-second-overview)
   - [CMake FetchContent Usage](#cmake-fetchcontent-usage)
@@ -116,7 +113,7 @@ include(FetchContent)
 FetchContent_Declare(
   libassert
   GIT_REPOSITORY https://github.com/jeremy-rifkin/libassert.git
-  GIT_TAG        v2.0.0-beta # <HASH or TAG>
+  GIT_TAG        v2.0.0 # <HASH or TAG>
 )
 FetchContent_MakeAvailable(libassert)
 target_link_libraries(your_target libassert::assert)
@@ -805,7 +802,7 @@ include(FetchContent)
 FetchContent_Declare(
   libassert
   GIT_REPOSITORY https://github.com/jeremy-rifkin/libassert.git
-  GIT_TAG        v2.0.0-beta # <HASH or TAG>
+  GIT_TAG        v2.0.0 # <HASH or TAG>
 )
 FetchContent_MakeAvailable(libassert)
 target_link_libraries(your_target libassert::assert)
@@ -820,7 +817,7 @@ information.
 
 ```sh
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v2.0.0-beta
+git checkout v2.0.0
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
@@ -856,7 +853,7 @@ you when installing new libraries.
 
 ```ps1
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v2.0.0-beta
+git checkout v2.0.0
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
