@@ -14,7 +14,6 @@ Changes since v1:
 **Assertion macros:**
 - Replaced the previous `ASSERT`/`VERIFY` nomenclature with `DEBUG_ASSERT` and `ASSERT`
 - Updated assertion macros to no longer return a value by default
-  - Debug-only assertions no longer have to evaluate the assertion expression, and removed `NO_ASSERT_RELEASE_EVAL`
 - Added `DEBUG_ASSERT_VAL`, `ASSERT_VAL`, and `ASSUME_VAL` variants that return values
 - Added `PANIC` and `UNREACHABLE`
 - Added `LIBASSERT_PREFIX_ASSERTIONS` option to only add assertion macros with a `LIBASSERT_` prefix
