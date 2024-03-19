@@ -918,6 +918,8 @@ For the `[cpptrace args]` placeholder refer to the [cpptrace documentation](http
 
 Libassert is available through conan at https://conan.io/center/recipes/libassert.
 
+Note: The [PR](https://github.com/conan-io/conan-center-index/pull/23117) to add v2 to conan may still be pending at the time of reading.
+
 ```
 [requires]
 libassert/2.0.0
