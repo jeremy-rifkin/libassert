@@ -6,8 +6,6 @@
 #define LIBASSERT_PREFIX_ASSERTIONS
 #include <libassert/assert.hpp>
 
-#include "tokenizer.hpp"
-
 #if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL != 0
  #error "Libassert integration does not work with MSVC's non-conformant preprocessor. /Zc:preprocessor must be used."
 #endif
