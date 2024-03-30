@@ -5,13 +5,12 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jeremy-rifkin_libassert&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jeremy-rifkin_libassert)
 <br/>
 [![Community Discord Link](https://img.shields.io/badge/Chat%20on%20the%20(very%20small)-Community%20Discord-blue?labelColor=2C3239&color=7289DA&style=flat&logo=discord&logoColor=959DA5)](https://discord.gg/frjaAZvqUZ)
+<!--
 <br/>
 [![Try on Compiler Explorer](https://img.shields.io/badge/-Compiler%20Explorer-brightgreen?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAQCAYAAAAmlE46AAAACXBIWXMAAACwAAAAsAEUaqtpAAABSElEQVQokYVTsU7DMBB9QMTCEJbOMLB5oF0tRfUPIPIJZctYJkZYu3WMxNL+ARUfQKpImcPgDYnsXWBgYQl61TkYyxI3Wef37j3fnQ/6vkcsikY9AbiWq0mpbevDBmLRqDEAA4CEHMADgFRwrwDmch6X2i73RCFVHvC/WCeCMAFpC2AFoPPu5x4md4rnAN4luS61nYWSgauNU8ydkr0bLTMYAoIYtWqxM4LtEumeERDtfUjlMDrp7L67iddyyJtOvUIu2rquVn4iiVSOKXYhiMSJWLwUJZLuQ2CWmVldV4MT11UmXgB8fr0dX3WP6VHMiVrscim6Da2mJxffzwSU2v6xWzSKmzQ4cUTOaCBTvWgU14xkzjhckKm/q3wnrRAcAhksxMZNAdxEf0fRKI6E8zqT1C0X28ccRpqAUltW5pu4sxv5Mb8B4AciE3bHMxz/+gAAAABJRU5ErkJggg==&labelColor=2C3239&style=flat&label=Try+it+on&color=30C452)](https://godbolt.org/z/Eonafvxof)
+-->
 
 <p align="center">The most over-engineered C++ assertion library</p>
-
-> [!IMPORTANT]
-> The current page corresponds to a pre-release for version 2.0. For version 1 refer to https://github.com/jeremy-rifkin/libassert/tree/v1.2.2.
 
 ## Table of Contents: <!-- omit in toc -->
 - [30-Second Overview](#30-second-overview)
@@ -34,8 +33,8 @@
     - [Anatomy of Assertion Information](#anatomy-of-assertion-information)
   - [Stringification of Custom Objects](#stringification-of-custom-objects)
   - [Custom Failure Handlers](#custom-failure-handlers-1)
-  - [Other configurations](#other-configurations)
-- [Integration with test libraries](#integration-with-test-libraries)
+  - [Other Donfigurations](#other-donfigurations)
+- [Integration with Test Libraries](#integration-with-test-libraries)
   - [Catch2](#catch2)
   - [GoogleTest](#googletest)
 - [Usage](#usage)
@@ -114,7 +113,7 @@ include(FetchContent)
 FetchContent_Declare(
   libassert
   GIT_REPOSITORY https://github.com/jeremy-rifkin/libassert.git
-  GIT_TAG        v2.0.0-beta # <HASH or TAG>
+  GIT_TAG        v2.0.0 # <HASH or TAG>
 )
 FetchContent_MakeAvailable(libassert)
 target_link_libraries(your_target libassert::assert)
@@ -391,8 +390,8 @@ expression. The returned value is determined as follows:
 - Otherwise if the top-level binary operation is `&`, `|`, `^`, `<<`, `>>`, or any binary operator with precedence above
   bitshift then value of the whole expression is returned.
 
-I.e., `ASSERT(foo() > 2);` returns the computed result from `foo()` and `ASSERT(x & y);` returns the
-computed result of `x & y`;
+I.e., `ASSERT_VAL(foo() > 2);` returns the computed result from `foo()` and `ASSERT_VAL(x & y);` returns the computed
+result of `x & y`;
 
 If the value from the assertion expression selected to be returned is an lvalue, the type of the assertion call will be
 an lvalue reference. If the value from the assertion expression is an rvalue then the type of the call will be an
@@ -402,7 +401,11 @@ rvalue.
 
 ```cpp
 namespace libassert {
-    [[nodiscard]] std::string stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme(), std::size_t skip = 0);
+    [[nodiscard]] std::string stacktrace(
+        int width = 0,
+        const color_scheme& scheme = get_color_scheme(),
+        std::size_t skip = 0
+    );
     template<typename T> [[nodiscard]] std::string_view type_name() noexcept;
     template<typename T> [[nodiscard]] std::string pretty_type_name() noexcept;
     template<typename T> [[nodiscard]] std::string stringify(const T& value);
@@ -438,11 +441,11 @@ namespace libassert {
 
 ```cpp
 namespace libassert {
-    // NOTE: string view underlying data should have static storage duration, or otherwise live as long as the scheme
-    // is in use
+    // NOTE: string view underlying data should have static storage duration, or otherwise live as
+    // long as the scheme is in use
     struct color_scheme {
         std::string_view string, escape, keyword, named_literal, number, punctuation, operator_token,
-                         call_identifier, scope_resolution_identifier, identifier, accent, unknown, reset;
+                    call_identifier, scope_resolution_identifier, identifier, accent, unknown, reset;
         static const color_scheme ansi_basic;
         static const color_scheme ansi_rgb;
         static const color_scheme blank;
@@ -474,13 +477,13 @@ namespace libassert {
     enum class literal_format_mode {
         infer, // infer literal formats based on the assertion condition
         no_variations, // don't do any literal format variations, just default
-        fixed_variations // use a fixed set of formats always; note the default format will always be used
+        fixed_variations // always use a fixed set of formats (in addition to the default format)
     };
     void set_literal_format_mode(literal_format_mode);
 
     enum class literal_format : unsigned {
-        // integers and floats are decimal by default, chars are of course chars, and everything else only has one
-        // format that makes sense
+        // integers and floats are decimal by default, chars are of course chars, and everything
+        // else only has one format that makes sense
         default_format = 0,
         integer_hex = 1,
         integer_octal = 2,
@@ -672,11 +675,11 @@ template<> struct libassert::stringifier<MyObject> {
 };
 ```
 
-Additionally, `LIBASSERT_USE_FMT` can be used to turn on libfmt integration which will allow libassert to use
-`fmt::formatter`s.
+By default any container-like user-defined types will be automatically stringifiable.
 
-Furthermore, any types with an ostream `operator<<` overload can be stringified as well as any container-like
-user-defined types.
+Additionally, `LIBASSERT_USE_FMT` can be used to allow libassert to use `fmt::formatter`s.
+
+Lastly, any types with an ostream `operator<<` overload can be stringified.
 
 ## Custom Failure Handlers
 
@@ -694,8 +697,10 @@ An example assertion handler similar to the default handler:
 void libassert_default_failure_handler(const assertion_info& info) {
     libassert::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
     std::string message = info.to_string(
-        libassert::terminal_width(STDERR_FILENO),
-        libassert::isatty(STDERR_FILENO) ? libassert::get_color_scheme() : libassert::color_scheme::blank
+        libassert::terminal_width(libassert::stderr_fileno),
+        libassert::isatty(libassert::stderr_fileno)
+            ? libassert::get_color_scheme()
+            : libassert::color_scheme::blank
     );
     std::cerr << message << std::endl;
     switch(info.type) {
@@ -706,11 +711,12 @@ void libassert_default_failure_handler(const assertion_info& info) {
         case libassert::assert_type::unreachable:
             (void)fflush(stderr);
             std::abort();
-            // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
-            // this library (on top of preventing fallthrough from nonfatal libassert)
+            // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a
+            // debug build of this library
             break;
         default:
-            LIBASSERT_PRIMITIVE_ASSERT(false);
+            std::cerr << "Critical error: Unknown libassert::assert_type" << std::endl;
+            std::abort(1);
     }
 }
 ```
@@ -721,20 +727,22 @@ all assertion types instead of aborting.
 > [!IMPORTANT]
 > Failure handlers must not return for `assert_type::panic` and `assert_type::unreachable`.
 
-## Other configurations
+## Other Donfigurations
 
-Set these either at CMake or with `-D` for the compiler.
+**Defines:**
 
 - `LIBASSERT_USE_MAGIC_ENUM`: Use magic enum for stringifying enum values
 - `LIBASSERT_DECOMPOSE_BINARY_LOGICAL`: Decompose `&&` and `||`
 - `LIBASSERT_SAFE_COMPARISONS`: Enable safe signed-unsigned comparisons for decomposed expressions
-- `LIBASSERT_USE_EXTERNAL_CPPTRACE`: Use an externam cpptrace instead of aquiring the library with FetchContent
-- `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`: Use an externam magic enum instead of aquiring the library with FetchContent
 - `LIBASSERT_PREFIX_ASSERTIONS`: Prefixes all assertion macros with `LIBASSERT_`
 - `LIBASSERT_USE_FMT`: Enables libfmt integration
 - `LIBASSERT_NO_STRINGIFY_SMART_POINTER_OBJECTS`: Disables stringification of smart pointer contents
 
-# Integration with test libraries
+**CMake:**
+- `LIBASSERT_USE_EXTERNAL_CPPTRACE`: Use an externam cpptrace instead of aquiring the library with FetchContent
+- `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`: Use an externam magic enum instead of aquiring the library with FetchContent
+
+# Integration with Test Libraries
 
 > [!NOTE]
 > Because of MSVC's non-conformant preprocessor there is no easy way to provide assertion wrappers. In order to use test
@@ -794,7 +802,7 @@ include(FetchContent)
 FetchContent_Declare(
   libassert
   GIT_REPOSITORY https://github.com/jeremy-rifkin/libassert.git
-  GIT_TAG        v2.0.0-beta # <HASH or TAG>
+  GIT_TAG        v2.0.0 # <HASH or TAG>
 )
 FetchContent_MakeAvailable(libassert)
 target_link_libraries(your_target libassert::assert)
@@ -809,7 +817,7 @@ information.
 
 ```sh
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v2.0.0-beta
+git checkout v2.0.0
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
@@ -845,7 +853,7 @@ you when installing new libraries.
 
 ```ps1
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v2.0.0-beta
+git checkout v2.0.0
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
@@ -863,7 +871,7 @@ To install just for the local user (or any custom prefix):
 
 ```sh
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v0.4.0
+git checkout v2.0.0
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/wherever
@@ -912,7 +920,7 @@ Libassert is available through conan at https://conan.io/center/recipes/libasser
 
 ```
 [requires]
-libassert/0.4.0
+libassert/2.0.0
 [generators]
 CMakeDeps
 CMakeToolchain
@@ -933,7 +941,7 @@ vcpkg install libassert
 ```
 ```cmake
 find_package(libassert CONFIG REQUIRED)
-target_link_libraries(main PRIVATE libassert::assert)
+target_link_libraries(YOUR_TARGET PRIVATE libassert::assert)
 ```
 
 # Platform Logistics
@@ -1021,27 +1029,27 @@ This is not as helpful as it could be.
 
 Functionality other languages / their standard libraries provide:
 
-|                                    | C/C++ | Rust |  C#  | Java | Python | JavaScript | This Library |
-| :--------------------------------- | :---: | :--: | :--: | :--: | :----: | :--------: | :----------: |
-| Expression string                  | ✔️  |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
-| Location                           | ✔️  | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |     ✔️     |
-| Stack trace                        |  ❌   | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |     ✔️     |
-| Assertion message                  | ❌**  | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |     ✔️     |
-| Extra diagnostics                  |  ❌   | ❌*  | ❌*  |  ❌  |  ❌*   |    ❌*     |     ✔️     |
-| Binary specializations             |  ❌   | ✔️ |  ❌  |  ❌  |   ❌   |    ✔️    |     ✔️     |
-| Automatic expression decomposition |  ❌   |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
-| Sub-expression strings             |  ❌   |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
+|                                    | C/C++ | Rust |  C#  | Java | Python | JavaScript | Libassert |
+| :--------------------------------- | :---: | :--: | :--: | :--: | :----: | :--------: | :-------: |
+| Expression string                  | ✔️  |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |   ✔️    |
+| Location                           | ✔️  | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |   ✔️    |
+| Stack trace                        |  ❌   | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |   ✔️    |
+| Assertion message                  | ❌**  | ✔️ | ✔️ | ✔️ |  ✔️  |    ✔️    |   ✔️    |
+| Extra diagnostics                  |  ❌   | ❌*  | ❌*  |  ❌  |  ❌*   |    ❌*     |   ✔️    |
+| Binary specializations             |  ❌   | ✔️ |  ❌  |  ❌  |   ❌   |    ✔️    |   ✔️    |
+| Automatic expression decomposition |  ❌   |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |   ✔️    |
+| Sub-expression strings             |  ❌   |  ❌  |  ❌  |  ❌  |   ❌   |     ❌     |   ✔️    |
 
 `*`: Possible through string formatting but that is sub-ideal. <br/>
 `**`: `assert(expression && "message")` is commonly used but this is sub-ideal and only allows string literal messages.
 
 Extras:
 
-|                                                                                         | C/C++ | Rust | C#  | Java | Python | JavaScript | This Library |
-| :-------------------------------------------------------------------------------------- | :---: | :--: | :-: | :--: | :----: | :--------: | :----------: |
-| Syntax highlighting                                                                     |  ❌   |  ❌  | ❌  |  ❌  |  🟡   |     ❌     |     ✔️     |
-| Literal formatting consistency                                                          |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
-| Expression strings and expression values everywhere                                     |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
-| Return values from the assert to allow asserts to be integrated into expressions inline |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |     ✔️     |
+|                                                                                         | C/C++ | Rust | C#  | Java | Python | JavaScript | Libassert |
+| :-------------------------------------------------------------------------------------- | :---: | :--: | :-: | :--: | :----: | :--------: | :-------: |
+| Syntax highlighting                                                                     |  ❌   |  ❌  | ❌  |  ❌  |  🟡   |     ❌     |   ✔️    |
+| Literal formatting consistency                                                          |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |   ✔️    |
+| Expression strings and expression values everywhere                                     |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |   ✔️    |
+| Return values from the assert to allow asserts to be integrated into expressions inline |  ❌   |  ❌  | ❌  |  ❌  |   ❌   |     ❌     |   ✔️    |
 
 [16.4.5.3.3]: https://eel.is/c++draft/reserved.names#macro.names-1
