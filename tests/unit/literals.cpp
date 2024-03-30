@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "microfmt.hpp"
+
 inline std::vector<std::string> split(std::string_view s, std::string_view delim) {
     std::vector<std::string> vec;
     size_t old_pos = 0;
@@ -42,16 +44,6 @@ inline std::string& ltrim(std::string& s, const char* t = ws) {
 // trim from both ends of string (right then left)
 inline std::string& trim(std::string& s, const char* t = ws) {
     return ltrim(rtrim(s, t), t);
-}
-
-template<typename... T> std::string stringf(T... args) {
-    int length = snprintf(nullptr, 0, args...);
-    if(length < 0) {
-        abort();
-    }
-    std::string str(length, 0);
-    snprintf(str.data(), length + 1, args...);
-    return str;
 }
 
 #define let auto
@@ -146,17 +138,17 @@ int main() {
     static std::regex int_hex     = std::regex("^0[Xx](?!')(?:'?[\\da-fA-F])+" + optional_integer_suffix + "$");
 
     static std::string digit_sequence = "\\d(?:'?\\d)*";
-    static std::string fractional_constant = stringf("(?:(?:%s)?\\.%s|%s\\.)", digit_sequence.c_str(), digit_sequence.c_str(), digit_sequence.c_str());
+    static std::string fractional_constant = microfmt::format("(?:(?:{})?\\.{}|{}\\.)", digit_sequence, digit_sequence, digit_sequence);
     static std::string exponent_part = "(?:[Ee][\\+-]?" + digit_sequence + ")";
     static std::string suffix = "[FfLl]";
-    static std::regex float_decimal = std::regex(stringf("^(?:%s%s?|%s%s)%s?$",
-                                    fractional_constant.c_str(), exponent_part.c_str(),
-                                    digit_sequence.c_str(), exponent_part.c_str(), suffix.c_str()));
+    static std::regex float_decimal = std::regex(microfmt::format("^(?:{}{}?|{}{}){}?$",
+                                    fractional_constant, exponent_part,
+                                    digit_sequence, exponent_part, suffix));
     static std::string hex_digit_sequence = "[\\da-fA-F](?:'?[\\da-fA-F])*";
-    static std::string hex_frac_const = stringf("(?:(?:%s)?\\.%s|%s\\.)", hex_digit_sequence.c_str(), hex_digit_sequence.c_str(), hex_digit_sequence.c_str());
+    static std::string hex_frac_const = microfmt::format("(?:(?:{})?\\.{}|{}\\.)", hex_digit_sequence, hex_digit_sequence, hex_digit_sequence);
     static std::string binary_exp = "[Pp][\\+-]?" + digit_sequence;
-    static std::regex float_hex = std::regex(stringf("^0[Xx](?:%s|%s)%s%s?$",
-                                    hex_frac_const.c_str(), hex_digit_sequence.c_str(), binary_exp.c_str(), suffix.c_str()));
+    static std::regex float_hex = std::regex(microfmt::format("^0[Xx](?:{}|{}){}{}?$",
+                                    hex_frac_const, hex_digit_sequence, binary_exp, suffix));
     let matches_any = [&](const std::string& str) {
         let matches = [](const std::string& value, const std::regex& re) {
             std::smatch base_match;

@@ -19,6 +19,7 @@
 
 #include "common.hpp"
 #include "utils.hpp"
+#include "microfmt.hpp"
 #include "analysis.hpp"
 #include "tokenizer.hpp"
 
@@ -173,36 +174,36 @@ namespace libassert::detail {
             const std::string int_decimal = "(?:0|[1-9](?:'?\\d)*)" + optional_integer_suffix;
             const std::string int_hex        = "0[Xx](?!')(?:'?[\\da-fA-F])+" + optional_integer_suffix;
             const std::string digit_sequence = "\\d(?:'?\\d)*";
-            const std::string fractional_constant = stringf(
-                "(?:(?:%s)?\\.%s|%s\\.)",
-                digit_sequence.c_str(),
-                digit_sequence.c_str(),
-                digit_sequence.c_str()
+            const std::string fractional_constant = microfmt::format(
+                "(?:(?:{})?\\.{}|{}\\.)",
+                digit_sequence,
+                digit_sequence,
+                digit_sequence
             );
             const std::string exponent_part = "(?:[Ee][\\+-]?" + digit_sequence + ")";
             const std::string suffix = "[FfLl]";
-            const std::string float_decimal = stringf(
-                "(?:%s%s?|%s%s)%s?",
-                fractional_constant.c_str(),
-                exponent_part.c_str(),
-                digit_sequence.c_str(),
-                exponent_part.c_str(),
-                suffix.c_str()
+            const std::string float_decimal = microfmt::format(
+                "(?:{}{}?|{}{}){}?",
+                fractional_constant,
+                exponent_part,
+                digit_sequence,
+                exponent_part,
+                suffix
             );
             const std::string hex_digit_sequence = "[\\da-fA-F](?:'?[\\da-fA-F])*";
-            const std::string hex_frac_const = stringf(
-                "(?:(?:%s)?\\.%s|%s\\.)",
-                hex_digit_sequence.c_str(),
-                hex_digit_sequence.c_str(),
-                hex_digit_sequence.c_str()
+            const std::string hex_frac_const = microfmt::format(
+                "(?:(?:{})?\\.{}|{}\\.)",
+                hex_digit_sequence,
+                hex_digit_sequence,
+                hex_digit_sequence
             );
             const std::string binary_exp = "[Pp][\\+-]?" + digit_sequence;
-            const std::string float_hex = stringf(
-                "0[Xx](?:%s|%s)%s%s?",
-                hex_frac_const.c_str(),
-                hex_digit_sequence.c_str(),
-                binary_exp.c_str(),
-                suffix.c_str()
+            const std::string float_hex = microfmt::format(
+                "0[Xx](?:{}|{}){}{}?",
+                hex_frac_const,
+                hex_digit_sequence,
+                binary_exp,
+                suffix
             );
             // char and string literals
             // TODO: This needs to be updated

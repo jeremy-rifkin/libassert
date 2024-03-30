@@ -37,16 +37,6 @@ namespace libassert::detail {
      * string utilities
      */
 
-    template<typename... T>
-    LIBASSERT_ATTR_COLD
-    std::string stringf(T... args) {
-        const int length = snprintf(nullptr, 0, args...);
-        if(length < 0) { LIBASSERT_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
-        std::string str(length, 0);
-        (void)snprintf(str.data(), length + 1, args...);
-        return str;
-    }
-
     LIBASSERT_ATTR_COLD
     std::vector<std::string_view> split(std::string_view s, std::string_view delims);
 

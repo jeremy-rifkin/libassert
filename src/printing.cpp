@@ -1,5 +1,7 @@
 #include "printing.hpp"
 
+#include "microfmt.hpp"
+
 namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     // TODO
@@ -61,15 +63,21 @@ namespace libassert::detail {
             for(size_t i = 0; i <= last_col; i++) {
                 auto& content = line[i];
                 if(columns[i].right_align) {
-                    output += stringf("%-*s%s%s",
-                                      i == last_col ? 0 : int(columns[i].width - content.length), "",
-                                      content.content.c_str(),
-                                      i == last_col ? "\n" : " ");
+                    output += microfmt::format(
+                        "{<{}}{}{}",
+                        i == last_col ? 0 : int(columns[i].width - content.length),
+                        "",
+                        content.content,
+                        i == last_col ? "\n" : " "
+                    );
                 } else {
-                    output += stringf("%s%-*s%s",
-                                      content.content.c_str(),
-                                      i == last_col ? 0 : int(columns[i].width - content.length), "",
-                                      i == last_col ? "\n" : " ");
+                    output += microfmt::format(
+                        "{}{<{}}{}",
+                        content.content,
+                        i == last_col ? 0 : int(columns[i].width - content.length),
+                        "",
+                        i == last_col ? "\n" : " "
+                    );
                 }
             }
         }

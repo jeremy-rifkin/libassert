@@ -27,6 +27,7 @@
 
 #include "common.hpp"
 #include "utils.hpp"
+#include "microfmt.hpp"
 #include "analysis.hpp"
 #include "platform.hpp"
 #include "paths.hpp"
@@ -149,24 +150,24 @@ namespace libassert::detail {
                 } else {
                     auto sig = highlight(signature + "(", scheme); // hack for the highlighter
                     sig = sig.substr(0, sig.rfind('('));
-                    stacktrace += stringf(
-                        "#%s%2d%s %s\n      at %s:%s%s%s\n",
-                        std::string(scheme.number).c_str(),
-                        (int)frame_number,
-                        std::string(scheme.reset).c_str(),
-                        sig.c_str(),
-                        path_handler->resolve_path(source_path).data(), // will be null-terminated
-                        std::string(scheme.number).c_str(),
-                        line_number.c_str(),
-                        std::string(scheme.reset).c_str() // yes this is excessive; intentionally coloring "?"
+                    stacktrace += microfmt::format(
+                        "#{}{>2}{} {}\n      at {}:{}{}{}\n",
+                        scheme.number,
+                        frame_number,
+                        scheme.reset,
+                        sig,
+                        path_handler->resolve_path(source_path),
+                        scheme.number,
+                        line_number,
+                        scheme.reset // yes this is excessive; intentionally coloring "?"
                     );
                 }
                 if(recursion_folded) {
                     i += recursion_folded;
-                    const std::string s = stringf("| %d layers of recursion were folded |", recursion_folded);
-                    (((stacktrace += scheme.accent) += stringf("|%*s|", int(s.size() - 2), "")) += scheme.reset) += '\n';
-                    (((stacktrace += scheme.accent) += stringf("%s", s.c_str())) += scheme.reset) += '\n';
-                    (((stacktrace += scheme.accent) += stringf("|%*s|", int(s.size() - 2), "")) += scheme.reset) += '\n';
+                    const std::string s = microfmt::format("| {} layers of recursion were folded |", recursion_folded);
+                    stacktrace += microfmt::format("{}|{<{}}|{}\n", scheme.accent, s.size() - 2, "", scheme.reset);
+                    stacktrace += microfmt::format("{}{}{}\n", scheme.accent, s, scheme.reset);
+                    stacktrace += microfmt::format("{}|{<{}}|{}\n", scheme.accent, s.size() - 2, "", scheme.reset);
                 }
             }
         } else {
@@ -180,13 +181,13 @@ namespace libassert::detail {
         LIBASSERT_PRIMITIVE_ASSERT(!vec.empty());
         std::string values;
         if(vec.size() == 1) {
-            values += stringf("%s\n", indent(highlight(vec[0], scheme), 8 + lw + 4, ' ', true).c_str());
+            values += microfmt::format("{}\n", indent(highlight(vec[0], scheme), 8 + lw + 4, ' ', true));
         } else {
             // spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
             // no indentation done here for multiple value printing
             values += " ";
             for(const auto& str : vec) {
-                values += stringf("%s", highlight(str, scheme).c_str());
+                values += microfmt::format("{}", highlight(str, scheme));
                 if(&str != &*--vec.end()) {
                     values += "  ";
                 }
@@ -285,12 +286,12 @@ namespace libassert::detail {
                         scheme
                     );
                 } else {
-                    where += stringf(
-                        "        %s%*s %s ",
-                        highlight(expr_str, scheme).c_str(),
-                        int(lw - expr_str.size()),
+                    where += microfmt::format(
+                        "        {}{<{}} {} ",
+                        highlight(expr_str, scheme),
+                        lw - expr_str.size(),
                         "",
-                        arrow.c_str()
+                        arrow
                     );
                     where += print_values(expr_strs, lw, scheme);
                 }
@@ -328,18 +329,18 @@ namespace libassert::detail {
                     scheme
                 );
             } else {
-                output += stringf(
-                    "        %s%*s %s %s\n",
-                    highlight(entry.expression, scheme).c_str(),
-                    int(lw - entry.expression.length()),
+                output += microfmt::format(
+                    "        {}{<{}} {} {}\n",
+                    highlight(entry.expression, scheme),
+                    lw - entry.expression.length(),
                     "",
-                    arrow.c_str(),
+                    arrow,
                     indent(
                         highlight(entry.stringification, scheme),
                         8 + lw + 4,
                         ' ',
                         true
-                    ).c_str()
+                    )
                 );
             }
         }
@@ -555,41 +556,41 @@ namespace libassert {
     std::string assertion_info::tagline(const color_scheme& scheme) const {
         const auto prettified_function = prettify_type(std::string(function));
         if(message && !message->empty()) {
-            return stringf(
-                "%s at %s:%d: %s: %s\n",
-                action().data(), // we know it's null-terminated
-                get_path_handler()->resolve_path(file_name).data(), // we know this will be null-terminated
+            return microfmt::format(
+                "{} at {}:{}: {}: {}\n",
+                action(),
+                get_path_handler()->resolve_path(file_name),
                 line,
-                highlight(prettified_function, scheme).c_str(),
-                message->c_str()
+                highlight(prettified_function, scheme),
+                *message
             );
         } else {
-            return stringf(
-                "%s at %s:%d: %s:\n",
-                action().data(), // we know it's null-terminated
-                get_path_handler()->resolve_path(file_name).data(), // we know this will be null-terminated
+            return microfmt::format(
+                "{} at {}:{}: {}:\n",
+                action(),
+                get_path_handler()->resolve_path(file_name),
                 line,
-                highlight(prettified_function, scheme).c_str()
+                highlight(prettified_function, scheme)
             );
         }
     }
 
     std::string assertion_info::location() const {
-        return stringf("%s:%d", get_path_handler()->resolve_path(file_name).data(), line);
+        return microfmt::format("{}:{}", get_path_handler()->resolve_path(file_name), line);
     }
 
     std::string assertion_info::statement(const color_scheme& scheme) const {
-        return stringf(
-            "    %s\n",
+        return microfmt::format(
+            "    {}\n",
             highlight(
-                stringf(
-                    "%s(%s%s);",
-                    macro_name.data(), // we know this is null-terminated
-                    expression_string.data(), // we know this is null-terminated
+                microfmt::format(
+                    "{}({}{});",
+                    macro_name,
+                    expression_string,
                     n_args > 0 ? (expression_string.empty() ? "..." : ", ...") : ""
                 ),
                 scheme
-            ).c_str()
+            )
         );
     }
 
