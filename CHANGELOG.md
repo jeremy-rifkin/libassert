@@ -1,3 +1,4 @@
+- [libassert 2.0.1](#libassert-201)
 - [libassert 2.0.0](#libassert-200)
 - [libassert 2.0.0-beta](#libassert-200-beta)
 - [libassert 2.0.0-alpha](#libassert-200-alpha)
@@ -6,6 +7,18 @@
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.0.1
+
+Fixed:
+- Fixed issue with determining stringifiability when `T::value_type` is a class named `value_type` with a constructor
+  https://github.com/jeremy-rifkin/libassert/issues/90
+- Fixed issue with an incorrect header being imported in `assert-gtest.hpp`
+  https://github.com/jeremy-rifkin/libassert/issues/87
+
+Other:
+- Improved internal string formatting
+- Improved Catch2 support
 
 ## libassert 2.0.0
 
