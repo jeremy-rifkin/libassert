@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -46,6 +47,10 @@ namespace microfmt {
         }
         #endif
 
+        template<typename U, typename V> U to(V v) {
+            return static_cast<U>(v); // A way to cast to U without "warning: useless cast to type"
+        }
+
         enum class alignment { left, right };
 
         struct format_options {
@@ -83,7 +88,7 @@ namespace microfmt {
                 // log_2(x) == 63 - clz(x)
                 // 1 + (63 - clz(value)) / (63 - clz(1 << shift))
                 // 63 - clz(1 << shift) is the same as shift
-                auto n_digits = 1 + (63 - clz(value)) / shift;
+                auto n_digits = to<std::size_t>(1 + (63 - clz(value)) / shift);
                 std::string number;
                 number.resize(n_digits);
                 std::size_t i = n_digits - 1;
@@ -254,7 +259,7 @@ namespace microfmt {
                         } else if(*it == '{') { // try to parse variable width
                             MICROFMT_ASSERT(peek() == '}');
                             it += 2;
-                            MICROFMT_ASSERT(arg_i < N);
+                            MICROFMT_ASSERT(arg_i < args.size());
                             options.width = args[arg_i++].unwrap_int();
                         }
                         // try to parse fill/base
@@ -277,7 +282,7 @@ namespace microfmt {
                             }
                         }
                         MICROFMT_ASSERT(*it == '}');
-                        MICROFMT_ASSERT(arg_i < N);
+                        MICROFMT_ASSERT(arg_i < args.size());
                         args[arg_i++].write(str, options);
                     }
                 } else if(*it == '}') {
@@ -297,18 +302,25 @@ namespace microfmt {
         }
     }
 
-    template<typename... Args>
     #if defined(__cpp_lib_string_view) && __cpp_lib_string_view >= 201606L
+    template<typename... Args>
     std::string format(std::string_view fmt, Args&&... args) {
-    #else
-    std::string format(const std::string& fmt, Args&&... args) {
-    #endif
         return detail::format<sizeof...(args)>(fmt.begin(), fmt.end(), {detail::format_value(args)...});
     }
+
+    inline std::string format(std::string_view fmt) {
+        return std::string(fmt);
+    }
+    #endif
 
     template<typename... Args>
     std::string format(const char* fmt, Args&&... args) {
         return detail::format<sizeof...(args)>(fmt, fmt + std::strlen(fmt), {detail::format_value(args)...});
+    }
+
+    // working around an old msvc bug https://godbolt.org/z/88T8hrzzq mre: https://godbolt.org/z/drd8echbP
+    inline std::string format(const char* fmt) {
+        return std::string(fmt);
     }
 
     template<typename S, typename... Args>
@@ -319,6 +331,12 @@ namespace microfmt {
     template<typename S, typename... Args>
     void print(std::ostream& ostream, const S& fmt, Args&&... args) {
         ostream<<format(fmt, args...);
+    }
+
+    template<typename S, typename... Args>
+    void print(std::FILE* stream, const S& fmt, Args&&... args) {
+        auto str = format(fmt, args...);
+        fwrite(str.data(), 1, str.size(), stream);
     }
 }
 
