@@ -13,6 +13,31 @@
 using namespace libassert::detail;
 using namespace std::literals;
 
+struct basic_fields {
+    struct value_type {
+        value_type() {}
+    };
+    struct const_iterator {
+        bool operator==(const const_iterator&) const {
+            return true;
+        }
+    };
+    const_iterator begin() {
+        return {};
+    }
+    const_iterator end() {
+        return {};
+    }
+};
+
+void regression01() {
+    // regression test for #90, just making sure this can compile
+    constexpr bool b = stringifiable_container<basic_fields::value_type>();
+    ASSERT(!b);
+    basic_fields fields;
+    ASSERT(fields.begin() == fields.end());
+}
+
 struct S {};
 struct S2 {};
 
@@ -124,4 +149,6 @@ int main() {
     // libfmt
     // std::format
     // stringification tests
+
+    regression01();
 }

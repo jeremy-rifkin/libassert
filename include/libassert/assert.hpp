@@ -573,7 +573,11 @@ namespace libassert::detail {
     template<typename T> constexpr bool stringifiable_container() {
         // TODO: Guard against std::expected....?
         if constexpr(has_value_type<T>::value) {
-            return stringifiable<typename T::value_type>;
+            if constexpr(std::is_same_v<typename T::value_type, T>) {
+                return false;
+            } else {
+                return stringifiable<typename T::value_type>;
+            }
         } else if constexpr(std::is_array_v<typename std::remove_reference_t<T>>) { // C arrays
             return stringifiable<decltype(std::declval<T>()[0])>;
         } else if constexpr(stringification::is_tuple_like<T>::value) {
