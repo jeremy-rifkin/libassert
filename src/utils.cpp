@@ -87,6 +87,9 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     std::string_view trim(const std::string_view s) {
         const size_t l = s.find_first_not_of(ws);
+        if(l == std::string_view::npos) {
+            return "";
+        }
         const size_t r = s.find_last_not_of(ws) + 1;
         return s.substr(l, r - l);
     }
