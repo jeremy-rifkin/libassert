@@ -28,24 +28,22 @@ namespace microfmt {
             throw std::runtime_error("Microfmt check failed" __FILE__ ":" STR(__LINE__) ": " #expr); \
         }
 
-        #ifdef _MSC_VER
         inline std::uint64_t clz(std::uint64_t value) {
-            unsigned long out = 0;
-            #ifdef _WIN64
-            _BitScanForward64(&out, value);
+            #ifdef _MSC_VER
+             unsigned long out = 0;
+             #ifdef _WIN64
+              _BitScanReverse64(&out, value);
+             #else
+              if(_BitScanReverse(&out, std::uint32_t(value >> 32))) {
+                  return 63 - int(out + 32);
+              }
+              _BitScanReverse(&out, std::uint32_t(value));
+             #endif
+             return 63 - out;
             #else
-            if(_BitScanForward(&out, std::uint32_t(value >> 32))) {
-                return 63 ^ int(out + 32);
-            }
-            _BitScanForward(&out, std::uint32_t(value));
+             return __builtin_clzll(value);
             #endif
-            return out;
         }
-        #else
-        inline std::uint64_t clz(std::uint64_t value) {
-            return __builtin_clzll(value);
-        }
-        #endif
 
         template<typename U, typename V> U to(V v) {
             return static_cast<U>(v); // A way to cast to U without "warning: useless cast to type"
@@ -320,7 +318,7 @@ namespace microfmt {
 
     // working around an old msvc bug https://godbolt.org/z/88T8hrzzq mre: https://godbolt.org/z/drd8echbP
     inline std::string format(const char* fmt) {
-        return std::string(fmt);
+        return detail::format<1>(fmt, fmt + std::strlen(fmt), {detail::format_value(1)});
     }
 
     template<typename S, typename... Args>

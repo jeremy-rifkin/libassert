@@ -119,7 +119,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       target_include_directories(${test_name} PRIVATE src)
       add_test(NAME ${test_name} COMMAND ${test_name})
       list(APPEND dsym_targets ${test_name})
-    endforeach(test_file ${unit_test_sources})
+    endforeach()
 
     target_link_libraries(lexer PRIVATE GTest::gtest_main)
     target_link_libraries(fmt-test PRIVATE GTest::gtest_main fmt::fmt)
@@ -142,7 +142,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       target_link_libraries(${test_name} PRIVATE libassert-lib)
       target_include_directories(${test_name} PRIVATE src)
       list(APPEND dsym_targets ${test_name})
-    endforeach(test_file ${binary_sources})
+    endforeach()
 
     target_link_libraries(gtest-demo PRIVATE GTest::gtest_main)
     target_compile_options(gtest-demo PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
@@ -156,7 +156,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
           POST_BUILD
           COMMAND dsymutil $<TARGET_FILE:${target}>
         )
-      endforeach(target ${dsym_targets})
+      endforeach()
     endif()
 
     foreach(target ${all_targets})
