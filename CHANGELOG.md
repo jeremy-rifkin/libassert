@@ -1,3 +1,4 @@
+- [libassert 2.0.2](#libassert-202)
 - [libassert 2.0.1](#libassert-201)
 - [libassert 2.0.0](#libassert-200)
 - [libassert 2.0.0-beta](#libassert-200-beta)
@@ -7,6 +8,15 @@
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.0.2
+
+Fixed:
+- Fixed minor issue with `LIBASSERT_USE_MAGIC_ENUM` handling in libassert-config.cmake
+- Fixed handling of edge case for internal string trimming utility
+
+Other:
+- Bumped cpptrace to 0.5.3
 
 ## libassert 2.0.1
 

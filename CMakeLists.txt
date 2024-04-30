@@ -11,7 +11,7 @@ set(package_name "libassert")
 # create base project
 project(
   libassert
-  VERSION 2.0.1
+  VERSION 2.0.2
   DESCRIPTION "The most over-engineered C++ assertion library"
   HOMEPAGE_URL "https://github.com/jeremy-rifkin/libassert"
   LANGUAGES CXX
