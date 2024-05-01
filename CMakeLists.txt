@@ -87,6 +87,7 @@ target_sources(
   ${target_name} PRIVATE
   # include
   include/libassert/assert.hpp
+  include/libassert/libassert_internal.hpp
 )
 
 # add /src files to target
@@ -115,7 +116,7 @@ target_compile_options(
   PRIVATE
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror=return-type -Wshadow -Wundef>
   $<$<CXX_COMPILER_ID:GNU>:-Wuseless-cast -Wnonnull-compare>
-  $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive->
+  $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive- /Zc:__cplusplus>
 )
 
 # ---- Generate Build Info Headers ----
