@@ -116,7 +116,7 @@ target_compile_options(
   PRIVATE
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror=return-type -Wshadow -Wundef>
   $<$<CXX_COMPILER_ID:GNU>:-Wuseless-cast -Wnonnull-compare>
-  $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive- /Zc:__cplusplus>
+  $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive->
 )
 
 # ---- Generate Build Info Headers ----

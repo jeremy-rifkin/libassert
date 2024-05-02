@@ -23,13 +23,9 @@
  #include <expected>
 #endif
 
-#if defined(_MSVC_LANG) && _MSVC_LANG < 201703L
- #error "libassert requires C++17 or newer"
-#elif !defined(_MSVC_LANG) && __cplusplus < 201703L
- #pragma error "libassert requires C++17 or newer"
-#endif
+#include "libassert/libassert_internal.hpp"
 
-#if __cplusplus >= 202002L || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002L)
+#if LIBASSERT_STD_VER >= 20
  #include <compare>
 #endif
 
@@ -56,100 +52,11 @@
 // Block comments are used to create some visual separation and try to break the library into more manageable parts.
 // I've tried as much as I can to keep logically connected parts together but there is some bootstrapping necessary.
 
-// =====================================================================================================================
-// || Preprocessor stuff                                                                                              ||
-// =====================================================================================================================
-
-#ifdef _WIN32
-#define LIBASSERT_EXPORT_ATTR __declspec(dllexport)
-#define LIBASSERT_IMPORT_ATTR __declspec(dllimport)
-#else
-#define LIBASSERT_EXPORT_ATTR __attribute__((visibility("default")))
-#define LIBASSERT_IMPORT_ATTR __attribute__((visibility("default")))
-#endif
-
-#ifdef LIBASSERT_STATIC_DEFINE
- #define LIBASSERT_EXPORT
- #define LIBASSERT_NO_EXPORT
-#else
- #ifndef LIBASSERT_EXPORT
-  #ifdef libassert_lib_EXPORTS
-   /* We are building this library */
-   #define LIBASSERT_EXPORT LIBASSERT_EXPORT_ATTR
-  #else
-   /* We are using this library */
-   #define LIBASSERT_EXPORT LIBASSERT_IMPORT_ATTR
-  #endif
- #endif
-#endif
-
-#define LIBASSERT_IS_CLANG 0
-#define LIBASSERT_IS_GCC 0
-#define LIBASSERT_IS_MSVC 0
-
-#if defined(__clang__)
- #undef LIBASSERT_IS_CLANG
- #define LIBASSERT_IS_CLANG 1
-#elif defined(__GNUC__) || defined(__GNUG__)
- #undef LIBASSERT_IS_GCC
- #define LIBASSERT_IS_GCC 1
-#elif defined(_MSC_VER)
- #undef LIBASSERT_IS_MSVC
- #define LIBASSERT_IS_MSVC 1
- #include <iso646.h> // alternative operator tokens are standard but msvc requires the include or /permissive- or /Za
-#else
- #error "Libassert: Unsupported compiler"
-#endif
-
-#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
- #define LIBASSERT_PFUNC __extension__ __PRETTY_FUNCTION__
- #define LIBASSERT_ATTR_COLD     [[gnu::cold]]
- #define LIBASSERT_ATTR_NOINLINE [[gnu::noinline]]
- #define LIBASSERT_UNREACHABLE_CALL __builtin_unreachable()
-#else
- #define LIBASSERT_PFUNC __FUNCSIG__
- #define LIBASSERT_ATTR_COLD
- #define LIBASSERT_ATTR_NOINLINE __declspec(noinline)
- #define LIBASSERT_UNREACHABLE_CALL __assume(false)
-#endif
-
-#if LIBASSERT_IS_MSVC
- #define LIBASSERT_STRONG_EXPECT(expr, value) (expr)
-#elif defined(__clang__) && __clang_major__ >= 11 || __GNUC__ >= 9
- #define LIBASSERT_STRONG_EXPECT(expr, value) __builtin_expect_with_probability((expr), (value), 1)
-#else
- #define LIBASSERT_STRONG_EXPECT(expr, value) __builtin_expect((expr), (value))
-#endif
-
-// deal with gcc shenanigans
-// at one point their std::string's move assignment was not noexcept even in c++17
-// https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
-#if defined(_GLIBCXX_USE_CXX11_ABI)
- // NOLINTNEXTLINE(misc-include-cleaner)
- #define LIBASSERT_GCC_ISNT_STUPID _GLIBCXX_USE_CXX11_ABI
-#else
- // assume others target new abi by default - homework
- #define LIBASSERT_GCC_ISNT_STUPID 1
-#endif
 
 // always_false is just convenient to use here
 #define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
 
-#if LIBASSERT_IS_MSVC
- #pragma warning(push)
- // warning C4251: using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for
- // some reason
- // 4275 is the same thing but for base classes
- #pragma warning(disable: 4251; disable: 4275)
-#endif
 
-#if LIBASSERT_IS_GCC || __cplusplus >= 2020002L
- // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
- #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
-#else
- // clang properly eats the comma with ##__VA_ARGS__
- #define LIBASSERT_VA_ARGS(...) , ##__VA_ARGS__
-#endif
 
 // =====================================================================================================================
 // || Core utilities                                                                                                  ||
