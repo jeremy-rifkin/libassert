@@ -10,20 +10,17 @@
 // || Preprocessor stuff                                                                                              ||
 // =====================================================================================================================
 
-
-// Validate that we are using a C++17 or newer compiler.
-#if defined(_MSVC_LANG) && _MSVC_LANG < 201703L
-    #error "libassert requires C++17 or newer"
-#elif !defined(_MSVC_LANG) && __cplusplus < 201703L
-    #pragma error "libassert requires C++17 or newer"
-#endif
-
-
 // Set the C++ version number based on if we are on a dumb compiler like MSVC or not.
 #ifdef _MSVC_LANG
     #define LIBASSERT_CPLUSPLUS _MSVC_LANG
 #else
     #define LIBASSERT_CPLUSPLUS __cplusplus
+#endif
+
+
+// Validate that we are using a C++17 or newer compiler.
+#if LIBASSERT_CPLUSPLUS < 201703L
+    #error "libassert requires C++17 or newer"
 #endif
 
 
@@ -152,7 +149,18 @@
 /// C++20 feature support.
 ///
 
+#if defined(__cpp_conditional_explicit) && __cpp_conditional_explicit >= 201806L
+    #define LIBASSERT_CPP20_EXPLICIT_BOOL(expr) explicit(expr)
+#else
+    #define LIBASSERT_CPP20_EXPLICIT_BOOL(expr) explicit
+#endif
 
+
+#if LIBASSERT_STD_VER >= 20
+    #define LIBASSERT_CPP20_CONSTEXPR constexpr
+#else
+    #define LIBASSERT_CPP20_CONSTEXPR
+#endif
 
 
 ///
@@ -167,11 +175,19 @@
 #endif
 
 
-#ifdef __cpp_if_consteval
+#if defined(__cpp_if_consteval) && __cpp_if_consteval >= 202106L
     #define LIBASSERT_IF_CONSTEVAL if consteval
 #else
     #define LIBASSERT_IF_CONSTEVAL if constexpr
 #endif
+
+
+#if LIBASSERT_STD_VER >= 23
+    #define LIBASSERT_CONSTEXPR23 constexpr
+#else
+    #define LIBASSERT_CONSTEXPR23
+#endif
+
 
 
 ///
