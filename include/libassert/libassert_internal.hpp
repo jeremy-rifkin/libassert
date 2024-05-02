@@ -10,6 +10,7 @@
 // || Preprocessor stuff                                                                                              ||
 // =====================================================================================================================
 
+
 // Validate that we are using a C++17 or newer compiler.
 #if defined(_MSVC_LANG) && _MSVC_LANG < 201703L
     #error "libassert requires C++17 or newer"
@@ -17,12 +18,14 @@
     #pragma error "libassert requires C++17 or newer"
 #endif
 
+
 // Set the C++ version number based on if we are on a dumb compiler like MSVC or not.
 #ifdef _MSVC_LANG
     #define LIBASSERT_CPLUSPLUS _MSVC_LANG
 #else
     #define LIBASSERT_CPLUSPLUS __cplusplus
 #endif
+
 
 // LIBASSERT_STRINGIFY
 //
@@ -33,6 +36,7 @@
     #define LIBASSERT_STRINGIFY(x) LIBASSERT_STRINGIFYIMPL(x)
     #define LIBASSERT_STRINGIFYIMPL(x) #x
 #endif
+
 
 // Here we assign the current C++ standard number to LIBASSERT_STD_VER if it is not already defined.
 // Currently this check assumes that the base version is C++17 and if the version number is greater than
@@ -123,9 +127,9 @@
 
 // Check if we have __has_cpp_attribute support.
 #ifdef __has_cpp_attribute
-#  define LIBASSERT_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
+    #define LIBASSERT_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
 #else
-#  define LIBASSERT_HAS_CPP_ATTRIBUTE(x) 0
+    #define LIBASSERT_HAS_CPP_ATTRIBUTE(x) 0
 #endif
 
 
@@ -204,6 +208,8 @@
     #define LIBASSERT_USE_CONSTEVAL 0
 #endif
 
+
+// If we have consteval support, define the LIBASSERT_CONSTEVAL macro to use consteval.
 #if LIBASSERT_USE_CONSTEVAL
     #define LIBASSERT_CONSTEVAL consteval
     #define LIBASSERT_CONSTEXPR20 constexpr
@@ -222,9 +228,11 @@
 #if defined(__cpp_constexpr) && __cpp_constexpr >= 202211L
     #define LIBASSERT_CONSTEXPR23_STATIC_VAR static constexpr
 #else
-    #define LIBASSERT_CONSTEXPR23_STATIC_VAR
+    #define LIBASSERT_CONSTEXPR23_STATIC_VAR constexpr
 #endif
 
+
+// Permits the use of if consteval in C++23.
 #ifdef __cpp_if_consteval
     #define LIBASSERT_IF_CONSTEVAL if consteval
 #else
@@ -236,34 +244,40 @@
 /// C++20 functionality wrappers.
 ///
 
+// Check if we can use std::is_constant_evaluated.
 #ifdef __has_include
-    # if __has_include(<version>)
-        #  include <version>
-        #  ifdef __cpp_lib_is_constant_evaluated
-            #   include <type_traits>
-            #   define LIBASSERT_HAS_IS_CONSTANT_EVALUATED
-        #  endif
-    # endif
+    #if __has_include(<version>)
+        #include <version>
+        #ifdef __cpp_lib_is_constant_evaluated
+            #include <type_traits>
+            #define LIBASSERT_HAS_IS_CONSTANT_EVALUATED
+        #endif
+    #endif
 #endif
 
+
+// Check if we have the builtin __builtin_is_constant_evaluated.
 #ifdef __has_builtin
-    #  if __has_builtin(__builtin_is_constant_evaluated)
-        #    define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
-    #  endif
+    #if __has_builtin(__builtin_is_constant_evaluated)
+        #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+    #endif
 #endif
 
-// GCC 9 and later has __builtin_is_constant_evaluated
+
+// GCC 9.1+ and later has __builtin_is_constant_evaluated
 #if (__GNUC__ >= 9) && !defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
-    #  define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+    #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
-// Visual Studio 2019 and later supports __builtin_is_constant_evaluated
+
+// Visual Studio 2019 (19.25) and later supports __builtin_is_constant_evaluated
 #if defined(_MSC_FULL_VER) && (_MSC_FULL_VER >= 192528326)
-    #  define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+    #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
 
 // Add a helper function for support to C++20's std::is_constant_evaluated.
+// Works with C++17 under GCC 9.1+, Clang 9+, and MSVC 19.25.
 namespace libassert::support
 {
     constexpr bool is_constant_evaluated() noexcept
