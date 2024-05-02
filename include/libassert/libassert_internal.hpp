@@ -27,17 +27,6 @@
 #endif
 
 
-// LIBASSERT_STRINGIFY
-//
-// Example usage:
-//     printf("Line: %s", LIBASSERT_STRINGIFY(__LINE__));
-//
-#ifndef LIBASSERT_STRINGIFY
-    #define LIBASSERT_STRINGIFY(x) LIBASSERT_STRINGIFYIMPL(x)
-    #define LIBASSERT_STRINGIFYIMPL(x) #x
-#endif
-
-
 // Here we assign the current C++ standard number to LIBASSERT_STD_VER if it is not already defined.
 // Currently this check assumes that the base version is C++17 and if the version number is greater than
 // 202303L then we assume that we are using C++26. Currently, not every compiler has a defined value for C++26
