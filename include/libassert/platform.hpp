@@ -51,7 +51,6 @@
 ///
 
 
-// Detect Clang compiler.
 #if defined(__clang__) && !defined(__ibmxl__)
     #define LIBASSERT_IS_CLANG 1
     #define LIBASSERT_CLANG_VERSION (__clang_major__ * 100 + __clang_minor__)
@@ -61,7 +60,6 @@
 #endif
 
 
-// Detect GCC compiler.
 #if (defined(__GNUC__) || defined(__GNUG__)) && !defined(__clang__) && !defined(__INTEL_COMPILER)
     #define LIBASSERT_IS_GCC 1
     #define LIBASSERT_GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
@@ -71,11 +69,10 @@
 #endif
 
 
-// Detect MSVC compiler.
 #if defined(_MSC_VER)
     #define LIBASSERT_IS_MSVC 1
     #define LIBASSERT_MSVC_VERSION _MSC_VER
-#include <iso646.h> // alternative operator tokens are standard but msvc requires the include or /permissive- or /Za
+    #include <iso646.h> // alternative operator tokens are standard but msvc requires the include or /permissive- or /Za
 #else
     #define LIBASSERT_IS_MSVC 0
     #define LIBASSERT_MSVC_VERSION 0
@@ -86,7 +83,7 @@
 /// Detect standard library versions.
 ///
 
-// Detect libstdc++ version.
+// libstdc++
 #ifdef _GLIBCXX_RELEASE
     #define LIBASSERT_GLIBCXX_RELEASE _GLIBCXX_RELEASE
 #else
@@ -94,7 +91,6 @@
 #endif
 
 
-// Detect libc++ version.
 #ifdef _LIBCPP_VERSION
     #define LIBASSERT_LIBCPP_VERSION _LIBCPP_VERSION
 #else
@@ -102,7 +98,6 @@
 #endif
 
 
-// Detect the version number of __cplusplus.
 #ifdef _MSVC_LANG
     #define LIBASSERT_CPLUSPLUS _MSVC_LANG
 #else
@@ -114,7 +109,6 @@
 /// Helper macros for compiler attributes.
 ///
 
-// Check if we have __has_cpp_attribute support.
 #ifdef __has_cpp_attribute
     #define LIBASSERT_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
 #else
@@ -126,7 +120,6 @@
 /// Compiler attribute support.
 ///
 
-// Check if we have C++20's nodiscard("reason") attribute.
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(nodiscard) && LIBASSERT_STD_VER >= 20
     #define LIBASSERT_ATTR_NODISCARD_MSG(msg) [[nodiscard(msg)]]
 #else // Assume we have normal C++17 nodiscard support.
@@ -134,29 +127,20 @@
 #endif
 
 
-// Check if we have C++20's likely attribute.
-// Clang and GCC's builtin_expect compiler intrinsic appears to work 1:1 with C++20's likely attribute.
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(likely)
     #define LIBASSERT_LIKELY [[likely]]
-#elif defined(__GNUC__) || defined(__clang__)
-    #define LIBASSERT_ATTR_LIKELY __builtin_expect(!!(expr), 1)
 #else
     #define LIBASSERT_ATTR_LIKELY
 #endif
 
 
-// Check if we have C++20's unlikely attribute.
-// Clang and GCC's builtin_expect compiler intrinsic appears to work 1:1 with C++20's unlikely attribute.
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(unlikely)
     #define LIBASSERT_ATTR_UNLIKELY [[unlikely]]
-#elif defined(__GNUC__) || defined(__clang__)
-    #define LIBASSERT_ATTR_UNLIKELY __builtin_expect(!!(expr), 0)
 #else
     #define LIBASSERT_ATTR_UNLIKELY
 #endif
 
 
-// Check if we have C++20's no_unique_address attribute.
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(no_unique_address)
     #define LIBASSERT_ATTR_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #else
@@ -164,48 +148,10 @@
 #endif
 
 
-// Check if we have C++23's assume attribute.
-#if LIBASSERT_HAS_CPP_ATTRIBUTE(assume)
-    #define LIBASSERT_ATTR_ASSUME(expr) [[assume(expr)]]
-#else
-    #define LIBASSERT_ATTR_ASSUME(expr)
-#endif
-
-
 ///
 /// C++20 feature support.
 ///
 
-// Detect that we have access to consteval, C++20 constexpr extensions, and std::is_constant_evaluated.
-#if !defined(__cpp_lib_is_constant_evaluated)
-    #define LIBASSERT_USE_CONSTEVAL 0
-#elif LIBASSERT_CPLUSPLUS < 201709L
-    #define LIBASSERT_USE_CONSTEVAL 0
-#elif LIBASSERT_GLIBCXX_RELEASE && LIBASSERT_GLIBCXX_RELEASE < 10
-    #define LIBASSERT_USE_CONSTEVAL 0
-#elif LIBASSERT_LIBCPP_VERSION && LIBASSERT_LIBCPP_VERSION < 10000
-    #define LIBASSERT_USE_CONSTEVAL 0
-#elif defined(__apple_build_version__) && __apple_build_version__ < 14000029L
-    #define LIBASSERT_USE_CONSTEVAL 0  // consteval is broken in Apple clang < 14.
-#elif LIBASSERT_MSC_VERSION && LIBASSERT_MSC_VERSION < 1929
-    #define LIBASSERT_USE_CONSTEVAL 0  // consteval is broken in MSVC VS2019 < 16.10.
-#elif defined(__cpp_consteval)
-    #define LIBASSERT_USE_CONSTEVAL 1
-#elif LIBASSERT_GCC_VERSION >= 1002 || LIBASSERT_CLANG_VERSION >= 1101
-    #define LIBASSERT_USE_CONSTEVAL 1
-#else
-    #define LIBASSERT_USE_CONSTEVAL 0
-#endif
-
-
-// If we have consteval support, define the LIBASSERT_CONSTEVAL macro to use consteval.
-#if LIBASSERT_USE_CONSTEVAL
-    #define LIBASSERT_CONSTEVAL consteval
-    #define LIBASSERT_CONSTEXPR20 constexpr
-#else
-    #define LIBASSERT_CONSTEVAL
-    #define LIBASSERT_CONSTEXPR20
-#endif
 
 
 
@@ -221,7 +167,6 @@
 #endif
 
 
-// Permits the use of if consteval in C++23.
 #ifdef __cpp_if_consteval
     #define LIBASSERT_IF_CONSTEVAL if consteval
 #else
@@ -265,34 +210,17 @@
 #endif
 
 
-// Add a helper function for support to C++20's std::is_constant_evaluated.
-// Works with C++17 under GCC 9.1+, Clang 9+, and MSVC 19.25.
-namespace libassert::support
-{
-    constexpr bool is_constant_evaluated() noexcept
-    {
-#if defined(LIBASSERT_HAS_IS_CONSTANT_EVALUATED)
-        return std::is_constant_evaluated();
-#elif defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
-        return __builtin_is_constant_evaluated();
-#else
-        return false;
-#endif
-    }
-}
-
-
 ///
 /// General project macros
 ///
 
 
 #ifdef _WIN32
-#define LIBASSERT_EXPORT_ATTR __declspec(dllexport)
-#define LIBASSERT_IMPORT_ATTR __declspec(dllimport)
+    #define LIBASSERT_EXPORT_ATTR __declspec(dllexport)
+    #define LIBASSERT_IMPORT_ATTR __declspec(dllimport)
 #else
-#define LIBASSERT_EXPORT_ATTR __attribute__((visibility("default")))
-#define LIBASSERT_IMPORT_ATTR __attribute__((visibility("default")))
+    #define LIBASSERT_EXPORT_ATTR __attribute__((visibility("default")))
+    #define LIBASSERT_IMPORT_ATTR __attribute__((visibility("default")))
 #endif
 
 #ifdef LIBASSERT_STATIC_DEFINE
@@ -341,22 +269,31 @@ namespace libassert::support
     #define LIBASSERT_GCC_ISNT_STUPID 1
 #endif
 
-#if LIBASSERT_IS_MSVC
-#pragma warning(push)
-// warning C4251: using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for
-// some reason
-// 4275 is the same thing but for base classes
-#pragma warning(disable: 4251; disable: 4275)
-#endif
 
 #if LIBASSERT_IS_GCC || LIBASSERT_STD_VER >= 20
-
-// __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
-#define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
+    // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
+    #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
 #else
-// clang properly eats the comma with ##__VA_ARGS__
-#define LIBASSERT_VA_ARGS(...) , ##__VA_ARGS__
+    // clang properly eats the comma with ##__VA_ARGS__
+    #define LIBASSERT_VA_ARGS(...) , ##__VA_ARGS__
 #endif
+
+
+// Add a helper function for support to C++20's std::is_constant_evaluated.
+// Works with C++17 under GCC 9.1+, Clang 9+, and MSVC 19.25.
+namespace libassert::support
+{
+    constexpr bool is_constant_evaluated() noexcept
+    {
+#if defined(LIBASSERT_HAS_IS_CONSTANT_EVALUATED)
+        return std::is_constant_evaluated();
+#elif defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+        return __builtin_is_constant_evaluated();
+#else
+        return false;
+#endif
+    }
+}
 
 
 #endif // LIBASSERT_INTERNAL_HPP
