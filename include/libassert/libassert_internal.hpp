@@ -128,9 +128,9 @@
 
 // Check if we have C++20's nodiscard("reason") attribute.
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(nodiscard) && LIBASSERT_STD_VER >= 20
-    #define LIBASSERT_NODISCARD_MSG(msg) [[nodiscard(msg)]]
+    #define LIBASSERT_ATTR_NODISCARD_MSG(msg) [[nodiscard(msg)]]
 #else // Assume we have normal C++17 nodiscard support.
-    #define LIBASSERT_NODISCARD_MSG(msg) [[nodiscard]]
+    #define LIBASSERT_ATTR_NODISCARD_MSG(msg) [[nodiscard]]
 #endif
 
 
@@ -139,36 +139,36 @@
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(likely)
     #define LIBASSERT_LIKELY [[likely]]
 #elif defined(__GNUC__) || defined(__clang__)
-    #define LIBASSERT_LIKELY __builtin_expect(!!(expr), 1)
+    #define LIBASSERT_ATTR_LIKELY __builtin_expect(!!(expr), 1)
 #else
-    #define LIBASSERT_LIKELY
+    #define LIBASSERT_ATTR_LIKELY
 #endif
 
 
 // Check if we have C++20's unlikely attribute.
 // Clang and GCC's builtin_expect compiler intrinsic appears to work 1:1 with C++20's unlikely attribute.
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(unlikely)
-    #define LIBASSERT_UNLIKELY [[unlikely]]
+    #define LIBASSERT_ATTR_UNLIKELY [[unlikely]]
 #elif defined(__GNUC__) || defined(__clang__)
-    #define LIBASSERT_UNLIKELY __builtin_expect(!!(expr), 0)
+    #define LIBASSERT_ATTR_UNLIKELY __builtin_expect(!!(expr), 0)
 #else
-    #define LIBASSERT_UNLIKELY
+    #define LIBASSERT_ATTR_UNLIKELY
 #endif
 
 
 // Check if we have C++20's no_unique_address attribute.
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(no_unique_address)
-    #define LIBASSERT_NO_UNIQUE_ADDRESS [[no_unique_address]]
+    #define LIBASSERT_ATTR_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #else
-    #define LIBASSERT_NO_UNIQUE_ADDRESS
+    #define LIBASSERT_ATTR_NO_UNIQUE_ADDRESS
 #endif
 
 
 // Check if we have C++23's assume attribute.
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(assume)
-    #define LIBASSERT_ASSUME(expr) [[assume(expr)]]
+    #define LIBASSERT_ATTR_ASSUME(expr) [[assume(expr)]]
 #else
-    #define LIBASSERT_ASSUME(expr)
+    #define LIBASSERT_ATTR_ASSUME(expr)
 #endif
 
 
