@@ -87,7 +87,7 @@ target_sources(
   ${target_name} PRIVATE
   # include
   include/libassert/assert.hpp
-        include/libassert/platform.hpp
+  include/libassert/platform.hpp
 )
 
 # add /src files to target

@@ -57,11 +57,11 @@
 #define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
 
 #if LIBASSERT_IS_MSVC
-#pragma warning(push)
+ #pragma warning(push)
 // warning C4251: using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for
 // some reason
 // 4275 is the same thing but for base classes
-#pragma warning(disable: 4251; disable: 4275)
+ #pragma warning(disable: 4251; disable: 4275)
 #endif
 
 

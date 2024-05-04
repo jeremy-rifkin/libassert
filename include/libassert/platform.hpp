@@ -125,7 +125,7 @@
 
 
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(likely)
-    #define LIBASSERT_LIKELY [[likely]]
+    #define LIBASSERT_ATTR_LIKELY [[likely]]
 #else
     #define LIBASSERT_ATTR_LIKELY
 #endif
@@ -327,15 +327,14 @@ namespace libassert::support
      *
      * @note Works with C++17 under GCC 9.1+, Clang 9+, and MSVC 19.25.
      */
-    constexpr bool is_constant_evaluated() noexcept
-    {
-#if defined(LIBASSERT_HAS_IS_CONSTANT_EVALUATED)
-        return std::is_constant_evaluated();
-#elif defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
-        return __builtin_is_constant_evaluated();
-#else
-        return false;
-#endif
+    constexpr bool is_constant_evaluated() noexcept {
+        #if defined(LIBASSERT_HAS_IS_CONSTANT_EVALUATED)
+            return std::is_constant_evaluated();
+        #elif defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+            return __builtin_is_constant_evaluated();
+        #else
+            return false;
+        #endif
     }
 }
 
