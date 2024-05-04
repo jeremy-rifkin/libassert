@@ -295,6 +295,21 @@
 #endif
 
 
+// Wrapper macro to allow support for C++26's user generated static_assert messages.
+// The backup message version also allows for the user to provide a backup version that will
+// be used if the compiler does not support user generated messages.
+// More info on user generated static_assert's
+// can be found here: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2741r1.pdf
+#if __cpp_static_assert >= 202306L
+    #define LIBASSERT_USER_STATIC_ASSERT(cond, constant) static_assert(cond, constant)
+    #define LIBASSERT_USER_STATIC_ASSERT_BACKUP_MSG(cond, msg, constant) static_assert(cond, constant)
+#else
+    #define LIBASSERT_USER_STATIC_ASSERT(cond, constant) static_assert(cond)
+    #define LIBASSERT_USER_STATIC_ASSERT_BACKUP_MSG(cond, msg, constant) static_assert(cond, msg)
+#endif
+
+
+
 // Add a helper function for support to C++20's std::is_constant_evaluated.
 // Works with C++17 under GCC 9.1+, Clang 9+, and MSVC 19.25.
 namespace libassert::support
