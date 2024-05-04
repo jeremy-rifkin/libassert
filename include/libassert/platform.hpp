@@ -1,5 +1,5 @@
-#ifndef LIBASSERT_INTERNAL_HPP
-#define LIBASSERT_INTERNAL_HPP
+#ifndef LIBASSERT_PLATFORM_HPP
+#define LIBASSERT_PLATFORM_HPP
 
 // Copyright (c) 2021-2024 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
@@ -156,6 +156,13 @@
 #endif
 
 
+#if defined(__cpp_consteval) && __cpp_consteval >= 201811L
+    #define LIBASSERT_CONSTEVAL consteval
+#else
+    #define LIBASSERT_CONSTEVAL constexpr
+#endif
+
+
 #if LIBASSERT_STD_VER >= 20
     #define LIBASSERT_CPP20_CONSTEXPR constexpr
 #else
@@ -188,41 +195,22 @@
     #define LIBASSERT_CONSTEXPR23
 #endif
 
-
-
 ///
-/// C++20 functionality wrappers.
-///
-
-// Check if we can use std::is_constant_evaluated.
-#ifdef __has_include
-    #if __has_include(<version>)
-        #include <version>
-        #ifdef __cpp_lib_is_constant_evaluated
-            #include <type_traits>
-            #define LIBASSERT_HAS_IS_CONSTANT_EVALUATED
-        #endif
-    #endif
-#endif
+/// C++26 feature support.
+/// 
 
 
-// Check if we have the builtin __builtin_is_constant_evaluated.
-#ifdef __has_builtin
-    #if __has_builtin(__builtin_is_constant_evaluated)
-        #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
-    #endif
-#endif
-
-
-// GCC 9.1+ and later has __builtin_is_constant_evaluated
-#if (__GNUC__ >= 9) && !defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
-    #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
-#endif
-
-
-// Visual Studio 2019 (19.25) and later supports __builtin_is_constant_evaluated
-#if defined(_MSC_FULL_VER) && (_MSC_FULL_VER >= 192528326)
-    #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+// Wrapper macro to allow support for C++26's user generated static_assert messages.
+// The backup message version also allows for the user to provide a backup version that will
+// be used if the compiler does not support user generated messages.
+// More info on user generated static_assert's
+// can be found here: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2741r1.pdf
+#if defined(__cpp_static_assert) && __cpp_static_assert >= 202306L
+    #define LIBASSERT_USER_STATIC_ASSERT(cond, constant) static_assert(cond, constant)
+    #define LIBASSERT_USER_STATIC_ASSERT_BACKUP_MSG(cond, msg, constant) static_assert(cond, constant)
+#else
+    #define LIBASSERT_USER_STATIC_ASSERT(cond, constant) static_assert(cond)
+    #define LIBASSERT_USER_STATIC_ASSERT_BACKUP_MSG(cond, msg, constant) static_assert(cond, msg)
 #endif
 
 
@@ -295,25 +283,50 @@
 #endif
 
 
-// Wrapper macro to allow support for C++26's user generated static_assert messages.
-// The backup message version also allows for the user to provide a backup version that will
-// be used if the compiler does not support user generated messages.
-// More info on user generated static_assert's
-// can be found here: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2741r1.pdf
-#if __cpp_static_assert >= 202306L
-    #define LIBASSERT_USER_STATIC_ASSERT(cond, constant) static_assert(cond, constant)
-    #define LIBASSERT_USER_STATIC_ASSERT_BACKUP_MSG(cond, msg, constant) static_assert(cond, constant)
-#else
-    #define LIBASSERT_USER_STATIC_ASSERT(cond, constant) static_assert(cond)
-    #define LIBASSERT_USER_STATIC_ASSERT_BACKUP_MSG(cond, msg, constant) static_assert(cond, msg)
+///
+/// C++20 functionality wrappers.
+///
+
+// Check if we can use std::is_constant_evaluated.
+#ifdef __has_include
+    #if __has_include(<version>)
+        #include <version>
+        #ifdef __cpp_lib_is_constant_evaluated
+            #include <type_traits>
+            #define LIBASSERT_HAS_IS_CONSTANT_EVALUATED
+        #endif
+    #endif
 #endif
 
 
+// Check if we have the builtin __builtin_is_constant_evaluated.
+#ifdef __has_builtin
+    #if __has_builtin(__builtin_is_constant_evaluated)
+        #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+    #endif
+#endif
 
-// Add a helper function for support to C++20's std::is_constant_evaluated.
-// Works with C++17 under GCC 9.1+, Clang 9+, and MSVC 19.25.
+
+// GCC 9.1+ and later has __builtin_is_constant_evaluated
+#if (__GNUC__ >= 9) && !defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+    #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+#endif
+
+
+// Visual Studio 2019 (19.25) and later supports __builtin_is_constant_evaluated
+#if defined(_MSC_FULL_VER) && (_MSC_FULL_VER >= 192528326)
+    #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+#endif
+
+
 namespace libassert::support
 {
+    /**
+     * @brief C++17 implementation of is_constant_evaluated that detects whether the function call occurs within a constant-evaluated context. Returns true if the evaluation of the call occurs within the evaluation of an expression or conversion that is manifestly constant-evaluated; otherwise returns false.
+     * @return true if the evaluation of the call occurs within the evaluation of an expression or conversion that is manifestly constant-evaluated; otherwise false.
+     *
+     * @note Works with C++17 under GCC 9.1+, Clang 9+, and MSVC 19.25.
+     */
     constexpr bool is_constant_evaluated() noexcept
     {
 #if defined(LIBASSERT_HAS_IS_CONSTANT_EVALUATED)
@@ -327,4 +340,4 @@ namespace libassert::support
 }
 
 
-#endif // LIBASSERT_INTERNAL_HPP
+#endif // LIBASSERT_PLATFORM_HPP
