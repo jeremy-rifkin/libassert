@@ -206,11 +206,6 @@ if(LIBASSERT_BUILD_TESTING)
       enable_testing()
   endif()
 
-  target_compile_definitions(
-    ${target_name} PUBLIC
-    LIBASSERT_BUILD_TESTING
-  )
-
   # tell unit tests where our files are
   set(LIBASSERT_BINARY_DIR "${PROJECT_BINARY_DIR}")
   set(LIBASSERT_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
@@ -218,5 +213,4 @@ if(LIBASSERT_BUILD_TESTING)
   # include test project
   # add_subdirectory(tests)
   include(tests/CMakeLists.txt)
-
 endif()
