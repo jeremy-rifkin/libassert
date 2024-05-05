@@ -95,13 +95,6 @@
 #endif
 
 
-#ifdef _MSVC_LANG
-    #define LIBASSERT_CPLUSPLUS _MSVC_LANG
-#else
-    #define LIBASSERT_CPLUSPLUS __cplusplus
-#endif
-
-
 ///
 /// Helper macros for compiler attributes.
 ///
