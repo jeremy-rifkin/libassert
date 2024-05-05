@@ -24,7 +24,7 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" \
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}"
            make -j
   build-macos:
     runs-on: macos-14
@@ -44,7 +44,7 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" \
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}"
            make -j
   build-windows:
     runs-on: windows-2022
