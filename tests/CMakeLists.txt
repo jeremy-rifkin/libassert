@@ -81,7 +81,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       Catch2
       GIT_SHALLOW    TRUE
       GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-      GIT_TAG        8ac8190e494a381072c89f5e161b92a08d98b37b # v3.5.3
+      GIT_TAG        4e8d92bf02f7d1c8006a0e7a5ecabd8e62d98502 # v3.6.0
     )
     FetchContent_MakeAvailable(Catch2)
 
