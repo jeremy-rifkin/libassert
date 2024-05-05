@@ -124,93 +124,10 @@
 #endif
 
 
-#if LIBASSERT_HAS_CPP_ATTRIBUTE(likely)
-    #define LIBASSERT_ATTR_LIKELY [[likely]]
-#else
-    #define LIBASSERT_ATTR_LIKELY
-#endif
-
-
-#if LIBASSERT_HAS_CPP_ATTRIBUTE(unlikely)
-    #define LIBASSERT_ATTR_UNLIKELY [[unlikely]]
-#else
-    #define LIBASSERT_ATTR_UNLIKELY
-#endif
-
-
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(no_unique_address)
     #define LIBASSERT_ATTR_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #else
     #define LIBASSERT_ATTR_NO_UNIQUE_ADDRESS
-#endif
-
-
-///
-/// C++20 feature support.
-///
-
-#if defined(__cpp_conditional_explicit) && __cpp_conditional_explicit >= 201806L
-    #define LIBASSERT_CPP20_EXPLICIT_BOOL(expr) explicit(expr)
-#else
-    #define LIBASSERT_CPP20_EXPLICIT_BOOL(expr) explicit
-#endif
-
-
-#if defined(__cpp_consteval) && __cpp_consteval >= 201811L
-    #define LIBASSERT_CONSTEVAL consteval
-#else
-    #define LIBASSERT_CONSTEVAL constexpr
-#endif
-
-
-#if LIBASSERT_STD_VER >= 20
-    #define LIBASSERT_CPP20_CONSTEXPR constexpr
-#else
-    #define LIBASSERT_CPP20_CONSTEXPR
-#endif
-
-
-///
-/// C++23 feature support.
-///
-
-// Permit static constexpr variables in constexpr functions in C++23.
-#if defined(__cpp_constexpr) && __cpp_constexpr >= 202211L
-    #define LIBASSERT_CONSTEXPR23_STATIC_VAR static constexpr
-#else
-    #define LIBASSERT_CONSTEXPR23_STATIC_VAR constexpr
-#endif
-
-
-#if defined(__cpp_if_consteval) && __cpp_if_consteval >= 202106L
-    #define LIBASSERT_IF_CONSTEVAL if consteval
-#else
-    #define LIBASSERT_IF_CONSTEVAL if constexpr
-#endif
-
-
-#if LIBASSERT_STD_VER >= 23
-    #define LIBASSERT_CONSTEXPR23 constexpr
-#else
-    #define LIBASSERT_CONSTEXPR23
-#endif
-
-///
-/// C++26 feature support.
-/// 
-
-
-// Wrapper macro to allow support for C++26's user generated static_assert messages.
-// The backup message version also allows for the user to provide a backup version that will
-// be used if the compiler does not support user generated messages.
-// More info on user generated static_assert's
-// can be found here: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2741r1.pdf
-#if defined(__cpp_static_assert) && __cpp_static_assert >= 202306L
-    #define LIBASSERT_USER_STATIC_ASSERT(cond, constant) static_assert(cond, constant)
-    #define LIBASSERT_USER_STATIC_ASSERT_BACKUP_MSG(cond, msg, constant) static_assert(cond, constant)
-#else
-    #define LIBASSERT_USER_STATIC_ASSERT(cond, constant) static_assert(cond)
-    #define LIBASSERT_USER_STATIC_ASSERT_BACKUP_MSG(cond, msg, constant) static_assert(cond, msg)
 #endif
 
 
