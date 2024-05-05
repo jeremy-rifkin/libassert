@@ -8,6 +8,8 @@ include(cmake/PreventInSourceBuilds.cmake)
 # used to support find_package
 set(package_name "libassert")
 
+set(LIBASSERT_DESIRED_STD "cxx_std_17" CACHE STRING "The C++ standard to use for libassert")
+
 # create base project
 project(
   libassert
@@ -156,7 +158,7 @@ target_include_directories(
 # require C++17 support
 target_compile_features(
   ${target_name}
-  PUBLIC cxx_std_17
+  PUBLIC ${LIBASSERT_DESIRED_STD}
 )
 
 if(LIBASSERT_SANITIZER_BUILD)
