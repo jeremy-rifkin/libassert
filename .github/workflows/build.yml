@@ -26,7 +26,7 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-            -DCMAKE_CXX_STANDARD=${{matrix.cxx-version}}
+            -DCMAKE_CXX_STANDARD=${{matrix.cxx_version}}
            make -j
   build-macos:
     runs-on: macos-14
