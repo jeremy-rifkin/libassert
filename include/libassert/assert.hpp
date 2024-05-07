@@ -1366,7 +1366,7 @@ namespace libassert::detail {
  #pragma warning(pop)
 #endif
 
-#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || (defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL == 0)
+#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
  // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
  #define LIBASSERT_EVAL0(...) __VA_ARGS__
  #define LIBASSERT_EVAL1(...) LIBASSERT_EVAL0(LIBASSERT_EVAL0(LIBASSERT_EVAL0(__VA_ARGS__)))
@@ -1719,7 +1719,7 @@ namespace libassert {
 // non-prefixed versions
 
 #ifndef LIBASSERT_PREFIX_ASSERTIONS
- #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || (defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL == 0)
+ #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
   #define DEBUG_ASSERT(...) LIBASSERT_DEBUG_ASSERT(__VA_ARGS__)
   #define ASSERT(...) LIBASSERT_ASSERT(__VA_ARGS__)
   #define ASSUME(...) LIBASSERT_ASSUME(__VA_ARGS__)

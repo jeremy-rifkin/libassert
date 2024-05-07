@@ -183,13 +183,18 @@
     #define LIBASSERT_GCC_ISNT_STUPID 1
 #endif
 
-
-#if LIBASSERT_IS_GCC || LIBASSERT_STD_VER >= 20
-    // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
-    #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
+#if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL
+ #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR true
 #else
-    // clang properly eats the comma with ##__VA_ARGS__
-    #define LIBASSERT_VA_ARGS(...) , ##__VA_ARGS__
+ #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR false
+#endif
+
+#if (LIBASSERT_IS_GCC || LIBASSERT_STD_VER >= 20) && !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
+ // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
+ #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
+#else
+ // clang properly eats the comma with ##__VA_ARGS__
+ #define LIBASSERT_VA_ARGS(...) , ##__VA_ARGS__
 #endif
 
 
