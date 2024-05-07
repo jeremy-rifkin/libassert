@@ -148,3 +148,9 @@ option(
   OFF
 )
 option(LIBASSERT_USE_EXTERNAL_MAGIC_ENUM "Obtain magic_enum via find_package instead of FetchContent" OFF)
+
+# -- internal --
+
+set(LIBASSERT_DESIRED_CXX_STANDARD cxx_std_17 CACHE STRING "")
+
+mark_as_advanced(LIBASSERT_DESIRED_CXX_STANDARD)
