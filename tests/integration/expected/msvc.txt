@@ -122,7 +122,7 @@ Stack trace:
 
 ===================== [value printing: number formats] =====================
 Debug Assertion failed at integration\integration.cpp:1303: void __cdecl test_class<int>::something_else(void):
-    debug_assert(mask & flags);
+    debug_assert(mask bitand flags);
     Where:
         mask  => 405 0b0000000110010101
         flags => 42 0b0000000000101010
@@ -519,9 +519,9 @@ Stack trace:
 
 ===================== [expression decomposition] =====================
 Debug Assertion failed at integration\integration.cpp:2102: void __cdecl test_class<int>::something_else(void):
-    debug_assert(1 == (1 & 2));
+    debug_assert(1 == (1 bitand 2));
     Where:
-        (1 & 2) => 0
+        (1 bitand 2) => 0
 
 Stack trace:
 # 1 test_class<int>::something_else()
