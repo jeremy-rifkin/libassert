@@ -230,7 +230,7 @@
 
 
 namespace libassert::support {
-    // Note: Works with >C++20 and with C++17 for GCC 9.1+, Clang 9+, and MSVC 19.25+.
+    // Note: Works with >=C++20 and with C++17 for GCC 9.1+, Clang 9+, and MSVC 19.25+.
     constexpr bool is_constant_evaluated() noexcept {
         #if defined(LIBASSERT_HAS_IS_CONSTANT_EVALUATED)
             return std::is_constant_evaluated();
