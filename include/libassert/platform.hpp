@@ -19,7 +19,6 @@
  #error "libassert requires C++17 or newer"
 #endif
 
-#ifndef LIBASSERT_STD_VER
 #if LIBASSERT_CPLUSPLUS >= 202302L
  #define LIBASSERT_STD_VER 23
 #elif LIBASSERT_CPLUSPLUS >= 202002L
@@ -28,7 +27,6 @@
  #define LIBASSERT_STD_VER 17
 #else
  #error "Can't happen"
-#endif
 #endif
 
 ///
