@@ -229,14 +229,8 @@
 #endif
 
 
-namespace libassert::support
-{
-    /**
-     * @brief C++17 implementation of is_constant_evaluated that detects whether the function call occurs within a constant-evaluated context. Returns true if the evaluation of the call occurs within the evaluation of an expression or conversion that is manifestly constant-evaluated; otherwise returns false.
-     * @return true if the evaluation of the call occurs within the evaluation of an expression or conversion that is manifestly constant-evaluated; otherwise false.
-     *
-     * @note Works with C++17 under GCC 9.1+, Clang 9+, and MSVC 19.25.
-     */
+namespace libassert::support {
+    // Note: Works with >C++20 and with C++17 for GCC 9.1+, Clang 9+, and MSVC 19.25+.
     constexpr bool is_constant_evaluated() noexcept {
         #if defined(LIBASSERT_HAS_IS_CONSTANT_EVALUATED)
             return std::is_constant_evaluated();
