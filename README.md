@@ -764,8 +764,7 @@ TEST_CASE("1 + 1 is 2") {
 
 Currently the only macro provided is `ASSERT`, which will perform a `REQUIRE` internally.
 
-This isn't as pretty as I would like, however, it gets the job done. I'd like to support syntax highlighting however
-unfortunately catch2's line wrapping does not take into account ANSI escape sequences at the moment.
+Note: Before v3.6.0 ansi color codes interfere with Catch2's line wrapping so color is disabled on older versions.
 
 ## GoogleTest
 
