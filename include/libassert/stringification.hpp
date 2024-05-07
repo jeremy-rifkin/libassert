@@ -25,6 +25,10 @@
  #include <fmt/format.h>
 #endif
 
+#if LIBASSERT_STD_VER >= 20
+ #include <compare>
+#endif
+
 // =====================================================================================================================
 // || Stringification micro-library                                                                                   ||
 // || Note: There is some stateful stuff behind the scenes related to literal format configuration                    ||

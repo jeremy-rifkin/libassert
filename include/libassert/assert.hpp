@@ -31,10 +31,6 @@
  #include <expected>
 #endif
 
-#if LIBASSERT_STD_VER >= 20
- #include <compare>
-#endif
-
 #if LIBASSERT_IS_MSVC
  #pragma warning(push)
  // warning C4251: using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for
