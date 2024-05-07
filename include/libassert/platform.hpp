@@ -207,7 +207,7 @@
  #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
-namespace libassert::support {
+namespace libassert::detail {
     // Note: Works with >=C++20 and with C++17 for GCC 9.1+, Clang 9+, and MSVC 19.25+.
     constexpr bool is_constant_evaluated() noexcept {
         #if defined(LIBASSERT_HAS_IS_CONSTANT_EVALUATED)
