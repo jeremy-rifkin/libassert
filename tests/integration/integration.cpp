@@ -12,6 +12,10 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#if LIBASSERT_IS_MSVC
+ // alternative operator tokens are standard but msvc requires the include unless /std:c++20 or /permissive- or /Za
+ #include <iso646.h>
+#endif
 
 #include <libassert/assert.hpp>
 
