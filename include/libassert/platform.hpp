@@ -23,24 +23,17 @@
     #error "libassert requires C++17 or newer"
 #endif
 
-
-// Here we assign the current C++ standard number to LIBASSERT_STD_VER if it is not already defined.
-// Currently this check assumes that the base version is C++17 and if the version number is greater than
-// 202303L then we assume that we are using C++26. Currently, not every compiler has a defined value for C++26
-// and to some degree even checking for 202302L is not 100% reliable as some compilers have chosen to not actually define
-// the version number for C++23 until they are fully compliant. Still this is a rare case and should be fine here.
-// TODO: Once C++26 is fully released we should update this so the else instead uses the proper value.
 #ifndef LIBASSERT_STD_VER
-    #if LIBASSERT_CPLUSPLUS <= 201703L
-        #define LIBASSERT_STD_VER 17
-    #elif LIBASSERT_CPLUSPLUS <= 202002L
-        #define LIBASSERT_STD_VER 20
-    #elif LIBASSERT_CPLUSPLUS <= 202302L
-        #define LIBASSERT_STD_VER 23
-    #else
-        #define LIBASSERT_STD_VER 26 // If our version number is higher than 202303L assume we are using C++26
-    #endif // LIBASSERT_CPLUSPLUS
-#endif // LIBASSERT_STD_VER
+#if LIBASSERT_CPLUSPLUS >= 202302L
+ #define LIBASSERT_STD_VER 23
+#elif LIBASSERT_CPLUSPLUS >= 202002L
+ #define LIBASSERT_STD_VER 20
+#elif LIBASSERT_CPLUSPLUS >= 201703L
+ #define LIBASSERT_STD_VER 17
+#else
+ #error "Can't happen"
+#endif
+#endif
 
 
 ///
