@@ -1,8 +1,10 @@
 .vs
 .vscode
 .cache
+.idea
 scratch
 build*
+cmake-build-*
 __pycache__
 compile_commands.json
 CMakeUserPresets.json
