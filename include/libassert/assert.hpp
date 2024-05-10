@@ -23,7 +23,7 @@
 #include <libassert/platform.hpp>
 #include <libassert/utilities.hpp>
 #include <libassert/stringification.hpp>
-#include <libassert/expression_decomposition.hpp>
+#include <libassert/expression-decomposition.hpp>
 
 #include <cpptrace/cpptrace.hpp>
 
