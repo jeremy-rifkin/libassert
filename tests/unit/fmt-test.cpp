@@ -49,3 +49,21 @@ template<> struct libassert::stringifier<S2> {
 TEST(LibassertFmt, FmtPriority) {
     ASSERT(libassert::stringify(S2{42}) == "s2.x=42--");
 }
+
+struct fmtable {
+    int x;
+};
+
+template <> struct fmt::formatter<fmtable>: formatter<string_view> {
+    auto format(const fmtable& f, format_context& ctx) const {
+        return fmt::format_to(ctx.out(), "{{{}}}", f.x);
+    }
+};
+
+TEST(LibassertFmt, FmtContainers) {
+    fmtable f{2};
+    ASSERT(libassert::detail::generate_stringification(f) == "{2}");
+
+    std::vector<fmtable> fvec{{{2}, {3}}};
+    ASSERT(libassert::detail::generate_stringification(fvec) == "std::vector<fmtable>: [{2}, {3}]");
+}

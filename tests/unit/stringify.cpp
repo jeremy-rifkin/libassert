@@ -2,6 +2,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <string_view>
 #include <string>
 #include <tuple>
@@ -36,6 +37,14 @@ void regression01() {
     ASSERT(!b);
     basic_fields fields;
     ASSERT(fields.begin() == fields.end());
+}
+
+struct ostream_printable {
+    int x;
+};
+
+std::ostream& operator<<(std::ostream& os, ostream_printable item) {
+    return os << "{" << item.x << "}";
 }
 
 struct S {};
@@ -143,6 +152,12 @@ int main() {
     ASSERT(generate_stringification(tuple2) == R"(<instance of std::tuple<A, B, C>>)");
     std::tuple<A, B, float, C> tuple3 = {{}, {}, 1.2, {}};
     ASSERT(generate_stringification(tuple3) == R"(std::tuple<A, B, float, C>: [<instance of A>, <instance of B>, 1.20000005, <instance of C>])");
+
+    ostream_printable op{2};
+    ASSERT(generate_stringification(op) == "{2}");
+
+    std::vector<ostream_printable> opvec{{{2}, {3}}};
+    ASSERT(generate_stringification(opvec) == "std::vector<ostream_printable>: [{2}, {3}]");
 
     // error codes
     // customization point objects

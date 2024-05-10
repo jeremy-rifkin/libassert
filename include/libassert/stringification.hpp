@@ -325,6 +325,10 @@ namespace libassert::detail {
         || (stringification::is_tuple_like<T>::value && stringifiable_container<T>())
         || (stringification::adl::is_container<T>::value && stringifiable_container<T>())
         || can_basic_stringify<T>::value
+        || stringification::has_ostream_overload<T>::value
+        #ifdef LIBASSERT_USE_FMT
+        || fmt::is_formattable<T>::value
+        #endif
         || stringifiable_container<T>();
 
     template<typename T, size_t... I> constexpr bool tuple_has_stringifiable_args_core(std::index_sequence<I...>) {
