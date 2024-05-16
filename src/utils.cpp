@@ -1,3 +1,4 @@
+#include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <regex>
@@ -12,7 +13,25 @@
 #include "utils.hpp"
 #include "microfmt.hpp"
 
+#include <libassert/assert.hpp>
+
 namespace libassert::detail {
+    // to save template instantiation work in TUs a variadic stringf is used
+    LIBASSERT_ATTR_COLD
+    std::string bstringf(const char* format, ...) {
+        va_list args1;
+        va_list args2;
+        va_start(args1, format);
+        va_start(args2, format);
+        const int length = vsnprintf(nullptr, 0, format, args1);
+        if(length < 0) { LIBASSERT_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
+        std::string str(length, 0);
+        (void)vsnprintf(str.data(), length + 1, format, args2);
+        va_end(args1);
+        va_end(args2);
+        return str;
+    }
+
     LIBASSERT_ATTR_COLD
     void primitive_assert_impl(
         bool condition,

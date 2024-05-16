@@ -2,6 +2,8 @@
 #define LIBASSERT_UTILITIES_HPP
 
 #include <type_traits>
+#include <string>
+#include <string_view>
 
 #include <libassert/platform.hpp>
 
@@ -62,12 +64,32 @@ namespace libassert::detail {
 namespace libassert::detail {
     [[nodiscard]] LIBASSERT_EXPORT std::string bstringf(const char* format, ...);
 
-    [[nodiscard]] LIBASSERT_EXPORT std::string_view type_name_core(std::string_view signature) noexcept;
+    LIBASSERT_ATTR_COLD [[nodiscard]]
+    constexpr inline std::string_view substring_bounded_by(
+        std::string_view sig,
+        std::string_view l,
+        std::string_view r
+    ) noexcept {
+        auto i = sig.find(l) + l.length();
+        return sig.substr(i, sig.rfind(r) - i);
+    }
 
     template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string_view type_name() noexcept {
-        return type_name_core(LIBASSERT_PFUNC);
+        // Cases to handle:
+        // gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]
+        // clang: std::string_view ns::type_name() [T = int]
+        // msvc:  class std::basic_string_view<char,struct std::char_traits<char> > __cdecl ns::type_name<int>(void)
+        #if LIBASSERT_IS_CLANG
+         return substring_bounded_by(LIBASSERT_PFUNC, "[T = ", "]");
+        #elif LIBASSERT_IS_GCC
+         return substring_bounded_by(LIBASSERT_PFUNC, "[with T = ", "; std::string_view = ");
+        #elif LIBASSERT_IS_MSVC
+         return substring_bounded_by(LIBASSERT_PFUNC, "type_name<", ">(void)");
+        #else
+         return LIBASSERT_PFUNC;
+        #endif
     }
 
     [[nodiscard]] LIBASSERT_EXPORT std::string prettify_type(std::string type);
