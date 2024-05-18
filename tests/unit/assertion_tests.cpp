@@ -11,6 +11,9 @@
 #include <set>
 #include <string>
 #include <vector>
+#if LIBASSERT_IS_MSVC
+ #include <iso646.h>
+#endif
 
 using namespace std::literals;
 
@@ -840,3 +843,23 @@ TEST(LibassertBasic, Panic) {
         )XX"
     );
 }
+
+// basic assertion failures
+// extra diagnostics
+// other kinds of assertions...
+// assumptions...
+// lowercase vs uppercase
+// fmt
+// optimizations vs no optimizations
+// traces
+// path name disambiguation
+// color codes?
+// message logic
+// safe comparisons
+// magic enum
+// todo: unary non-bool
+// value forwarding: lifetimes
+// value forwarding: lvalue references
+// value forwarding: rvalue references
+// recursion / recursion folding
+// Complex type resolution
