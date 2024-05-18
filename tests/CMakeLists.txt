@@ -110,6 +110,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       tests/unit/type_handling.cpp
       tests/unit/stringify.cpp
       tests/unit/fmt-test.cpp
+      tests/unit/assertion_tests.cpp
     )
     foreach(test_file ${unit_test_sources})
       get_filename_component(test_name ${test_file} NAME_WE)
@@ -123,6 +124,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 
     target_link_libraries(lexer PRIVATE GTest::gtest_main)
     target_link_libraries(fmt-test PRIVATE GTest::gtest_main fmt::fmt)
+    target_link_libraries(assertion_tests PRIVATE GTest::gtest_main)
     target_compile_definitions(fmt-test PRIVATE LIBASSERT_USE_FMT)
     target_compile_options(lexer PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
     target_compile_options(fmt-test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
