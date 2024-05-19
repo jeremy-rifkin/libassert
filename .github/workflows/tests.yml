@@ -124,3 +124,5 @@ jobs:
       run: |
            $env:CTEST_OUTPUT_ON_FAILURE=1
            make test
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
