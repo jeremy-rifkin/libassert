@@ -41,8 +41,6 @@ def parse_output(output: str):
             # read until blank line
             while i < len(output_lines) and output_lines[i] != "":
                 line = output_lines[i]
-                if re.match(r"^.+ at .+\.cpp:\d+: .+$", line):
-                    line = re.sub(r"(?<= at ).+\.cpp(?=:\d+: .+$)", "integration/integration.cpp", line)
                 e["lines"].append(line)
                 i += 1
             # read until non blank line

@@ -1,5 +1,5 @@
 ===================== [simple recursion] =====================
-Debug Assertion failed at integration/integration.cpp:501: void rec(int):
+Debug Assertion failed at integration.cpp:501: void rec(int):
     debug_assert(false);
 
 Stack trace:
@@ -21,7 +21,7 @@ Stack trace:
 
 
 ===================== [other recursion] =====================
-Debug Assertion failed at integration/integration.cpp:508: void recursive_a(int):
+Debug Assertion failed at integration.cpp:508: void recursive_a(int):
     debug_assert(false);
 
 Stack trace:
@@ -56,7 +56,7 @@ Stack trace:
 
 
 ===================== [Path differentiation] =====================
-Debug Assertion failed at /mnt/c/Users/rifkin/home/projects/libassert/tests/integration/x/a.cpp:5: void test_path_differentiation_2():
+Debug Assertion failed at x/a.cpp:5: void test_path_differentiation_2():
     debug_assert(false);
 
 Stack trace:
@@ -73,7 +73,7 @@ Stack trace:
 
 
 ===================== [Type cleaning] =====================
-Debug Assertion failed at integration/integration.cpp:3305: void test_class<T>::test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>>&) [with T = int]:
+Debug Assertion failed at integration.cpp:3305: void test_class<T>::test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>>&) [with T = int]:
     debug_assert(map == other);
     Where:
         map   => std::map<std::string, std::vector<std::string_view>>: [["bar", ["b1", "b3", "b5"]], ["foo", ["f1", "f3", "f5"]]]
@@ -91,7 +91,7 @@ Stack trace:
 
 
 ===================== [Complex type resolution] =====================
-Debug Assertion failed at integration/integration.cpp:3602: void test_class<T>::test_complex_typing(const volatile std::vector<std::string>* const&, int*, const char (&)[4], void (complex_typing::S::*)(int, std::string, void***, void* (*)(int), void (* (*)(int))(), void (* (* (*)(int))[5])()), int complex_typing::S::*) [with T = int; std::string = std::string]:
+Debug Assertion failed at integration.cpp:3602: void test_class<T>::test_complex_typing(const volatile std::vector<std::string>* const&, int*, const char (&)[4], void (complex_typing::S::*)(int, std::string, void***, void* (*)(int), void (* (*)(int))(), void (* (* (*)(int))[5])()), int complex_typing::S::*) [with T = int; std::string = std::string]:
     debug_assert(false);
 
 Stack trace:

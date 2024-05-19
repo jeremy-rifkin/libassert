@@ -1,5 +1,5 @@
 ===================== [simple recursion] =====================
-Debug Assertion failed at integration\integration.cpp:501: void __cdecl rec(int):
+Debug Assertion failed at integration.cpp:501: void __cdecl rec(int):
     debug_assert(false);
 
 Stack trace:
@@ -21,7 +21,7 @@ Stack trace:
 
 
 ===================== [other recursion] =====================
-Debug Assertion failed at integration\integration.cpp:508: void __cdecl recursive_a(int):
+Debug Assertion failed at integration.cpp:508: void __cdecl recursive_a(int):
     debug_assert(false);
 
 Stack trace:
@@ -56,7 +56,7 @@ Stack trace:
 
 
 ===================== [Path differentiation] =====================
-Debug Assertion failed at integration\x\a.cpp:5: void __cdecl test_path_differentiation_2(void):
+Debug Assertion failed at x\a.cpp:5: void __cdecl test_path_differentiation_2(void):
     debug_assert(false);
 
 Stack trace:
@@ -73,7 +73,7 @@ Stack trace:
 
 
 ===================== [Type cleaning] =====================
-Debug Assertion failed at integration\integration.cpp:3305: void __cdecl test_class<int>::test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>, std::less<std::string>> &):
+Debug Assertion failed at integration.cpp:3305: void __cdecl test_class<int>::test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>, std::less<std::string>> &):
     debug_assert(map == other);
     Where:
         map   => std::map<std::string, std::vector<std::string_view>, std::less<std::string>>: [["bar", ["b1", "b3", "b5"]], ["foo", ["f1", "f3", "f5"]]]
@@ -91,7 +91,7 @@ Stack trace:
 
 
 ===================== [Complex type resolution] =====================
-Debug Assertion failed at integration\integration.cpp:3602: void __cdecl test_class<int>::test_complex_typing(volatile const std::vector<std::string> *const &, int [], const char (&)[4], void (__cdecl complex_typing::S::* )(int, std::string, void ***, void *(__cdecl *)(int), void (__cdecl *(__cdecl *)(int))(void), void (__cdecl *(*(__cdecl *)(int))[5])(void)), int complex_typing::S::* ):
+Debug Assertion failed at integration.cpp:3602: void __cdecl test_class<int>::test_complex_typing(volatile const std::vector<std::string> *const &, int [], const char (&)[4], void (__cdecl complex_typing::S::* )(int, std::string, void ***, void *(__cdecl *)(int), void (__cdecl *(__cdecl *)(int))(void), void (__cdecl *(*(__cdecl *)(int))[5])(void)), int complex_typing::S::* ):
     debug_assert(false);
 
 Stack trace:
