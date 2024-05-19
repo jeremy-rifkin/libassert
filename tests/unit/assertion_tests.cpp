@@ -3,6 +3,7 @@
 
 #include "utils.hpp"
 #include "microfmt.hpp"
+#include "tokenizer.hpp"
 
 #include <array>
 #include <iostream>
@@ -11,9 +12,6 @@
 #include <set>
 #include <string>
 #include <vector>
-#if LIBASSERT_IS_MSVC
- #include <iso646.h>
-#endif
 
 using namespace std::literals;
 
@@ -80,16 +78,40 @@ std::string prepare(std::string_view string, location loc) {
         auto pos = line.find('|');
         line = line.substr(pos == std::string_view::npos ? 0 : pos + 1);
     }
-    return replace(join(lines, "\n"), "<LOCATION>", microfmt::format("{}:{}: {}", loc.file, loc.line, loc.signature));
+    auto message = replace(
+        join(lines, "\n"),
+        "<LOCATION>",
+        microfmt::format("{}:{}: {}", loc.file, loc.line, loc.signature)
+    );
+    return message;
+}
+
+std::string normalize(std::string message) {
+    using namespace libassert::detail;
+    // TODO: Find a better way to do this, or integrate into normal type normalization rules
+    // msvc does T const
+    replace_all(message, "char const", "const char");
+    // clang does T *
+    replace_all(message, "void *", "void*");
+    replace_all(message, "char *", "char*");
+    // clang does T[N], gcc does T [N]
+    replace_all(message, "int [5]", "int[5]");
+    // msvc includes the std::less
+    replace_all(message, ", std::less<int>", "");
+    replace_all(message, ", std::less<std::string>", "");
+    return message;
 }
 
 #define CHECK(call, expected) \
     do { \
-        location loc = {file, __LINE__, LIBASSERT_PFUNC}; \
+        /* using __builtin_LINE() as source_location to work around */ \
+        /* https://developercommunity.visualstudio.com/t/__builtin_LINE-function-is-reporting-w/10439054 */ \
+        /* and also there seems to be some weirdness with __LINE__ vs __builtin_LINE() on msvc */ \
+        location loc = {file, __builtin_LINE(), LIBASSERT_PFUNC}; \
         WRAP(call); \
         EXPECT_EQ( \
-            assertion_failure_message, \
-            prepare((expected), loc) \
+            prepare((expected), loc), \
+            normalize(assertion_failure_message) \
         ); \
     } while(0)
 
@@ -780,7 +802,7 @@ TEST(LibassertBasic, Containers) {
         |Debug Assertion failed at <LOCATION>:
         |    DEBUG_ASSERT(false, ...);
         |    Extra diagnostics:
-        |        carr => int [5]: [5, 4, 3, 2, 1]
+        |        carr => int[5]: [5, 4, 3, 2, 1]
         )XX"
     );
 }
@@ -844,6 +866,7 @@ TEST(LibassertBasic, Panic) {
     );
 }
 
+// TODO:
 // basic assertion failures
 // extra diagnostics
 // other kinds of assertions...
@@ -863,3 +886,5 @@ TEST(LibassertBasic, Panic) {
 // value forwarding: rvalue references
 // recursion / recursion folding
 // Complex type resolution
+// non-conformant msvc preprocessor
+// source location unit test
