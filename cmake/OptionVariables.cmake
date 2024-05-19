@@ -1,27 +1,6 @@
 # included further down to avoid interfering with our cache variables
 # include(GNUInstallDirs)
 
-
-# ---- Options Summary ----
-
-# ------------------------------------------------------------------------------------------------------
-# | Option                             | Availability  | Default                                       |
-# |====================================|===============|===============================================|
-# | BUILD_SHARED_LIBS                  | Top-Level     | OFF                                           |
-# | BUILD_TESTING                      | Top-Level     | OFF                                           |
-# | CMAKE_INSTALL_INCLUDEDIR           | Top-Level     | include/${package_name}-${PROJECT_VERSION}    |
-# |------------------------------------|---------------|-----------------------------------------------|
-# | LIBASSERT_BUILD_SHARED             | Always        | ${BUILD_SHARED_LIBS}                          |
-# | LIBASSERT_BUILD_TESTING            | Always        | ${BUILD_TESTING} AND ${PROJECT_IS_TOP_LEVEL}  |
-# | LIBASSERT_INCLUDES_WITH_SYSTEM     | Not Top-Level | ON                                            |
-# | LIBASSERT_INSTALL_CMAKEDIR         | Always        | ${CMAKE_INSTALL_LIBDIR}/cmake/${package_name} |
-# | LIBASSERT_USE_EXTERNAL_CPPTRACE    | Always        | OFF                                           |
-# | LIBASSERT_USE_MAGIC_ENUM           | Always        | OFF                                           |
-# ------------------------------------------------------------------------------------------------------
-
-
-# ---- Build Shared ----
-
 # Sometimes it's useful to be able to single out a dependency to be built as
 # static or shared, even if obtained from source
 if(PROJECT_IS_TOP_LEVEL)
@@ -38,14 +17,11 @@ if(LIBASSERT_BUILD_SHARED)
   set(build_type SHARED)
 endif()
 
-
-# ---- Warning Guard ----
-
 # target_include_directories with SYSTEM modifier will request the compiler to
 # omit warnings from the provided paths, if the compiler supports that.
 # This is to provide a user experience similar to find_package when
 # add_subdirectory or FetchContent is used to consume this project.
-set(warning_guard )
+set(warning_guard)
 if(NOT PROJECT_IS_TOP_LEVEL)
   option(
     LIBASSERT_INCLUDES_WITH_SYSTEM
@@ -57,9 +33,6 @@ if(NOT PROJECT_IS_TOP_LEVEL)
     set(warning_guard SYSTEM)
   endif()
 endif()
-
-
-# ---- Enable Testing ----
 
 # By default tests aren't enabled even with BUILD_TESTING=ON unless the library
 # is built as a top level project.
@@ -80,9 +53,6 @@ option(
 set(build_testing)
 mark_as_advanced(LIBASSERT_BUILD_TESTING)
 
-
-# ---- Install Include Directory ----
-
 # Adds an extra directory to the include path by default, so that when you link
 # against the target, you get `<prefix>/include/<package-X.Y.Z` added to your
 # include paths rather than `<prefix>/include`.
@@ -101,14 +71,9 @@ mark_as_advanced(LIBASSERT_BUILD_TESTING)
 #   # marked as advanced in GNUInstallDirs version, so we follow their lead
 #   mark_as_advanced(CMAKE_INSTALL_INCLUDEDIR)
 # endif()
-
-
 # do not include earlier or we can't set CMAKE_INSTALL_INCLUDEDIR above
 # include required for CMAKE_INSTALL_LIBDIR below
 include(GNUInstallDirs)
-
-
-# ---- Install CMake Directory ----
 
 # This allows package maintainers to freely override the installation path for
 # the CMake configs.
@@ -124,19 +89,9 @@ set(
 # depends on CMAKE_INSTALL_LIBDIR which is marked as advanced in GNUInstallDirs
 mark_as_advanced(LIBASSERT_INSTALL_CMAKEDIR)
 
-
-# ---- Use External CppTrace ----
-
 # Enables obtaining cpptrace via find_package instead of using FetchContent to
 # obtain it from the official GitHub repo
-option(
-  LIBASSERT_USE_EXTERNAL_CPPTRACE
-  "Obtain cpptrace via find_package instead of FetchContent"
-  OFF
-)
-
-
-# ---- Use and Package Magic Enum ----
+option(LIBASSERT_USE_EXTERNAL_CPPTRACE "Obtain cpptrace via find_package instead of FetchContent" OFF)
 
 # Enables the use of the magic_enum library in order to provide better
 # diagnostic messages for enum class types.
@@ -152,9 +107,8 @@ option(LIBASSERT_USE_EXTERNAL_MAGIC_ENUM "Obtain magic_enum via find_package ins
 # -- internal --
 
 set(LIBASSERT_DESIRED_CXX_STANDARD cxx_std_17 CACHE STRING "")
-
-mark_as_advanced(LIBASSERT_DESIRED_CXX_STANDARD)
-
-
 option(LIBASSERT_USE_CI_WRAPPER "" OFF)
-mark_as_advanced(LIBASSERT_USE_CI_WRAPPER)
+mark_as_advanced(
+  LIBASSERT_DESIRED_CXX_STANDARD
+  LIBASSERT_USE_CI_WRAPPER
+)
