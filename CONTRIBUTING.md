@@ -17,8 +17,10 @@ too much ultimately but consistency within a codebase is important.
 
 ## Local development
 
-To build the project make a `build/` folder and run `cmake ..`, along with any cmake configurations
-you desire. Then run `make -j`, `ninja test`, or `msbuild assert.sln`.
+The easiest way to develop locally is to run `make build` which will handle cmake invocation and
+build in `build/`. Alternatively you can manually run `cmake ..`, along with any cmake
+configurations you desire in a build folder. Then run `make -j`, `ninja`, or
+`msbuild libassert.sln`.
 
 Some useful configurations:
 - `-DCMAKE_BUILD_TYPE=Debug|Release|RelWithDebInfo`: Build in debug / release / etc.
