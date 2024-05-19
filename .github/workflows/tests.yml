@@ -119,10 +119,10 @@ jobs:
             -DLIBASSERT_BUILD_TESTING=On `
             "-GUnix Makefiles"
            make -j
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
     - name: test
       working-directory: build
       run: |
            $env:CTEST_OUTPUT_ON_FAILURE=1
            make test
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
