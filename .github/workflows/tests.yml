@@ -119,10 +119,11 @@ jobs:
             -DLIBASSERT_BUILD_TESTING=On `
             "-GUnix Makefiles"
            make -j
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
+    # - name: Setup tmate session
+    #   uses: mxschmitt/action-tmate@v3
     - name: test
       working-directory: build
       run: |
+           $env:Path = "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" + $env:Path
            $env:CTEST_OUTPUT_ON_FAILURE=1
            make test
