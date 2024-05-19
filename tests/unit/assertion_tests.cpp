@@ -49,6 +49,7 @@ std::string_view mtrim(const std::string_view s) {
         return "";
     }
     const size_t r = s.find_last_not_of(" ") + 1;
+    ASSERT(r != std::string_view::npos);
     return s.substr(l, r - l);
 }
 
