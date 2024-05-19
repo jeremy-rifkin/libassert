@@ -124,6 +124,5 @@ jobs:
     - name: test
       working-directory: build
       run: |
-           $env:Path = "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" + $env:Path
            $env:CTEST_OUTPUT_ON_FAILURE=1
            make test
