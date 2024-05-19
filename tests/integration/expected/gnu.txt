@@ -56,7 +56,7 @@ Stack trace:
 
 
 ===================== [Path differentiation] =====================
-Debug Assertion failed at x/a.cpp:5: void test_path_differentiation_2():
+Debug Assertion failed at integration/x/a.cpp:5: void test_path_differentiation_2():
     debug_assert(false);
 
 Stack trace:
