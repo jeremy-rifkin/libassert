@@ -10,7 +10,7 @@ if "LD_LIBRARY_PATH" in env:
 else:
     env["LD_LIBRARY_PATH"] = lp
 
-# Workaround for https://github.com/actions/runner-images/issues/8803
+# This script is just a poor workaround for https://github.com/actions/runner-images/issues/8803
 buggy_path = "C:\\Program Files\\Git\\mingw64\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Users\\runneradmin\\bin;"
 if env["PATH"].startswith(buggy_path):
     env["PATH"] = env["PATH"].replace(buggy_path, "", 1)

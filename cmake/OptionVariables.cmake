@@ -77,7 +77,7 @@ option(
   "Override BUILD_TESTING for ${package_name} library"
   ${build_testing}
 )
-set(build_testing )
+set(build_testing)
 mark_as_advanced(LIBASSERT_BUILD_TESTING)
 
 
@@ -154,3 +154,7 @@ option(LIBASSERT_USE_EXTERNAL_MAGIC_ENUM "Obtain magic_enum via find_package ins
 set(LIBASSERT_DESIRED_CXX_STANDARD cxx_std_17 CACHE STRING "")
 
 mark_as_advanced(LIBASSERT_DESIRED_CXX_STANDARD)
+
+
+option(LIBASSERT_USE_CI_WRAPPER "" OFF)
+mark_as_advanced(LIBASSERT_USE_CI_WRAPPER)

@@ -117,10 +117,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
             -DLIBASSERT_BUILD_TESTING=On `
+            -DLIBASSERT_USE_CI_WRAPPER=On `
             "-GUnix Makefiles"
            make -j
-    # - name: Setup tmate session
-    #   uses: mxschmitt/action-tmate@v3
     - name: test
       working-directory: build
       run: |
