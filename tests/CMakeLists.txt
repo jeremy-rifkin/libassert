@@ -120,7 +120,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       target_include_directories(${test_name} PRIVATE src)
       target_compile_features(${test_name} PUBLIC cxx_std_17)
       # add_test(NAME ${test_name} COMMAND ${test_name})
-      add_test(NAME ${test_name} COMMAND ci-wrapper.py $<TARGET_FILE:${test_name}>)
+      add_test(NAME ${test_name} COMMAND python3 ci-wrapper.py $<TARGET_FILE:${test_name}>)
       list(APPEND dsym_targets ${test_name})
     endforeach()
 
