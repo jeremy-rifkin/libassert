@@ -25,8 +25,6 @@ inline std::vector<std::string> split(std::string_view s, std::string_view delim
     return vec;
 }
 
-// https://stackoverflow.com/a/25385766/15675011
-// TODO: template
 constexpr const char * const ws = " \t\n\r\f\v";
 
 // trim from end of string (right)

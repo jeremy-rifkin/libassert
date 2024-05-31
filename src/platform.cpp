@@ -1,9 +1,11 @@
 #include "platform.hpp"
 
+#include <atomic>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <optional>
 #include <string>
 
 #include "common.hpp"
@@ -14,13 +16,16 @@
  #include <io.h>
  #undef min // fucking windows headers, man
  #undef max
-#elif defined(__linux) || defined(__APPLE__) || defined(__unix__)
+#elif IS_LINUX
  #include <sys/ioctl.h>
  #include <unistd.h>
- // NOLINTNEXTLINE(misc-include-cleaner)
- #include <climits> // MAX_PATH
-#else
- #error "Libassert doesn't recognize this system, please open an issue at https://github.com/jeremy-rifkin/libassert"
+ #include <fcntl.h>
+ #include <charconv>
+#elif IS_APPLE
+ #include <sys/ioctl.h>
+ #include <sys/types.h>
+ #include <sys/sysctl.h>
+ #include <unistd.h>
 #endif
 
 #include <libassert/assert.hpp>
@@ -50,6 +55,114 @@ namespace libassert {
          if(ioctl(fd, TIOCGWINSZ, &w) == -1) { return 0; }
          return w.ws_col;
         #endif
+    }
+
+    #if IS_LINUX
+    class file_closer {
+        int fd;
+    public:
+        file_closer(int fd_) : fd(fd_) {}
+        file_closer(const file_closer&) = delete;
+        file_closer(file_closer&&) = delete;
+        file_closer& operator=(const file_closer&) = delete;
+        file_closer& operator=(file_closer&&) = delete;
+        ~file_closer() {
+            if(close(fd) == -1) {
+                perror("Libassert: Something went wrong when closing a file descriptor.");
+            }
+        }
+    };
+    #endif
+
+	LIBASSERT_ATTR_COLD bool is_debugger_present_internal() noexcept {
+        #if IS_WINDOWS
+         return IsDebuggerPresent();
+        #elif IS_LINUX
+         // https://www.man7.org/linux/man-pages/man5/proc.5.html
+         // We're looking at the top of /proc/self/status until we find "TracerPid:"
+         // Sample:
+         //  Name:   cat
+         //  Umask:  0022
+         //  State:  R (running)
+         //  Tgid:   106085
+         //  Ngid:   0
+         //  Pid:    106085
+         //  PPid:   104045
+         //  TracerPid:      0
+         // The name is truncated at 16 characters, so this whole thing should be under 256 chars
+         constexpr std::size_t read_goal = 256;
+         int fd = open("/proc/self/status", O_RDONLY);
+         if(fd == -1) {
+             // something went wrong
+             return false;
+         }
+         file_closer closer(fd);
+         char buffer[read_goal];
+         auto size = read(fd, buffer, read_goal);
+         if(size == -1) {
+             // something went wrong
+             return false;
+         }
+         std::string_view status{buffer, std::size_t(size)};
+         constexpr std::string_view key = "TracerPid:";
+         auto pos = status.find(key);
+         if(pos == std::string_view::npos) {
+             return false;
+         }
+         auto pid_start = status.find_first_not_of(detail::whitespace_chars, pos + key.size());
+         if(pid_start == std::string_view::npos) {
+             return false;
+         }
+         auto pid_end = status.find_first_of(detail::whitespace_chars, pid_start);
+         if(pid_end == std::string_view::npos) {
+             return false;
+         }
+         // since we found a whitespace character after the pid we know the read wasn't somehow weirdly truncated
+         auto tracer_pid = status.substr(pid_start, pid_end - pid_start);
+         int value;
+         if(std::from_chars(tracer_pid.data(), tracer_pid.data() + tracer_pid.size(), value).ec == std::errc{}) {
+             return value != 0;
+         } else {
+             return false;
+         }
+         return false;
+        #else
+         // https://developer.apple.com/library/archive/qa/qa1361/_index.html
+         int mib[4] {CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()};
+         struct kinfo_proc info;
+         info.kp_proc.p_flag = 0;
+         size_t size = sizeof(info);
+         int res = sysctl(mib, sizeof(mib) / sizeof(*mib), &info, &size, NULL, 0);
+         if(res != 0) {
+             // something went wrong, assume false
+             return false;
+         }
+         return info.kp_proc.p_flag & P_TRACED;
+        #endif
+    }
+
+    std::atomic<debugger_check_mode> check_mode = debugger_check_mode::check_once;
+    std::mutex is_debugger_present_mutex;
+    std::optional<bool> cached_is_debugger_present;
+
+    LIBASSERT_ATTR_COLD
+    bool is_debugger_present() noexcept {
+        if(check_mode.load() == debugger_check_mode::check_every_time) {
+            return is_debugger_present_internal();
+        } else {
+            std::unique_lock lock(is_debugger_present_mutex);
+            if(cached_is_debugger_present) {
+                return *cached_is_debugger_present;
+            } else {
+                cached_is_debugger_present = is_debugger_present_internal();
+                return *cached_is_debugger_present;
+            }
+        }
+    }
+
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
+    void set_debugger_check_mode(debugger_check_mode mode) noexcept {
+        check_mode = mode;
     }
 
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed() {
@@ -82,7 +195,6 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {
         std::unique_lock lock(strerror_mutex);
-        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         return strerror(e);
     }
 }

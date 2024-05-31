@@ -142,6 +142,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set(
       binary_sources
       tests/binaries/basic_test.cpp
+      tests/binaries/basic_demo.cpp
       tests/binaries/gtest-demo.cpp
       tests/binaries/catch2-demo.cpp
       tests/binaries/tokens_and_highlighting.cpp
