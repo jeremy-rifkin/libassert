@@ -292,7 +292,7 @@ namespace libassert::detail {
   #else
    #define LIBASSERT_BREAKPOINT() LIBASSERT_ASM_BREAKPOINT("udf #0xfe")
   #endif
- #elif defined(__aarch64__)
+ #elif defined(__aarch64__) || defined(_M_ARM64)
   #define LIBASSERT_BREAKPOINT() LIBASSERT_ASM_BREAKPOINT("brk #0xf000")
  #else
   // some architecture we aren't prepared for
