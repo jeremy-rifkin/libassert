@@ -1,5 +1,5 @@
-#ifndef ASSERT_GTEST_HPP
-#define ASSERT_GTEST_HPP
+#ifndef LIBASSERT_GTEST_HPP
+#define LIBASSERT_GTEST_HPP
 
 #include <gtest/gtest.h>
 

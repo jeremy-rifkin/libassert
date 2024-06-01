@@ -1,5 +1,5 @@
-#ifndef ASSERT_CATCH2_HPP
-#define ASSERT_CATCH2_HPP
+#ifndef LIBASSERT_CATCH2_HPP
+#define LIBASSERT_CATCH2_HPP
 
 #define LIBASSERT_PREFIX_ASSERTIONS
 #include <libassert/assert.hpp>
