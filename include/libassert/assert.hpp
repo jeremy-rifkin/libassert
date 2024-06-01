@@ -696,15 +696,17 @@ namespace libassert {
  #define LIBASSERT_IGNORE_UNUSED_VALUE
 #endif
 
+#define LIBASSERT_BREAKPOINT_IF_DEBUGGING() \
+    do \
+        if(libassert::is_debugger_present()) { \
+            LIBASSERT_BREAKPOINT(); \
+        } \
+    while(0)
+
 #ifdef LIBASSERT_BREAK_ON_FAIL
- #define LIBASSERT_BREAKPOINT_IF_DEBUGGING() \
-     do \
-         if(libassert::is_debugger_present()) { \
-             LIBASSERT_BREAKPOINT(); \
-         } \
-     while(0)
+ #define LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL() LIBASSERT_BREAKPOINT_IF_DEBUGGING()
 #else
- #define LIBASSERT_BREAKPOINT_IF_DEBUGGING()
+ #define LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL()
 #endif
 
 #define LIBASSERT_INVOKE(expr, name, type, failaction, ...) \
@@ -722,7 +724,7 @@ namespace libassert {
         LIBASSERT_WARNING_PRAGMA_POP_GCC \
         if(LIBASSERT_STRONG_EXPECT(!static_cast<bool>(libassert_decomposer.get_value()), 0)) { \
             libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
-            LIBASSERT_BREAKPOINT_IF_DEBUGGING(); \
+            LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
             failaction \
             LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
             if constexpr(sizeof libassert_decomposer > 32) { \
