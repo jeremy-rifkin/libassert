@@ -17,14 +17,14 @@
  #undef min // fucking windows headers, man
  #undef max
 #elif IS_LINUX
+ #include <charconv>
+ #include <fcntl.h>
  #include <sys/ioctl.h>
  #include <unistd.h>
- #include <fcntl.h>
- #include <charconv>
 #elif IS_APPLE
  #include <sys/ioctl.h>
- #include <sys/types.h>
  #include <sys/sysctl.h>
+ #include <sys/types.h>
  #include <unistd.h>
 #endif
 
