@@ -97,15 +97,14 @@ namespace libassert::detail {
         }
     };
 
-    // copied from cppref
-    template<typename T, std::size_t N, std::size_t... I>
-    constexpr std::array<std::remove_cv_t<T>, N> to_array_impl(T(&&a)[N], std::index_sequence<I...>) {
+    // note: the use of U here is mainly to workaround a gcc 8 issue https://godbolt.org/z/bdsWhdGj3
+    template<typename T, typename U, std::size_t N, std::size_t... I>
+    constexpr std::array<std::remove_cv_t<T>, N> to_array_impl(U(&&a)[N], std::index_sequence<I...>) {
         return {{std::move(a[I])...}};
     }
-
-    template<typename T, std::size_t N>
-    constexpr std::array<std::remove_cv_t<T>, N> to_array(T(&&a)[N]) {
-        return to_array_impl(std::move(a), std::make_index_sequence<N>{});
+    template<typename T, typename U, std::size_t N>
+    constexpr std::array<std::remove_cv_t<T>, N> to_array(U(&&a)[N]) {
+        return to_array_impl<T>(std::move(a), std::make_index_sequence<N>{});
     }
 
     template<typename A, typename B>
