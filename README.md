@@ -106,7 +106,7 @@ You can enable the lowercase `debug_assert` and `assert` aliases with `-DLIBASSE
 - Custom failure handlers
 - Catch2/Gtest integrations
 - {fmt} support
-- Programatic breakpoints on assertion failures for more debugger-friendly assertions, more info below
+- Programatic breakpoints on assertion failures for more debugger-friendly assertions, more info [below](#breakpoints)
 
 ## CMake FetchContent Usage
 
