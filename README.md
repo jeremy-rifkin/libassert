@@ -769,6 +769,10 @@ namespace libassert {
 This API mimics the API of [P2514](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2546r3.html), which has
 been accepted to C++26.
 
+A note about `constexpr`: For clang and msvc libassert can use compiler intrinsics, however, for gcc inline assembly is
+required. Inline assembly isn't allowed in constexpr functions pre-C++20, however, gcc supports it with a warning after
+gcc 10 and the library can surpress that warning for gcc 12. <!-- https://godbolt.org/z/ETjePhT3v -->
+
 ## Other Donfigurations
 
 **Defines:**
