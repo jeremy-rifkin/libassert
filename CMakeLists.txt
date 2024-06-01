@@ -163,12 +163,14 @@ if(LIBASSERT_SANITIZER_BUILD)
   add_link_options(-fsanitize=address)
 endif()
 
-if(LIBASSERT_BUILD_TESTING) # TODO: Maybe remove
+if(
+  LIBASSERT_BUILD_TESTING AND NOT (
+    "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 9.0
+  )
+)
   set(LIBASSERT_USE_MAGIC_ENUM ON)
 endif()
 
-# add pre-processor definitions corresponding to CMake options
-# fixme: supposedly generator expressions should work for this
 if(LIBASSERT_USE_MAGIC_ENUM)
   set(MAGIC_ENUM_OPT_INSTALL ON)
   if(LIBASSERT_USE_EXTERNAL_MAGIC_ENUM)

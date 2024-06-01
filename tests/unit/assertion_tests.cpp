@@ -708,10 +708,11 @@ TEST(LibassertBasic, LvalueForwarding) {
     EXPECT_EQ(x, 0);
 }
 
+#ifdef LIBASSERT_USE_MAGIC_ENUM
+enum foo_e { A, B };
+enum class bar_e { A, B };
 TEST(LibassertBasic, EnumHandling) {
-    enum foo { A, B };
-    enum class bar { A, B };
-    foo a = A;
+    foo_e a = A;
     CHECK(
         DEBUG_ASSERT(a != A),
         R"XX(
@@ -721,18 +722,47 @@ TEST(LibassertBasic, EnumHandling) {
         |        a => A
         )XX"
     );
-    bar b = bar::A;
+    bar_e b = bar_e::A;
     CHECK(
-        DEBUG_ASSERT(b != bar::A),
+        DEBUG_ASSERT(b != bar_e::A),
         R"XX(
         |Debug Assertion failed at <LOCATION>:
-        |    DEBUG_ASSERT(b != bar::A);
+        |    DEBUG_ASSERT(b != bar_e::A);
         |    Where:
-        |        b      => A
-        |        bar::A => A
+        |        b        => A
+        |        bar_e::A => A
         )XX"
     );
 }
+#else
+// TODO: Also test this outside of gcc 8
+enum foo_e { A, B };
+enum class bar_e { A, B };
+TEST(LibassertBasic, EnumHandling) {
+    foo_e a = A;
+    CHECK(
+        DEBUG_ASSERT(a != A),
+        R"XX(
+        |Debug Assertion failed at <LOCATION>:
+        |    DEBUG_ASSERT(a != A);
+        |    Where:
+        |        a => enum foo_e: 0
+        |        A => enum foo_e: 0
+        )XX"
+    );
+    bar_e b = bar_e::A;
+    CHECK(
+        DEBUG_ASSERT(b != bar_e::A),
+        R"XX(
+        |Debug Assertion failed at <LOCATION>:
+        |    DEBUG_ASSERT(b != bar_e::A);
+        |    Where:
+        |        b        => enum bar_e: 0
+        |        bar_e::A => enum bar_e: 0
+        )XX"
+    );
+}
+#endif
 
 TEST(LibassertBasic, Containers) {
     std::set<int> a = { 2, 2, 4, 6, 10 };
