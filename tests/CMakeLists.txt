@@ -19,7 +19,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     )
     target_link_libraries(demo PRIVATE libassert-lib)
     target_compile_definitions(demo PRIVATE LIBASSERT_LOWERCASE)
-    if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 9.0))
+    if(LIBASSERT_USE_MAGIC_ENUM)
      target_compile_definitions(demo PRIVATE LIBASSERT_USE_MAGIC_ENUM)
     endif()
     target_compile_features(
@@ -31,7 +31,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       PUBLIC LIBASSERT_SAFE_COMPARISONS
     )
 
-    if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 9.0))
+    if(LIBASSERT_USE_MAGIC_ENUM)
      add_executable(integration tests/integration/integration.cpp tests/integration/a.cpp tests/integration/x/a.cpp)
      # Temporary workaround for Visual Studio 2022 bug with __builtin_LINE() and __builtin_FILE()
      # https://developercommunity.visualstudio.com/t/__builtin_LINE-function-is-reporting-w/10439054?space=62&q=__builtin_function
