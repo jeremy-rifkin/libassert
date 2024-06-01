@@ -199,6 +199,7 @@ endif()
 # ---- Setup Tests ----
 
 if(LIBASSERT_BUILD_TESTING)
+  target_compile_definitions(${target_name} PRIVATE LIBASSERT_BUILD_TESTING)
 
   # need to enable testing in case BUILD_TESTING is disabled
   # ctest expects that the top level project enables testing

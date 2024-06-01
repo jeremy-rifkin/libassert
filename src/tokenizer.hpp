@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "utils.hpp"
+#include "common.hpp"
 
 namespace libassert::detail {
     enum class token_e {

@@ -88,7 +88,7 @@ namespace libassert::detail {
      * string utilities
      */
 
-    LIBASSERT_ATTR_COLD
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
     std::vector<std::string_view> split(std::string_view s, std::string_view delims) {
         std::vector<std::string_view> vec;
         size_t old_pos = 0;
@@ -122,7 +122,7 @@ namespace libassert::detail {
         }
     }
 
-    LIBASSERT_ATTR_COLD
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
     void replace_all(std::string& str, const std::regex& re, std::string_view replacement) {
         std::smatch match;
         std::size_t i = 0;
@@ -133,7 +133,7 @@ namespace libassert::detail {
         }
     }
 
-    LIBASSERT_ATTR_COLD
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
     void replace_all(std::string& str, std::string_view substr, std::string_view replacement) {
         std::string::size_type pos = 0;
         // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)

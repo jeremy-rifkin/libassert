@@ -15,19 +15,7 @@
 
 #include <libassert/assert.hpp>
 
-#if !defined(LIBASSERT_BUILD_TESTING) || defined(LIBASSERT_STATIC_DEFINE)
- #define LIBASSERT_EXPORT_TESTING
-#else
- #ifndef LIBASSERT_EXPORT_TESTING
-  #ifdef libassert_lib_EXPORTS
-   /* We are building this library */
-   #define LIBASSERT_EXPORT_TESTING LIBASSERT_EXPORT_ATTR
-  #else
-   /* We are using this library */
-   #define LIBASSERT_EXPORT_TESTING LIBASSERT_IMPORT_ATTR
-  #endif
- #endif
-#endif
+#include "common.hpp"
 
 namespace libassert::detail {
     // Still present in release mode, nonfatal
@@ -37,7 +25,7 @@ namespace libassert::detail {
      * string utilities
      */
 
-    LIBASSERT_ATTR_COLD
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
     std::vector<std::string_view> split(std::string_view s, std::string_view delims);
 
     template<typename C>
@@ -75,10 +63,10 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     void replace_all_dynamic(std::string& str, std::string_view text, std::string_view replacement);
 
-    LIBASSERT_ATTR_COLD
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
     void replace_all(std::string& str, const std::regex& re, std::string_view replacement);
 
-    LIBASSERT_ATTR_COLD
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
     void replace_all(std::string& str, std::string_view substr, std::string_view replacement);
 
     LIBASSERT_ATTR_COLD

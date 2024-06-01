@@ -23,6 +23,20 @@
 #define BASIC_CYAN   ESC "36m"
 #define BASIC_PURPL  ESC "35m"
 
+#if !defined(LIBASSERT_BUILD_TESTING) || defined(LIBASSERT_STATIC_DEFINE)
+ #define LIBASSERT_EXPORT_TESTING
+#else
+ #ifndef LIBASSERT_EXPORT_TESTING
+  #ifdef libassert_lib_EXPORTS
+   /* We are building this library */
+   #define LIBASSERT_EXPORT_TESTING LIBASSERT_EXPORT_ATTR
+  #else
+   /* We are using this library */
+   #define LIBASSERT_EXPORT_TESTING LIBASSERT_IMPORT_ATTR
+  #endif
+ #endif
+#endif
+
 #define IS_WINDOWS 0
 #define IS_LINUX 0
 #define IS_APPLE 0
