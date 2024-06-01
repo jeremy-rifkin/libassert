@@ -748,7 +748,7 @@ namespace libassert {
 #define LIBASSERT_INVOKE_PANIC(name, type, ...) \
     do { \
         libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
-        LIBASSERT_BREAKPOINT_IF_DEBUGGING(); \
+        LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
         LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, "", __VA_ARGS__) \
         libassert::detail::process_panic( \
             libassert_params \
@@ -805,7 +805,7 @@ namespace libassert {
             /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
             if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
                 libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
-                LIBASSERT_BREAKPOINT_IF_DEBUGGING(); \
+                LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
                 failaction \
                 LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
                 if constexpr(sizeof libassert_decomposer > 32) { \
