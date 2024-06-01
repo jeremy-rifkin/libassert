@@ -101,15 +101,13 @@ namespace libassert::detail {
         return vec;
     }
 
-    constexpr const char * const ws = " \t\n\r\f\v";
-
     LIBASSERT_ATTR_COLD
     std::string_view trim(const std::string_view s) {
-        const size_t l = s.find_first_not_of(ws);
+        const size_t l = s.find_first_not_of(whitespace_chars);
         if(l == std::string_view::npos) {
             return "";
         }
-        const size_t r = s.find_last_not_of(ws) + 1;
+        const size_t r = s.find_last_not_of(whitespace_chars) + 1;
         return s.substr(l, r - l);
     }
 

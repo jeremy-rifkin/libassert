@@ -142,6 +142,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set(
       binary_sources
       tests/binaries/basic_test.cpp
+      tests/binaries/basic_demo.cpp
       tests/binaries/gtest-demo.cpp
       tests/binaries/catch2-demo.cpp
       tests/binaries/tokens_and_highlighting.cpp
@@ -159,6 +160,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     target_compile_options(gtest-demo PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
     target_link_libraries(catch2-demo PRIVATE Catch2::Catch2WithMain)
     target_compile_options(catch2-demo PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
+    target_compile_definitions(basic_demo PRIVATE LIBASSERT_BREAK_ON_FAIL)
 
     if(APPLE)
       foreach(target ${dsym_targets})

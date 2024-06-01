@@ -67,6 +67,8 @@ namespace libassert::detail {
         return a;
     }
 
+    constexpr const char* const whitespace_chars = " \t\n\r\f\v";
+
     LIBASSERT_ATTR_COLD
     std::string_view trim(std::string_view s);
 

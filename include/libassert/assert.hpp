@@ -56,6 +56,13 @@ namespace libassert {
 
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT bool isatty(int fd);
 
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT bool is_debugger_present() noexcept;
+    enum class debugger_check_mode {
+        check_once,
+        check_every_time,
+    };
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void set_debugger_check_mode(debugger_check_mode mode) noexcept;
+
     // returns the type name of T
     template<typename T>
     [[nodiscard]] std::string_view type_name() noexcept {
@@ -689,6 +696,19 @@ namespace libassert {
  #define LIBASSERT_IGNORE_UNUSED_VALUE
 #endif
 
+#define LIBASSERT_BREAKPOINT_IF_DEBUGGING() \
+    do \
+        if(libassert::is_debugger_present()) { \
+            LIBASSERT_BREAKPOINT(); \
+        } \
+    while(0)
+
+#ifdef LIBASSERT_BREAK_ON_FAIL
+ #define LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL() LIBASSERT_BREAKPOINT_IF_DEBUGGING()
+#else
+ #define LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL()
+#endif
+
 #define LIBASSERT_INVOKE(expr, name, type, failaction, ...) \
     /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
     /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
@@ -704,6 +724,7 @@ namespace libassert {
         LIBASSERT_WARNING_PRAGMA_POP_GCC \
         if(LIBASSERT_STRONG_EXPECT(!static_cast<bool>(libassert_decomposer.get_value()), 0)) { \
             libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
+            LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
             failaction \
             LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
             if constexpr(sizeof libassert_decomposer > 32) { \
@@ -727,6 +748,7 @@ namespace libassert {
 #define LIBASSERT_INVOKE_PANIC(name, type, ...) \
     do { \
         libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
+        LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
         LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, "", __VA_ARGS__) \
         libassert::detail::process_panic( \
             libassert_params \
@@ -783,6 +805,7 @@ namespace libassert {
             /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
             if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
                 libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
+                LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
                 failaction \
                 LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
                 if constexpr(sizeof libassert_decomposer > 32) { \

@@ -65,7 +65,7 @@ jobs:
            cmake .. `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
-            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" `
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}"
            msbuild .\libassert.sln
   build-mingw:
     runs-on: windows-2022
