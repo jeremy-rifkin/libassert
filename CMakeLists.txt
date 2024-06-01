@@ -164,7 +164,7 @@ if(LIBASSERT_SANITIZER_BUILD)
 endif()
 
 if(LIBASSERT_BUILD_TESTING) # TODO: Maybe remove
-  set(LIBASSERT_USE_MAGIC_ENUM ON)
+  # set(LIBASSERT_USE_MAGIC_ENUM ON)
 endif()
 
 # add pre-processor definitions corresponding to CMake options
