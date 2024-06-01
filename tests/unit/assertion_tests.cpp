@@ -727,7 +727,7 @@ TEST(LibassertBasic, EnumHandling) {
         DEBUG_ASSERT(b != bar_e::A),
         R"XX(
         |Debug Assertion failed at <LOCATION>:
-        |    DEBUG_ASSERT(b != bar::A);
+        |    DEBUG_ASSERT(b != bar_e::A);
         |    Where:
         |        b        => A
         |        bar_e::A => A
