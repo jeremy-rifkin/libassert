@@ -12,7 +12,7 @@ set(package_name "libassert")
 # create base project
 project(
   libassert
-  VERSION 2.0.2
+  VERSION 2.1.1
   DESCRIPTION "The most over-engineered C++ assertion library"
   HOMEPAGE_URL "https://github.com/jeremy-rifkin/libassert"
   LANGUAGES CXX
@@ -51,7 +51,7 @@ set(LIBASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
 set(LIBASSERT_MAGIC_ENUM_TAG "e55b9b54d5cf61f8e117cafb17846d7d742dd3b4") # v0.9.5
 
 set(LIBASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
-set(LIBASSERT_CPPTRACE_TAG "06226ee2aa6a615a63af9d73d69e522c10093dd2") # v0.6.0
+set(LIBASSERT_CPPTRACE_TAG "06eb15bda66c5d060f45740b179e80be8e355645") # v0.7.1
 
 # obtain cpptrace
 if(LIBASSERT_USE_EXTERNAL_CPPTRACE)
