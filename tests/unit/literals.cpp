@@ -136,16 +136,16 @@ int main() {
     static std::regex int_hex     = std::regex("^0[Xx](?!')(?:'?[\\da-fA-F])+" + optional_integer_suffix + "$");
 
     static std::string digit_sequence = "\\d(?:'?\\d)*";
-    static std::string fractional_constant = microfmt::format("(?:(?:{})?\\.{}|{}\\.)", digit_sequence, digit_sequence, digit_sequence);
+    static std::string fractional_constant = libassert::microfmt::format("(?:(?:{})?\\.{}|{}\\.)", digit_sequence, digit_sequence, digit_sequence);
     static std::string exponent_part = "(?:[Ee][\\+-]?" + digit_sequence + ")";
     static std::string suffix = "[FfLl]";
-    static std::regex float_decimal = std::regex(microfmt::format("^(?:{}{}?|{}{}){}?$",
+    static std::regex float_decimal = std::regex(libassert::microfmt::format("^(?:{}{}?|{}{}){}?$",
                                     fractional_constant, exponent_part,
                                     digit_sequence, exponent_part, suffix));
     static std::string hex_digit_sequence = "[\\da-fA-F](?:'?[\\da-fA-F])*";
-    static std::string hex_frac_const = microfmt::format("(?:(?:{})?\\.{}|{}\\.)", hex_digit_sequence, hex_digit_sequence, hex_digit_sequence);
+    static std::string hex_frac_const = libassert::microfmt::format("(?:(?:{})?\\.{}|{}\\.)", hex_digit_sequence, hex_digit_sequence, hex_digit_sequence);
     static std::string binary_exp = "[Pp][\\+-]?" + digit_sequence;
-    static std::regex float_hex = std::regex(microfmt::format("^0[Xx](?:{}|{}){}{}?$",
+    static std::regex float_hex = std::regex(libassert::microfmt::format("^0[Xx](?:{}|{}){}{}?$",
                                     hex_frac_const, hex_digit_sequence, binary_exp, suffix));
     let matches_any = [&](const std::string& str) {
         let matches = [](const std::string& value, const std::regex& re) {
