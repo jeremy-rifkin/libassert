@@ -1,3 +1,4 @@
+- [libassert 2.1.1](#libassert-211)
 - [libassert 2.1.0](#libassert-210)
 - [libassert 2.0.2](#libassert-202)
 - [libassert 2.0.1](#libassert-201)
@@ -9,6 +10,16 @@
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.1.1
+
+Fixed:
+- ODR issue due to libassert and cpptrace both using the same formatting code https://github.com/jeremy-rifkin/libassert/issues/103
+- Worked around old MSVC ICE
+- False-positive warnings on gcc about null pointers
+
+Other changes:
+- Bumped default cpptrace to v0.7.1
 
 ## libassert 2.1.0
 
