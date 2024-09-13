@@ -82,7 +82,7 @@ std::string prepare(std::string_view string, location loc) {
     auto message = replace(
         join(lines, "\n"),
         "<LOCATION>",
-        microfmt::format("{}:{}: {}", loc.file, loc.line, loc.signature)
+        libassert::microfmt::format("{}:{}: {}", loc.file, loc.line, loc.signature)
     );
     return message;
 }

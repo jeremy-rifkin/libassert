@@ -17,7 +17,7 @@
 // https://github.com/jeremy-rifkin/microfmt
 // Format: {[align][width][:[fill][base]]}  # width: number or {}
 
-namespace microfmt {
+namespace libassert::microfmt {
     namespace detail {
         inline std::uint64_t clz(std::uint64_t value) {
             #ifdef _MSC_VER
