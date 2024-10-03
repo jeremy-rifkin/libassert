@@ -108,13 +108,23 @@ jobs:
     - name: dependencies
       run: |
            pip install icdiff
-    - name: build
+    - name: build msvc
+      if: ${{ matrix.compiler == 'cl' }}
       run: |
            mkdir -p build
            cd build
            cmake .. `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
-            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
+            -DLIBASSERT_BUILD_TESTING=On
+           msbuild .\libassert.sln
+    - name: build clang
+      if: ${{ matrix.compiler == 'clang++' }}
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. `
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} `
+            -T ClangCL `
             -DLIBASSERT_BUILD_TESTING=On
            msbuild .\libassert.sln
     - name: test
