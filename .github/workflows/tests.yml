@@ -124,8 +124,8 @@ jobs:
            cd build
            cmake .. `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
-            -DCMAKE_CXX_COMPILER=clang++ `
-            -DCMAKE_C_COMPILER=clang `
+            -DCMAKE_CXX_COMPILER="C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/Llvm/bin/clang++" `
+            -DCMAKE_C_COMPILER="C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/Llvm/bin/clang" `
             -DLIBASSERT_BUILD_TESTING=On
            msbuild .\libassert.sln
     - name: test
