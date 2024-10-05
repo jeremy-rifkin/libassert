@@ -124,7 +124,8 @@ jobs:
            cd build
            cmake .. `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
-            -T ClangCL `
+            -DCMAKE_CXX_COMPILER=clang++ `
+            -DCMAKE_C_COMPILER=clang `
             -DLIBASSERT_BUILD_TESTING=On
            msbuild .\libassert.sln
     - name: test
