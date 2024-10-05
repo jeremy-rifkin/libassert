@@ -49,7 +49,7 @@
  #define LIBASSERT_GCC_VERSION 0
 #endif
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__) // clang on windows defines _MSC_VER
  #define LIBASSERT_IS_MSVC 1
  #define LIBASSERT_MSVC_VERSION _MSC_VER
 #else
@@ -154,7 +154,7 @@
 
 #if LIBASSERT_IS_MSVC
  #define LIBASSERT_STRONG_EXPECT(expr, value) (expr)
-#elif defined(__clang__) && __clang_major__ >= 11 || __GNUC__ >= 9
+#elif (defined(__clang__) && __clang_major__ >= 11) || __GNUC__ >= 9
  #define LIBASSERT_STRONG_EXPECT(expr, value) __builtin_expect_with_probability((expr), (value), 1)
 #else
  #define LIBASSERT_STRONG_EXPECT(expr, value) __builtin_expect((expr), (value))
@@ -208,7 +208,7 @@
 #endif
 
 // GCC 9.1+ and later has __builtin_is_constant_evaluated
-#if (__GNUC__ >= 9) && !defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+#if defined(__GNUC__) && (__GNUC__ >= 9) && !defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
  #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
