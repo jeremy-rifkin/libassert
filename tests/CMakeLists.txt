@@ -157,6 +157,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       target_link_libraries(${test_name} PRIVATE libassert-lib)
       target_include_directories(${test_name} PRIVATE src)
       target_compile_definitions(${test_name} PRIVATE LIBASSERT_BUILD_TESTING)
+      target_compile_features(${test_name} PUBLIC cxx_std_17)
       list(APPEND dsym_targets ${test_name})
     endforeach()
 
