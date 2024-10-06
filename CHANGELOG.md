@@ -1,3 +1,4 @@
+- [libassert 2.1.2](#libassert-212)
 - [libassert 2.1.1](#libassert-211)
 - [libassert 2.1.0](#libassert-210)
 - [libassert 2.0.2](#libassert-202)
@@ -10,6 +11,13 @@
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.1.2
+
+Changes:
+- Fixed an issue with clang vs MSVC detection on windows https://github.com/jeremy-rifkin/libassert/issues/104
+- Bumped default cpptrace to v0.7.2 to better support older CMake versions https://github.com/jeremy-rifkin/libassert/issues/105
+- Updated to use new cpptrace headers for better build times
 
 ## libassert 2.1.1
 
