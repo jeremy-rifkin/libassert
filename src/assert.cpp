@@ -23,7 +23,8 @@
 #include <utility>
 #include <vector>
 
-#include <cpptrace/cpptrace.hpp>
+#include <cpptrace/basic.hpp>
+#include <cpptrace/exceptions.hpp>
 
 #include "common.hpp"
 #include "utils.hpp"

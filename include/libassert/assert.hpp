@@ -25,7 +25,7 @@
 #include <libassert/stringification.hpp>
 #include <libassert/expression-decomposition.hpp>
 
-#include <cpptrace/cpptrace.hpp>
+#include <cpptrace/basic.hpp>
 
 #ifdef __cpp_lib_expected
  #include <expected>

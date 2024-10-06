@@ -8,7 +8,8 @@
 #include <vector>
 
 #include <libassert/assert.hpp>
-#include <cpptrace/cpptrace.hpp>
+#include <cpptrace/basic.hpp>
+#include <cpptrace/exceptions.hpp>
 
 #include "utils.hpp"
 #include "microfmt.hpp"
