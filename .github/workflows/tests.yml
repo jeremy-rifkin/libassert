@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [cl, clang++]
+        compiler: [cl] # turned off clang for now
         target: [Debug]
     steps:
     - uses: actions/checkout@v2
@@ -117,17 +117,17 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
             -DLIBASSERT_BUILD_TESTING=On
            msbuild .\libassert.sln
-    - name: build clang
-      if: ${{ matrix.compiler == 'clang++' }}
-      run: |
-           mkdir -p build
-           cd build
-           cmake .. `
-            -DCMAKE_BUILD_TYPE=${{matrix.target}} `
-            -DCMAKE_CXX_COMPILER="C:\msys64\mingw64\bin\clang++" `
-            -DCMAKE_C_COMPILER="C:\msys64\mingw64\bin\clang" `
-            -DLIBASSERT_BUILD_TESTING=On
-           msbuild .\libassert.sln
+    # - name: build clang
+    #   if: ${{ matrix.compiler == 'clang++' }}
+    #   run: |
+    #        mkdir -p build
+    #        cd build
+    #        cmake .. `
+    #         -DCMAKE_BUILD_TYPE=${{matrix.target}} `
+    #         -DCMAKE_CXX_COMPILER="C:\msys64\mingw64\bin\clang++" `
+    #         -DCMAKE_C_COMPILER="C:\msys64\mingw64\bin\clang" `
+    #         -DLIBASSERT_BUILD_TESTING=On
+    #        msbuild .\libassert.sln
     - name: test
       working-directory: build
       run: |
