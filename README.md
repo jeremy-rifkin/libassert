@@ -34,7 +34,7 @@
   - [Stringification of Custom Objects](#stringification-of-custom-objects)
   - [Custom Failure Handlers](#custom-failure-handlers-1)
   - [Breakpoints](#breakpoints)
-  - [Other Donfigurations](#other-donfigurations)
+  - [Other Configurations](#other-configurations)
 - [Integration with Test Libraries](#integration-with-test-libraries)
   - [Catch2](#catch2)
   - [GoogleTest](#googletest)
@@ -773,7 +773,7 @@ A note about `constexpr`: For clang and msvc libassert can use compiler intrinsi
 required. Inline assembly isn't allowed in constexpr functions pre-C++20, however, gcc supports it with a warning after
 gcc 10 and the library can surpress that warning for gcc 12. <!-- https://godbolt.org/z/ETjePhT3v -->
 
-## Other Donfigurations
+## Other Configurations
 
 **Defines:**
 
