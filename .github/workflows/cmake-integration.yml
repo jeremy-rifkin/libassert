@@ -16,7 +16,7 @@ jobs:
            cp -rv libassert/tests/fetchcontent-integration .
            mkdir fetchcontent-integration/build
            cd fetchcontent-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG=$tag
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG=$tag -DLIBASSERT_WERROR_BUILD=On
            make
            ./main
   test-linux-findpackage:
@@ -28,7 +28,7 @@ jobs:
            tag=$(git rev-parse --abbrev-ref HEAD)
            mkdir build
            cd build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
            sudo make -j install
            sudo /sbin/ldconfig
            cd ../..
@@ -49,7 +49,7 @@ jobs:
            cp -rv libassert add_subdirectory-integration
            mkdir add_subdirectory-integration/build
            cd add_subdirectory-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
            make
            ./main
 
@@ -64,7 +64,7 @@ jobs:
            cp -rv libassert/tests/fetchcontent-integration .
            mkdir fetchcontent-integration/build
            cd fetchcontent-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG=$tag
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG=$tag -DLIBASSERT_WERROR_BUILD=On
            make
            ./main
   test-macos-findpackage:
@@ -76,7 +76,7 @@ jobs:
            tag=$(git rev-parse --abbrev-ref HEAD)
            mkdir build
            cd build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
            sudo make -j install
            cd ../..
            cp -rv libassert/tests/findpackage-integration .
@@ -96,7 +96,7 @@ jobs:
            cp -rv libassert add_subdirectory-integration
            mkdir add_subdirectory-integration/build
            cd add_subdirectory-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
            make
            ./main
 
@@ -111,7 +111,7 @@ jobs:
            cp -Recurse libassert/tests/fetchcontent-integration .
            mkdir fetchcontent-integration/build
            cd fetchcontent-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG="$tag" "-GUnix Makefiles"
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG="$tag" "-GUnix Makefiles" -DLIBASSERT_WERROR_BUILD=On
            make
            .\main.exe
   test-mingw-findpackage:
@@ -123,7 +123,7 @@ jobs:
            $tag=$(git rev-parse --abbrev-ref HEAD)
            mkdir build
            cd build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug "-GUnix Makefiles" -DCMAKE_INSTALL_PREFIX=C:/foo
+           cmake .. -DCMAKE_BUILD_TYPE=Debug "-GUnix Makefiles" -DCMAKE_INSTALL_PREFIX=C:/foo -DLIBASSERT_WERROR_BUILD=On
            make -j install
            cd ../..
            cp -Recurse libassert/tests/findpackage-integration .
@@ -143,7 +143,7 @@ jobs:
            cp -Recurse libassert add_subdirectory-integration
            mkdir add_subdirectory-integration/build
            cd add_subdirectory-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug "-GUnix Makefiles"
+           cmake .. -DCMAKE_BUILD_TYPE=Debug "-GUnix Makefiles" -DLIBASSERT_WERROR_BUILD=On
            make
            .\main.exe
   test-windows-fetchcontent:
@@ -159,7 +159,7 @@ jobs:
            cp -Recurse libassert/tests/fetchcontent-integration .
            mkdir fetchcontent-integration/build
            cd fetchcontent-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG="$tag"
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG="$tag" -DLIBASSERT_WERROR_BUILD=On
            msbuild demo_project.sln
            .\Debug\main.exe
   test-windows-findpackage:
@@ -173,7 +173,7 @@ jobs:
            $tag=$(git rev-parse --abbrev-ref HEAD)
            mkdir build
            cd build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=C:/foo
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=C:/foo -DLIBASSERT_WERROR_BUILD=On
            msbuild .\libassert.sln
            msbuild INSTALL.vcxproj
            cd ../..
@@ -196,6 +196,6 @@ jobs:
            cp -Recurse libassert add_subdirectory-integration
            mkdir add_subdirectory-integration/build
            cd add_subdirectory-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
            msbuild demo_project.sln
            .\Debug\main.exe

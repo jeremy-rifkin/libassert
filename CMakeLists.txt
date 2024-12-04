@@ -111,12 +111,26 @@ target_link_libraries(
   cpptrace::cpptrace
 )
 
+set(
+  warning_options
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror=return-type -Wundef>
+  $<$<CXX_COMPILER_ID:GNU>:-Wuseless-cast -Wmaybe-uninitialized>
+  $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->
+)
+
+if(LIBASSERT_WERROR_BUILD)
+  set(
+    warning_options
+    ${warning_options}
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Werror -Wpedantic>
+    $<$<CXX_COMPILER_ID:MSVC>:/WX>
+  )
+endif()
+
 target_compile_options(
   ${target_name}
   PRIVATE
-  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror=return-type -Wshadow -Wundef>
-  $<$<CXX_COMPILER_ID:GNU>:-Wuseless-cast -Wnonnull-compare>
-  $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive->
+  ${warning_options}
 )
 
 # ---- Generate Build Info Headers ----

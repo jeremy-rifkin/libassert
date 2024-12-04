@@ -181,9 +181,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       target_compile_options(
         ${target_name}
         PRIVATE
-        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror=return-type -Wshadow -Wundef -Werror>
-        $<$<CXX_COMPILER_ID:GNU>:-Wuseless-cast -Wnonnull-compare>
-        $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive->
+        ${warning_options}
       )
     endforeach()
 endif()

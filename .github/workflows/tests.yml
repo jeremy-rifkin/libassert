@@ -28,7 +28,8 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-            -DLIBASSERT_BUILD_TESTING=On
+            -DLIBASSERT_BUILD_TESTING=On \
+            -DLIBASSERT_WERROR_BUILD=On
            make -j
     - name: test
       working-directory: build
@@ -54,7 +55,8 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-            -DLIBASSERT_BUILD_TESTING=On
+            -DLIBASSERT_BUILD_TESTING=On \
+            -DLIBASSERT_WERROR_BUILD=On
            make -j
     - name: test
       working-directory: build
@@ -88,7 +90,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
             -DCMAKE_C_COMPILER=${{matrix.c_compiler}} \
-            -DLIBASSERT_BUILD_TESTING=On
+            -DLIBASSERT_BUILD_TESTING=On \
+            -DLIBASSERT_WERROR_BUILD=On
            make -j
     - name: test
       working-directory: build
@@ -115,7 +118,8 @@ jobs:
            cd build
            cmake .. `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
-            -DLIBASSERT_BUILD_TESTING=On
+            -DLIBASSERT_BUILD_TESTING=On \
+            -DLIBASSERT_WERROR_BUILD=On
            msbuild .\libassert.sln
     # - name: build clang
     #   if: ${{ matrix.compiler == 'clang++' }}
@@ -126,7 +130,8 @@ jobs:
     #         -DCMAKE_BUILD_TYPE=${{matrix.target}} `
     #         -DCMAKE_CXX_COMPILER="C:\msys64\mingw64\bin\clang++" `
     #         -DCMAKE_C_COMPILER="C:\msys64\mingw64\bin\clang" `
-    #         -DLIBASSERT_BUILD_TESTING=On
+    #         -DLIBASSERT_BUILD_TESTING=On \
+    #         -DLIBASSERT_WERROR_BUILD=On
     #        msbuild .\libassert.sln
     - name: test
       working-directory: build
@@ -155,7 +160,8 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
             -DLIBASSERT_BUILD_TESTING=On `
             -DLIBASSERT_USE_CI_WRAPPER=On `
-            "-GUnix Makefiles"
+            "-GUnix Makefiles" \
+            -DLIBASSERT_WERROR_BUILD=On
            make -j
     - name: test
       working-directory: build
