@@ -60,6 +60,14 @@ install(
   COMPONENT ${package_name}-development
 )
 
+if(LIBASSERT_PROVIDE_EXPORT_SET)
+  export(
+    TARGETS ${target_name}
+    NAMESPACE libassert::
+    FILE "${PROJECT_BINARY_DIR}/${package_name}-targets.cmake"
+  )
+endif()
+
 # support packaging library
 if(PROJECT_IS_TOP_LEVEL)
   include(CPack)
