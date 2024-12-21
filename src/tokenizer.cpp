@@ -283,7 +283,7 @@ namespace libassert::detail {
             auto begin = pos();
             std::size_t count = 0;
             while(isspace(peek())) {
-                internal_verify(advance() == std::nullopt);
+                LIBASSERT_PRIMITIVE_ASSERT(advance() == std::nullopt);
                 count++;
             }
             return {token_e::whitespace, std::string_view(source.data() + begin, count)};
@@ -541,7 +541,7 @@ namespace libassert::detail {
 
         void rollback(std::size_t count) {
             while(count--) {
-                internal_verify(it != source.begin(), "Tokenizer rollback() failed, please report this bug");
+                LIBASSERT_PRIMITIVE_ASSERT(it != source.begin(), "Tokenizer rollback() failed, please report this bug");
                 it--;
             }
         }
@@ -566,7 +566,7 @@ namespace libassert::detail {
         if(res.index() == 0) {
             return std::move(std::get<std::vector<token_t>>(res));
         } else {
-            internal_verify(res.index() == 1);
+            LIBASSERT_PRIMITIVE_ASSERT(res.index() == 1);
             return std::nullopt;
         }
     }

@@ -44,14 +44,14 @@ namespace libassert::detail {
                 }
             }
         }
-        LIBASSERT_PRIMITIVE_ASSERT(!parts.empty());
-        LIBASSERT_PRIMITIVE_ASSERT(parts.back() != "." && parts.back() != "..");
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!parts.empty());
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(parts.back() != "." && parts.back() != "..");
         return parts;
     }
 
     LIBASSERT_ATTR_COLD
     void path_trie::insert(const path_components& path) {
-        LIBASSERT_PRIMITIVE_ASSERT(path.back() == root);
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(path.back() == root);
         insert(path, (int)path.size() - 2);
     }
 
@@ -59,15 +59,15 @@ namespace libassert::detail {
     path_components path_trie::disambiguate(const path_components& path) {
         path_components result;
         path_trie* current = this;
-        LIBASSERT_PRIMITIVE_ASSERT(path.back() == root);
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(path.back() == root);
         result.push_back(current->root);
         for(size_t i = path.size() - 2; i >= 1; i--) {
-            LIBASSERT_PRIMITIVE_ASSERT(current->downstream_branches >= 1);
+            LIBASSERT_PRIMITIVE_DEBUG_ASSERT(current->downstream_branches >= 1);
             if(current->downstream_branches == 1) {
                 break;
             }
             const std::string& component = path[i];
-            LIBASSERT_PRIMITIVE_ASSERT(current->edges.count(component));
+            LIBASSERT_PRIMITIVE_DEBUG_ASSERT(current->edges.count(component));
             current = current->edges.at(component).get();
             result.push_back(current->root);
         }
@@ -96,11 +96,11 @@ namespace libassert::detail {
     }
 
     void path_handler::add_path(std::string_view) {
-        LIBASSERT_PRIMITIVE_ASSERT(false, "Improper path_handler::add_path");
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false, "Improper path_handler::add_path");
     }
 
     void path_handler::finalize() {
-        LIBASSERT_PRIMITIVE_ASSERT(false, "Improper path_handler::finalize");
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false, "Improper path_handler::finalize");
     }
 
     LIBASSERT_ATTR_COLD
@@ -143,7 +143,7 @@ namespace libassert::detail {
         std::unordered_map<std::string, std::string> files;
         for(auto& [raw, parsed_path] : parsed_paths) {
             const std::string new_path = join(tries.at(parsed_path.back()).disambiguate(parsed_path), "/");
-            internal_verify(files.insert({raw, new_path}).second);
+            LIBASSERT_PRIMITIVE_ASSERT(files.insert({raw, new_path}).second);
         }
         path_map = std::move(files);
         // return {files, std::min(longest_file_width, size_t(50))};

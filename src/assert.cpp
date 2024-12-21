@@ -134,7 +134,7 @@ namespace libassert::detail {
                     const size_t line_number_width = std::max(line_number.size(), max_line_number_width);
                     const size_t remaining_width = term_width - (left + line_number_width + 2 /* spaces */ + 1 /* : */);
                     const size_t file_width = std::min({max_file_length, remaining_width / 2, max_file_length});
-                    LIBASSERT_PRIMITIVE_ASSERT(remaining_width >= 2);
+                    LIBASSERT_PRIMITIVE_DEBUG_ASSERT(remaining_width >= 2);
                     const size_t sig_width = remaining_width - file_width;
                     std::vector<highlight_block> location_blocks = concat(
                         {{"", std::string(path_handler->resolve_path(source_path)) + ":"}},
@@ -179,7 +179,7 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD
     static std::string print_values(const std::vector<std::string>& vec, size_t lw, const color_scheme& scheme) {
-        LIBASSERT_PRIMITIVE_ASSERT(!vec.empty());
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!vec.empty());
         std::string values;
         if(vec.size() == 1) {
             values += microfmt::format("{}\n", indent(highlight(vec[0], scheme), 8 + lw + 4, ' ', true));
@@ -200,7 +200,7 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD
     static std::vector<highlight_block> get_values(const std::vector<std::string>& vec, const color_scheme& scheme) {
-        LIBASSERT_PRIMITIVE_ASSERT(!vec.empty());
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!vec.empty());
         if(vec.size() == 1) {
             return highlight_blocks(vec[0], scheme);
         } else {
@@ -239,8 +239,8 @@ namespace libassert::detail {
         // TODO: Temporary hack while reworking
         std::vector<std::string> lstrings = { left_stringification };
         std::vector<std::string> rstrings = { right_stringification };
-        LIBASSERT_PRIMITIVE_ASSERT(!lstrings.empty());
-        LIBASSERT_PRIMITIVE_ASSERT(!rstrings.empty());
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!lstrings.empty());
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!rstrings.empty());
         // pad all columns where there is overlap
         // TODO: Use column printer instead of manual padding.
         for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()); i++) {
@@ -442,7 +442,7 @@ namespace libassert {
                     // this library
                     break;
                 default:
-                    LIBASSERT_PRIMITIVE_ASSERT(false);
+                    LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false);
             }
         }
     }

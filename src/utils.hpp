@@ -19,7 +19,7 @@
 
 namespace libassert::detail {
     // Still present in release mode, nonfatal
-    #define internal_verify(c, ...) primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, {} LIBASSERT_VA_ARGS(__VA_ARGS__))
+    #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, {} LIBASSERT_VA_ARGS(__VA_ARGS__))
 
     /*
      * string utilities
@@ -89,7 +89,7 @@ namespace libassert::detail {
         constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
             if(needle_value == option) { return result; }
             if constexpr(sizeof...(Rest) > 0) { return lookup(rest...); }
-            else { LIBASSERT_PRIMITIVE_ASSERT(false); LIBASSERT_UNREACHABLE_CALL; }
+            else { LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false); LIBASSERT_UNREACHABLE_CALL; }
         }
         template<typename... Args>
         constexpr bool is_in(const Args&... option) {

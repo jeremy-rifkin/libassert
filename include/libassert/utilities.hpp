@@ -31,7 +31,7 @@ namespace libassert::detail {
     // bootstrap with primitive implementations
     LIBASSERT_EXPORT void primitive_assert_impl(
         bool condition,
-        bool verify,
+        bool normal_assert,
         const char* expression,
         const char* signature,
         source_location location,
@@ -48,10 +48,10 @@ namespace libassert::detail {
     #define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
 
     #ifndef NDEBUG
-     #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) \
+     #define LIBASSERT_PRIMITIVE_DEBUG_ASSERT(c, ...) \
         libassert::detail::primitive_assert_impl(c, false, #c, LIBASSERT_PFUNC, {} LIBASSERT_VA_ARGS(__VA_ARGS__))
     #else
-     #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) LIBASSERT_PHONY_USE(c)
+     #define LIBASSERT_PRIMITIVE_DEBUG_ASSERT(c, ...) LIBASSERT_PHONY_USE(c)
     #endif
 
     #define LIBASSERT_PRIMITIVE_PANIC(message) libassert::detail::primitive_panic_impl(LIBASSERT_PFUNC, {}, message)

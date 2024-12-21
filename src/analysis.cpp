@@ -279,7 +279,7 @@ namespace libassert::detail {
             while(std::regex_search(str.data() + i, str.data() + str.size(), match, escapes_re)) {
                 // add string part
                 // TODO: I don't know why this assert was added, I might have done it in dev on a whim. Re-evaluate.
-                // LIBASSERT_PRIMITIVE_ASSERT(match.position() > 0);
+                // LIBASSERT_PRIMITIVE_DEBUG_ASSERT(match.position() > 0);
                 if(match.position() > 0) {
                     output.push_back({scheme.string, str.substr(i, match.position())});
                 }
@@ -313,7 +313,7 @@ namespace libassert::detail {
                             }
                         }
                     }
-                    LIBASSERT_PRIMITIVE_ASSERT(j != 0);
+                    LIBASSERT_PRIMITIVE_DEBUG_ASSERT(j != 0);
                     return token_t { token_e::whitespace, "" };
                 };
                 switch(token.type) {
@@ -442,7 +442,7 @@ namespace libassert::detail {
                         }
                     }
                     if(i == tokens.size() && count != -1) {
-                        LIBASSERT_PRIMITIVE_ASSERT(false, "ill-formed expression input");
+                        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false, "ill-formed expression input");
                     }
                     return empty;
                 };
@@ -472,7 +472,7 @@ namespace libassert::detail {
                                 } else if(token.str == "<" && normalize_brace(find_last_non_ws(tokens, i).str) == "]") {
                                     // this must be a template parameter list, part of a generic lambda
                                     const bool empty = scan_forward("<", ">");
-                                    LIBASSERT_PRIMITIVE_ASSERT(!empty);
+                                    LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!empty);
                                     state = expecting_operator;
                                     continue;
                                 }
@@ -532,7 +532,7 @@ namespace libassert::detail {
                             }
                             state = expecting_operator;
                         } else {
-                            LIBASSERT_PRIMITIVE_ASSERT(false, "unhandled punctuation?");
+                            LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false, "unhandled punctuation?");
                         }
                         break;
                     case token_e::keyword:

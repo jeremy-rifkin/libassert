@@ -80,7 +80,7 @@ namespace libassert::detail {
         } else if(mode == literal_format_mode::fixed_variations) {
             set_thread_current_literal_format(fixed_format);
         } else {
-            LIBASSERT_PRIMITIVE_ASSERT(false);
+            LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false);
         }
         return previous;
     }
@@ -176,7 +176,7 @@ namespace libassert::detail {
                 case literal_format::default_format:
                     break;
                 default:
-                    LIBASSERT_PRIMITIVE_ASSERT(false, "unexpected literal format requested for printing");
+                    LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false, "unexpected literal format requested for printing");
             }
             oss<<value;
             r: return std::move(oss).str();

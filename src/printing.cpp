@@ -27,7 +27,7 @@ namespace libassert::detail {
                     }
                     // number of characters we can extract from the block
                     size_t extract = std::min(width - lines[current_line][i].length, block.content.size() - block_i);
-                    LIBASSERT_PRIMITIVE_ASSERT(block_i + extract <= block.content.size());
+                    LIBASSERT_PRIMITIVE_DEBUG_ASSERT(block_i + extract <= block.content.size());
                     auto substr = std::string_view(block.content).substr(block_i, extract);
                     // handle newlines
                     if(auto x = substr.find('\n'); x != std::string_view::npos) {

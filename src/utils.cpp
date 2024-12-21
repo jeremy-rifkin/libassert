@@ -25,7 +25,7 @@ namespace libassert::detail {
         va_start(args1, format);
         va_start(args2, format);
         const int length = vsnprintf(nullptr, 0, format, args1);
-        if(length < 0) { LIBASSERT_PRIMITIVE_ASSERT(false, "Invalid arguments to stringf"); }
+        if(length < 0) { LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false, "Invalid arguments to stringf"); }
         std::string str(length, 0);
         (void)vsnprintf(str.data(), length + 1, format, args2);
         va_end(args1);
@@ -36,15 +36,15 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     void primitive_assert_impl(
         bool condition,
-        bool verify,
+        bool normal_assert,
         const char* expression,
         const char* signature,
         source_location location,
         const char* message
     ) {
         if(!condition) {
-            const char* action = verify ? "Verification" : "Assertion";
-            const char* name   = verify ? "verify"       : "assert";
+            const char* action = normal_assert ? "Assert"                     : "Debug assert";
+            const char* name   = normal_assert ? "LIBASSERT_PRIMITIVE_ASSERT" : "LIBASSERT_PRIMITIVE_DEBUG_ASSERT";
             std::string out_message;
             if(message == nullptr) {
                 out_message += microfmt::format(
@@ -64,7 +64,7 @@ namespace libassert::detail {
                     message
                 );
             }
-            out_message += microfmt::format("    primitive_{}({});\n", name, expression);
+            out_message += microfmt::format("    {}({});\n", name, expression);
             throw cpptrace::runtime_error(std::move(out_message));
         }
     }
@@ -81,7 +81,7 @@ namespace libassert::detail {
             signature,
             message
         );
-        out_message += "    primitive_panic(...);\n";
+        out_message += "    LIBASSERT_PRIMITIVE_PANIC(...);\n";
         throw cpptrace::runtime_error(std::move(out_message));
     }
 

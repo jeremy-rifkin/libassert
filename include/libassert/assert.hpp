@@ -404,7 +404,7 @@ namespace libassert::detail {
         Args&&... args
     ) {
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
-        LIBASSERT_PRIMITIVE_ASSERT(sizeof...(args) <= params->args_strings.size);
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(sizeof...(args) <= params->args_strings.size);
         assertion_info info(
             params,
             cpptrace::generate_raw_trace(),
@@ -449,7 +449,7 @@ namespace libassert::detail {
         Args&&... args
     ) {
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
-        LIBASSERT_PRIMITIVE_ASSERT(sizeof...(args) <= params->args_strings.size);
+        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(sizeof...(args) <= params->args_strings.size);
         assertion_info info(
             params,
             cpptrace::generate_raw_trace(),
