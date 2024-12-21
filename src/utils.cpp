@@ -165,7 +165,7 @@ namespace libassert::detail {
             str.replace(match_begin, end - match_begin, replacement);
             cursor = match_begin + replacement.length();
         }
-    };
+    }
 
     LIBASSERT_ATTR_COLD
     std::string indent(const std::string_view str, size_t depth, char c, bool ignore_first) {

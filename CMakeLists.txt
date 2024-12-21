@@ -122,7 +122,7 @@ if(LIBASSERT_WERROR_BUILD)
   set(
     warning_options
     ${warning_options}
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Werror -Wpedantic>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Werror>
     $<$<CXX_COMPILER_ID:MSVC>:/WX>
   )
 endif()
