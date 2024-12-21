@@ -118,7 +118,7 @@ jobs:
            cd build
            cmake .. `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
-            -DLIBASSERT_BUILD_TESTING=On \
+            -DLIBASSERT_BUILD_TESTING=On `
             -DLIBASSERT_WERROR_BUILD=On
            msbuild .\libassert.sln
     # - name: build clang
@@ -160,7 +160,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
             -DLIBASSERT_BUILD_TESTING=On `
             -DLIBASSERT_USE_CI_WRAPPER=On `
-            "-GUnix Makefiles" \
+            "-GUnix Makefiles" `
             -DLIBASSERT_WERROR_BUILD=On
            make -j
     - name: test
