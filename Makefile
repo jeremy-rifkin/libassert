@@ -10,12 +10,12 @@ build: debug  ## build in debug mode
 
 .PHONY: debug
 debug:  ## build in debug mode
-	cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=On -DLIBASSERT_BUILD_TESTING=On
+	cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=On -DLIBASSERT_BUILD_TESTING=On -DLIBASSERT_WERROR_BUILD=On
 	cmake --build build
 
 .PHONY: release
 release:  ## build in release mode (with debug info)
-	cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=On -DLIBASSERT_BUILD_TESTING=On
+	cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=On -DLIBASSERT_BUILD_TESTING=On -DLIBASSERT_WERROR_BUILD=On
 	cmake --build build
 
 .PHONY: debug-msvc
