@@ -35,6 +35,7 @@
   - [Custom Failure Handlers](#custom-failure-handlers-1)
   - [Breakpoints](#breakpoints)
   - [Other Configurations](#other-configurations)
+  - [Library Version](#library-version)
 - [Integration with Test Libraries](#integration-with-test-libraries)
   - [Catch2](#catch2)
   - [GoogleTest](#googletest)
@@ -787,6 +788,10 @@ gcc 10 and the library can surpress that warning for gcc 12. <!-- https://godbol
 **CMake:**
 - `LIBASSERT_USE_EXTERNAL_CPPTRACE`: Use an externam cpptrace instead of aquiring the library with FetchContent
 - `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`: Use an externam magic enum instead of aquiring the library with FetchContent
+
+## Library Version
+
+`<libassert/version.hpp>` provides version macros for the library.
 
 # Integration with Test Libraries
 

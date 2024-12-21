@@ -133,6 +133,11 @@ target_compile_options(
   ${warning_options}
 )
 
+set(LIBASSERT_VERSION_MAJOR ${CMAKE_PROJECT_VERSION_MAJOR})
+set(LIBASSERT_VERSION_MINOR ${CMAKE_PROJECT_VERSION_MINOR})
+set(LIBASSERT_VERSION_PATCH ${CMAKE_PROJECT_VERSION_PATCH})
+configure_file("${PROJECT_SOURCE_DIR}/cmake/in/version-hpp.in" "${PROJECT_BINARY_DIR}/include/libassert/version.hpp")
+
 # ---- Generate Build Info Headers ----
 
 # used in export header generated below
