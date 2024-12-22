@@ -8,8 +8,13 @@
 #include <vector>
 
 #include <libassert/assert.hpp>
-#include <cpptrace/basic.hpp>
-#include <cpptrace/exceptions.hpp>
+
+#if defined(__has_include) && __has_include(<cpptrace/basic.hpp>)
+ #include <cpptrace/basic.hpp>
+ #include <cpptrace/exceptions.hpp>
+#else
+ #include <cpptrace/cpptrace.hpp>
+#endif
 
 #include "utils.hpp"
 #include "microfmt.hpp"

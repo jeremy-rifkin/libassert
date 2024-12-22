@@ -23,8 +23,12 @@
 #include <utility>
 #include <vector>
 
-#include <cpptrace/basic.hpp>
-#include <cpptrace/exceptions.hpp>
+#if defined(__has_include) && __has_include(<cpptrace/basic.hpp>)
+ #include <cpptrace/basic.hpp>
+ #include <cpptrace/exceptions.hpp>
+#else
+ #include <cpptrace/cpptrace.hpp>
+#endif
 
 #include "common.hpp"
 #include "utils.hpp"
