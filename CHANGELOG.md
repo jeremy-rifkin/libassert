@@ -1,3 +1,4 @@
+- [libassert 2.1.3](#libassert-213)
 - [libassert 2.1.2](#libassert-212)
 - [libassert 2.1.1](#libassert-211)
 - [libassert 2.1.0](#libassert-210)
@@ -11,6 +12,22 @@
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.1.3
+
+Added:
+- Added `<libassert/version.hpp>` header with version macros
+- Added export set definition
+- Made the default failure handler callback public, updated docs on custom failure handlers
+
+Fixes:
+- Added a flag to control -Werror instead of having it on unconditionally by default
+- Added fallback for older cpptrace versions where `<cpptrace/basic.hpp>` didn't exist
+- Added safeguard to ensure static init order issues can never bite
+
+Other:
+- Some internal refactoring
+- Bumped to cpptrace 0.7.4
 
 ## libassert 2.1.2
 
