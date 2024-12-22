@@ -1,7 +1,7 @@
 # libassert <!-- omit in toc -->
 
-[![build](https://github.com/jeremy-rifkin/libassert/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/build.yml)
-[![tests](https://github.com/jeremy-rifkin/libassert/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/jeremy-rifkin/libassert/actions/workflows/tests.yml)
+[![build](https://github.com/jeremy-rifkin/libassert/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/jeremy-rifkin/libassert/actions/workflows/build.yml)
+[![tests](https://github.com/jeremy-rifkin/libassert/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/jeremy-rifkin/libassert/actions/workflows/tests.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jeremy-rifkin_libassert&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jeremy-rifkin_libassert)
 <br/>
 [![Community Discord Link](https://img.shields.io/badge/Chat%20on%20the%20(very%20small)-Community%20Discord-blue?labelColor=2C3239&color=7289DA&style=flat&logo=discord&logoColor=959DA5)](https://discord.gg/frjaAZvqUZ)
