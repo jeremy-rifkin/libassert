@@ -19,7 +19,13 @@
 
 namespace libassert::detail {
     // Still present in release mode, nonfatal
-    #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, {} LIBASSERT_VA_ARGS(__VA_ARGS__))
+    #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) ::libassert::detail::primitive_assert_impl( \
+        c, \
+        true, \
+        #c, \
+        LIBASSERT_PFUNC, \
+        {} LIBASSERT_VA_ARGS(__VA_ARGS__) \
+    )
 
     /*
      * string utilities

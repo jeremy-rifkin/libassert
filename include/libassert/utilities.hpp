@@ -45,7 +45,7 @@ namespace libassert::detail {
     );
 
     // always_false is just convenient to use here
-    #define LIBASSERT_PHONY_USE(E) ((void)libassert::detail::always_false<decltype(E)>)
+    #define LIBASSERT_PHONY_USE(E) ((void)::libassert::detail::always_false<decltype(E)>)
 
     #ifndef NDEBUG
      #define LIBASSERT_PRIMITIVE_DEBUG_ASSERT(c, ...) \
@@ -54,7 +54,7 @@ namespace libassert::detail {
      #define LIBASSERT_PRIMITIVE_DEBUG_ASSERT(c, ...) LIBASSERT_PHONY_USE(c)
     #endif
 
-    #define LIBASSERT_PRIMITIVE_PANIC(message) libassert::detail::primitive_panic_impl(LIBASSERT_PFUNC, {}, message)
+    #define LIBASSERT_PRIMITIVE_PANIC(message) ::libassert::detail::primitive_panic_impl(LIBASSERT_PFUNC, {}, message)
 }
 
 // =====================================================================================================================

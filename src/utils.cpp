@@ -33,7 +33,7 @@ namespace libassert::detail {
         return str;
     }
 
-    LIBASSERT_ATTR_COLD
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
     void primitive_assert_impl(
         bool condition,
         bool normal_assert,
@@ -69,7 +69,8 @@ namespace libassert::detail {
         }
     }
 
-    [[noreturn]] LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void primitive_panic_impl(
+    [[noreturn]] LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
+    void primitive_panic_impl(
         const char* signature,
         source_location location,
         const char* message
