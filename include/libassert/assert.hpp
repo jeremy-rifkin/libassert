@@ -165,6 +165,8 @@ namespace libassert {
 
     struct assertion_info;
 
+    LIBASSERT_EXPORT [[noreturn]] void default_failure_handler(const assertion_info& info);
+
     LIBASSERT_EXPORT void set_failure_handler(void (*handler)(const assertion_info&));
 
     struct LIBASSERT_EXPORT binary_diagnostics_descriptor {

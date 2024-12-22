@@ -215,7 +215,7 @@ screenshots above. This is to help enhance readability.
 Libassert supports custom assertion failure handlers:
 
 ```cpp
-void handler(assert_type type, const assertion_info& assertion) {
+void handler(const assertion_info& info) {
     throw std::runtime_error("Assertion failed:\n" + assertion.to_string());
 }
 
@@ -223,6 +223,8 @@ int main() {
     libassert::set_failure_handler(handler);
 }
 ```
+
+More details [below](#custom-failure-handlers-1).
 
 ## Debug Stringification <!-- omit in toc -->
 
@@ -689,15 +691,26 @@ Lastly, any types with an ostream `operator<<` overload can be stringified.
 ```cpp
 namespace libassert {
     void set_failure_handler(void (*handler)(const assertion_info&));
+    [[noreturn]] void default_failure_handler(const assertion_info& info);
 }
 ```
 
 - `set_failure_handler`: Sets the assertion handler for the program.
+- `default_failure_handler`: The default failure handler, provided for convenience.
 
-An example assertion handler similar to the default handler:
+Example: If you wanted to log to a file in addition to the default behavior you could do something along the lines of:
 
 ```cpp
-void libassert_default_failure_handler(const assertion_info& info) {
+void handler(const assertion_info& info) {
+    logger::error(info.to_string());
+    libassert::default_failure_handler(info);
+}
+```
+
+For more complex custom handling you can modify the default handler's logic:
+
+```cpp
+void default_failure_handler(const assertion_info& info) {
     libassert::enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
     std::string message = info.to_string(
         libassert::terminal_width(libassert::stderr_fileno),

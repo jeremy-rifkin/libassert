@@ -422,32 +422,33 @@ namespace libassert {
             }
         }
 
-        LIBASSERT_ATTR_COLD
-        void libassert_default_failure_handler(const assertion_info& info) {
-            enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
-            std::string message = info.to_string(
-                terminal_width(STDERR_FILENO),
-                isatty(STDERR_FILENO) ? get_color_scheme() : color_scheme::blank
-            );
-            std::cerr << message << std::endl;
-            switch(info.type) {
-                case assert_type::assertion:
-                case assert_type::debug_assertion:
-                case assert_type::assumption:
-                case assert_type::panic:
-                case assert_type::unreachable:
-                    (void)fflush(stderr);
-                    std::abort();
-                    // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
-                    // this library
-                    break;
-                default:
-                    LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false);
-            }
+    }
+
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT [[noreturn]]
+    void default_failure_handler(const assertion_info& info) {
+        enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
+        std::string message = info.to_string(
+            terminal_width(STDERR_FILENO),
+            isatty(STDERR_FILENO) ? get_color_scheme() : color_scheme::blank
+        );
+        std::cerr << message << std::endl;
+        switch(info.type) {
+            case assert_type::assertion:
+            case assert_type::debug_assertion:
+            case assert_type::assumption:
+            case assert_type::panic:
+            case assert_type::unreachable:
+                (void)fflush(stderr);
+                std::abort();
+                // Breaking here as debug CRT allows aborts to be ignored, if someone wants to make a debug build of
+                // this library
+                break;
+            default:
+                LIBASSERT_PRIMITIVE_PANIC("Unknown assertion type in assertion failure handler");
         }
     }
 
-    static std::atomic failure_handler = detail::libassert_default_failure_handler;
+    static std::atomic failure_handler = default_failure_handler;
 
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
     void set_failure_handler(void (*handler)(const assertion_info&)) {
