@@ -448,16 +448,19 @@ namespace libassert {
         }
     }
 
-    static std::atomic failure_handler = default_failure_handler;
+    static auto& get_failure_handler() {
+        static std::atomic handler = default_failure_handler;
+        return handler;
+    }
 
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
     void set_failure_handler(void (*handler)(const assertion_info&)) {
-        failure_handler = handler;
+        get_failure_handler() = handler;
     }
 
     namespace detail {
         LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void fail(const assertion_info& info) {
-            failure_handler.load()(info);
+            get_failure_handler().load()(info);
         }
     }
 
