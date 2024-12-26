@@ -428,7 +428,7 @@ namespace libassert {
 
     }
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT [[noreturn]]
+    [[noreturn]] LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
     void default_failure_handler(const assertion_info& info) {
         enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
         std::string message = info.to_string(
