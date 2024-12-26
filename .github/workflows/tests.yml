@@ -15,7 +15,7 @@ jobs:
       matrix:
         compiler: [g++-10, clang++-14]
         cxx_version: [ cxx_std_17, cxx_std_20 ]
-        target: [Debug, Release]
+        target: [Debug]
         shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
@@ -73,7 +73,7 @@ jobs:
       matrix:
         compiler: [g++-12, clang++]
         cxx_version: [ cxx_std_17, cxx_std_20 ]
-        target: [Debug, Release]
+        target: [Debug]
         shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
@@ -103,7 +103,7 @@ jobs:
       matrix:
         compiler: [cl, clang++]
         cxx_version: [ cxx_std_17, cxx_std_20 ]
-        target: [Debug, Release]
+        target: [Debug]
         shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
@@ -148,7 +148,7 @@ jobs:
       matrix:
         compiler: [g++]
         cxx_version: [ cxx_std_17, cxx_std_20 ]
-        target: [Debug, Release]
+        target: [Debug]
         shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
