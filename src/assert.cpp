@@ -82,101 +82,100 @@ namespace libassert::detail {
         const color_scheme& scheme,
         path_handler* path_handler
     ) {
+        if(trace.empty()) {
+            return "Empty stacktrace.\n";
+        }
+        // [start, end] is an inclusive range
+        auto [start, end] = get_trace_window(trace);
+        // path preprocessing
+        constexpr size_t hard_max_file_length = 50;
+        size_t max_file_length = 0;
+        for(std::size_t i = start; i <= end; i++) {
+            max_file_length = std::max(
+                path_handler->resolve_path(trace.frames[i].filename).size(),
+                max_file_length
+            );
+        }
+        max_file_length = std::min(max_file_length, hard_max_file_length);
+        // figure out column widths
+        const auto max_line_number =
+            std::max_element(
+                // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+                trace.begin() + start,
+                // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+                trace.begin() + end + 1,
+                [](const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_frame& b) {
+                    return a.line.value_or(0) < b.line.value_or(0);
+                }
+            )->line;
+        const size_t max_line_number_width = n_digits(max_line_number.value_or(0));
+        const size_t max_frame_width = n_digits(end - start);
+        // do the actual trace printing
         std::string stacktrace;
-        if(!trace.empty()) {
-            // [start, end] is an inclusive range
-            auto [start, end] = get_trace_window(trace);
-            // path preprocessing
-            constexpr size_t hard_max_file_length = 50;
-            size_t max_file_length = 0;
-            for(std::size_t i = start; i <= end; i++) {
-                max_file_length = std::max(
-                    path_handler->resolve_path(trace.frames[i].filename).size(),
-                    max_file_length
+        for(size_t i = start; i <= end; i++) {
+            const auto& [raw_address, obj_address, line, col, source_path, signature_, is_inline] = trace.frames[i];
+            const std::string line_number = line.has_value() ? std::to_string(line.value()) : "?";
+            // look for repeats, i.e. recursion we can fold
+            size_t recursion_folded = 0;
+            if(end - i >= 4) {
+                size_t j = 1;
+                for( ; i + j <= end; j++) {
+                    if(trace.frames[i + j] != trace.frames[i] || trace.frames[i + j].symbol == "??") {
+                        break;
+                    }
+                }
+                if(j >= 4) {
+                    recursion_folded = j - 2;
+                }
+            }
+            const size_t frame_number = i - start + 1;
+            auto signature = prettify_type(signature_);
+            // pretty print with columns for wide terminals
+            // split printing for small terminals
+            if(term_width >= 50) {
+                auto sig = highlight_blocks(signature + "(", scheme); // hack for the highlighter
+                sig.pop_back();
+                const size_t left = 1 + max_frame_width;
+                // todo: is this looking right...?
+                const size_t line_number_width = std::max(line_number.size(), max_line_number_width);
+                const size_t remaining_width = term_width - (left + line_number_width + 2 /* spaces */ + 1 /* : */);
+                const size_t file_width = std::min({max_file_length, remaining_width / 2, max_file_length});
+                LIBASSERT_PRIMITIVE_DEBUG_ASSERT(remaining_width >= 2);
+                const size_t sig_width = remaining_width - file_width;
+                std::vector<highlight_block> location_blocks = concat(
+                    {{"", std::string(path_handler->resolve_path(source_path)) + ":"}},
+                    highlight_blocks(line_number, scheme)
+                );
+                stacktrace += wrapped_print(
+                    {
+                        { left, {{"", "#"}, {scheme.number, std::to_string(frame_number)}}, true },
+                        { file_width + 1 + line_number_width, location_blocks },
+                        { sig_width, sig }
+                    },
+                    scheme
+                );
+            } else {
+                auto sig = highlight(signature + "(", scheme); // hack for the highlighter
+                sig = sig.substr(0, sig.rfind('('));
+                stacktrace += microfmt::format(
+                    "#{}{>2}{} {}\n      at {}:{}{}{}\n",
+                    scheme.number,
+                    frame_number,
+                    scheme.reset,
+                    sig,
+                    path_handler->resolve_path(source_path),
+                    scheme.number,
+                    line_number,
+                    scheme.reset // yes this is excessive; intentionally coloring "?"
                 );
             }
-            max_file_length = std::min(max_file_length, hard_max_file_length);
-            // figure out column widths
-            const auto max_line_number =
-                std::max_element(
-                    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
-                    trace.begin() + start,
-                    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
-                    trace.begin() + end + 1,
-                    [](const cpptrace::stacktrace_frame& a, const cpptrace::stacktrace_frame& b) {
-                        return a.line.value_or(0) < b.line.value_or(0);
-                    }
-                )->line;
-            const size_t max_line_number_width = n_digits(max_line_number.value_or(0));
-            const size_t max_frame_width = n_digits(end - start);
-            // do the actual trace
-            for(size_t i = start; i <= end; i++) {
-                const auto& [raw_address, obj_address, line, col, source_path, signature_, is_inline] = trace.frames[i];
-                const std::string line_number = line.has_value() ? std::to_string(line.value()) : "?";
-                // look for repeats, i.e. recursion we can fold
-                size_t recursion_folded = 0;
-                if(end - i >= 4) {
-                    size_t j = 1;
-                    for( ; i + j <= end; j++) {
-                        if(trace.frames[i + j] != trace.frames[i] || trace.frames[i + j].symbol == "??") {
-                            break;
-                        }
-                    }
-                    if(j >= 4) {
-                        recursion_folded = j - 2;
-                    }
-                }
-                const size_t frame_number = i - start + 1;
-                auto signature = prettify_type(signature_);
-                // pretty print with columns for wide terminals
-                // split printing for small terminals
-                if(term_width >= 50) {
-                    auto sig = highlight_blocks(signature + "(", scheme); // hack for the highlighter
-                    sig.pop_back();
-                    const size_t left = 1 + max_frame_width;
-                    // todo: is this looking right...?
-                    const size_t line_number_width = std::max(line_number.size(), max_line_number_width);
-                    const size_t remaining_width = term_width - (left + line_number_width + 2 /* spaces */ + 1 /* : */);
-                    const size_t file_width = std::min({max_file_length, remaining_width / 2, max_file_length});
-                    LIBASSERT_PRIMITIVE_DEBUG_ASSERT(remaining_width >= 2);
-                    const size_t sig_width = remaining_width - file_width;
-                    std::vector<highlight_block> location_blocks = concat(
-                        {{"", std::string(path_handler->resolve_path(source_path)) + ":"}},
-                        highlight_blocks(line_number, scheme)
-                    );
-                    stacktrace += wrapped_print(
-                        {
-                            { left, {{"", "#"}, {scheme.number, std::to_string(frame_number)}}, true },
-                            { file_width + 1 + line_number_width, location_blocks },
-                            { sig_width, sig }
-                        },
-                        scheme
-                    );
-                } else {
-                    auto sig = highlight(signature + "(", scheme); // hack for the highlighter
-                    sig = sig.substr(0, sig.rfind('('));
-                    stacktrace += microfmt::format(
-                        "#{}{>2}{} {}\n      at {}:{}{}{}\n",
-                        scheme.number,
-                        frame_number,
-                        scheme.reset,
-                        sig,
-                        path_handler->resolve_path(source_path),
-                        scheme.number,
-                        line_number,
-                        scheme.reset // yes this is excessive; intentionally coloring "?"
-                    );
-                }
-                if(recursion_folded) {
-                    i += recursion_folded;
-                    const std::string s = microfmt::format("| {} layers of recursion were folded |", recursion_folded);
-                    stacktrace += microfmt::format("{}|{<{}}|{}\n", scheme.accent, s.size() - 2, "", scheme.reset);
-                    stacktrace += microfmt::format("{}{}{}\n", scheme.accent, s, scheme.reset);
-                    stacktrace += microfmt::format("{}|{<{}}|{}\n", scheme.accent, s.size() - 2, "", scheme.reset);
-                }
+            if(recursion_folded) {
+                i += recursion_folded;
+                const std::string s = microfmt::format("| {} layers of recursion were folded |", recursion_folded);
+                stacktrace += microfmt::format("{}|{<{}}|{}\n", scheme.accent, s.size() - 2, "", scheme.reset);
+                stacktrace += microfmt::format("{}{}{}\n", scheme.accent, s, scheme.reset);
+                stacktrace += microfmt::format("{}|{<{}}|{}\n", scheme.accent, s.size() - 2, "", scheme.reset);
             }
-        } else {
-            stacktrace += "Error while generating stack trace.\n";
         }
         return stacktrace;
     }
