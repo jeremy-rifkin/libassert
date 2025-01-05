@@ -83,7 +83,7 @@ def main():
     compiler_id = sys.argv[3].lower()
     if compiler_id.startswith("gcc") or compiler_id.startswith("g++") or compiler_id.startswith("gnu"):
         target.append("gnu")
-    elif compiler_id.startswith("clang"):
+    elif "clang" in compiler_id:
         target.append("clang")
     elif compiler_id.startswith("cl") or compiler_id.startswith("msvc"):
         target.append("msvc")

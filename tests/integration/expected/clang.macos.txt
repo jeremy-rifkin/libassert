@@ -1,0 +1,107 @@
+===================== [simple recursion] =====================
+Debug Assertion failed at integration.cpp:501: void rec(int):
+    debug_assert(false);
+
+Stack trace:
+# 1 rec(int)
+      at integration.cpp:501
+# 2 rec(int)
+      at integration.cpp:502
+|                                   |
+| 8 layers of recursion were folded |
+|                                   |
+#11 rec(int)
+      at integration.cpp:502
+#12 test_class<int>::something_else()
+      at integration.cpp:2600
+#13 void test_class<int>::something<N>(std::__1::pair<N, int>)
+      at integration.cpp:1004
+#14 main
+      at integration.cpp:402
+
+
+===================== [other recursion] =====================
+Debug Assertion failed at integration.cpp:508: void recursive_a(int):
+    debug_assert(false);
+
+Stack trace:
+# 1 recursive_a(int)
+      at integration.cpp:508
+# 2 recursive_b(int)
+      at integration.cpp:514
+# 3 recursive_a(int)
+      at integration.cpp:509
+# 4 recursive_b(int)
+      at integration.cpp:514
+# 5 recursive_a(int)
+      at integration.cpp:509
+# 6 recursive_b(int)
+      at integration.cpp:514
+# 7 recursive_a(int)
+      at integration.cpp:509
+# 8 recursive_b(int)
+      at integration.cpp:514
+# 9 recursive_a(int)
+      at integration.cpp:509
+#10 recursive_b(int)
+      at integration.cpp:514
+#11 recursive_a(int)
+      at integration.cpp:509
+#12 test_class<int>::something_else()
+      at integration.cpp:2700
+#13 void test_class<int>::something<N>(std::__1::pair<N, int>)
+      at integration.cpp:1004
+#14 main
+      at integration.cpp:402
+
+
+===================== [Path differentiation] =====================
+Debug Assertion failed at x/a.cpp:5: void test_path_differentiation_2():
+    debug_assert(false);
+
+Stack trace:
+# 1 test_path_differentiation_2()
+      at x/a.cpp:5
+# 2 test_path_differentiation()
+      at integration/a.cpp:7
+# 3 test_class<int>::something_else()
+      at integration.cpp:2800
+# 4 void test_class<int>::something<N>(std::__1::pair<N, int>)
+      at integration.cpp:1004
+# 5 main
+      at integration.cpp:402
+
+
+===================== [Type cleaning] =====================
+Debug Assertion failed at integration.cpp:3305: void test_class<int>::test_pretty_function_cleaning(const std::map<std::string, std::vector<std::string_view>> &) [T = int]:
+    debug_assert(map == other);
+    Where:
+        map   => std::map<std::string, std::vector<std::string_view>>: [["bar", ["b1", "b3", "b5"]], ["foo", ["f1", "f3", "f5"]]]
+        other => std::map<std::string, std::vector<std::string_view>>: []
+
+Stack trace:
+# 1 test_class<int>::test_pretty_function_cleaning(std::__1::map<std::string, std::__1::vector<std::string_view>, std::__1::less<std::string>> const&)
+      at integration.cpp:3305
+# 2 test_class<int>::something_else()
+      at integration.cpp:3201
+# 3 void test_class<int>::something<N>(std::__1::pair<N, int>)
+      at integration.cpp:1004
+# 4 main
+      at integration.cpp:402
+
+
+===================== [Complex type resolution] =====================
+Debug Assertion failed at integration.cpp:3602: void test_class<int>::test_complex_typing(const volatile std::vector<std::string> *const &, int *, const char (&)[4], decltype(&complex_typing::S::foo), int complex_typing::S::*) [T = int]:
+    debug_assert(false);
+
+Stack trace:
+# 1 test_class<int>::test_complex_typing(std::__1::vector<std::string> const volatile* const&, int*, char const (&) [4], void (complex_typing::S::*)(int, std::string, void***, void* (*)(int), void (* (*)(int))(), void (* (* (*)(int)) [5])()), int complex_typing::S::*)
+      at integration.cpp:3602
+# 2 test_class<int>::something_else()
+      at integration.cpp:3502
+# 3 void test_class<int>::something<N>(std::__1::pair<N, int>)
+      at integration.cpp:1004
+# 4 main
+      at integration.cpp:402
+
+

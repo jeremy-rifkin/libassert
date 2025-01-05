@@ -14,7 +14,9 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [g++-10, clang++-14]
+        cxx_version: [ cxx_std_17, cxx_std_20 ]
         target: [Debug]
+        shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
     - name: dependencies
@@ -28,6 +30,9 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" \
+            -DLIBASSERT_BUILD_SHARED=${{matrix.shared}} \
+            -DCPPTRACE_BUILD_SHARED=ON \
             -DLIBASSERT_BUILD_TESTING=On \
             -DLIBASSERT_WERROR_BUILD=On
            make -j
@@ -68,15 +73,9 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [g++-12, clang++]
-        c_compiler: [gcc-12, clang]
+        cxx_version: [ cxx_std_17, cxx_std_20 ]
         target: [Debug]
-        exclude: # TODO: Ugly hack
-          - compiler: g++-12
-            c_compiler: clang
-          - compiler: clang++
-            c_compiler: gcc-12
-          - compiler: clang++ # Disabled due to #15 TODO TODO TODO
-            target: Debug
+        shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
     - name: dependencies
@@ -89,7 +88,8 @@ jobs:
            cmake .. \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
-            -DCMAKE_C_COMPILER=${{matrix.c_compiler}} \
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" \
+            -DCPPTRACE_BUILD_SHARED=ON \
             -DLIBASSERT_BUILD_TESTING=On \
             -DLIBASSERT_WERROR_BUILD=On
            make -j
@@ -102,8 +102,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [cl] # turned off clang for now
+        compiler: [cl, clang++]
+        cxx_version: [ cxx_std_17, cxx_std_20 ]
         target: [Debug]
+        shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
@@ -112,12 +114,15 @@ jobs:
       run: |
            pip install icdiff
     - name: build msvc
-      if: ${{ matrix.compiler == 'cl' }}
+      # if: ${{ matrix.compiler == 'cl' }}
       run: |
            mkdir -p build
            cd build
            cmake .. `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" `
+            -DCPPTRACE_BUILD_SHARED=ON `
             -DLIBASSERT_BUILD_TESTING=On `
             -DLIBASSERT_WERROR_BUILD=On
            msbuild .\libassert.sln
@@ -143,7 +148,9 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [g++]
+        cxx_version: [ cxx_std_17, cxx_std_20 ]
         target: [Debug]
+        shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
@@ -158,6 +165,8 @@ jobs:
            cmake .. `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" `
+            -DCPPTRACE_BUILD_SHARED=ON `
             -DLIBASSERT_BUILD_TESTING=On `
             -DLIBASSERT_USE_CI_WRAPPER=On `
             "-GUnix Makefiles" `
