@@ -1,3 +1,4 @@
+- [libassert 2.1.4](#libassert-214)
 - [libassert 2.1.3](#libassert-213)
 - [libassert 2.1.2](#libassert-212)
 - [libassert 2.1.1](#libassert-211)
@@ -12,6 +13,17 @@
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.1.4
+
+Fixed:
+- Fixed MSVC build issue due to placement of `[[noreturn]]` attribute
+
+Changed:
+- Updated printing of empty stacktraces
+
+Other:
+- Added testing for more configurations
 
 ## libassert 2.1.3
 
