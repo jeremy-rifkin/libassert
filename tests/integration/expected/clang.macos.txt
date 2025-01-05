@@ -14,7 +14,7 @@ Stack trace:
       at integration.cpp:502
 #12 test_class<int>::something_else()
       at integration.cpp:2600
-#13 void test_class<int>::something<N>(std::pair<N, int>)
+#13 void test_class<int>::something<N>(std::__1::pair<N, int>)
       at integration.cpp:1004
 #14 main
       at integration.cpp:402
@@ -49,7 +49,7 @@ Stack trace:
       at integration.cpp:509
 #12 test_class<int>::something_else()
       at integration.cpp:2700
-#13 void test_class<int>::something<N>(std::pair<N, int>)
+#13 void test_class<int>::something<N>(std::__1::pair<N, int>)
       at integration.cpp:1004
 #14 main
       at integration.cpp:402
@@ -66,7 +66,7 @@ Stack trace:
       at integration/a.cpp:7
 # 3 test_class<int>::something_else()
       at integration.cpp:2800
-# 4 void test_class<int>::something<N>(std::pair<N, int>)
+# 4 void test_class<int>::something<N>(std::__1::pair<N, int>)
       at integration.cpp:1004
 # 5 main
       at integration.cpp:402
@@ -80,11 +80,11 @@ Debug Assertion failed at integration.cpp:3305: void test_class<int>::test_prett
         other => std::map<std::string, std::vector<std::string_view>>: []
 
 Stack trace:
-# 1 test_class<int>::test_pretty_function_cleaning(std::map<std::string, std::vector<std::string_view>, std::less<std::string>> const&)
+# 1 test_class<int>::test_pretty_function_cleaning(std::__1::map<std::string, std::__1::vector<std::string_view>, std::__1::less<std::string>> const&)
       at integration.cpp:3305
 # 2 test_class<int>::something_else()
       at integration.cpp:3201
-# 3 void test_class<int>::something<N>(std::pair<N, int>)
+# 3 void test_class<int>::something<N>(std::__1::pair<N, int>)
       at integration.cpp:1004
 # 4 main
       at integration.cpp:402
@@ -95,11 +95,11 @@ Debug Assertion failed at integration.cpp:3602: void test_class<int>::test_compl
     debug_assert(false);
 
 Stack trace:
-# 1 test_class<int>::test_complex_typing(std::vector<std::string> const volatile* const&, int*, char const (&) [4], void (complex_typing::S::*)(int, std::string, void***, void* (*)(int), void (*(*)(int))(), void (* (*(*)(int)) [5])()), int complex_typing::S::*)
+# 1 test_class<int>::test_complex_typing(std::__1::vector<std::string> const volatile* const&, int*, char const (&) [4], void (complex_typing::S::*)(int, std::string, void***, void* (*)(int), void (* (*)(int))(), void (* (* (*)(int)) [5])()), int complex_typing::S::*)
       at integration.cpp:3602
 # 2 test_class<int>::something_else()
       at integration.cpp:3502
-# 3 void test_class<int>::something<N>(std::pair<N, int>)
+# 3 void test_class<int>::something<N>(std::__1::pair<N, int>)
       at integration.cpp:1004
 # 4 main
       at integration.cpp:402
