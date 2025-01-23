@@ -60,6 +60,7 @@
 **Some of the awesome things the library does:**
 
 ```cpp
+#include <libassert/assert.hpp>
 void zoog(const std::map<std::string, int>& map) {
     DEBUG_ASSERT(map.contains("foo"), "expected key not found", map);
 }
@@ -330,6 +331,12 @@ magic.
 > Because of expression decomposition, `ASSERT(1 = 2);` compiles.
 
 # In-Depth Library Documentation
+
+## Library headers
+
+- `libassert/assert.hpp`: The main library header
+- `libassert/assert-gtest.hpp`: Libassert macros for gtest
+- `libassert/assert-catch2.hpp`: Libassert macros for catch2
 
 ## Assertion Macros
 
