@@ -82,7 +82,7 @@ float f = *ASSERT_VAL(get_param());
 
 Conditional assertions:
 
-- `DEBUG_ASSERT`: Checked in debug but but does nothing in release (analogous to the standard library's `assert`)
+- `DEBUG_ASSERT`: Checked in debug but does nothing in release (analogous to the standard library's `assert`)
 - `ASSERT`: Checked in both debug and release
 - `ASSUME`: Checked in debug and serves as an optimization hint in release
 
