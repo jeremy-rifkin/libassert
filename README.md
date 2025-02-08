@@ -148,7 +148,7 @@ sources. Assertion tooling should prioritize providing as much information and c
 allow for speedy triage. Unfortunately, existing language and library tooling provides very limited triage information.
 
 For example with stdlib assertions an assertion such as `assert(n <= 12);` provides no information upon failure about
-why it failed or what lead to its failure. Providing a stack trace and the value of `n` greatley improves triage and
+why it failed or what led to its failure. Providing a stack trace and the value of `n` greatly improves triage and
 debugging. Ideally an assertion failure should provide enough diagnostic information that the programmmer doesn't have
 to rerun in a debugger to pinpoint the problem.
 
