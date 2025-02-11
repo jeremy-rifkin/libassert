@@ -85,6 +85,12 @@ namespace libassert {
         return detail::generate_stringification(t);
     }
 
+    std::string highlight(std::string_view expression);
+    template<typename T>
+    [[nodiscard]] std::string highlight_stringify(const T& t) {
+        return highlight(stringify(t));
+    }
+
     // NOTE: string view underlying data should have static storage duration, or otherwise live as long as the scheme
     // is in use
     struct color_scheme {

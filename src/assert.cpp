@@ -46,6 +46,12 @@
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
+namespace libassert {
+
+    [[nodiscard]] std::string highlight(std::string_view expression) {
+        return libassert::detail::highlight(expression, libassert::color_scheme::ansi_rgb);
+    }
+}
 namespace libassert::detail {
     /*
      * stack trace printing
