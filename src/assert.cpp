@@ -46,12 +46,6 @@
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
-namespace libassert {
-
-    [[nodiscard]] std::string highlight(std::string_view expression) {
-        return libassert::detail::highlight(expression, libassert::color_scheme::ansi_rgb);
-    }
-}
 namespace libassert::detail {
     /*
      * stack trace printing
@@ -404,6 +398,10 @@ namespace libassert {
     LIBASSERT_EXPORT const color_scheme& get_color_scheme() {
         std::unique_lock lock(color_scheme_mutex);
         return current_color_scheme;
+    }
+
+    [[nodiscard]] std::string highlight(std::string_view expression) {
+        return detail::highlight(expression, libassert::color_scheme::ansi_rgb);
     }
 
     LIBASSERT_EXPORT void set_separator(std::string_view separator) {

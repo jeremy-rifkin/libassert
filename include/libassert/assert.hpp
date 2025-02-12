@@ -86,6 +86,7 @@ namespace libassert {
     }
 
     std::string highlight(std::string_view expression);
+
     template<typename T>
     [[nodiscard]] std::string highlight_stringify(const T& t) {
         return highlight(stringify(t));
