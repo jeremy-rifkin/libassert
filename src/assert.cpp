@@ -400,6 +400,10 @@ namespace libassert {
         return current_color_scheme;
     }
 
+    [[nodiscard]] std::string highlight(std::string_view expression) {
+        return detail::highlight(expression, libassert::color_scheme::ansi_rgb);
+    }
+
     LIBASSERT_EXPORT void set_separator(std::string_view separator) {
         detail::arrow = separator;
     }
