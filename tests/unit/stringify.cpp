@@ -2,6 +2,7 @@
 #include <libassert/assert-gtest.hpp>
 
 #include <array>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <optional>
@@ -66,6 +67,39 @@ TEST(Stringify, Strings) {
     // Note: There's buggy behavior here with how MSVC stringizes the raw string literal when /Zc:preprocessor is not
     // used. https://godbolt.org/z/13acEWTGc
     ASSERT(generate_stringification(R"("foobar")") == R"xx("\"foobar\"")xx");
+}
+
+TEST(Stringify, Paths) {
+    ASSERT(generate_stringification(std::filesystem::path("/home/foo")) == R"("/home/foo")");
+}
+
+struct recursive_stringify {
+    using value_type = int;
+    struct const_iterator {
+        int i;
+        using value_type = recursive_stringify;
+        value_type operator*() const {
+            return recursive_stringify{};
+        }
+        const_iterator operator++(int) {
+            auto copy = *this;
+            i++;
+            return copy;
+        }
+        bool operator!=(const const_iterator& other) const {
+            return i != other.i;
+        }
+    };
+    const_iterator begin() const {
+        return {0};
+    }
+    const_iterator end() const {
+        return {5};
+    }
+};
+
+TEST(Stringify, RecursiveStringify) {
+    ASSERT(generate_stringification(recursive_stringify{}) == R"(recursive_stringify: [<instance of recursive_stringify>, <instance of recursive_stringify>, <instance of recursive_stringify>, <instance of recursive_stringify>, <instance of recursive_stringify>])");
 }
 
 TEST(Stringify, Containers) {

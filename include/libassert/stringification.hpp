@@ -1,6 +1,7 @@
 #ifndef LIBASSERT_STRINGIFICATION_HPP
 #define LIBASSERT_STRINGIFICATION_HPP
 
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <system_error>
@@ -172,6 +173,7 @@ namespace libassert::detail {
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long double);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_code ec);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_condition ec);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::filesystem::path path);
         #if __cplusplus >= 202002L
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::strong_ordering);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::weak_ordering);
@@ -345,7 +347,7 @@ namespace libassert::detail {
     template<typename T> constexpr bool stringifiable_container() {
         // TODO: Guard against std::expected....?
         if constexpr(has_value_type<T>::value) {
-            if constexpr(std::is_same_v<typename T::value_type, T>) {
+            if constexpr(std::is_same_v<typename T::value_type, T>) { // TODO: Reconsider
                 return false;
             } else {
                 return stringifiable<typename T::value_type>;
@@ -359,9 +361,64 @@ namespace libassert::detail {
         }
     }
 
+    // Stringification of some types can result in infinite recursion and subsequent stack-overflow. An example would be
+    // a container/range-like type T whose iterator's value_type is also T (such as std::filesystem::path). This is easy
+    // enough to detect at compile time, however, there are pathological types in the general case which would be much
+    // more difficult to check at compile time.
+    // For example, let T be a container whose iterator's value_type = std::vector<T>. This would cause infinite
+    // recursion via:
+    // do_stringify<T>
+    //   -> stringify_container<T>
+    //     -> do_stringify<std::vector<T>>
+    //       -> stringify_container<std::vector<T>>
+    //         -> do_stringify<T>
+    //           -> ...
+    // Instead of compile-time checks this class and a RAII helper is used at the do_stringify<T> level to detect
+    // stringification recursion at runtime.
+    class recursion_flag {
+        bool the_flag = false;
+    public:
+        recursion_flag() = default;
+        recursion_flag(const recursion_flag&) = delete;
+        recursion_flag(recursion_flag&&) = delete;
+        recursion_flag& operator=(const recursion_flag&) = delete;
+        recursion_flag& operator=(recursion_flag&&) = delete;
+
+        class recursion_canary {
+            bool& flag_ref;
+        public:
+            recursion_canary(bool& flag) : flag_ref(flag) {}
+            ~recursion_canary() {
+                flag_ref = false;
+            }
+        };
+
+        recursion_canary set() {
+            the_flag = true;
+            return recursion_canary(the_flag);
+        }
+
+        bool test() const {
+            return the_flag;
+        }
+    };
+
     template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string do_stringify(const T& v) {
+        // TODO: This is overkill to do for every instantiation of do_stringify (e.g. primitive types could omit this)
+        thread_local recursion_flag flag;
+        if(flag.test()) { // pathological case detected, fall back to unknown
+            return stringification::stringify_unknown<T>();
+        }
+        auto canary = flag.set();
+        // Ordering notes
+        // - stringifier first
+        // - nullptr before string_view (char*)
+        // - other pointers before basic stringify
+        // - enum before basic stringify
+        // - container before basic stringify (c arrays and decay etc)
+        //   - needs to exclude std::filesystem::path
         if constexpr(stringification::has_stringifier<T>::value) {
             return stringifier<strip<T>>{}.stringify(v);
         } else if constexpr(std::is_same_v<T, std::nullptr_t>) {
@@ -400,7 +457,10 @@ namespace libassert::detail {
             } else {
                 return stringification::stringify_unknown<T>();
             }
-        } else if constexpr(stringification::adl::is_container<T>::value) {
+        } else if constexpr(
+            stringification::adl::is_container<T>::value
+            && !std::is_same_v<strip<T>, std::filesystem::path>
+        ) {
             if constexpr(stringifiable_container<T>()) {
                 return stringification::stringify_container(v);
             } else {
@@ -429,6 +489,7 @@ namespace libassert::detail {
         if constexpr(
             stringification::adl::is_container<T>::value
             && !is_string_type<T>
+            && !std::is_same_v<strip<T>, std::filesystem::path>
             && stringifiable_container<T>()
         ) {
             return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);

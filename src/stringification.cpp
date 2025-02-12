@@ -292,6 +292,14 @@ namespace libassert::detail {
             return ec.category().name() + (':' + std::to_string(ec.value())) + ' ' + ec.message();
         }
 
+        LIBASSERT_ATTR_COLD std::string stringify(std::filesystem::path path) {
+            if constexpr(std::is_same_v<std::filesystem::path::value_type, char>) {
+                return stringify(std::string_view(path.native()));
+            } else {
+                return stringify(std::string_view(path.string()));
+            }
+        }
+
         #if __cplusplus >= 202002L
         LIBASSERT_ATTR_COLD std::string stringify(std::strong_ordering value) {
                 if(value == std::strong_ordering::less)       return "std::strong_ordering::less";
