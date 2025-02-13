@@ -85,13 +85,6 @@ namespace libassert {
         return detail::generate_stringification(t);
     }
 
-    std::string highlight(std::string_view expression);
-
-    template<typename T>
-    [[nodiscard]] std::string highlight_stringify(const T& t) {
-        return highlight(stringify(t));
-    }
-
     // NOTE: string view underlying data should have static storage duration, or otherwise live as long as the scheme
     // is in use
     struct color_scheme {
@@ -119,6 +112,13 @@ namespace libassert {
     // set separator used for diagnostics, by default it is "=>"
     // note: not thread-safe
     LIBASSERT_EXPORT void set_separator(std::string_view separator);
+
+    std::string highlight(std::string_view expression, const color_scheme& scheme = get_color_scheme());
+
+    template<typename T>
+    [[nodiscard]] std::string highlight_stringify(const T& t, const color_scheme& scheme = get_color_scheme()) {
+        return highlight(stringify(t), scheme);
+    }
 
     // generates a stack trace, formats to the given width
     [[nodiscard]] LIBASSERT_ATTR_NOINLINE LIBASSERT_EXPORT

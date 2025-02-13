@@ -155,7 +155,7 @@ namespace libassert::detail {
                     scheme
                 );
             } else {
-                auto sig = highlight(signature + "(", scheme); // hack for the highlighter
+                auto sig = detail::highlight(signature + "(", scheme); // hack for the highlighter
                 sig = sig.substr(0, sig.rfind('('));
                 stacktrace += microfmt::format(
                     "#{}{>2}{} {}\n      at {}:{}{}{}\n",
@@ -185,13 +185,13 @@ namespace libassert::detail {
         LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!vec.empty());
         std::string values;
         if(vec.size() == 1) {
-            values += microfmt::format("{}\n", indent(highlight(vec[0], scheme), 8 + lw + 4, ' ', true));
+            values += microfmt::format("{}\n", indent(detail::highlight(vec[0], scheme), 8 + lw + 4, ' ', true));
         } else {
             // spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
             // no indentation done here for multiple value printing
             values += " ";
             for(const auto& str : vec) {
-                values += microfmt::format("{}", highlight(str, scheme));
+                values += microfmt::format("{}", detail::highlight(str, scheme));
                 if(&str != &*--vec.end()) {
                     values += "  ";
                 }
@@ -292,7 +292,7 @@ namespace libassert::detail {
                 } else {
                     where += microfmt::format(
                         "        {}{<{}} {} ",
-                        highlight(expr_str, scheme),
+                        detail::highlight(expr_str, scheme),
                         lw - expr_str.size(),
                         "",
                         arrow
@@ -335,12 +335,12 @@ namespace libassert::detail {
             } else {
                 output += microfmt::format(
                     "        {}{<{}} {} {}\n",
-                    highlight(entry.expression, scheme),
+                    detail::highlight(entry.expression, scheme),
                     lw - entry.expression.length(),
                     "",
                     arrow,
                     indent(
-                        highlight(entry.stringification, scheme),
+                        detail::highlight(entry.stringification, scheme),
                         8 + lw + 4,
                         ' ',
                         true
@@ -400,12 +400,12 @@ namespace libassert {
         return current_color_scheme;
     }
 
-    [[nodiscard]] std::string highlight(std::string_view expression) {
-        return detail::highlight(expression, libassert::color_scheme::ansi_rgb);
-    }
-
     LIBASSERT_EXPORT void set_separator(std::string_view separator) {
         detail::arrow = separator;
+    }
+
+    [[nodiscard]] std::string highlight(std::string_view expression, const color_scheme& scheme) {
+        return detail::highlight(expression, scheme);
     }
 
     std::atomic<path_mode> current_path_mode = path_mode::disambiguated;
@@ -575,7 +575,7 @@ namespace libassert {
                 action(),
                 get_path_handler()->resolve_path(file_name),
                 line,
-                highlight(prettified_function, scheme),
+                detail::highlight(prettified_function, scheme),
                 *message
             );
         } else {
@@ -584,7 +584,7 @@ namespace libassert {
                 action(),
                 get_path_handler()->resolve_path(file_name),
                 line,
-                highlight(prettified_function, scheme)
+                detail::highlight(prettified_function, scheme)
             );
         }
     }
@@ -596,7 +596,7 @@ namespace libassert {
     std::string assertion_info::statement(const color_scheme& scheme) const {
         return microfmt::format(
             "    {}\n",
-            highlight(
+            detail::highlight(
                 microfmt::format(
                     "{}({}{});",
                     macro_name,
