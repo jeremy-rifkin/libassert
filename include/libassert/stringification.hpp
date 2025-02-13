@@ -173,7 +173,7 @@ namespace libassert::detail {
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long double);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_code ec);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_condition ec);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::filesystem::path path);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::filesystem::path& path);
         #if __cplusplus >= 202002L
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::strong_ordering);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::weak_ordering);
