@@ -421,6 +421,15 @@ namespace libassert {
     template<typename T> [[nodiscard]] std::string_view type_name() noexcept;
     template<typename T> [[nodiscard]] std::string pretty_type_name() noexcept;
     template<typename T> [[nodiscard]] std::string stringify(const T& value);
+    std::string highlight(
+        std::string_view expression,
+        const color_scheme& scheme = get_color_scheme()
+    );
+    template<typename T>
+    [[nodiscard]] std::string highlight_stringify(
+        const T& value,
+        const color_scheme& scheme = get_color_scheme()
+    );
 }
 ```
 
@@ -428,6 +437,8 @@ namespace libassert {
 - `type_name`: Returns the type name of T
 - `pretty_type_name`: Returns the prettified type name for T
 - `stringify`: Produces a debug stringification of a value
+- `highlight`: Syntax-highlights a string using libassert's internal expression highlighter
+- `highlight_stringify`: Equivalent to `libassert::highlight(libassert::stringify(value))`
 
 ## Terminal Utilities
 
