@@ -106,6 +106,35 @@ TEST(Stringify, RecursiveStringify) {
     ASSERT(generate_stringification(recursive_stringify{}) == R"(recursive_stringify: [<instance of recursive_stringify>, <instance of recursive_stringify>, <instance of recursive_stringify>, <instance of recursive_stringify>, <instance of recursive_stringify>])");
 }
 
+struct recursive_stringify_pathological {
+    using value_type = int;
+    struct const_iterator {
+        int i;
+        using value_type = std::vector<recursive_stringify_pathological>;
+        value_type operator*() const {
+            return value_type{};
+        }
+        const_iterator operator++(int) {
+            auto copy = *this;
+            i++;
+            return copy;
+        }
+        bool operator!=(const const_iterator& other) const {
+            return i != other.i;
+        }
+    };
+    const_iterator begin() const {
+        return {0};
+    }
+    const_iterator end() const {
+        return {5};
+    }
+};
+
+TEST(Stringify, RecursiveStringifyPathological) {
+    ASSERT(generate_stringification(recursive_stringify_pathological{}) == R"(recursive_stringify_pathological: [[], [], [], [], []])");
+}
+
 TEST(Stringify, Containers) {
     std::array arr{1,2,3,4,5};
     static_assert(stringifiable<std::array<int, 5>>);
