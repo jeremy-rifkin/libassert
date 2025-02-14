@@ -39,4 +39,25 @@ namespace libassert::detail {
     } ();
 }
 
+// Some testing utilities
+
+#define REQUIRE_ASSERT(expr) \
+    do { \
+        auto handler = ::libassert::get_failure_handler(); \
+        ::libassert::set_failure_handler([] (const ::libassert::assertion_info& info) { \
+            throw info; \
+        }); \
+        bool did_assert = false; \
+        try { \
+            (expr); \
+        } catch(const ::libassert::assertion_info& info) { \
+            did_assert = true; \
+            SUCCEED(); \
+        } \
+        if(!did_assert) { \
+            FAIL("Expected assertion failure from " #expr " however none happened"); \
+        } \
+        ::libassert::set_failure_handler(handler); \
+    } while(false)
+
 #endif
