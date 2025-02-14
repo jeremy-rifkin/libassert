@@ -463,7 +463,12 @@ namespace libassert {
     }
 
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
-    void set_failure_handler(void (*handler)(const assertion_info&)) {
+    handler_ptr get_failure_handler() {
+        return detail::get_failure_handler();
+    }
+
+    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
+    void set_failure_handler(handler_ptr handler) {
         detail::get_failure_handler() = handler;
     }
 

@@ -178,7 +178,9 @@ namespace libassert {
 
     [[noreturn]] LIBASSERT_EXPORT void default_failure_handler(const assertion_info& info);
 
-    LIBASSERT_EXPORT void set_failure_handler(void (*handler)(const assertion_info&));
+    using handler_ptr = void(*)(const assertion_info&);
+    LIBASSERT_EXPORT handler_ptr get_failure_handler();
+    LIBASSERT_EXPORT void set_failure_handler(handler_ptr handler);
 
     struct LIBASSERT_EXPORT binary_diagnostics_descriptor {
         std::string left_expression;
