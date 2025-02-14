@@ -1,6 +1,7 @@
 #include "paths.hpp"
 
 #include "common.hpp"
+#include <memory>
 
 namespace libassert::detail {
     using path_components = std::vector<std::string>;
@@ -104,8 +105,18 @@ namespace libassert::detail {
     }
 
     LIBASSERT_ATTR_COLD
+    std::unique_ptr<detail::path_handler> identity_path_handler::clone() const {
+        return std::make_unique<identity_path_handler>(*this);
+    }
+
+    LIBASSERT_ATTR_COLD
     std::string_view identity_path_handler::resolve_path(std::string_view path) {
         return path;
+    }
+
+    LIBASSERT_ATTR_COLD
+    std::unique_ptr<detail::path_handler> disambiguating_path_handler::clone() const {
+        return std::make_unique<disambiguating_path_handler>(*this);
     }
 
     LIBASSERT_ATTR_COLD
@@ -147,6 +158,11 @@ namespace libassert::detail {
         }
         path_map = std::move(files);
         // return {files, std::min(longest_file_width, size_t(50))};
+    }
+
+    LIBASSERT_ATTR_COLD
+    std::unique_ptr<detail::path_handler> basename_path_handler::clone() const {
+        return std::make_unique<basename_path_handler>(*this);
     }
 
     LIBASSERT_ATTR_COLD

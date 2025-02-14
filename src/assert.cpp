@@ -493,7 +493,9 @@ namespace libassert {
         multiple_formats(_multiple_formats) {}
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
     LIBASSERT_ATTR_COLD
+    binary_diagnostics_descriptor::binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = default;
     binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
+    binary_diagnostics_descriptor& binary_diagnostics_descriptor::operator=(const binary_diagnostics_descriptor&) = default;
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor&
     binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID) = default;
 }
@@ -516,8 +518,36 @@ namespace libassert {
         trace(std::move(_raw_trace)) {}
 
     LIBASSERT_ATTR_COLD assertion_info::~assertion_info() = default;
-
+    assertion_info::assertion_info(const assertion_info& other) :
+        macro_name(other.macro_name),
+        type(other.type),
+        expression_string(other.expression_string),
+        file_name(other.file_name),
+        line(other.line),
+        function(other.function),
+        message(other.message),
+        binary_diagnostics(other.binary_diagnostics),
+        extra_diagnostics(other.extra_diagnostics),
+        n_args(other.n_args),
+        trace(other.trace),
+        path_handler(other.path_handler ? other.path_handler->clone() : nullptr)
+        {}
     assertion_info::assertion_info(assertion_info&&) = default;
+    assertion_info& assertion_info::operator=(const assertion_info& other) {
+        macro_name = other.macro_name;
+        type = other.type;
+        expression_string = other.expression_string;
+        file_name = other.file_name;
+        line = other.line;
+        function = other.function;
+        message = other.message;
+        binary_diagnostics = other.binary_diagnostics;
+        extra_diagnostics = other.extra_diagnostics;
+        n_args = other.n_args;
+        trace = other.trace;
+        path_handler = other.path_handler ? other.path_handler->clone() : nullptr;
+        return *this;
+    }
     assertion_info& assertion_info::operator=(assertion_info&&) = default;
 
     path_handler* assertion_info::get_path_handler() const {

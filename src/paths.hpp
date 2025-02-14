@@ -43,6 +43,7 @@ namespace libassert::detail {
 
     class identity_path_handler : public path_handler {
     public:
+        std::unique_ptr<detail::path_handler> clone() const override;
         std::string_view resolve_path(std::string_view) override;
     };
 
@@ -50,6 +51,7 @@ namespace libassert::detail {
         std::vector<std::string> paths;
         std::unordered_map<std::string, std::string> path_map;
     public:
+        std::unique_ptr<detail::path_handler> clone() const override;
         std::string_view resolve_path(std::string_view) override;
         bool has_add_path() const override;
         void add_path(std::string_view) override;
@@ -58,6 +60,7 @@ namespace libassert::detail {
 
     class basename_path_handler : public path_handler {
     public:
+        std::unique_ptr<detail::path_handler> clone() const override;
         std::string_view resolve_path(std::string_view) override;
     };
 }
