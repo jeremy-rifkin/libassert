@@ -15,10 +15,6 @@
  #define LIBASSERT_CPLUSPLUS __cplusplus
 #endif
 
-#if LIBASSERT_CPLUSPLUS < 201703L
- #error "libassert requires C++17 or newer"
-#endif
-
 #if LIBASSERT_CPLUSPLUS >= 202302L
  #define LIBASSERT_STD_VER 23
 #elif LIBASSERT_CPLUSPLUS >= 202002L
@@ -26,7 +22,7 @@
 #elif LIBASSERT_CPLUSPLUS >= 201703L
  #define LIBASSERT_STD_VER 17
 #else
- #error "Can't happen"
+ #error "libassert requires C++17 or newer"
 #endif
 
 ///
