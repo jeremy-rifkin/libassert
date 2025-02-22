@@ -48,7 +48,7 @@ endif()
 # ---- Project Dependencies ----
 
 set(LIBASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
-set(LIBASSERT_MAGIC_ENUM_TAG "e55b9b54d5cf61f8e117cafb17846d7d742dd3b4") # v0.9.5
+set(LIBASSERT_MAGIC_ENUM_TAG "e046b69a3736d314fad813e159b1c192eaef92cd") # v0.9.7
 
 set(LIBASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
 set(LIBASSERT_CPPTRACE_TAG "1940dc607aa09fd9014c650aa305f363284919fa") # v0.8.1
