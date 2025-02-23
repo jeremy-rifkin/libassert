@@ -117,7 +117,7 @@ include(FetchContent)
 FetchContent_Declare(
   libassert
   GIT_REPOSITORY https://github.com/jeremy-rifkin/libassert.git
-  GIT_TAG        v2.1.4 # <HASH or TAG>
+  GIT_TAG        v2.1.5 # <HASH or TAG>
 )
 FetchContent_MakeAvailable(libassert)
 target_link_libraries(your_target libassert::assert)
@@ -886,7 +886,7 @@ include(FetchContent)
 FetchContent_Declare(
   libassert
   GIT_REPOSITORY https://github.com/jeremy-rifkin/libassert.git
-  GIT_TAG        v2.1.4 # <HASH or TAG>
+  GIT_TAG        v2.1.5 # <HASH or TAG>
 )
 FetchContent_MakeAvailable(libassert)
 target_link_libraries(your_target libassert::assert)
@@ -901,7 +901,7 @@ information.
 
 ```sh
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v2.1.4
+git checkout v2.1.5
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
@@ -937,7 +937,7 @@ you when installing new libraries.
 
 ```ps1
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v2.1.4
+git checkout v2.1.5
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
@@ -955,7 +955,7 @@ To install just for the local user (or any custom prefix):
 
 ```sh
 git clone https://github.com/jeremy-rifkin/libassert.git
-git checkout v2.1.4
+git checkout v2.1.5
 mkdir libassert/build
 cd libassert/build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/wherever
@@ -1004,7 +1004,7 @@ Libassert is available through conan at https://conan.io/center/recipes/libasser
 
 ```
 [requires]
-libassert/2.1.4
+libassert/2.1.5
 [generators]
 CMakeDeps
 CMakeToolchain

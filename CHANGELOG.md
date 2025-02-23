@@ -1,3 +1,4 @@
+- [libassert 2.1.5](#libassert-215)
 - [libassert 2.1.4](#libassert-214)
 - [libassert 2.1.3](#libassert-213)
 - [libassert 2.1.2](#libassert-212)
@@ -13,6 +14,23 @@
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.1.5
+
+Added:
+- Added `libassert::highlight` and `libassert::highlight_stringify` https://github.com/jeremy-rifkin/libassert/pull/120
+- Added `REQUIRE_ASSERT` to test assertion failures under Catch2 https://github.com/jeremy-rifkin/libassert/issues/114
+
+Fixed:
+- Fixed problem with stringifying `std::filesystem::path` resulting in a stack overflow and a general problem of
+  infinite recursion from stringifying types where iterators can lead to hard to detect type cycles https://github.com/jeremy-rifkin/libassert/issues/118
+
+Other:
+- Bumped magic_enum via FetchContent
+- Bumped cpptrace via FetchContent from v0.7.5 to v0.8.2, with lots of improvements
+- Some makefile improvements
+- Various typo fixes in the README
+- Added some info on library headers to the README
 
 ## libassert 2.1.4
 
