@@ -338,6 +338,9 @@ magic.
 - `libassert/assert-gtest.hpp`: Libassert macros for gtest
 - `libassert/assert-catch2.hpp`: Libassert macros for catch2
 
+Additionally, the `libassert/` include folder contains `expression-decomposition.hpp`, `platform.hpp`,
+`stringification.hpp`, and `utilities.hpp`. These are mostly library details.
+
 ## Assertion Macros
 
 All assertion functions are macros. Here are some pseudo-declarations for interfacing with them:
