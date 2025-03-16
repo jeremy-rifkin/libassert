@@ -16,9 +16,9 @@
  // paths. this isn't an issue for #include <assert.hpp> but becomes an issue
  // for includes within the library (libA might include from libB)
  #if defined(__has_include) && __has_include(<magic_enum/magic_enum.hpp>)
-    #include <magic_enum/magic_enum.hpp>
+  #include <magic_enum/magic_enum.hpp>
  #else
-    #include <magic_enum.hpp>
+  #include <magic_enum.hpp>
  #endif
 #endif
 
