@@ -66,49 +66,6 @@
 #endif
 
 ///
-/// Detect standard library versions.
-///
-
-// libstdc++
-#ifdef _GLIBCXX_RELEASE
- #define LIBASSERT_GLIBCXX_RELEASE _GLIBCXX_RELEASE
-#else
- #define LIBASSERT_GLIBCXX_RELEASE 0
-#endif
-
-#ifdef _LIBCPP_VERSION
- #define LIBASSERT_LIBCPP_VERSION _LIBCPP_VERSION
-#else
- #define LIBASSERT_LIBCPP_VERSION 0
-#endif
-
-///
-/// Helper macros for compiler attributes.
-///
-
-#ifdef __has_cpp_attribute
- #define LIBASSERT_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
-#else
- #define LIBASSERT_HAS_CPP_ATTRIBUTE(x) 0
-#endif
-
-///
-/// Compiler attribute support.
-///
-
-#if LIBASSERT_HAS_CPP_ATTRIBUTE(nodiscard) && LIBASSERT_STD_VER >= 20
- #define LIBASSERT_ATTR_NODISCARD_MSG(msg) [[nodiscard(msg)]]
-#else // Assume we have normal C++17 nodiscard support.
- #define LIBASSERT_ATTR_NODISCARD_MSG(msg) [[nodiscard]]
-#endif
-
-#if LIBASSERT_HAS_CPP_ATTRIBUTE(no_unique_address)
- #define LIBASSERT_ATTR_NO_UNIQUE_ADDRESS [[no_unique_address]]
-#else
- #define LIBASSERT_ATTR_NO_UNIQUE_ADDRESS
-#endif
-
-///
 /// General project macros
 ///
 
