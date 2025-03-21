@@ -118,18 +118,14 @@ namespace libassert::detail {
              LIBASSERT_ATTR_COLD [[nodiscard]]
              constexpr decltype(auto) operator()(A&& lhs, B&& rhs) const {
                  // Go out of the way to support old-style ASSERT(foo && "Message")
-                 #if LIBASSERT_IS_GCC
-                  if constexpr(is_string_literal<B>) {
-                      #pragma GCC diagnostic push
-                      #pragma GCC diagnostic ignored "-Wnonnull-compare"
-                      return std::forward<A>(lhs) && std::forward<B>(rhs);
-                      #pragma GCC diagnostic pop
-                  } else {
-                      return std::forward<A>(lhs) && std::forward<B>(rhs);
-                  }
-                 #else
-                  return std::forward<A>(lhs) && std::forward<B>(rhs);
-                 #endif
+                if constexpr(is_string_literal<B>) {
+                    LIBASSERT_WARNING_PRAGMA_PUSH_GCC
+                    LIBASSERT_WARNING_PRAGMA_IGNORED_GCC("-Wnonnull-compare")
+                    return std::forward<A>(lhs) && std::forward<B>(rhs);
+                    LIBASSERT_WARNING_PRAGMA_POP_GCC
+                } else {
+                    return std::forward<A>(lhs) && std::forward<B>(rhs);
+                }
              }
          };
          LIBASSERT_GEN_OP_BOILERPLATE(lor,    ||);

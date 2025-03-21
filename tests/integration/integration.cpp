@@ -79,9 +79,7 @@ void recursive_b(int n) {
 #define SECTION(s) std::cout<<"===================== ["<<(s)<<"] ====================="<<std::endl;
 
 // disable unsafe use of bool warning msvc
-#ifdef _MSC_VER
- #pragma warning(disable: 4804)
-#endif
+LIBASSERT_WARNING_PRAGMA_IGNORED_MSVC(4804)
 
 // TODO: need to check assert, verify, and check...?
 // Opt/DNDEBUG

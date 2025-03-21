@@ -163,9 +163,7 @@ int get_mask() {
 }
 
 // disable unsafe use of bool warning msvc
-#ifdef _MSC_VER
- #pragma warning(disable: 4806)
-#endif
+LIBASSERT_WARNING_PRAGMA_IGNORED_MSVC(4806)
 
 class foo {
 public:
@@ -271,9 +269,8 @@ public:
         debug_assert((puts("A"), false) && (puts("B"), false));
 
         {
-            #if defined(__GNUC__) || defined(__GNUG__) // gcc/clang
-             #pragma GCC diagnostic ignored "-Wshadow"
-            #endif
+            LIBASSERT_WARNING_PRAGMA_IGNORED_CLANG("-Wshadow")
+            LIBASSERT_WARNING_PRAGMA_IGNORED_GCC("-Wshadow")
             std::string s = "h1eLlo";
             debug_assert(std::find_if(s.begin(), s.end(), [](char c) {
                 debug_assert(not isdigit(c), c);

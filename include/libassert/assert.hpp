@@ -35,13 +35,13 @@
  #include <expected>
 #endif
 
-#if LIBASSERT_IS_MSVC
- #pragma warning(push)
- // warning C4251: using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for
- // some reason
- // 4275 is the same thing but for base classes
- #pragma warning(disable: 4251; disable: 4275)
-#endif
+LIBASSERT_WARNING_PRAGMA_PUSH_MSVC
+
+// using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for some reason
+LIBASSERT_WARNING_PRAGMA_IGNORED_MSVC(4251)
+
+// same thing but for base classes
+LIBASSERT_WARNING_PRAGMA_IGNORED_MSVC(4275)
 
 // =====================================================================================================================
 // || Libassert public interface                                                                                      ||
@@ -527,9 +527,7 @@ namespace libassert::detail {
     }
 }
 
-#if LIBASSERT_IS_MSVC
- #pragma warning(pop)
-#endif
+LIBASSERT_WARNING_PRAGMA_POP_MSVC
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
  // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
@@ -607,35 +605,6 @@ namespace libassert::detail {
 #define LIBASSERT_IF_true(t,...) t
 #define LIBASSERT_IF_false(t,f,...) f
 
-#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
- #if LIBASSERT_IS_GCC
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
-     _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-     _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC _Pragma("GCC diagnostic push")
-  #define LIBASSERT_WARNING_PRAGMA_POP_GCC _Pragma("GCC diagnostic pop")
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
-  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
- #else
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
-     _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-     _Pragma("GCC diagnostic ignored \"-Woverloaded-shift-op-parentheses\"")
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
-  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG _Pragma("GCC diagnostic push")
-  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG _Pragma("GCC diagnostic pop")
- #endif
-#else
- #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
- #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
- #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
- #define LIBASSERT_WARNING_PRAGMA_POP_GCC
- #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
- #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
-#endif
-
 namespace libassert {
     inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
         // This non-constexpr method is called from an assertion in a constexpr context if a failure occurs. It is
@@ -687,9 +656,8 @@ namespace libassert {
     }();
 #endif
 
-// Note about statement expressions: These are needed for two reasons. The first is putting the arg string array and
-// source location structure in .rodata rather than on the stack, the second is a _Pragma for warnings which isn't
-// allowed in the middle of an expression by GCC. The semantics are similar to a function return:
+// Note about statement expressions: This is needed for putting the arg string array and source location structure in
+// .rodata rather than on the stack. The semantics are similar to a function return:
 // Given M m; in parent scope, ({ m; }) is an rvalue M&& rather than an lvalue
 // ({ M m; m; }) doesn't move, it copies
 // ({ M{}; }) does move
@@ -705,11 +673,6 @@ namespace libassert {
  #define LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
 #endif
 #define LIBASSERT_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
-#if LIBASSERT_IS_CLANG // -Wall in clang
- #define LIBASSERT_IGNORE_UNUSED_VALUE _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
-#else
- #define LIBASSERT_IGNORE_UNUSED_VALUE
-#endif
 
 #define LIBASSERT_BREAKPOINT_IF_DEBUGGING() \
     do \
@@ -729,10 +692,12 @@ namespace libassert {
     /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
     do { \
         LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
-        LIBASSERT_IGNORE_UNUSED_VALUE \
-        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
+        LIBASSERT_WARNING_PRAGMA_IGNORED_CLANG("-Wunused-value") \
+        LIBASSERT_WARNING_PRAGMA_IGNORED_CLANG("-Wparentheses") \
+        LIBASSERT_WARNING_PRAGMA_IGNORED_CLANG("-Woverloaded-shift-op-parentheses") \
         LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
-        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
+        LIBASSERT_WARNING_PRAGMA_IGNORED_GCC("-Wparentheses") \
+        LIBASSERT_WARNING_PRAGMA_IGNORED_GCC("-Wuseless-cast") \
         auto libassert_decomposer = libassert::detail::expression_decomposer( \
             libassert::detail::expression_decomposer{} << expr \
         ); \
@@ -803,11 +768,13 @@ namespace libassert {
     /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
     /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
     LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
-    LIBASSERT_IGNORE_UNUSED_VALUE \
-    LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
+    LIBASSERT_WARNING_PRAGMA_IGNORED_CLANG("-Wunused-value") \
+    LIBASSERT_WARNING_PRAGMA_IGNORED_CLANG("-Wparentheses") \
+    LIBASSERT_WARNING_PRAGMA_IGNORED_CLANG("-Woverloaded-shift-op-parentheses") \
     LIBASSERT_STMTEXPR( \
         LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
-        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
+        LIBASSERT_WARNING_PRAGMA_IGNORED_GCC("-Wparentheses") \
+        LIBASSERT_WARNING_PRAGMA_IGNORED_GCC("-Wuseless-cast") \
         auto libassert_decomposer = libassert::detail::expression_decomposer( \
             libassert::detail::expression_decomposer{} << expr \
         ); \
