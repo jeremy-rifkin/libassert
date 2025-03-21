@@ -62,7 +62,7 @@ namespace libassert::detail {
         // lexer_error() { throw std::runtime_error("oops"); }
     };
 
-    #define TRY(expr) do if(std::optional<lexer_error> res = (expr); res.has_value()) { return res.value(); } while(0)
+    #define TRY(expr) do if(std::optional<lexer_error> res = (expr); res.has_value()) { return res.value(); } while(false)
 
     // key#nt:keyword
     // [...temp0.querySelectorAll("span.keyword, span.literal")].map(node => `"${node.innerHTML.replace(`<span class="shy"></span>`, "")}",`).join("\n")

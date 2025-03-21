@@ -70,7 +70,7 @@ std::string assertion_failure_message;
         } catch(std::exception& e) { \
             assertion_failure_message = e.what(); \
         } \
-    } while(0)
+    } while(false)
 
 std::string prepare(std::string_view string, location loc) {
     using namespace libassert::detail;
@@ -114,7 +114,7 @@ std::string normalize(std::string message) {
             prepare((expected), loc), \
             normalize(assertion_failure_message) \
         ); \
-    } while(0)
+    } while(false)
 
 #define PASS(...) try { __VA_ARGS__; SUCCEED(); } catch(const std::exception& e) { FAIL() << e.what(); }
 

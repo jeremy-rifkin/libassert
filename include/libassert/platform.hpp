@@ -102,7 +102,6 @@
  #define LIBASSERT_ATTR_NODISCARD_MSG(msg) [[nodiscard]]
 #endif
 
-
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(no_unique_address)
  #define LIBASSERT_ATTR_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #else
@@ -167,10 +166,10 @@
  #define LIBASSERT_GCC_ISNT_STUPID 1
 #endif
 
-#if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL
- #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR true
+#if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL != 0
+ #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR 1
 #else
- #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR false
+ #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR 0
 #endif
 
 #if (LIBASSERT_IS_GCC || LIBASSERT_STD_VER >= 20) && !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
@@ -204,12 +203,12 @@
 #endif
 
 // GCC 9.1+ and later has __builtin_is_constant_evaluated
-#if defined(__GNUC__) && (__GNUC__ >= 9) && !defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+#if defined(__GNUC__) && __GNUC__ >= 9 && !defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
  #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
 // Visual Studio 2019 (19.25) and later supports __builtin_is_constant_evaluated
-#if defined(_MSC_FULL_VER) && (_MSC_FULL_VER >= 192528326)
+#if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 192528326
  #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
@@ -264,7 +263,7 @@ namespace libassert::detail {
    __asm__ __volatile__(instruction) \
    ; \
    LIBASSERT_WARNING_PRAGMA_POP_GCC \
-  } while(0)
+  } while(false)
  // precedence for these come from llvm's __builtin_debugtrap() implementation
  // arm: https://github.com/llvm/llvm-project/blob/e9954ec087d640809082f46d1c7e5ac1767b798d/llvm/lib/Target/ARM/ARMInstrInfo.td#L2393-L2394
  //  def : Pat<(debugtrap), (BKPT 0)>, Requires<[IsARM, HasV5T]>;

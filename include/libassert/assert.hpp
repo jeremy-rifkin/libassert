@@ -578,10 +578,10 @@ namespace libassert::detail {
  #define LIBASSERT_EVAL4(...) LIBASSERT_EVAL3(LIBASSERT_EVAL3(LIBASSERT_EVAL3(__VA_ARGS__)))
  #define LIBASSERT_EVAL(...) LIBASSERT_EVAL4(LIBASSERT_EVAL4(LIBASSERT_EVAL4(__VA_ARGS__)))
  #define LIBASSERT_EXPAND(x) x
- #define LIBASSERT_MAP_SWITCH(...)\
-     LIBASSERT_EXPAND(LIBASSERT_ARG_40(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
-             2, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
-             2, 2, 2, 2, 2, 2, 2, 2, 2,\
+ #define LIBASSERT_MAP_SWITCH(...) \
+     LIBASSERT_EXPAND(LIBASSERT_ARG_40(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2, \
+             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, \
+             2, 2, 2, 2, 2, 2, 2, 2, 2, \
              2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0))
  #define LIBASSERT_MAP_A(...) LIBASSERT_PLUS_TEXT(LIBASSERT_MAP_NEXT_, \
                                             LIBASSERT_MAP_SWITCH(0, __VA_ARGS__)) (LIBASSERT_MAP_B, __VA_ARGS__)
@@ -589,7 +589,7 @@ namespace libassert::detail {
                                             LIBASSERT_MAP_SWITCH(0, __VA_ARGS__)) (LIBASSERT_MAP_A, __VA_ARGS__)
  #define LIBASSERT_MAP_CALL(fn, Value) LIBASSERT_EXPAND(fn(Value))
  #define LIBASSERT_MAP_OUT
- #define LIBASSERT_MAP_NEXT_2(...)\
+ #define LIBASSERT_MAP_NEXT_2(...) \
      LIBASSERT_MAP_CALL(LIBASSERT_EXPAND(LIBASSERT_ARG_2(__VA_ARGS__)), \
      LIBASSERT_EXPAND(LIBASSERT_ARG_3(__VA_ARGS__))) \
      LIBASSERT_EXPAND(LIBASSERT_ARG_1(__VA_ARGS__)) \
@@ -716,7 +716,7 @@ namespace libassert {
         if(libassert::is_debugger_present()) { \
             LIBASSERT_BREAKPOINT(); \
         } \
-    while(0)
+    while(false)
 
 #ifdef LIBASSERT_BREAK_ON_FAIL
  #define LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL() LIBASSERT_BREAKPOINT_IF_DEBUGGING()
@@ -979,7 +979,6 @@ namespace libassert {
   #define USER_STATIC_ASSERT_BACKUP_MSG(cond, msg, constant) static_assert(cond, msg)
  #endif
 #endif
-
 
 #endif // LIBASSERT_HPP
 
