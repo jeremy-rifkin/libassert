@@ -96,7 +96,7 @@
 /// Compiler attribute support.
 ///
 
-#if LIBASSERT_HAS_CPP_ATTRIBUTE(nodiscard) && LIBASSERT_STD_VER >= 20
+#if LIBASSERT_HAS_CPP_ATTRIBUTE(nodiscard) && (LIBASSERT_STD_VER >= 20)
  #define LIBASSERT_ATTR_NODISCARD_MSG(msg) [[nodiscard(msg)]]
 #else // Assume we have normal C++17 nodiscard support.
  #define LIBASSERT_ATTR_NODISCARD_MSG(msg) [[nodiscard]]
@@ -114,11 +114,11 @@
 ///
 
 #ifdef _WIN32
- #define LIBASSERT_EXPORT_ATTR __declspec(dllexport)
- #define LIBASSERT_IMPORT_ATTR __declspec(dllimport)
+ #define LIBASSERT_ATTR_EXPORT __declspec(dllexport)
+ #define LIBASSERT_ATTR_IMPORT __declspec(dllimport)
 #else
- #define LIBASSERT_EXPORT_ATTR __attribute__((visibility("default")))
- #define LIBASSERT_IMPORT_ATTR __attribute__((visibility("default")))
+ #define LIBASSERT_ATTR_EXPORT __attribute__((visibility("default")))
+ #define LIBASSERT_ATTR_IMPORT __attribute__((visibility("default")))
 #endif
 
 #ifdef LIBASSERT_STATIC_DEFINE
@@ -128,29 +128,36 @@
  #ifndef LIBASSERT_EXPORT
   #ifdef libassert_lib_EXPORTS
    /* We are building this library */
-   #define LIBASSERT_EXPORT LIBASSERT_EXPORT_ATTR
+   #define LIBASSERT_EXPORT LIBASSERT_ATTR_EXPORT
   #else
    /* We are using this library */
-   #define LIBASSERT_EXPORT LIBASSERT_IMPORT_ATTR
+   #define LIBASSERT_EXPORT LIBASSERT_ATTR_IMPORT
   #endif
  #endif
+#endif
+
+#if LIBASSERT_CPLUSPLUS >= 202302L
+ #include <utility>
+ #define LIBASSERT_UNREACHABLE_CALL() (::std::unreachable())
+#elif LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
+ #define LIBASSERT_UNREACHABLE_CALL() __builtin_unreachable()
+#else
+ #define LIBASSERT_UNREACHABLE_CALL() __assume(false)
 #endif
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  #define LIBASSERT_PFUNC __extension__ __PRETTY_FUNCTION__
  #define LIBASSERT_ATTR_COLD     [[gnu::cold]]
  #define LIBASSERT_ATTR_NOINLINE [[gnu::noinline]]
- #define LIBASSERT_UNREACHABLE_CALL __builtin_unreachable()
 #else
  #define LIBASSERT_PFUNC __FUNCSIG__
  #define LIBASSERT_ATTR_COLD
  #define LIBASSERT_ATTR_NOINLINE __declspec(noinline)
- #define LIBASSERT_UNREACHABLE_CALL __assume(false)
 #endif
 
 #if LIBASSERT_IS_MSVC
  #define LIBASSERT_STRONG_EXPECT(expr, value) (expr)
-#elif (defined(__clang__) && __clang_major__ >= 11) || __GNUC__ >= 9
+#elif (defined(__clang__) && (__clang_major__ >= 11)) || (__GNUC__ >= 9)
  #define LIBASSERT_STRONG_EXPECT(expr, value) __builtin_expect_with_probability((expr), (value), 1)
 #else
  #define LIBASSERT_STRONG_EXPECT(expr, value) __builtin_expect((expr), (value))
@@ -168,12 +175,12 @@
 #endif
 
 #if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL
- #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR true
+ #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR 1
 #else
- #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR false
+ #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR 0
 #endif
 
-#if (LIBASSERT_IS_GCC || LIBASSERT_STD_VER >= 20) && !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
+#if (LIBASSERT_IS_GCC || (LIBASSERT_STD_VER >= 20)) && !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
  // __VA_OPT__ needed for GCC, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
  #define LIBASSERT_VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
 #else

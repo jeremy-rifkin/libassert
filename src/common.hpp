@@ -29,10 +29,10 @@
  #ifndef LIBASSERT_EXPORT_TESTING
   #ifdef libassert_lib_EXPORTS
    /* We are building this library */
-   #define LIBASSERT_EXPORT_TESTING LIBASSERT_EXPORT_ATTR
+   #define LIBASSERT_EXPORT_TESTING LIBASSERT_ATTR_EXPORT
   #else
    /* We are using this library */
-   #define LIBASSERT_EXPORT_TESTING LIBASSERT_IMPORT_ATTR
+   #define LIBASSERT_EXPORT_TESTING LIBASSERT_ATTR_IMPORT
   #endif
  #endif
 #endif

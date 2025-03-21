@@ -578,10 +578,10 @@ namespace libassert::detail {
  #define LIBASSERT_EVAL4(...) LIBASSERT_EVAL3(LIBASSERT_EVAL3(LIBASSERT_EVAL3(__VA_ARGS__)))
  #define LIBASSERT_EVAL(...) LIBASSERT_EVAL4(LIBASSERT_EVAL4(LIBASSERT_EVAL4(__VA_ARGS__)))
  #define LIBASSERT_EXPAND(x) x
- #define LIBASSERT_MAP_SWITCH(...)\
-     LIBASSERT_EXPAND(LIBASSERT_ARG_40(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
-             2, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
-             2, 2, 2, 2, 2, 2, 2, 2, 2,\
+ #define LIBASSERT_MAP_SWITCH(...) \
+     LIBASSERT_EXPAND(LIBASSERT_ARG_40(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2, \
+             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, \
+             2, 2, 2, 2, 2, 2, 2, 2, 2, \
              2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0))
  #define LIBASSERT_MAP_A(...) LIBASSERT_PLUS_TEXT(LIBASSERT_MAP_NEXT_, \
                                             LIBASSERT_MAP_SWITCH(0, __VA_ARGS__)) (LIBASSERT_MAP_B, __VA_ARGS__)
@@ -589,7 +589,7 @@ namespace libassert::detail {
                                             LIBASSERT_MAP_SWITCH(0, __VA_ARGS__)) (LIBASSERT_MAP_A, __VA_ARGS__)
  #define LIBASSERT_MAP_CALL(fn, Value) LIBASSERT_EXPAND(fn(Value))
  #define LIBASSERT_MAP_OUT
- #define LIBASSERT_MAP_NEXT_2(...)\
+ #define LIBASSERT_MAP_NEXT_2(...) \
      LIBASSERT_MAP_CALL(LIBASSERT_EXPAND(LIBASSERT_ARG_2(__VA_ARGS__)), \
      LIBASSERT_EXPAND(LIBASSERT_ARG_3(__VA_ARGS__))) \
      LIBASSERT_EXPAND(LIBASSERT_ARG_1(__VA_ARGS__)) \
@@ -607,33 +607,27 @@ namespace libassert::detail {
 #define LIBASSERT_IF_true(t,...) t
 #define LIBASSERT_IF_false(t,f,...) f
 
-#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
- #if LIBASSERT_IS_GCC
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
-     _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
-     _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC _Pragma("GCC diagnostic push")
-  #define LIBASSERT_WARNING_PRAGMA_POP_GCC _Pragma("GCC diagnostic pop")
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
-  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
- #else
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
+#if LIBASSERT_IS_CLANG
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
      _Pragma("GCC diagnostic ignored \"-Woverloaded-shift-op-parentheses\"")
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
-  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG _Pragma("GCC diagnostic push")
-  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG _Pragma("GCC diagnostic pop")
- #endif
+ #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG _Pragma("GCC diagnostic push")
+ #define LIBASSERT_WARNING_PRAGMA_POP_CLANG _Pragma("GCC diagnostic pop")
 #else
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
+#endif
+#if LIBASSERT_IS_GCC
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
+     _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+     _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
+ #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC _Pragma("GCC diagnostic push")
+ #define LIBASSERT_WARNING_PRAGMA_POP_GCC _Pragma("GCC diagnostic pop")
+#else
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
- #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
- #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
 #endif
 
 namespace libassert {
@@ -854,7 +848,7 @@ namespace libassert {
     LIBASSERT_WARNING_PRAGMA_POP_CLANG
 
 #ifdef NDEBUG
- #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE_CALL;
+ #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE_CALL();
 #else
  #define LIBASSERT_ASSUME_ACTION
 #endif
@@ -882,7 +876,7 @@ namespace libassert {
 #ifndef NDEBUG
  #define LIBASSERT_UNREACHABLE(...) LIBASSERT_INVOKE_PANIC("UNREACHABLE", unreachable, __VA_ARGS__)
 #else
- #define LIBASSERT_UNREACHABLE(...) LIBASSERT_UNREACHABLE_CALL
+ #define LIBASSERT_UNREACHABLE(...) LIBASSERT_UNREACHABLE_CALL()
 #endif
 
 // value variants
