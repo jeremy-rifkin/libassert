@@ -7,11 +7,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_version_macros.hpp>
 
-#if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL != 0
+#if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL
  #error "Libassert integration does not work with MSVC's non-conformant preprocessor. /Zc:preprocessor must be used."
 #endif
 // TODO: CHECK/REQUIRE?
-#define ASSERT(...) do { try { LIBASSERT_ASSERT(__VA_ARGS__); SUCCEED(); } catch(std::exception& e) { FAIL(e.what()); } } while(false)
+#define ASSERT(...) do { try { LIBASSERT_ASSERT(__VA_ARGS__); SUCCEED(); } catch(std::exception& e) { FAIL(e.what()); } } while(0)
 
 namespace libassert::detail {
     // catch line wrapping can't handle ansi sequences before 3.6 https://github.com/catchorg/Catch2/issues/2833
@@ -58,6 +58,6 @@ namespace libassert::detail {
             FAIL("Expected assertion failure from " #expr " however none happened"); \
         } \
         ::libassert::set_failure_handler(handler); \
-    } while(false)
+    } while(0)
 
 #endif

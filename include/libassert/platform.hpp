@@ -102,7 +102,6 @@
  #define LIBASSERT_ATTR_NODISCARD_MSG(msg) [[nodiscard]]
 #endif
 
-
 #if LIBASSERT_HAS_CPP_ATTRIBUTE(no_unique_address)
  #define LIBASSERT_ATTR_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #else
@@ -175,9 +174,9 @@
 #endif
 
 #if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL
- #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR true
+ #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR 1
 #else
- #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR false
+ #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR 0
 #endif
 
 #if (LIBASSERT_IS_GCC || LIBASSERT_STD_VER >= 20) && !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
@@ -211,12 +210,12 @@
 #endif
 
 // GCC 9.1+ and later has __builtin_is_constant_evaluated
-#if defined(__GNUC__) && (__GNUC__ >= 9) && !defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+#if defined(__GNUC__) && __GNUC__ >= 9 && !defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
  #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
 // Visual Studio 2019 (19.25) and later supports __builtin_is_constant_evaluated
-#if defined(_MSC_FULL_VER) && (_MSC_FULL_VER >= 192528326)
+#if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 192528326
  #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
