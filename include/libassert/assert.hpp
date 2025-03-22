@@ -716,7 +716,7 @@ namespace libassert {
         if(libassert::is_debugger_present()) { \
             LIBASSERT_BREAKPOINT(); \
         } \
-    while(false)
+    while(0)
 
 #ifdef LIBASSERT_BREAK_ON_FAIL
  #define LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL() LIBASSERT_BREAKPOINT_IF_DEBUGGING()
@@ -758,7 +758,7 @@ namespace libassert {
             } \
         } \
         LIBASSERT_WARNING_PRAGMA_POP_CLANG \
-    } while(false) \
+    } while(0) \
 
 #define LIBASSERT_INVOKE_PANIC(name, type, ...) \
     do { \
@@ -769,7 +769,7 @@ namespace libassert {
             libassert_params \
             LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
         ); \
-    } while(false) \
+    } while(0) \
 
 // Workaround for gcc bug 105734 / libassert bug #24
 #define LIBASSERT_DESTROY_DECOMPOSER libassert_decomposer.~expression_decomposer() /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */

@@ -166,7 +166,7 @@
  #define LIBASSERT_GCC_ISNT_STUPID 1
 #endif
 
-#if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL != 0
+#if defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL
  #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR 1
 #else
  #define LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR 0
@@ -263,7 +263,7 @@ namespace libassert::detail {
    __asm__ __volatile__(instruction) \
    ; \
    LIBASSERT_WARNING_PRAGMA_POP_GCC \
-  } while(false)
+  } while(0)
  // precedence for these come from llvm's __builtin_debugtrap() implementation
  // arm: https://github.com/llvm/llvm-project/blob/e9954ec087d640809082f46d1c7e5ac1767b798d/llvm/lib/Target/ARM/ARMInstrInfo.td#L2393-L2394
  //  def : Pat<(debugtrap), (BKPT 0)>, Requires<[IsARM, HasV5T]>;
