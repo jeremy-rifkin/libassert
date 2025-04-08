@@ -51,7 +51,7 @@ set(LIBASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
 set(LIBASSERT_MAGIC_ENUM_TAG "e046b69a3736d314fad813e159b1c192eaef92cd") # v0.9.7
 
 set(LIBASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
-set(LIBASSERT_CPPTRACE_TAG "c37b5ed7364f4fc1c58e92d13399cd04656e6572") # v0.8.2
+set(LIBASSERT_CPPTRACE_TAG "ce639ebfcec47a7c74233b4bab50017cb34e615b") # v0.8.3
 
 # obtain cpptrace
 if(LIBASSERT_USE_EXTERNAL_CPPTRACE)
