@@ -312,12 +312,6 @@ namespace libassert::detail {
     );
 
     /*
-     * System wrappers
-     */
-
-    [[nodiscard]] LIBASSERT_EXPORT std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
-
-    /*
      * assert diagnostics generation
      */
 
@@ -368,6 +362,8 @@ namespace libassert::detail {
         info.function = t.pretty_function;
     }
 
+    [[nodiscard]] LIBASSERT_EXPORT extra_diagnostic create_errno_diagnostic(int value);
+
     template<typename T>
     LIBASSERT_ATTR_COLD
     // TODO
@@ -375,7 +371,7 @@ namespace libassert::detail {
     void process_arg(assertion_info& info, size_t i, sv_span args_strings, const T& t) {
         if constexpr(isa<T, strip<decltype(errno)>>) {
             if(args_strings.data[i] == errno_expansion) {
-                info.extra_diagnostics.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
+                info.extra_diagnostics.push_back(create_errno_diagnostic(t));
                 return;
             }
         } else if constexpr(is_string_type<T>) {

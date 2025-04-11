@@ -9,6 +9,7 @@
 #include <string>
 
 #include "common.hpp"
+#include "microfmt.hpp"
 #include "utils.hpp"
 
 #if IS_WINDOWS
@@ -191,10 +192,16 @@ namespace libassert {
 }
 
 namespace libassert::detail {
-    std::mutex strerror_mutex;
-
     LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {
-        std::unique_lock lock(strerror_mutex);
+        // "strerror is not required to be thread-safe. Implementations may be returning different pointers to static
+        // read-only string literals or may be returning the same pointer over and over, pointing at a static buffer
+        // in which strerror places the string."
+        static std::mutex mutex;
+        std::unique_lock lock(mutex);
         return strerror(e);
+    }
+
+    LIBASSERT_ATTR_COLD extra_diagnostic create_errno_diagnostic(int value) {
+        return { "errno", microfmt::format("{>2:} \"{}\"", value, strerror_wrapper(value)) };
     }
 }

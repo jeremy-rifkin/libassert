@@ -62,8 +62,6 @@ namespace libassert::detail {
 // =====================================================================================================================
 
 namespace libassert::detail {
-    [[nodiscard]] LIBASSERT_EXPORT std::string bstringf(const char* format, ...);
-
     LIBASSERT_ATTR_COLD [[nodiscard]]
     constexpr inline std::string_view substring_bounded_by(
         std::string_view sig,

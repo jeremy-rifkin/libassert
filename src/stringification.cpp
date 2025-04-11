@@ -6,6 +6,7 @@
 #include <string>
 
 #include "analysis.hpp"
+#include "microfmt.hpp"
 #include "utils.hpp"
 
 #include <libassert/assert.hpp>
@@ -127,6 +128,10 @@ namespace libassert::detail {
     }
 
     namespace stringification {
+        LIBASSERT_ATTR_COLD std::string stringify_unknown(std::string_view type_name) {
+            return microfmt::format("<instance of {}>", prettify_type(std::string(type_name)));
+        }
+
         LIBASSERT_ATTR_COLD std::string stringify(std::string_view value) {
             return escape_string(value, '"');
         }
@@ -343,6 +348,10 @@ namespace libassert::detail {
             // messes up the highlighter.
             oss<<std::showbase<<std::hex<<uintptr_t(value);
             return std::move(oss).str();
+        }
+
+        LIBASSERT_ATTR_COLD std::string stringify_enum(std::string_view type_name, std::string_view underlying_value) {
+            return microfmt::format("enum {}: {}", prettify_type(std::string(type_name)), underlying_value);
         }
     }
 }
