@@ -2,6 +2,8 @@
 #include <format>
 #include <fmt/format.h>
 
+#ifdef LIBASSERT_USE_STD_FORMAT
+
 struct S {
     int x;
 };
@@ -104,3 +106,5 @@ TEST(LibassertFmt, StdFormatContainers) {
     std::vector<fmtable> fvec{{{2}, {3}}};
     ASSERT(libassert::detail::generate_stringification(fvec) == "std::vector<fmtable>: [{2}, {3}]");
 }
+
+#endif
