@@ -4,6 +4,8 @@
 // Copyright (c) 2021-2024 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
+#include <cassert>
+
 // =====================================================================================================================
 // || Preprocessor stuff                                                                                              ||
 // =====================================================================================================================
@@ -297,6 +299,10 @@ namespace libassert::detail {
 #else
  // some compiler we aren't prepared for
  #define LIBASSERT_BREAKPOINT()
+#endif
+
+#if defined(__cpp_lib_format) && __cpp_lib_format >= 202110L
+ #define LIBASSERT_USE_STD_FORMAT
 #endif
 
 #endif
