@@ -301,7 +301,7 @@ namespace libassert::detail {
  #define LIBASSERT_BREAKPOINT()
 #endif
 
-#if defined(__has_include) && __has_include(<format>)
+#if defined(__has_include) && __has_include(<format>) && defined(__cpp_lib_format)
  #define LIBASSERT_USE_STD_FORMAT
 #endif
 
