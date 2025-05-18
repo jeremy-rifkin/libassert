@@ -148,11 +148,13 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     target_compile_options(lexer PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
     target_compile_options(fmt-test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
     target_compile_options(stringify PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
+    target_compile_options(std_format20 PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
     target_compile_features(std_format20 PRIVATE cxx_std_20)
     if(cxx_std_23 IN_LIST CMAKE_CXX_COMPILE_FEATURES)
       target_link_libraries(std_format23 PRIVATE GTest::gtest_main)
       target_compile_definitions(std_format23 PRIVATE LIBASSERT_USE_FMT)
       target_compile_features(std_format23 PRIVATE cxx_std_23)
+      target_compile_options(std_format23 PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
     endif()
 
     set(
