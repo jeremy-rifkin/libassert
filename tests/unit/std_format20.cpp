@@ -1,8 +1,8 @@
 #include <libassert/assert-gtest.hpp>
-#include <format>
-#include <fmt/format.h>
 
 #ifdef LIBASSERT_USE_STD_FORMAT
+
+#include <format>
 
 struct S {
     int x;
