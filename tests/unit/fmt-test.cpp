@@ -14,7 +14,7 @@ struct fmt::formatter<S> {
     }
 
     template<typename FormatContext>
-    auto format(const S& s, FormatContext& ctx) {
+    auto format(const S& s, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "s.x={}", s.x);
     }
 };
@@ -35,7 +35,7 @@ struct fmt::formatter<S2> {
     }
 
     template<typename FormatContext>
-    auto format(const S2& s, FormatContext& ctx) {
+    auto format(const S2& s, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "s2.x={}", s.x);
     }
 };
