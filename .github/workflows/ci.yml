@@ -1,12 +1,205 @@
-name: cmake-integration
+name: ci
 
 on:
   push:
   pull_request:
 
+# TODO: Check different standards?
+# TODO: Re-enable testing in release
+
 jobs:
+  test-linux:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++-10, clang++-14]
+        cxx_version: [ cxx_std_17, cxx_std_20 ]
+        target: [Debug, Release]
+        shared: [ON, OFF]
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: |
+           sudo apt install gcc-10 g++-10 libgcc-10-dev
+           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. \
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} \
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" \
+            -DLIBASSERT_BUILD_SHARED=${{matrix.shared}} \
+            -DCPPTRACE_BUILD_SHARED=ON \
+            -DLIBASSERT_BUILD_TESTING=On \
+            -DLIBASSERT_WERROR_BUILD=On
+           make -j
+    - name: test
+      working-directory: build
+      run: |
+           CTEST_OUTPUT_ON_FAILURE=1 make test
+  # test-linux-gcc-8:
+  #   runs-on: ubuntu-20.04
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       compiler: [g++-8]
+  #       target: [Debug, Release]
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: dependencies
+  #     run: |
+  #          sudo apt install gcc-8 g++-8 libgcc-8-dev
+  #          python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+  #   - name: build
+  #     run: |
+  #          mkdir -p build
+  #          cd build
+  #          cmake .. \
+  #           -DCMAKE_BUILD_TYPE=${{matrix.target}} \
+  #           -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+  #           -DLIBASSERT_BUILD_TESTING=On \
+  #           -DLIBASSERT_WERROR_BUILD=On
+  #          make -j
+  #   - name: test
+  #     working-directory: build
+  #     run: |
+  #          CTEST_OUTPUT_ON_FAILURE=1 make test
+  test-macos:
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++-12, clang++]
+        cxx_version: [ cxx_std_17, cxx_std_20 ]
+        target: [Debug, Release]
+        shared: [ON, OFF]
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: |
+           brew install icdiff
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. \
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} \
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" \
+            -DLIBASSERT_BUILD_SHARED=${{matrix.shared}} \
+            -DCPPTRACE_BUILD_SHARED=ON \
+            -DLIBASSERT_BUILD_TESTING=On \
+            -DLIBASSERT_WERROR_BUILD=On
+           make -j
+    - name: test
+      working-directory: build
+      run: |
+           CTEST_OUTPUT_ON_FAILURE=1 make test
+  test-windows:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [cl, clang++]
+        cxx_version: [ cxx_std_17, cxx_std_20 ]
+        target: [Debug, Release]
+        shared: [ON, OFF]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Enable Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: dependencies
+      run: |
+           pip install icdiff
+    - name: build msvc
+      # if: ${{ matrix.compiler == 'cl' }}
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. `
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} `
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" `
+            -DLIBASSERT_BUILD_SHARED=${{matrix.shared}} `
+            -DCPPTRACE_BUILD_SHARED=ON `
+            -DLIBASSERT_BUILD_TESTING=On `
+            -DLIBASSERT_WERROR_BUILD=On
+           cmake --build . --config ${{matrix.target}}
+    # - name: build clang
+    #   if: ${{ matrix.compiler == 'clang++' }}
+    #   run: |
+    #        mkdir -p build
+    #        cd build
+    #        cmake .. `
+    #         -DCMAKE_BUILD_TYPE=${{matrix.target}} `
+    #         -DCMAKE_CXX_COMPILER="C:\msys64\mingw64\bin\clang++" `
+    #         -DCMAKE_C_COMPILER="C:\msys64\mingw64\bin\clang" `
+    #         -DLIBASSERT_BUILD_TESTING=On \
+    #         -DLIBASSERT_WERROR_BUILD=On
+    #        msbuild .\libassert.sln
+    - name: test
+      working-directory: build
+      run: |
+           ctest -C ${{matrix.target}} --output-on-failure
+  test-mingw:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++]
+        cxx_version: [ cxx_std_17, cxx_std_20 ]
+        target: [Debug, Release]
+        shared: [ON, OFF]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Enable Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.10.0
+    - name: dependencies
+      run: |
+           pip install icdiff
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. `
+            -DCMAKE_BUILD_TYPE=${{matrix.target}} `
+            -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
+            -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" `
+            -DLIBASSERT_BUILD_SHARED=${{matrix.shared}} `
+            -DCPPTRACE_BUILD_SHARED=ON `
+            -DLIBASSERT_BUILD_TESTING=On `
+            -DLIBASSERT_USE_CI_WRAPPER=On `
+            -DLIBASSERT_WERROR_BUILD=On `
+            "-GUnix Makefiles"
+           make -j
+    - name: test
+      working-directory: build
+      run: |
+           $env:CTEST_OUTPUT_ON_FAILURE=1
+           make test
+
+  clang-tidy:
+    runs-on: ubuntu-22.04
+    needs: test-linux
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: |
+           sudo apt install clang-tidy
+           mkdir build
+           cd build
+           cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++-14 -DCMAKE_C_COMPILER=clang-14
+    - name: clang-tidy
+      run: |
+           chmod +x lint.sh
+          #  ./lint.sh
+
   test-linux-fetchcontent:
     runs-on: ubuntu-22.04
+    needs: test-linux
     steps:
     - uses: actions/checkout@v2
     - name: test
@@ -21,6 +214,7 @@ jobs:
            ./main
   test-linux-findpackage:
     runs-on: ubuntu-22.04
+    needs: test-linux
     steps:
     - uses: actions/checkout@v2
     - name: build
@@ -40,6 +234,7 @@ jobs:
            ./main
   test-linux-add_subdirectory:
     runs-on: ubuntu-22.04
+    needs: test-linux
     steps:
     - uses: actions/checkout@v2
     - name: build
@@ -55,6 +250,7 @@ jobs:
 
   test-macos-fetchcontent:
     runs-on: macos-14
+    needs: test-macos
     steps:
     - uses: actions/checkout@v2
     - name: test
@@ -69,6 +265,7 @@ jobs:
            ./main
   test-macos-findpackage:
     runs-on: macos-14
+    needs: test-macos
     steps:
     - uses: actions/checkout@v2
     - name: build
@@ -87,6 +284,7 @@ jobs:
            ./main
   test-macos-add_subdirectory:
     runs-on: macos-14
+    needs: test-macos
     steps:
     - uses: actions/checkout@v2
     - name: test
@@ -102,6 +300,7 @@ jobs:
 
   test-mingw-fetchcontent:
     runs-on: windows-2022
+    needs: test-mingw
     steps:
     - uses: actions/checkout@v2
     - name: test
@@ -116,6 +315,7 @@ jobs:
            .\main.exe
   test-mingw-findpackage:
     runs-on: windows-2022
+    needs: test-mingw
     steps:
     - uses: actions/checkout@v2
     - name: test
@@ -134,6 +334,7 @@ jobs:
            ./main.exe
   test-mingw-add_subdirectory:
     runs-on: windows-2022
+    needs: test-mingw
     steps:
     - uses: actions/checkout@v2
     - name: test
@@ -148,6 +349,7 @@ jobs:
            .\main.exe
   test-windows-fetchcontent:
     runs-on: windows-2022
+    needs: test-windows
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
@@ -164,6 +366,7 @@ jobs:
            .\Debug\main.exe
   test-windows-findpackage:
     runs-on: windows-2022
+    needs: test-windows
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
@@ -185,6 +388,7 @@ jobs:
            .\Debug\main.exe
   test-windows-add_subdirectory:
     runs-on: windows-2022
+    needs: test-windows
     steps:
     - uses: actions/checkout@v2
     - name: Enable Developer Command Prompt
@@ -199,3 +403,4 @@ jobs:
            cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
            msbuild demo_project.sln
            .\Debug\main.exe
+
