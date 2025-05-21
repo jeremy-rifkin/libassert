@@ -445,14 +445,10 @@ namespace libassert::detail {
                     return "nullptr";
                 }
             }
-            #if LIBASSERT_IS_GCC
-                #pragma GCC diagnostic push
-                #pragma GCC diagnostic ignored "-Wnonnull"
-            #endif
+            LIBASSERT_WARNING_PRAGMA_PUSH_GCC
+            LIBASSERT_WARNING_PRAGMA_IGNORED_GCC("-Wnonnull")
             return stringification::stringify(std::string_view(v));
-            #if LIBASSERT_IS_GCC
-                #pragma GCC diagnostic pop
-            #endif
+            LIBASSERT_WARNING_PRAGMA_POP_GCC
         } else if constexpr(std::is_pointer_v<T> || std::is_function_v<T>) {
             return stringification::stringify_pointer_value(reinterpret_cast<const void*>(v));
         } else if constexpr(is_smart_pointer<T>) {

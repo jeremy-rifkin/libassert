@@ -38,10 +38,8 @@
 #include "paths.hpp"
 #include "printing.hpp"
 
-#if LIBASSERT_IS_MSVC
- // wchar -> char string warning
- #pragma warning(disable : 4244)
-#endif
+// wchar -> char string warning
+LIBASSERT_WARNING_PRAGMA_IGNORED_MSVC(4244)
 
 using namespace std::string_literals;
 using namespace std::string_view_literals;
