@@ -12,7 +12,8 @@
 #define ASSERT(...) do { try { LIBASSERT_ASSERT(__VA_ARGS__); SUCCEED(); } catch(std::exception& e) { FAIL() << e.what(); } } while(0)
 #define EXPECT(...) do { try { LIBASSERT_ASSERT(__VA_ARGS__); SUCCEED(); } catch(std::exception& e) { ADD_FAILURE() << e.what(); } } while(0)
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     inline void gtest_failure_handler(const assertion_info& info) {
         enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
         auto width = terminal_width(stderr_fileno);
@@ -33,5 +34,6 @@ namespace libassert::detail {
         return 1;
     } ();
 }
+LIBASSERT_END_NAMESPACE
 
 #endif
