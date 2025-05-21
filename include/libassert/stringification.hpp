@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <system_error>
 
