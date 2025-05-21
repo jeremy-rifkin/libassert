@@ -14,59 +14,6 @@
 
 namespace libassert::detail {
     // Lots of boilerplate
-    // Using int comparison functions here to support proper signed comparisons. Need to make sure
-    // assert(map.count(1) == 2) doesn't produce a warning. It wouldn't under normal circumstances
-    // but it would in this library due to the parameters being forwarded down a long chain.
-    // And we want to provide as much robustness as possible anyways.
-    // Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
-    // Not using std:: versions because library is targeting C++17
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_equal(T t, U u) {
-        using UT = std::make_unsigned_t<T>;
-        using UU = std::make_unsigned_t<U>;
-        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>) {
-            return t == u;
-        } else if constexpr(std::is_signed_v<T>) {
-            return t >= 0 && UT(t) == u;
-        } else {
-            return u >= 0 && t == UU(u);
-        }
-    }
-
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_not_equal(T t, U u) {
-        return !cmp_equal(t, u);
-    }
-
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_less(T t, U u) {
-        using UT = std::make_unsigned_t<T>;
-        using UU = std::make_unsigned_t<U>;
-        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>) {
-            return t < u;
-        } else if constexpr(std::is_signed_v<T>) {
-            return t < 0  || UT(t) < u;
-        } else {
-            return u >= 0 && t < UU(u);
-        }
-    }
-
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_greater(T t, U u) {
-        return cmp_less(u, t);
-    }
-
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_less_equal(T t, U u) {
-        return !cmp_less(u, t);
-    }
-
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_greater_equal(T t, U u) {
-        return !cmp_less(t, u);
-    }
-
-    // Lots of boilerplate
     // std:: implementations don't allow two separate types for lhs/rhs
     // Note: is this macro potentially bad when it comes to debugging(?)
     namespace ops {

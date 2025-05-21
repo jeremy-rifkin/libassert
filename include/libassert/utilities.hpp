@@ -138,4 +138,58 @@ namespace libassert::detail {
     template<typename T> typename std::add_lvalue_reference_t<T> decllval() noexcept;
 }
 
+// =====================================================================================================================
+// || Safe comparisons                                                                                                ||
+// =====================================================================================================================
+
+namespace libassert::detail {
+    // Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
+    // Not using std:: versions because library is targeting C++17
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_equal(T t, U u) {
+        using UT = std::make_unsigned_t<T>;
+        using UU = std::make_unsigned_t<U>;
+        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>) {
+            return t == u;
+        } else if constexpr(std::is_signed_v<T>) {
+            return t >= 0 && UT(t) == u;
+        } else {
+            return u >= 0 && t == UU(u);
+        }
+    }
+
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_not_equal(T t, U u) {
+        return !cmp_equal(t, u);
+    }
+
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_less(T t, U u) {
+        using UT = std::make_unsigned_t<T>;
+        using UU = std::make_unsigned_t<U>;
+        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>) {
+            return t < u;
+        } else if constexpr(std::is_signed_v<T>) {
+            return t < 0  || UT(t) < u;
+        } else {
+            return u >= 0 && t < UU(u);
+        }
+    }
+
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_greater(T t, U u) {
+        return cmp_less(u, t);
+    }
+
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_less_equal(T t, U u) {
+        return !cmp_less(u, t);
+    }
+
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_greater_equal(T t, U u) {
+        return !cmp_less(t, u);
+    }
+}
+
 #endif
