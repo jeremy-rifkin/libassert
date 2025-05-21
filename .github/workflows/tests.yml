@@ -15,7 +15,7 @@ jobs:
       matrix:
         compiler: [g++-10, clang++-14]
         cxx_version: [ cxx_std_17, cxx_std_20 ]
-        target: [Debug]
+        target: [Debug, Release]
         shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
@@ -46,7 +46,7 @@ jobs:
   #     fail-fast: false
   #     matrix:
   #       compiler: [g++-8]
-  #       target: [Debug]
+  #       target: [Debug, Release]
   #   steps:
   #   - uses: actions/checkout@v2
   #   - name: dependencies
@@ -74,7 +74,7 @@ jobs:
       matrix:
         compiler: [g++-12, clang++]
         cxx_version: [ cxx_std_17, cxx_std_20 ]
-        target: [Debug]
+        target: [Debug, Release]
         shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
@@ -89,6 +89,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
             -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" \
+            -DLIBASSERT_BUILD_SHARED=${{matrix.shared}} \
             -DCPPTRACE_BUILD_SHARED=ON \
             -DLIBASSERT_BUILD_TESTING=On \
             -DLIBASSERT_WERROR_BUILD=On
@@ -104,7 +105,7 @@ jobs:
       matrix:
         compiler: [cl, clang++]
         cxx_version: [ cxx_std_17, cxx_std_20 ]
-        target: [Debug]
+        target: [Debug, Release]
         shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
@@ -122,6 +123,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
             -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" `
+            -DLIBASSERT_BUILD_SHARED=${{matrix.shared}} `
             -DCPPTRACE_BUILD_SHARED=ON `
             -DLIBASSERT_BUILD_TESTING=On `
             -DLIBASSERT_WERROR_BUILD=On
@@ -149,7 +151,7 @@ jobs:
       matrix:
         compiler: [g++]
         cxx_version: [ cxx_std_17, cxx_std_20 ]
-        target: [Debug]
+        target: [Debug, Release]
         shared: [ON, OFF]
     steps:
     - uses: actions/checkout@v2
@@ -166,11 +168,12 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
             -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" `
+            -DLIBASSERT_BUILD_SHARED=${{matrix.shared}} `
             -DCPPTRACE_BUILD_SHARED=ON `
             -DLIBASSERT_BUILD_TESTING=On `
             -DLIBASSERT_USE_CI_WRAPPER=On `
-            "-GUnix Makefiles" `
-            -DLIBASSERT_WERROR_BUILD=On
+            -DLIBASSERT_WERROR_BUILD=On `
+            "-GUnix Makefiles"
            make -j
     - name: test
       working-directory: build

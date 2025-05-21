@@ -45,12 +45,14 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
        LIBASSERT_LOWERCASE
        LIBASSERT_SAFE_COMPARISONS
      )
-     add_test(
-       NAME integration
-       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
-       COMMAND
-       python3 run-tests.py $<TARGET_FILE:integration> ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_STANDARD}
-     )
+     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+      add_test(
+        NAME integration
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        COMMAND
+        python3 run-tests.py $<TARGET_FILE:integration> ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_STANDARD}
+      )
+     endif()
      set(integration_target integration)
     else()
      set(integration_target)
