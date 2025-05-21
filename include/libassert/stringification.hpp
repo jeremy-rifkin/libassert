@@ -59,8 +59,8 @@ namespace libassert::detail {
     //  - enum values
     //  User-provided stringifications:
     //   - std::ostream<< overloads
-    //   - std format TODO
-    //   - fmt TODO
+    //   - std format
+    //   - fmt
     //   - libassert::stringifier
     // Containers:
     //  - std::optional
@@ -72,7 +72,7 @@ namespace libassert::detail {
     //  - libassert::stringifier
     //  - default formatters
     //  - fmt
-    //  - std fmt TODO
+    //  - std fmt
     //  - osteam format
     //  - instance of catch all
     // Other logistics:
@@ -508,7 +508,6 @@ namespace libassert::detail {
         else {
             return stringification::stringify_unknown<T>();
         }
-        // TODO std fmt
     }
 
     // Top-level stringify utility
