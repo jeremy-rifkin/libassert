@@ -30,6 +30,10 @@
  #include <compare>
 #endif
 
+#if defined(LIBASSERT_USE_STD_FORMAT)
+ #include <format>
+#endif
+
 // =====================================================================================================================
 // || Stringification micro-library                                                                                   ||
 // || Note: There is some stateful stuff behind the scenes related to literal format configuration                    ||
@@ -331,6 +335,15 @@ namespace libassert::detail {
         || (stringification::adl::is_container<T>::value && stringifiable_container<T>())
         || can_basic_stringify<T>::value
         || stringification::has_ostream_overload<T>::value
+        #if defined(LIBASSERT_USE_STD_FORMAT)
+        #if LIBASSERT_STD_VER >= 23
+        || std::formattable<T, char> // preferred since this is stricter than the C++20 way of checking
+                                     // and makes sure that the C++ community converges on how `std::formatter`
+                                     // should be used.
+        #elif LIBASSERT_STD_VER == 20
+        || requires { std::formatter<T>(); } // fallback for C++20
+        #endif
+        #endif
         #ifdef LIBASSERT_USE_FMT
         || fmt::is_formattable<T>::value
         #endif
@@ -474,6 +487,19 @@ namespace libassert::detail {
         } else if constexpr(stringification::has_ostream_overload<T>::value) {
             return stringification::stringify_by_ostream(v);
         }
+        #if defined(LIBASSERT_USE_STD_FORMAT)
+        #if LIBASSERT_STD_VER >= 23
+        // preferred since this is stricter than the C++20 way of checking and makes sure that the
+        // C++ community converges on how `std::formatter` should be used.
+        else if constexpr (std::formattable<T, char>) {
+            return std::format("{}", v);
+        }
+        #elif LIBASSERT_STD_VER == 20
+        else if constexpr (requires { std::formatter<T>(); }) {
+            return std::format("{}", v);
+        }
+        #endif
+        #endif
         #ifdef LIBASSERT_USE_FMT
         else if constexpr(fmt::is_formattable<T>::value) {
             return fmt::format("{}", v);
