@@ -127,7 +127,7 @@ jobs:
             -DCPPTRACE_BUILD_SHARED=ON `
             -DLIBASSERT_BUILD_TESTING=On `
             -DLIBASSERT_WERROR_BUILD=On
-           msbuild .\libassert.sln
+           cmake --build . --config ${{matrix.target}}
     # - name: build clang
     #   if: ${{ matrix.compiler == 'clang++' }}
     #   run: |
