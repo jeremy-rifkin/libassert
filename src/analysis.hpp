@@ -7,7 +7,8 @@
 
 #include <libassert/assert.hpp>
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     struct highlight_block {
         std::string_view color;
         std::string content;
@@ -26,5 +27,6 @@ namespace libassert::detail {
 
     LIBASSERT_ATTR_COLD bool is_bitwise(std::string_view op);
 }
+LIBASSERT_END_NAMESPACE
 
 #endif

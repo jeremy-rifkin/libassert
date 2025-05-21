@@ -8,7 +8,8 @@
 #include "utils.hpp"
 #include "common.hpp"
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     enum class token_e {
         keyword,
         punctuation,
@@ -35,5 +36,6 @@ namespace libassert::detail {
     LIBASSERT_EXPORT_TESTING
     std::optional<std::vector<token_t>> tokenize(std::string_view source, bool decompose_shr = false);
 }
+LIBASSERT_END_NAMESPACE
 
 #endif

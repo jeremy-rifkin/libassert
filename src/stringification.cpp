@@ -11,7 +11,8 @@
 
 #include <libassert/assert.hpp>
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     /*
      * literal format management
      */
@@ -27,8 +28,9 @@ namespace libassert::detail {
 
     thread_local literal_format thread_current_literal_format = literal_format::default_format;
 }
+LIBASSERT_END_NAMESPACE
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     LIBASSERT_EXPORT void set_literal_format_mode(literal_format_mode mode) {
         std::unique_lock lock(detail::literal_format_config_mutex);
         detail::current_literal_format_mode = mode;
@@ -39,9 +41,10 @@ namespace libassert {
         detail::current_fixed_literal_format = format;
         detail::current_literal_format_mode = literal_format_mode::fixed_variations;
     }
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     std::pair<literal_format_mode, literal_format> get_literal_format_config() {
         std::unique_lock lock(literal_format_config_mutex);
         return {current_literal_format_mode, current_fixed_literal_format};
@@ -355,3 +358,4 @@ namespace libassert::detail {
         }
     }
 }
+LIBASSERT_END_NAMESPACE

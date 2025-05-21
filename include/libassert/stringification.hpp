@@ -39,14 +39,15 @@
 // || Note: There is some stateful stuff behind the scenes related to literal format configuration                    ||
 // =====================================================================================================================
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     // customization point
     template<typename T> struct stringifier /*{
         std::convertible_to<std::string> stringify(const T&);
     }*/;
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     // What can be stringified
     // Base types:
     //  - anything string-like
@@ -532,5 +533,6 @@ namespace libassert::detail {
         }
     }
 }
+LIBASSERT_END_NAMESPACE
 
 #endif

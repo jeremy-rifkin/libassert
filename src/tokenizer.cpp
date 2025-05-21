@@ -10,7 +10,8 @@
 
 #include "utils.hpp"
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     // http://eel.is/c++draft/lex.name#nt:identifier
     bool is_identifier_start(char c) {
         return isalpha(c) || c == '$' || c == '_';
@@ -571,3 +572,4 @@ namespace libassert::detail {
         }
     }
 }
+LIBASSERT_END_NAMESPACE

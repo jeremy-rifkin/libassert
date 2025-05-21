@@ -6,6 +6,15 @@
 
 #include <version>
 
+#define LIBASSERT_ABI_NAMESPACE_TAG v1
+
+#define LIBASSERT_BEGIN_NAMESPACE \
+    namespace libassert { \
+    inline namespace LIBASSERT_ABI_NAMESPACE_TAG {
+#define LIBASSERT_END_NAMESPACE \
+    } \
+    }
+
 // =====================================================================================================================
 // || Preprocessor stuff                                                                                              ||
 // =====================================================================================================================
@@ -178,7 +187,8 @@
  #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     // Note: Works with >=C++20 and with C++17 for GCC 9.1+, Clang 9+, and MSVC 19.25+.
     constexpr bool is_constant_evaluated() noexcept {
         #if defined(LIBASSERT_HAS_IS_CONSTANT_EVALUATED)
@@ -190,6 +200,7 @@ namespace libassert::detail {
         #endif
     }
 }
+LIBASSERT_END_NAMESPACE
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  #if LIBASSERT_IS_GCC

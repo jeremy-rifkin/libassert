@@ -11,7 +11,7 @@
 // || Core utilities                                                                                                  ||
 // =====================================================================================================================
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     // Lightweight helper, eventually may use C++20 std::source_location if this library no longer
     // targets C++17. Note: __builtin_FUNCTION only returns the name, so __PRETTY_FUNCTION__ is
     // still needed.
@@ -25,9 +25,10 @@ namespace libassert {
             int _line         = __builtin_LINE()
         ) : file(_file), /*function(_function),*/ line(_line) {}
     };
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     // bootstrap with primitive implementations
     LIBASSERT_EXPORT void primitive_assert_impl(
         bool condition,
@@ -56,12 +57,14 @@ namespace libassert::detail {
 
     #define LIBASSERT_PRIMITIVE_PANIC(message) ::libassert::detail::primitive_panic_impl(LIBASSERT_PFUNC, {}, message)
 }
+LIBASSERT_END_NAMESPACE
 
 // =====================================================================================================================
 // || Basic formatting and type tools                                                                                 ||
 // =====================================================================================================================
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     LIBASSERT_ATTR_COLD [[nodiscard]]
     constexpr inline std::string_view substring_bounded_by(
         std::string_view sig,
@@ -92,12 +95,14 @@ namespace libassert::detail {
 
     [[nodiscard]] LIBASSERT_EXPORT std::string prettify_type(std::string type);
 }
+LIBASSERT_END_NAMESPACE
 
 // =====================================================================================================================
 // || Metaprogramming utilities                                                                                       ||
 // =====================================================================================================================
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     struct nothing {};
 
     template<typename T> inline constexpr bool is_nothing = std::is_same_v<T, nothing>;
@@ -137,12 +142,14 @@ namespace libassert::detail {
 
     template<typename T> typename std::add_lvalue_reference_t<T> decllval() noexcept;
 }
+LIBASSERT_END_NAMESPACE
 
 // =====================================================================================================================
 // || Safe comparisons                                                                                                ||
 // =====================================================================================================================
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     // Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
     // Not using std:: versions because library is targeting C++17
     template<typename T, typename U>
@@ -191,5 +198,6 @@ namespace libassert::detail {
         return !cmp_less(t, u);
     }
 }
+LIBASSERT_END_NAMESPACE
 
 #endif

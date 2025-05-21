@@ -2,7 +2,8 @@
 
 #include "microfmt.hpp"
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     LIBASSERT_ATTR_COLD
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -84,3 +85,4 @@ namespace libassert::detail {
         return output;
     }
 }
+LIBASSERT_END_NAMESPACE
