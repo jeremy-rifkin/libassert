@@ -354,10 +354,10 @@ namespace detail {
         info.function = t.pretty_function;
     }
 
-    void set_message(assertion_info& info, const char* value);
-    void set_message(assertion_info& info, std::string_view value);
+    LIBASSERT_EXPORT void set_message(assertion_info& info, const char* value);
+    LIBASSERT_EXPORT void set_message(assertion_info& info, std::string_view value);
     // used to enable errno stuff
-    extra_diagnostic make_extra_diagnostic(std::string_view expression, int value);
+    LIBASSERT_EXPORT extra_diagnostic make_extra_diagnostic(std::string_view expression, int value);
 
     template<typename T>
     LIBASSERT_ATTR_COLD
