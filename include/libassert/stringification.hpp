@@ -32,7 +32,7 @@
  #include <compare>
 #endif
 
-#if defined(LIBASSERT_USE_STD_FORMAT)
+#ifdef LIBASSERT_USE_STD_FORMAT
  #include <format>
 #endif
 
@@ -359,7 +359,7 @@ namespace detail {
         || (stringification::adl::is_container<T>::value && stringifiable_container<T>())
         || can_basic_stringify<T>::value
         || stringification::has_ostream_overload<T>::value
-        #if defined(LIBASSERT_USE_STD_FORMAT)
+        #ifdef LIBASSERT_USE_STD_FORMAT
         #if LIBASSERT_STD_VER >= 23
         || std::formattable<T, char> // preferred since this is stricter than the C++20 way of checking
                                      // and makes sure that the C++ community converges on how `std::formatter`
@@ -510,7 +510,7 @@ namespace detail {
         } else if constexpr(stringification::has_ostream_overload<T>::value) {
             return stringification::stringify_by_ostream(v);
         }
-        #if defined(LIBASSERT_USE_STD_FORMAT)
+        #ifdef LIBASSERT_USE_STD_FORMAT
         #if LIBASSERT_STD_VER >= 23
         // preferred since this is stricter than the C++20 way of checking and makes sure that the
         // C++ community converges on how `std::formatter` should be used.

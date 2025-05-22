@@ -215,6 +215,9 @@ if(LIBASSERT_USE_MAGIC_ENUM)
   )
 endif()
 
+if(NOT LIBASSERT_STD_FORMAT)
+  target_compile_definitions(${target_name} PUBLIC LIBASSERT_NO_STD_FORMAT)
+endif()
 
 # ---- Install Rules ----
 

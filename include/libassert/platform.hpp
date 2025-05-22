@@ -275,7 +275,7 @@ LIBASSERT_END_NAMESPACE
  #define LIBASSERT_BREAKPOINT()
 #endif
 
-#if defined(__has_include) && __has_include(<format>) && defined(__cpp_lib_format)
+#if !defined(LIBASSERT_NO_STD_FORMAT) && defined(__has_include) && __has_include(<format>) && defined(__cpp_lib_format)
  #define LIBASSERT_USE_STD_FORMAT
 #endif
 
