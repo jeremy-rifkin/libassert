@@ -353,6 +353,15 @@ namespace detail {
             return std::move(oss).str();
         }
 
+        LIBASSERT_ATTR_COLD std::string stringify_by_ostream(
+            const void* ptr,
+            void(*outputter)(std::ostream&, const void*)
+        ) {
+            std::ostringstream oss;
+            outputter(oss, ptr);
+            return std::move(oss).str();
+        }
+
         LIBASSERT_ATTR_COLD std::string stringify_enum(std::string_view type_name, std::string_view underlying_value) {
             return microfmt::format("enum {}: {}", prettify_type(std::string(type_name)), underlying_value);
         }

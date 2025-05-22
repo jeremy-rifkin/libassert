@@ -3,9 +3,10 @@
 
 #include <filesystem>
 #include <optional>
-#include <sstream>
+#include <iosfwd>
 #include <string>
 #include <system_error>
+#include <tuple>
 
 #include <libassert/platform.hpp>
 #include <libassert/utilities.hpp>
@@ -200,14 +201,16 @@ namespace detail {
             }
         }
 
+        [[nodiscard]] LIBASSERT_EXPORT
+        std::string stringify_by_ostream(const void*, void(*)(std::ostream&, const void*));
+
         template<typename T>
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify_by_ostream(const T& t) {
-            // clang-tidy bug here
-            // NOLINTNEXTLINE(misc-const-correctness)
-            std::ostringstream oss;
-            oss<<t;
-            return std::move(oss).str();
+            return stringify_by_ostream(
+                &t,
+                [] (std::ostream& os, const void* ptr) { os << *reinterpret_cast<const T*>(ptr); }
+            );
         }
 
         [[nodiscard]] LIBASSERT_EXPORT
