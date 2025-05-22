@@ -46,10 +46,17 @@
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
-namespace libassert::detail {
+#define STR_(x) #x
+#define STR(x) STR_(x)
+
+
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     /*
-     * stack trace printing
-     */
+    * stack trace printing
+    */
+
+    constexpr std::string_view libassert_detail_prefix = "libassert::" STR(LIBASSERT_ABI_NAMESPACE_TAG) "::detail::";
 
     LIBASSERT_ATTR_COLD
     auto get_trace_window(const cpptrace::stacktrace& trace) {
@@ -59,7 +66,7 @@ namespace libassert::detail {
         size_t start = 0;
         size_t end = trace.frames.size() - 1;
         for(size_t i = 0; i < trace.frames.size(); i++) {
-            if(trace.frames[i].symbol.find("libassert::detail::") != std::string::npos) {
+            if(trace.frames[i].symbol.find(libassert_detail_prefix) != std::string::npos) {
                 start = i + 1;
             }
             if(trace.frames[i].symbol == "main" || trace.frames[i].symbol.find("main(") == 0) {
@@ -351,8 +358,9 @@ namespace libassert::detail {
         return output;
     }
 }
+LIBASSERT_END_NAMESPACE
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     LIBASSERT_EXPORT const color_scheme color_scheme::ansi_basic {
         BASIC_GREEN, /* string */
         BASIC_BLUE, /* escape */
@@ -498,9 +506,9 @@ namespace libassert {
     binary_diagnostics_descriptor& binary_diagnostics_descriptor::operator=(const binary_diagnostics_descriptor&) = default;
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor&
     binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID) = default;
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     using namespace detail;
 
     LIBASSERT_ATTR_COLD assertion_info::assertion_info(
@@ -678,13 +686,13 @@ namespace libassert {
         output += print_stacktrace(width, scheme);
         return output;
     }
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE [[nodiscard]]
     std::string stacktrace(int width, const color_scheme& scheme, std::size_t skip) {
         auto trace = cpptrace::generate_trace(skip + 1);
         detail::identity_path_handler handler;
         return print_stacktrace(trace, width, scheme, &handler);
     }
-}
+LIBASSERT_END_NAMESPACE

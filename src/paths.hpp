@@ -10,7 +10,8 @@
 
 #include <libassert/assert.hpp>
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     using path_components = std::vector<std::string>;
 
     LIBASSERT_ATTR_COLD
@@ -64,5 +65,6 @@ namespace libassert::detail {
         std::string_view resolve_path(std::string_view) override;
     };
 }
+LIBASSERT_END_NAMESPACE
 
 #endif

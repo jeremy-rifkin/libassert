@@ -21,7 +21,8 @@
 
 #include <libassert/assert.hpp>
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
     void primitive_assert_impl(
         bool condition,
@@ -172,3 +173,4 @@ namespace libassert::detail {
         return output;
     }
 }
+LIBASSERT_END_NAMESPACE

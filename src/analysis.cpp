@@ -23,7 +23,8 @@
 #include "analysis.hpp"
 #include "tokenizer.hpp"
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     /*
      * C++ syntax analysis logic
      */
@@ -695,3 +696,4 @@ namespace libassert::detail {
         return analysis::get().decompose_expression(expression, target_op);
     }
 }
+LIBASSERT_END_NAMESPACE

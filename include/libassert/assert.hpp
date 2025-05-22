@@ -10,7 +10,6 @@
 #include <memory>
 #include <new>
 #include <optional>
-#include <sstream>
 #include <string_view>
 #include <string>
 #include <system_error>
@@ -47,7 +46,7 @@
 // || Libassert public interface                                                                                      ||
 // =====================================================================================================================
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     // returns the width of the terminal represented by fd, will be 0 on error
     [[nodiscard]] LIBASSERT_EXPORT int terminal_width(int fd);
 
@@ -279,13 +278,14 @@ namespace libassert {
 
         [[nodiscard]] std::string to_string(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
     };
-}
+LIBASSERT_END_NAMESPACE
 
 // =====================================================================================================================
 // || Library core                                                                                                    ||
 // =====================================================================================================================
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     /*
      * C++ syntax analysis and literal formatting
      */
@@ -397,12 +397,14 @@ namespace libassert::detail {
         (void)args_strings;
     }
 }
+LIBASSERT_END_NAMESPACE
 
 /*
  * Actual top-level assertion processing
  */
 
-namespace libassert::detail {
+ LIBASSERT_BEGIN_NAMESPACE
+ namespace detail {
     LIBASSERT_EXPORT void fail(const assertion_info& info);
 
     template<typename A, typename B, typename C, typename... Args>
@@ -522,6 +524,7 @@ namespace libassert::detail {
         }
     }
 }
+LIBASSERT_END_NAMESPACE
 
 #if LIBASSERT_IS_MSVC
  #pragma warning(pop)
@@ -632,12 +635,12 @@ namespace libassert::detail {
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
 #endif
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
         // This non-constexpr method is called from an assertion in a constexpr context if a failure occurs. It is
         // intentionally a no-op.
     }
-}
+LIBASSERT_END_NAMESPACE
 
 // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
 // name, not signature
@@ -771,11 +774,13 @@ namespace libassert {
 #define LIBASSERT_DESTROY_DECOMPOSER libassert_decomposer.~expression_decomposer() /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */
 #if LIBASSERT_IS_GCC
  #if __GNUC__ == 12 && __GNUC_MINOR__ == 1
-  namespace libassert::detail {
+  LIBASSERT_BEGIN_NAMESPACE
+  namespace detail {
       template<typename T> constexpr void destroy(T& t) {
           t.~T();
       }
   }
+  LIBASSERT_END_NAMESPACE
   #undef LIBASSERT_DESTROY_DECOMPOSER
   #define LIBASSERT_DESTROY_DECOMPOSER libassert::detail::destroy(libassert_decomposer)
  #endif
@@ -789,11 +794,13 @@ namespace libassert {
  #define LIBASSERT_STMTEXPR(B, R) [&](const char* libassert_msvc_pfunc) { B return R }(LIBASSERT_PFUNC)
  // Workaround for msvc bug
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) libassert::detail::static_cast_to_bool(x)
- namespace libassert::detail {
+ LIBASSERT_BEGIN_NAMESPACE
+ namespace detail {
      template<typename T> constexpr bool static_cast_to_bool(T&& t) {
          return static_cast<bool>(t);
      }
  }
+ LIBASSERT_END_NAMESPACE
 #endif
 #define LIBASSERT_INVOKE_VAL(expr, doreturn, check_expression, name, type, failaction, ...) \
     /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \

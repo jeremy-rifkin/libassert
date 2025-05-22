@@ -17,7 +17,8 @@
 
 #include "common.hpp"
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     // Still present in release mode, nonfatal
     #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) ::libassert::detail::primitive_assert_impl( \
         c, \
@@ -191,5 +192,6 @@ namespace libassert::detail {
             && a.reset == b.reset;
     }
 }
+LIBASSERT_END_NAMESPACE
 
 #endif

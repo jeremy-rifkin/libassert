@@ -33,7 +33,7 @@
 
 // All platform-specific/system code lives here
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
     LIBASSERT_ATTR_COLD int terminal_width(int fd) {
         if(fd < 0) {
@@ -189,9 +189,10 @@ namespace libassert {
          return ::isatty(fd);
         #endif
     }
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {
         // "strerror is not required to be thread-safe. Implementations may be returning different pointers to static
         // read-only string literals or may be returning the same pointer over and over, pointing at a static buffer
@@ -205,3 +206,4 @@ namespace libassert::detail {
         return { "errno", microfmt::format("{>2:} \"{}\"", value, strerror_wrapper(value)) };
     }
 }
+LIBASSERT_END_NAMESPACE
