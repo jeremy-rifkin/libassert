@@ -1,9 +1,9 @@
 #ifndef LIBASSERT_STRINGIFICATION_HPP
 #define LIBASSERT_STRINGIFICATION_HPP
 
-#include <filesystem>
-#include <optional>
 #include <iosfwd>
+#include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <tuple>
@@ -150,6 +150,19 @@ namespace detail {
             std::void_t<decltype(stringifier<strip<T>>{}.stringify(std::declval<T>()))>
         > : public std::true_type {};
 
+        // Following a pattern used in fmt: This is a heuristic to detect types that look like std::filesystem::path
+        // This is used so that libassert doesn't have to #include <filesystem>
+        template<typename T, typename = void> class is_std_filesystem_path_like : public std::false_type {};
+        template<typename T>
+        class is_std_filesystem_path_like<
+            T,
+            std::void_t<
+                decltype(std::declval<T>().parent_path()),
+                decltype(std::declval<T>().is_absolute()),
+                decltype(std::declval<T>().filename())
+            >
+        > : public std::is_convertible<decltype(std::declval<T>().string()), std::string_view> {};
+
         //
         // Catch all
         //
@@ -182,7 +195,6 @@ namespace detail {
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long double);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_code ec);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_condition ec);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::filesystem::path& path);
         #if __cplusplus >= 202002L
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::strong_ordering);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::weak_ordering);
@@ -307,6 +319,12 @@ namespace detail {
         std::string stringify_tuple_like(const T& t) {
             return stringify_tuple_like_impl(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
         }
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_filesystem_path_like(const T& t) {
+            return stringify(t.string());
+        }
     }
 
     template<typename T, typename = void>
@@ -337,6 +355,7 @@ namespace detail {
         || (std::is_pointer_v<T> || std::is_function_v<T>)
         || std::is_enum_v<T>
         || (stringification::is_tuple_like<T>::value && stringifiable_container<T>())
+        || stringification::is_std_filesystem_path_like<T>::value
         || (stringification::adl::is_container<T>::value && stringifiable_container<T>())
         || can_basic_stringify<T>::value
         || stringification::has_ostream_overload<T>::value
@@ -478,10 +497,9 @@ namespace detail {
             } else {
                 return stringification::stringify_unknown<T>();
             }
-        } else if constexpr(
-            stringification::adl::is_container<T>::value
-            && !std::is_same_v<strip<T>, std::filesystem::path>
-        ) {
+        } else if constexpr(stringification::is_std_filesystem_path_like<T>::value) {
+            return stringification::stringify_filesystem_path_like(v);
+        } else if constexpr(stringification::adl::is_container<T>::value) {
             if constexpr(stringifiable_container<T>()) {
                 return stringification::stringify_container(v);
             } else {
@@ -522,7 +540,7 @@ namespace detail {
         if constexpr(
             stringification::adl::is_container<T>::value
             && !is_string_type<T>
-            && !std::is_same_v<strip<T>, std::filesystem::path>
+            && !stringification::is_std_filesystem_path_like<T>::value
             && stringifiable_container<T>()
         ) {
             return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);
