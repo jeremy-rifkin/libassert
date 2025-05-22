@@ -95,6 +95,19 @@ namespace detail {
         LIBASSERT_GEN_OP_BOILERPLATE(bor_assign,  |=);
         #undef LIBASSERT_GEN_OP_BOILERPLATE
         #undef LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL
+
+        inline constexpr bool ret_lhs(std::string_view op_string) {
+            // return LHS for the following types;
+            return op_string == "=="
+                || op_string == "!="
+                || op_string == "<"
+                || op_string == ">"
+                || op_string == "<="
+                || op_string == ">="
+                || op_string == "&&"
+                || op_string == "||";
+            // don't return LHS for << >> & ^ | and all assignments
+        }
     }
 
     // I learned this automatic expression decomposition trick from lest:
@@ -184,16 +197,7 @@ namespace detail {
                 // if there is no top-level binary operation, A is the only thing that can be returned
                 return true;
             } else {
-                // return LHS for the following types;
-                return C::op_string == "=="
-                    || C::op_string == "!="
-                    || C::op_string == "<"
-                    || C::op_string == ">"
-                    || C::op_string == "<="
-                    || C::op_string == ">="
-                    || C::op_string == "&&"
-                    || C::op_string == "||";
-                // don't return LHS for << >> & ^ | and all assignments
+                return ops::ret_lhs(C::op_string);
             }
         }
         [[nodiscard]]
