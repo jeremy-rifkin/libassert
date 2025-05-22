@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
+#include <cerrno>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -543,6 +544,29 @@ LIBASSERT_BEGIN_NAMESPACE
                 new trace_holder(cpptrace::generate_raw_trace(1)),
                 trace_holder_deleter{}
             );
+        }
+
+        void set_message(assertion_info& info, const char* value) {
+            if(value == nullptr) {
+                info.message = "(nullptr)";
+                return;
+            }
+            info.message = value;
+        }
+
+        void set_message(assertion_info& info, std::string_view value) {
+            info.message = value;
+        }
+
+        constexpr std::string_view errno_expansion = STR(errno);
+        static_assert(std::is_same_v<decltype(errno), int&>);
+
+        extra_diagnostic make_extra_diagnostic(std::string_view expression, int value) {
+            if(expression == errno_expansion) {
+                return { "errno", microfmt::format("{>2:} \"{}\"", value, strerror_wrapper(value)) };
+            } else {
+                return { expression, generate_stringification(value) };
+            }
         }
     }
 

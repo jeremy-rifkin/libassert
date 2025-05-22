@@ -124,15 +124,9 @@ namespace detail {
     inline constexpr bool is_arith_not_bool_char = std::is_arithmetic_v<strip<T>> && !isa<T, bool> && !isa<T, char>;
 
     template<typename T>
-    inline constexpr bool is_c_string =
-           isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
-            || isa<std::decay_t<strip<T>>, const char*>;
-
-    template<typename T>
     inline constexpr bool is_string_type =
-           isa<T, std::string>
-            || isa<T, std::string_view>
-            || is_c_string<T>;
+        std::is_convertible_v<T, std::string_view>
+            && !std::is_same_v<T, std::nullptr_t>;
 
     // char(&)[20], const char(&)[20], const char(&)[]
     template<typename T> inline constexpr bool is_string_literal =

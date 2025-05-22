@@ -201,9 +201,5 @@ namespace detail {
         std::unique_lock lock(mutex);
         return strerror(e);
     }
-
-    LIBASSERT_ATTR_COLD extra_diagnostic create_errno_diagnostic(int value) {
-        return { "errno", microfmt::format("{>2:} \"{}\"", value, strerror_wrapper(value)) };
-    }
 }
 LIBASSERT_END_NAMESPACE

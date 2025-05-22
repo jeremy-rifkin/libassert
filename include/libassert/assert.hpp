@@ -4,7 +4,6 @@
 // Copyright (c) 2021-2025 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
-#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -342,12 +341,6 @@ namespace detail {
         return descriptor;
     }
 
-    #define LIBASSERT_X(x) #x
-    #define LIBASSERT_Y(x) LIBASSERT_X(x)
-    constexpr const std::string_view errno_expansion = LIBASSERT_Y(errno);
-    #undef LIBASSERT_Y
-    #undef LIBASSERT_X
-
     struct pretty_function_name_wrapper {
         const char* pretty_function;
     };
@@ -361,31 +354,27 @@ namespace detail {
         info.function = t.pretty_function;
     }
 
-    [[nodiscard]] LIBASSERT_EXPORT extra_diagnostic create_errno_diagnostic(int value);
+    void set_message(assertion_info& info, const char* value);
+    void set_message(assertion_info& info, std::string_view value);
+    // used to enable errno stuff
+    extra_diagnostic make_extra_diagnostic(std::string_view expression, int value);
 
     template<typename T>
     LIBASSERT_ATTR_COLD
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void process_arg(assertion_info& info, size_t i, sv_span args_strings, const T& t) {
-        if constexpr(isa<T, strip<decltype(errno)>>) {
-            if(args_strings.data[i] == errno_expansion) {
-                info.extra_diagnostics.push_back(create_errno_diagnostic(t));
-                return;
-            }
-        } else if constexpr(is_string_type<T>) {
+        if constexpr(is_string_type<T>) {
             if(i == 0) {
-                if constexpr(std::is_pointer_v<T>) {
-                    if(t == nullptr) {
-                        info.message = "(nullptr)";
-                        return;
-                    }
-                }
-                info.message = t;
+                set_message(info, t);
                 return;
             }
         }
-        info.extra_diagnostics.push_back({ args_strings.data[i], generate_stringification(t) });
+        if constexpr(isa<T, int>) {
+            info.extra_diagnostics.push_back(make_extra_diagnostic(args_strings.data[i], t));
+        } else {
+            info.extra_diagnostics.push_back({ args_strings.data[i], generate_stringification(t) });
+        }
     }
 
     template<typename... Args>
