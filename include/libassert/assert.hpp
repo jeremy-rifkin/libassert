@@ -27,10 +27,6 @@
  #include <cpptrace/cpptrace.hpp>
 #endif
 
-#ifdef __cpp_lib_expected
- #include <expected>
-#endif
-
 #if LIBASSERT_IS_MSVC
  #pragma warning(push)
  // warning C4251: using non-dll-exported type in dll-exported type, firing on std::vector<frame_ptr> and others for
