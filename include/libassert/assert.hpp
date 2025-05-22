@@ -14,7 +14,6 @@
 #include <string>
 #include <type_traits>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include <libassert/platform.hpp>
@@ -22,8 +21,8 @@
 #include <libassert/stringification.hpp>
 #include <libassert/expression-decomposition.hpp>
 
-#if defined(__has_include) && __has_include(<cpptrace/basic.hpp>)
- #include <cpptrace/basic.hpp>
+#if defined(__has_include) && __has_include(<cpptrace/forward.hpp>)
+ #include <cpptrace/forward.hpp>
 #else
  #include <cpptrace/cpptrace.hpp>
 #endif
@@ -231,6 +230,12 @@ LIBASSERT_BEGIN_NAMESPACE
             virtual void add_path(std::string_view);
             virtual void finalize();
         };
+        struct trace_holder;
+        // deleter needed so unique ptr move/delete can work on the opaque pointer
+        struct LIBASSERT_EXPORT trace_holder_deleter {
+            void operator()(trace_holder*);
+        };
+        LIBASSERT_ATTR_NOINLINE LIBASSERT_EXPORT std::unique_ptr<trace_holder, trace_holder_deleter> generate_trace();
     }
 
     struct LIBASSERT_EXPORT assertion_info {
@@ -245,14 +250,14 @@ LIBASSERT_BEGIN_NAMESPACE
         std::vector<extra_diagnostic> extra_diagnostics;
         size_t n_args;
     private:
-        mutable std::variant<cpptrace::raw_trace, cpptrace::stacktrace> trace; // lazy, resolved when needed
+        std::unique_ptr<detail::trace_holder> trace;
         mutable std::unique_ptr<detail::path_handler> path_handler;
         detail::path_handler* get_path_handler() const; // will get and setup the path handler
     public:
         assertion_info() = delete;
         assertion_info(
             const detail::assert_static_parameters* static_params,
-            cpptrace::raw_trace&& raw_trace,
+            std::unique_ptr<detail::trace_holder, detail::trace_holder_deleter> trace,
             size_t n_args
         );
         ~assertion_info();
@@ -416,11 +421,7 @@ LIBASSERT_END_NAMESPACE
     ) {
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
         LIBASSERT_PRIMITIVE_DEBUG_ASSERT(sizeof...(args) <= params->args_strings.size);
-        assertion_info info(
-            params,
-            cpptrace::generate_raw_trace(),
-            sizeof_extra_diagnostics
-        );
+        assertion_info info(params, detail::generate_trace(), sizeof_extra_diagnostics);
         // process_args fills in the message, extra_diagnostics, and pretty_function
         process_args(info, params->args_strings, args...);
         // generate binary diagnostics
@@ -461,11 +462,7 @@ LIBASSERT_END_NAMESPACE
     ) {
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
         LIBASSERT_PRIMITIVE_DEBUG_ASSERT(sizeof...(args) <= params->args_strings.size);
-        assertion_info info(
-            params,
-            cpptrace::generate_raw_trace(),
-            sizeof_extra_diagnostics
-        );
+        assertion_info info(params, detail::generate_trace(), sizeof_extra_diagnostics);
         // process_args fills in the message, extra_diagnostics, and pretty_function
         process_args(info, params->args_strings, args...);
         // send off
