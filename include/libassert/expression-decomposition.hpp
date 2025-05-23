@@ -250,6 +250,8 @@ namespace detail {
         #undef LIBASSERT_GEN_OP_BOILERPLATE
     };
 
+    template<typename T> T deduce_type(T&&);
+
     template<typename A, typename B, typename C>
     struct expression_decomposer {
         static_assert(!is_nothing<A> && !is_nothing<B> && !is_nothing<C>);
@@ -279,9 +281,8 @@ namespace detail {
         #define LIBASSERT_GEN_OP_BOILERPLATE(functor, op) \
         template<typename O> [[nodiscard]] constexpr auto operator op(O&& operand) && { \
             static_assert(!is_nothing<A>); \
-            using V = decltype(get_value()); \
-            using T = std::conditional_t<std::is_rvalue_reference_v<V>, std::remove_reference_t<V>, V>; \
-            return expression_decomposer<T, O, functor>(get_value(), std::forward<O>(operand)); \
+            using V = decltype(deduce_type(get_value())); /* deduce_type turns T&& into T while leaving T& as T& */ \
+            return expression_decomposer<V, O, functor>(get_value(), std::forward<O>(operand)); \
         }
         LIBASSERT_DO_GEN_OP_BOILERPLATE
         #undef LIBASSERT_GEN_OP_BOILERPLATE
