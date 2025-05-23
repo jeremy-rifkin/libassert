@@ -287,6 +287,10 @@ namespace detail {
         #undef LIBASSERT_GEN_OP_BOILERPLATE
     };
 
+    #undef LIBASSERT_GEN_OP_BOILERPLATE_SPACESHIP
+    #undef LIBASSERT_GEN_OP_BOILERPLATE_BINARY_LOGICAL
+    #undef LIBASSERT_DO_GEN_OP_BOILERPLATE
+
     // for ternary support
     template<typename U>
     expression_decomposer(U&&) -> expression_decomposer<U>;
