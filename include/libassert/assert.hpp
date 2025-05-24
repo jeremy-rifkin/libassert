@@ -596,6 +596,8 @@ LIBASSERT_END_NAMESPACE
   #define LIBASSERT_WARNING_PRAGMA_POP_GCC _Pragma("GCC diagnostic pop")
   #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
   #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
+  #define LIBASSERT_WARNING_PRAGMA_PUSH_MSVC
+  #define LIBASSERT_WARNING_PRAGMA_POP_MSVC
  #else
   #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
@@ -605,12 +607,26 @@ LIBASSERT_END_NAMESPACE
   #define LIBASSERT_WARNING_PRAGMA_POP_GCC
   #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG _Pragma("GCC diagnostic push")
   #define LIBASSERT_WARNING_PRAGMA_POP_CLANG _Pragma("GCC diagnostic pop")
+  #define LIBASSERT_WARNING_PRAGMA_PUSH_MSVC
+  #define LIBASSERT_WARNING_PRAGMA_POP_MSVC
  #endif
+#elif LIBASSERT_IS_MSVC
+ #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
+ #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
+ #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
+ #define LIBASSERT_WARNING_PRAGMA_POP_GCC
+ // https://learn.microsoft.com/en-us/cpp/preprocessor/pragma-directives-and-the-pragma-keyword?view=msvc-170
+ #define LIBASSERT_WARNING_PRAGMA_PUSH_MSVC   _Pragma("warning(push)")
+ #define LIBASSERT_WARNING_PRAGMA_POP_MSVC    _Pragma("warning(pop)")
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
 #else
  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
+ #define LIBASSERT_WARNING_PRAGMA_PUSH_MSVC
+ #define LIBASSERT_WARNING_PRAGMA_POP_MSVC
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
 #endif
@@ -686,6 +702,8 @@ LIBASSERT_END_NAMESPACE
 #define LIBASSERT_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
 #if LIBASSERT_IS_CLANG // -Wall in clang
  #define LIBASSERT_IGNORE_UNUSED_VALUE _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
+#elif LIBASSERT_IS_MSVC
+#define LIBASSERT_IGNORE_UNUSED_VALUE  _Pragma("warning(disable: 4101)") // warning C4101: 'info': unreferenced local variable
 #else
  #define LIBASSERT_IGNORE_UNUSED_VALUE
 #endif
@@ -708,6 +726,7 @@ LIBASSERT_END_NAMESPACE
     /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
     do { \
         LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
+        LIBASSERT_WARNING_PRAGMA_PUSH_MSVC \
         LIBASSERT_IGNORE_UNUSED_VALUE \
         LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
         LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
@@ -736,6 +755,7 @@ LIBASSERT_END_NAMESPACE
                 ); \
             } \
         } \
+        LIBASSERT_WARNING_PRAGMA_POP_MSVC \
         LIBASSERT_WARNING_PRAGMA_POP_CLANG \
     } while(0) \
 
@@ -786,6 +806,7 @@ LIBASSERT_END_NAMESPACE
     /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
     /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
     LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
+    LIBASSERT_WARNING_PRAGMA_PUSH_MSVC \
     LIBASSERT_IGNORE_UNUSED_VALUE \
     LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
     LIBASSERT_STMTEXPR( \
@@ -834,6 +855,7 @@ LIBASSERT_END_NAMESPACE
             std::is_lvalue_reference_v<decltype(libassert_value)> \
         >(libassert_value, *std::launder(&libassert_decomposer)); \
     ) LIBASSERT_IF(doreturn)(.value,) \
+    LIBASSERT_WARNING_PRAGMA_POP_MSVC \
     LIBASSERT_WARNING_PRAGMA_POP_CLANG
 
 #ifdef NDEBUG
