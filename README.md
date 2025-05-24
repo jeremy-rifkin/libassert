@@ -12,6 +12,7 @@
 <p align="center">The most over-engineered C++ assertion library</p>
 
 ## Table of Contents: <!-- omit in toc -->
+
 - [30-Second Overview](#30-second-overview)
   - [CMake FetchContent Usage](#cmake-fetchcontent-usage)
 - [Philosophy](#philosophy)
@@ -162,10 +163,12 @@ indispensable in development.
 # Features
 
 ## Automatic Expression Decomposition <!-- omit in toc -->
+
 The most important feature this library supports is automatic expression decomposition. No need for `ASSERT_LT` or other
 such hassle, `assert(vec.size() > 10);` is automatically understood, as showcased above.
 
 ## Expression Diagnostics <!-- omit in toc -->
+
 Values involved in assert expressions are displayed. Redundant diagnostics like `2 => 2` are avoided.
 
 ```cpp
@@ -234,7 +237,7 @@ A lot of care is given to producing debug stringifications of values as effectiv
 numbers, should all be printed as you'd expect. Additionally containers, tuples, std::optional, smart pointers, etc. are
 all stringified to show as much information as possible. If a user defined type overloads `operator<<(std::ostream& o,
 const S& s)`, that overload will be called. Otherwise it a default message will be printed. Additionally, a
-stringification customiztaion point is provided:
+stringification customization point is provided:
 
 ```cpp
 template<> struct libassert::stringifier<MyObject> {
@@ -813,7 +816,7 @@ gcc 10 and the library can surpress that warning for gcc 12. <!-- https://godbol
 
 **Defines:**
 
-- `LIBASSERT_USE_MAGIC_ENUM`: Use magic enum for stringifying enum values
+- `LIBASSERT_USE_MAGIC_ENUM`: Use [magic enum](https://github.com/Neargye/magic_enum) for stringifying enum values
 - `LIBASSERT_DECOMPOSE_BINARY_LOGICAL`: Decompose `&&` and `||`
 - `LIBASSERT_SAFE_COMPARISONS`: Enable safe signed-unsigned comparisons for decomposed expressions
 - `LIBASSERT_PREFIX_ASSERTIONS`: Prefixes all assertion macros with `LIBASSERT_`
@@ -821,8 +824,8 @@ gcc 10 and the library can surpress that warning for gcc 12. <!-- https://godbol
 - `LIBASSERT_NO_STRINGIFY_SMART_POINTER_OBJECTS`: Disables stringification of smart pointer contents
 
 **CMake:**
-- `LIBASSERT_USE_EXTERNAL_CPPTRACE`: Use an externam cpptrace instead of aquiring the library with FetchContent
-- `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`: Use an externam magic enum instead of aquiring the library with FetchContent
+- `LIBASSERT_USE_EXTERNAL_CPPTRACE`: Use an external [cpptrace](https://github.com/jeremy-rifkin/cpptrace) instead of aquiring the library with FetchContent
+- `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`: Use an external [magic enum](https://github.com/Neargye/magic_enum) instead of aquiring the library with FetchContent
 
 ## Library Version
 
