@@ -1,5 +1,8 @@
 #include <libassert/assert-gtest.hpp>
 
+
+#if defined(LIBASSERT_USE_STD_FORMAT) || defined(LIBASSERT_USE_FMT)
+
 #include <fmt/format.h>
 
 struct S {
@@ -67,3 +70,5 @@ TEST(LibassertFmt, FmtContainers) {
     std::vector<fmtable> fvec{{{2}, {3}}};
     ASSERT(libassert::detail::generate_stringification(fvec) == "std::vector<fmtable>: [{2}, {3}]");
 }
+
+#endif
