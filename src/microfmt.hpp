@@ -15,10 +15,14 @@
  #include <intrin.h>
 #endif
 
+#include <libassert/platform.hpp>
+#include <libassert/utilities.hpp>
+
 // https://github.com/jeremy-rifkin/microfmt
 // Format: {[align][width][:[fill][base]]}  # width: number or {}
 
-namespace libassert::microfmt {
+LIBASSERT_BEGIN_NAMESPACE
+namespace microfmt {
     namespace detail {
         inline std::uint64_t clz(std::uint64_t value) {
             #ifdef _MSC_VER
@@ -300,5 +304,6 @@ namespace libassert::microfmt {
         fwrite(str.data(), 1, str.size(), stream);
     }
 }
+LIBASSERT_END_NAMESPACE
 
 #endif
