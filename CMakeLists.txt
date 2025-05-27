@@ -238,6 +238,12 @@ if(LIBASSERT_USE_ENCHANTUM)
   )
 endif()
 
+if(LIBASSERT_USE_ENCHANTUM)
+    message(STATUS "Libassert is using enchatnum!! ")
+elseif(LIBASSERT_USE_MAGIC_ENUM)
+    message(STATUS "Libassert is using magic enum!! ")
+endif()
+
 # ---- Install Rules ----
 
 if(NOT CMAKE_SKIP_INSTALL_RULES)
