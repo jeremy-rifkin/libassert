@@ -222,7 +222,6 @@ endif()
 
 
 if(LIBASSERT_USE_ENCHANTUM)
-  set(ENCHANTUM_OPT_INSTALL OFF)
   if(LIBASSERT_USE_EXTERNAL_ENCHANTUM)
     find_package(enchantum REQUIRED)
   else()
