@@ -9,6 +9,7 @@
 #include <string>
 
 #include "common.hpp"
+#include "microfmt.hpp"
 #include "utils.hpp"
 
 #if IS_WINDOWS
@@ -32,7 +33,7 @@
 
 // All platform-specific/system code lives here
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
     LIBASSERT_ATTR_COLD int terminal_width(int fd) {
         if(fd < 0) {
@@ -188,13 +189,17 @@ namespace libassert {
          return ::isatty(fd);
         #endif
     }
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert::detail {
-    std::mutex strerror_mutex;
-
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {
-        std::unique_lock lock(strerror_mutex);
+        // "strerror is not required to be thread-safe. Implementations may be returning different pointers to static
+        // read-only string literals or may be returning the same pointer over and over, pointing at a static buffer
+        // in which strerror places the string."
+        static std::mutex mutex;
+        std::unique_lock lock(mutex);
         return strerror(e);
     }
 }
+LIBASSERT_END_NAMESPACE

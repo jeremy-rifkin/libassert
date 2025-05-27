@@ -3,7 +3,8 @@
 #include "common.hpp"
 #include <memory>
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     using path_components = std::vector<std::string>;
 
     #if IS_WINDOWS
@@ -176,3 +177,4 @@ namespace libassert::detail {
         return path.substr(last);
     }
 }
+LIBASSERT_END_NAMESPACE

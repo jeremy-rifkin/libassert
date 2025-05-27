@@ -8,7 +8,8 @@
 
 #include <libassert/assert.hpp>
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     struct column_t {
         size_t width;
         std::vector<highlight_block> blocks;
@@ -25,5 +26,6 @@ namespace libassert::detail {
     LIBASSERT_ATTR_COLD
     std::string wrapped_print(const std::vector<column_t>& columns, const color_scheme& scheme);
 }
+LIBASSERT_END_NAMESPACE
 
 #endif

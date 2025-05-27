@@ -106,6 +106,8 @@ option(LIBASSERT_USE_EXTERNAL_MAGIC_ENUM "Obtain magic_enum via find_package ins
 
 option(LIBASSERT_WERROR_BUILD "" OFF)
 
+option(LIBASSERT_STD_FORMAT "" ON)
+
 option(LIBASSERT_PROVIDE_EXPORT_SET "" ON)
 mark_as_advanced(
   LIBASSERT_PROVIDE_EXPORT_SET

@@ -1,11 +1,12 @@
 #include <libassert/assert.hpp>
 
-// Copyright (c) 2021-2024 Jeremy Rifkin under the MIT license
+// Copyright (c) 2021-2025 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
+#include <cerrno>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -21,6 +22,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #if defined(__has_include) && __has_include(<cpptrace/basic.hpp>)
@@ -46,10 +48,17 @@
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
-namespace libassert::detail {
+#define STR_(x) #x
+#define STR(x) STR_(x)
+
+
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     /*
-     * stack trace printing
-     */
+    * stack trace printing
+    */
+
+    constexpr std::string_view libassert_detail_prefix = "libassert::" STR(LIBASSERT_ABI_NAMESPACE_TAG) "::detail::";
 
     LIBASSERT_ATTR_COLD
     auto get_trace_window(const cpptrace::stacktrace& trace) {
@@ -59,7 +68,7 @@ namespace libassert::detail {
         size_t start = 0;
         size_t end = trace.frames.size() - 1;
         for(size_t i = 0; i < trace.frames.size(); i++) {
-            if(trace.frames[i].symbol.find("libassert::detail::") != std::string::npos) {
+            if(trace.frames[i].symbol.find(libassert_detail_prefix) != std::string::npos) {
                 start = i + 1;
             }
             if(trace.frames[i].symbol == "main" || trace.frames[i].symbol.find("main(") == 0) {
@@ -351,8 +360,9 @@ namespace libassert::detail {
         return output;
     }
 }
+LIBASSERT_END_NAMESPACE
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     LIBASSERT_EXPORT const color_scheme color_scheme::ansi_basic {
         BASIC_GREEN, /* string */
         BASIC_BLUE, /* escape */
@@ -498,14 +508,73 @@ namespace libassert {
     binary_diagnostics_descriptor& binary_diagnostics_descriptor::operator=(const binary_diagnostics_descriptor&) = default;
     LIBASSERT_ATTR_COLD binary_diagnostics_descriptor&
     binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID) = default;
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
+    namespace detail {
+        struct trace_holder {
+            std::variant<cpptrace::raw_trace, cpptrace::stacktrace> trace; // lazy, resolved when needed
+
+            trace_holder(cpptrace::raw_trace raw_trace) : trace(raw_trace) {};
+
+            LIBASSERT_ATTR_COLD const cpptrace::raw_trace& get_raw_trace() const {
+                try {
+                    return std::get<cpptrace::raw_trace>(trace);
+                } catch(std::bad_variant_access&) {
+                    throw cpptrace::runtime_error("get_raw_trace may only be called before get_stacktrace is called because that resoles the trace internally");
+                }
+            }
+
+            LIBASSERT_ATTR_COLD const cpptrace::stacktrace& get_stacktrace() {
+                if(std::holds_alternative<cpptrace::raw_trace>(trace)) {
+                    // do resolution
+                    auto raw_trace = std::move(std::get<cpptrace::raw_trace>(trace));
+                    trace = raw_trace.resolve();
+                }
+                return std::get<cpptrace::stacktrace>(trace);
+            }
+        };
+
+        void trace_holder_deleter::operator()(trace_holder* ptr) {
+            delete ptr;
+        }
+
+        LIBASSERT_ATTR_NOINLINE std::unique_ptr<trace_holder, trace_holder_deleter> generate_trace() {
+            return std::unique_ptr<trace_holder, trace_holder_deleter>(
+                new trace_holder(cpptrace::generate_raw_trace(1)),
+                trace_holder_deleter{}
+            );
+        }
+
+        void set_message(assertion_info& info, const char* value) {
+            if(value == nullptr) {
+                info.message = "(nullptr)";
+                return;
+            }
+            info.message = value;
+        }
+
+        void set_message(assertion_info& info, std::string_view value) {
+            info.message = value;
+        }
+
+        constexpr std::string_view errno_expansion = STR(errno);
+        static_assert(std::is_same_v<decltype(errno), int&>);
+
+        extra_diagnostic make_extra_diagnostic(std::string_view expression, int value) {
+            if(expression == errno_expansion) {
+                return { "errno", microfmt::format("{>2:} \"{}\"", value, strerror_wrapper(value)) };
+            } else {
+                return { expression, generate_stringification(value) };
+            }
+        }
+    }
+
     using namespace detail;
 
-    LIBASSERT_ATTR_COLD assertion_info::assertion_info(
+    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE assertion_info::assertion_info(
         const assert_static_parameters* static_params,
-        cpptrace::raw_trace&& _raw_trace,
+        std::unique_ptr<detail::trace_holder, detail::trace_holder_deleter> _trace,
         size_t _n_args
     ) :
         macro_name(static_params->macro_name),
@@ -515,7 +584,7 @@ namespace libassert {
         line(static_params->location.line),
         function("<error>"),
         n_args(_n_args),
-        trace(std::move(_raw_trace)) {}
+        trace(_trace.release()) {}
 
     LIBASSERT_ATTR_COLD assertion_info::~assertion_info() = default;
     assertion_info::assertion_info(const assertion_info& other) :
@@ -529,7 +598,7 @@ namespace libassert {
         binary_diagnostics(other.binary_diagnostics),
         extra_diagnostics(other.extra_diagnostics),
         n_args(other.n_args),
-        trace(other.trace),
+        trace(other.trace ? std::make_unique<trace_holder>(*other.trace) : nullptr),
         path_handler(other.path_handler ? other.path_handler->clone() : nullptr)
         {}
     assertion_info::assertion_info(assertion_info&&) = default;
@@ -544,7 +613,7 @@ namespace libassert {
         binary_diagnostics = other.binary_diagnostics;
         extra_diagnostics = other.extra_diagnostics;
         n_args = other.n_args;
-        trace = other.trace;
+        trace = other.trace ? std::make_unique<trace_holder>(*other.trace) : nullptr;
         path_handler = other.path_handler ? other.path_handler->clone() : nullptr;
         return *this;
     }
@@ -579,20 +648,13 @@ namespace libassert {
     }
 
     LIBASSERT_ATTR_COLD const cpptrace::raw_trace& assertion_info::get_raw_trace() const {
-        try {
-            return std::get<cpptrace::raw_trace>(trace);
-        } catch(std::bad_variant_access&) {
-            throw cpptrace::runtime_error("assertion_info::get_raw_trace may only be called before assertion_info::get_stacktrace is called because that resoles the trace internally");
-        }
+        LIBASSERT_PRIMITIVE_ASSERT(trace != nullptr);
+        return trace->get_raw_trace();
     }
 
     LIBASSERT_ATTR_COLD const cpptrace::stacktrace& assertion_info::get_stacktrace() const {
-        if(trace.index() == 0) {
-            // do resolution
-            auto raw_trace = std::move(std::get<cpptrace::raw_trace>(trace));
-            trace = raw_trace.resolve();
-        }
-        return std::get<cpptrace::stacktrace>(trace);
+        LIBASSERT_PRIMITIVE_ASSERT(trace != nullptr);
+        return trace->get_stacktrace();
     }
 
     std::string assertion_info::header(int width, const color_scheme& scheme) const {
@@ -678,13 +740,13 @@ namespace libassert {
         output += print_stacktrace(width, scheme);
         return output;
     }
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert {
-    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE [[nodiscard]]
+LIBASSERT_BEGIN_NAMESPACE
+    [[nodiscard]] LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
     std::string stacktrace(int width, const color_scheme& scheme, std::size_t skip) {
         auto trace = cpptrace::generate_trace(skip + 1);
         detail::identity_path_handler handler;
         return print_stacktrace(trace, width, scheme, &handler);
     }
-}
+LIBASSERT_END_NAMESPACE

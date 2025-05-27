@@ -1,10 +1,12 @@
 #ifndef LIBASSERT_STRINGIFICATION_HPP
 #define LIBASSERT_STRINGIFICATION_HPP
 
-#include <filesystem>
+#include <iosfwd>
+#include <memory>
 #include <optional>
 #include <string>
 #include <system_error>
+#include <tuple>
 
 #include <libassert/platform.hpp>
 #include <libassert/utilities.hpp>
@@ -16,9 +18,9 @@
  // paths. this isn't an issue for #include <assert.hpp> but becomes an issue
  // for includes within the library (libA might include from libB)
  #if defined(__has_include) && __has_include(<magic_enum/magic_enum.hpp>)
-    #include <magic_enum/magic_enum.hpp>
+  #include <magic_enum/magic_enum.hpp>
  #else
-    #include <magic_enum.hpp>
+  #include <magic_enum.hpp>
  #endif
 #endif
 
@@ -30,19 +32,24 @@
  #include <compare>
 #endif
 
+#ifdef LIBASSERT_USE_STD_FORMAT
+ #include <format>
+#endif
+
 // =====================================================================================================================
 // || Stringification micro-library                                                                                   ||
 // || Note: There is some stateful stuff behind the scenes related to literal format configuration                    ||
 // =====================================================================================================================
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     // customization point
     template<typename T> struct stringifier /*{
         std::convertible_to<std::string> stringify(const T&);
     }*/;
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     // What can be stringified
     // Base types:
     //  - anything string-like
@@ -55,8 +62,8 @@ namespace libassert::detail {
     //  - enum values
     //  User-provided stringifications:
     //   - std::ostream<< overloads
-    //   - std format TODO
-    //   - fmt TODO
+    //   - std format
+    //   - fmt
     //   - libassert::stringifier
     // Containers:
     //  - std::optional
@@ -68,7 +75,7 @@ namespace libassert::detail {
     //  - libassert::stringifier
     //  - default formatters
     //  - fmt
-    //  - std fmt TODO
+    //  - std fmt
     //  - osteam format
     //  - instance of catch all
     // Other logistics:
@@ -143,13 +150,28 @@ namespace libassert::detail {
             std::void_t<decltype(stringifier<strip<T>>{}.stringify(std::declval<T>()))>
         > : public std::true_type {};
 
+        // Following a pattern used in fmt: This is a heuristic to detect types that look like std::filesystem::path
+        // This is used so that libassert doesn't have to #include <filesystem>
+        template<typename T, typename = void> class is_std_filesystem_path_like : public std::false_type {};
+        template<typename T>
+        class is_std_filesystem_path_like<
+            T,
+            std::void_t<
+                decltype(std::declval<T>().parent_path()),
+                decltype(std::declval<T>().is_absolute()),
+                decltype(std::declval<T>().filename())
+            >
+        > : public std::is_convertible<decltype(std::declval<T>().string()), std::string_view> {};
+
         //
         // Catch all
         //
 
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify_unknown(std::string_view type_name);
+
         template<typename T>
         [[nodiscard]] std::string stringify_unknown() {
-            return bstringf("<instance of %s>", prettify_type(std::string(type_name<T>())).c_str());
+            return stringify_unknown(type_name<T>());
         }
 
         //
@@ -173,7 +195,6 @@ namespace libassert::detail {
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long double);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_code ec);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_condition ec);
-        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(const std::filesystem::path& path);
         #if __cplusplus >= 202002L
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::strong_ordering);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::weak_ordering);
@@ -192,15 +213,20 @@ namespace libassert::detail {
             }
         }
 
+        [[nodiscard]] LIBASSERT_EXPORT
+        std::string stringify_by_ostream(const void*, void(*)(std::ostream&, const void*));
+
         template<typename T>
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify_by_ostream(const T& t) {
-            // clang-tidy bug here
-            // NOLINTNEXTLINE(misc-const-correctness)
-            std::ostringstream oss;
-            oss<<t;
-            return std::move(oss).str();
+            return stringify_by_ostream(
+                &t,
+                [] (std::ostream& os, const void* ptr) { os << *reinterpret_cast<const T*>(ptr); }
+            );
         }
+
+        [[nodiscard]] LIBASSERT_EXPORT
+        std::string stringify_enum(std::string_view type_name, std::string_view underlying_value);
 
         #ifdef LIBASSERT_USE_MAGIC_ENUM
         template<typename T, typename std::enable_if_t<std::is_enum_v<strip<T>>, int> = 0>
@@ -209,20 +235,18 @@ namespace libassert::detail {
             if(!name.empty()) {
                 return std::string(name);
             } else {
-                return bstringf(
-                    "enum %s: %s",
-                    prettify_type(std::string(type_name<T>())).c_str(),
-                    stringify(static_cast<typename std::underlying_type<T>::type>(t)).c_str()
+                return stringify_enum(
+                    type_name<T>(),
+                    stringify(static_cast<typename std::underlying_type_t<T>>(t))
                 );
             }
         }
         #else
         template<typename T, typename std::enable_if_t<std::is_enum_v<strip<T>>, int> = 0>
         LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify_enum(const T& t) {
-            return bstringf(
-                "enum %s: %s",
-                prettify_type(std::string(type_name<T>())).c_str(),
-                stringify(static_cast<typename std::underlying_type_t<T>>(t)).c_str()
+            return stringify_enum(
+                type_name<T>(),
+                stringify(static_cast<typename std::underlying_type_t<T>>(t))
             );
         }
         #endif
@@ -295,6 +319,12 @@ namespace libassert::detail {
         std::string stringify_tuple_like(const T& t) {
             return stringify_tuple_like_impl(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
         }
+
+        template<typename T>
+        LIBASSERT_ATTR_COLD [[nodiscard]]
+        std::string stringify_filesystem_path_like(const T& t) {
+            return stringify(t.string());
+        }
     }
 
     template<typename T, typename = void>
@@ -325,9 +355,19 @@ namespace libassert::detail {
         || (std::is_pointer_v<T> || std::is_function_v<T>)
         || std::is_enum_v<T>
         || (stringification::is_tuple_like<T>::value && stringifiable_container<T>())
+        || stringification::is_std_filesystem_path_like<T>::value
         || (stringification::adl::is_container<T>::value && stringifiable_container<T>())
         || can_basic_stringify<T>::value
         || stringification::has_ostream_overload<T>::value
+        #ifdef LIBASSERT_USE_STD_FORMAT
+        #if LIBASSERT_STD_VER >= 23
+        || std::formattable<T, char> // preferred since this is stricter than the C++20 way of checking
+                                     // and makes sure that the C++ community converges on how `std::formatter`
+                                     // should be used.
+        #elif LIBASSERT_STD_VER == 20
+        || requires { std::formatter<T>(); } // fallback for C++20
+        #endif
+        #endif
         #ifdef LIBASSERT_USE_FMT
         || fmt::is_formattable<T>::value
         #endif
@@ -457,10 +497,9 @@ namespace libassert::detail {
             } else {
                 return stringification::stringify_unknown<T>();
             }
-        } else if constexpr(
-            stringification::adl::is_container<T>::value
-            && !std::is_same_v<strip<T>, std::filesystem::path>
-        ) {
+        } else if constexpr(stringification::is_std_filesystem_path_like<T>::value) {
+            return stringification::stringify_filesystem_path_like(v);
+        } else if constexpr(stringification::adl::is_container<T>::value) {
             if constexpr(stringifiable_container<T>()) {
                 return stringification::stringify_container(v);
             } else {
@@ -471,6 +510,19 @@ namespace libassert::detail {
         } else if constexpr(stringification::has_ostream_overload<T>::value) {
             return stringification::stringify_by_ostream(v);
         }
+        #ifdef LIBASSERT_USE_STD_FORMAT
+        #if LIBASSERT_STD_VER >= 23
+        // preferred since this is stricter than the C++20 way of checking and makes sure that the
+        // C++ community converges on how `std::formatter` should be used.
+        else if constexpr (std::formattable<T, char>) {
+            return std::format("{}", v);
+        }
+        #elif LIBASSERT_STD_VER == 20
+        else if constexpr (requires { std::formatter<T>(); }) {
+            return std::format("{}", v);
+        }
+        #endif
+        #endif
         #ifdef LIBASSERT_USE_FMT
         else if constexpr(fmt::is_formattable<T>::value) {
             return fmt::format("{}", v);
@@ -479,7 +531,6 @@ namespace libassert::detail {
         else {
             return stringification::stringify_unknown<T>();
         }
-        // TODO std fmt
     }
 
     // Top-level stringify utility
@@ -489,7 +540,7 @@ namespace libassert::detail {
         if constexpr(
             stringification::adl::is_container<T>::value
             && !is_string_type<T>
-            && !std::is_same_v<strip<T>, std::filesystem::path>
+            && !stringification::is_std_filesystem_path_like<T>::value
             && stringifiable_container<T>()
         ) {
             return prettify_type(std::string(type_name<T>())) + ": " + do_stringify(v);
@@ -504,5 +555,6 @@ namespace libassert::detail {
         }
     }
 }
+LIBASSERT_END_NAMESPACE
 
 #endif

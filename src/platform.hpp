@@ -20,4 +20,10 @@
 
 #include <libassert/assert.hpp>
 
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
+    LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e);
+}
+LIBASSERT_END_NAMESPACE
+
 #endif

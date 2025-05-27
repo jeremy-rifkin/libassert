@@ -6,11 +6,13 @@
 #include <string>
 
 #include "analysis.hpp"
+#include "microfmt.hpp"
 #include "utils.hpp"
 
 #include <libassert/assert.hpp>
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     /*
      * literal format management
      */
@@ -26,8 +28,9 @@ namespace libassert::detail {
 
     thread_local literal_format thread_current_literal_format = literal_format::default_format;
 }
+LIBASSERT_END_NAMESPACE
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     LIBASSERT_EXPORT void set_literal_format_mode(literal_format_mode mode) {
         std::unique_lock lock(detail::literal_format_config_mutex);
         detail::current_literal_format_mode = mode;
@@ -38,9 +41,10 @@ namespace libassert {
         detail::current_fixed_literal_format = format;
         detail::current_literal_format_mode = literal_format_mode::fixed_variations;
     }
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     std::pair<literal_format_mode, literal_format> get_literal_format_config() {
         std::unique_lock lock(literal_format_config_mutex);
         return {current_literal_format_mode, current_fixed_literal_format};
@@ -127,6 +131,10 @@ namespace libassert::detail {
     }
 
     namespace stringification {
+        LIBASSERT_ATTR_COLD std::string stringify_unknown(std::string_view type_name) {
+            return microfmt::format("<instance of {}>", prettify_type(std::string(type_name)));
+        }
+
         LIBASSERT_ATTR_COLD std::string stringify(std::string_view value) {
             return escape_string(value, '"');
         }
@@ -292,24 +300,6 @@ namespace libassert::detail {
             return ec.category().name() + (':' + std::to_string(ec.value())) + ' ' + ec.message();
         }
 
-        // I'd like to just write if constexpr(std::is_same_v<std::filesystem::path::value_type, char>) but this doesn't
-        // work because it needs to be dependent on a template and it's all awful.
-        template<typename T>
-        LIBASSERT_ATTR_COLD std::string stringify_path(
-            const std::basic_string<T>& native,
-            const std::filesystem::path& path
-        ) {
-            if constexpr(std::is_same_v<T, char>) {
-                return stringify(std::string_view(native));
-            } else {
-                return stringify(std::string_view(path.string()));
-            }
-        }
-
-        LIBASSERT_ATTR_COLD std::string stringify(const std::filesystem::path& path) {
-            return stringify_path(path.native(), path);
-        }
-
         #if __cplusplus >= 202002L
         LIBASSERT_ATTR_COLD std::string stringify(std::strong_ordering value) {
                 if(value == std::strong_ordering::less)       return "std::strong_ordering::less";
@@ -344,5 +334,19 @@ namespace libassert::detail {
             oss<<std::showbase<<std::hex<<uintptr_t(value);
             return std::move(oss).str();
         }
+
+        LIBASSERT_ATTR_COLD std::string stringify_by_ostream(
+            const void* ptr,
+            void(*outputter)(std::ostream&, const void*)
+        ) {
+            std::ostringstream oss;
+            outputter(oss, ptr);
+            return std::move(oss).str();
+        }
+
+        LIBASSERT_ATTR_COLD std::string stringify_enum(std::string_view type_name, std::string_view underlying_value) {
+            return microfmt::format("enum {}: {}", prettify_type(std::string(type_name)), underlying_value);
+        }
     }
 }
+LIBASSERT_END_NAMESPACE

@@ -1,23 +1,18 @@
 #ifndef LIBASSERT_HPP
 #define LIBASSERT_HPP
 
-// Copyright (c) 2021-2024 Jeremy Rifkin under the MIT license
+// Copyright (c) 2021-2025 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
-#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <new>
 #include <optional>
-#include <sstream>
 #include <string_view>
 #include <string>
-#include <system_error>
-#include <tuple>
 #include <type_traits>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include <libassert/platform.hpp>
@@ -25,14 +20,10 @@
 #include <libassert/stringification.hpp>
 #include <libassert/expression-decomposition.hpp>
 
-#if defined(__has_include) && __has_include(<cpptrace/basic.hpp>)
- #include <cpptrace/basic.hpp>
+#if defined(__has_include) && __has_include(<cpptrace/forward.hpp>)
+ #include <cpptrace/forward.hpp>
 #else
  #include <cpptrace/cpptrace.hpp>
-#endif
-
-#ifdef __cpp_lib_expected
- #include <expected>
 #endif
 
 #if LIBASSERT_IS_MSVC
@@ -47,7 +38,7 @@
 // || Libassert public interface                                                                                      ||
 // =====================================================================================================================
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     // returns the width of the terminal represented by fd, will be 0 on error
     [[nodiscard]] LIBASSERT_EXPORT int terminal_width(int fd);
 
@@ -234,6 +225,12 @@ namespace libassert {
             virtual void add_path(std::string_view);
             virtual void finalize();
         };
+        struct trace_holder;
+        // deleter needed so unique ptr move/delete can work on the opaque pointer
+        struct LIBASSERT_EXPORT trace_holder_deleter {
+            void operator()(trace_holder*);
+        };
+        LIBASSERT_ATTR_NOINLINE LIBASSERT_EXPORT std::unique_ptr<trace_holder, trace_holder_deleter> generate_trace();
     }
 
     struct LIBASSERT_EXPORT assertion_info {
@@ -248,14 +245,14 @@ namespace libassert {
         std::vector<extra_diagnostic> extra_diagnostics;
         size_t n_args;
     private:
-        mutable std::variant<cpptrace::raw_trace, cpptrace::stacktrace> trace; // lazy, resolved when needed
+        std::unique_ptr<detail::trace_holder> trace;
         mutable std::unique_ptr<detail::path_handler> path_handler;
         detail::path_handler* get_path_handler() const; // will get and setup the path handler
     public:
         assertion_info() = delete;
         assertion_info(
             const detail::assert_static_parameters* static_params,
-            cpptrace::raw_trace&& raw_trace,
+            std::unique_ptr<detail::trace_holder, detail::trace_holder_deleter> trace,
             size_t n_args
         );
         ~assertion_info();
@@ -279,13 +276,14 @@ namespace libassert {
 
         [[nodiscard]] std::string to_string(int width = 0, const color_scheme& scheme = get_color_scheme()) const;
     };
-}
+LIBASSERT_END_NAMESPACE
 
 // =====================================================================================================================
 // || Library core                                                                                                    ||
 // =====================================================================================================================
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     /*
      * C++ syntax analysis and literal formatting
      */
@@ -310,12 +308,6 @@ namespace libassert::detail {
         std::string_view expression,
         std::string_view target_op
     );
-
-    /*
-     * System wrappers
-     */
-
-    [[nodiscard]] LIBASSERT_EXPORT std::string strerror_wrapper(int err); // stupid C stuff, stupid microsoft stuff
 
     /*
      * assert diagnostics generation
@@ -349,12 +341,6 @@ namespace libassert::detail {
         return descriptor;
     }
 
-    #define LIBASSERT_X(x) #x
-    #define LIBASSERT_Y(x) LIBASSERT_X(x)
-    constexpr const std::string_view errno_expansion = LIBASSERT_Y(errno);
-    #undef LIBASSERT_Y
-    #undef LIBASSERT_X
-
     struct pretty_function_name_wrapper {
         const char* pretty_function;
     };
@@ -368,29 +354,27 @@ namespace libassert::detail {
         info.function = t.pretty_function;
     }
 
+    LIBASSERT_EXPORT void set_message(assertion_info& info, const char* value);
+    LIBASSERT_EXPORT void set_message(assertion_info& info, std::string_view value);
+    // used to enable errno stuff
+    LIBASSERT_EXPORT extra_diagnostic make_extra_diagnostic(std::string_view expression, int value);
+
     template<typename T>
     LIBASSERT_ATTR_COLD
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void process_arg(assertion_info& info, size_t i, sv_span args_strings, const T& t) {
-        if constexpr(isa<T, strip<decltype(errno)>>) {
-            if(args_strings.data[i] == errno_expansion) {
-                info.extra_diagnostics.push_back({ "errno", bstringf("%2d \"%s\"", t, strerror_wrapper(t).c_str()) });
-                return;
-            }
-        } else if constexpr(is_string_type<T>) {
+        if constexpr(is_string_type<T>) {
             if(i == 0) {
-                if constexpr(std::is_pointer_v<T>) {
-                    if(t == nullptr) {
-                        info.message = "(nullptr)";
-                        return;
-                    }
-                }
-                info.message = t;
+                set_message(info, t);
                 return;
             }
         }
-        info.extra_diagnostics.push_back({ args_strings.data[i], generate_stringification(t) });
+        if constexpr(isa<T, int>) {
+            info.extra_diagnostics.push_back(make_extra_diagnostic(args_strings.data[i], t));
+        } else {
+            info.extra_diagnostics.push_back({ args_strings.data[i], generate_stringification(t) });
+        }
     }
 
     template<typename... Args>
@@ -401,12 +385,14 @@ namespace libassert::detail {
         (void)args_strings;
     }
 }
+LIBASSERT_END_NAMESPACE
 
 /*
  * Actual top-level assertion processing
  */
 
-namespace libassert::detail {
+ LIBASSERT_BEGIN_NAMESPACE
+ namespace detail {
     LIBASSERT_EXPORT void fail(const assertion_info& info);
 
     template<typename A, typename B, typename C, typename... Args>
@@ -420,11 +406,7 @@ namespace libassert::detail {
     ) {
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
         LIBASSERT_PRIMITIVE_DEBUG_ASSERT(sizeof...(args) <= params->args_strings.size);
-        assertion_info info(
-            params,
-            cpptrace::generate_raw_trace(),
-            sizeof_extra_diagnostics
-        );
+        assertion_info info(params, detail::generate_trace(), sizeof_extra_diagnostics);
         // process_args fills in the message, extra_diagnostics, and pretty_function
         process_args(info, params->args_strings, args...);
         // generate binary diagnostics
@@ -465,11 +447,7 @@ namespace libassert::detail {
     ) {
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
         LIBASSERT_PRIMITIVE_DEBUG_ASSERT(sizeof...(args) <= params->args_strings.size);
-        assertion_info info(
-            params,
-            cpptrace::generate_raw_trace(),
-            sizeof_extra_diagnostics
-        );
+        assertion_info info(params, detail::generate_trace(), sizeof_extra_diagnostics);
         // process_args fills in the message, extra_diagnostics, and pretty_function
         process_args(info, params->args_strings, args...);
         // send off
@@ -479,7 +457,7 @@ namespace libassert::detail {
 
     // TODO: Re-evaluate benefit of this at all in non-cold path code
     template<typename A, typename B, typename C, typename... Args>
-    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE [[nodiscard]]
+    [[nodiscard]] LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
     expression_decomposer<A, B, C> process_assert_fail_m(
         expression_decomposer<A, B, C> decomposer,
         const assert_static_parameters* params,
@@ -526,6 +504,7 @@ namespace libassert::detail {
         }
     }
 }
+LIBASSERT_END_NAMESPACE
 
 #if LIBASSERT_IS_MSVC
  #pragma warning(pop)
@@ -578,10 +557,10 @@ namespace libassert::detail {
  #define LIBASSERT_EVAL4(...) LIBASSERT_EVAL3(LIBASSERT_EVAL3(LIBASSERT_EVAL3(__VA_ARGS__)))
  #define LIBASSERT_EVAL(...) LIBASSERT_EVAL4(LIBASSERT_EVAL4(LIBASSERT_EVAL4(__VA_ARGS__)))
  #define LIBASSERT_EXPAND(x) x
- #define LIBASSERT_MAP_SWITCH(...)\
-     LIBASSERT_EXPAND(LIBASSERT_ARG_40(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
-             2, 2, 2, 2, 2, 2, 2, 2, 2, 2,\
-             2, 2, 2, 2, 2, 2, 2, 2, 2,\
+ #define LIBASSERT_MAP_SWITCH(...) \
+     LIBASSERT_EXPAND(LIBASSERT_ARG_40(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2, \
+             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, \
+             2, 2, 2, 2, 2, 2, 2, 2, 2, \
              2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0))
  #define LIBASSERT_MAP_A(...) LIBASSERT_PLUS_TEXT(LIBASSERT_MAP_NEXT_, \
                                             LIBASSERT_MAP_SWITCH(0, __VA_ARGS__)) (LIBASSERT_MAP_B, __VA_ARGS__)
@@ -589,7 +568,7 @@ namespace libassert::detail {
                                             LIBASSERT_MAP_SWITCH(0, __VA_ARGS__)) (LIBASSERT_MAP_A, __VA_ARGS__)
  #define LIBASSERT_MAP_CALL(fn, Value) LIBASSERT_EXPAND(fn(Value))
  #define LIBASSERT_MAP_OUT
- #define LIBASSERT_MAP_NEXT_2(...)\
+ #define LIBASSERT_MAP_NEXT_2(...) \
      LIBASSERT_MAP_CALL(LIBASSERT_EXPAND(LIBASSERT_ARG_2(__VA_ARGS__)), \
      LIBASSERT_EXPAND(LIBASSERT_ARG_3(__VA_ARGS__))) \
      LIBASSERT_EXPAND(LIBASSERT_ARG_1(__VA_ARGS__)) \
@@ -636,12 +615,12 @@ namespace libassert::detail {
  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
 #endif
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     inline void ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT() {
         // This non-constexpr method is called from an assertion in a constexpr context if a failure occurs. It is
         // intentionally a no-op.
     }
-}
+LIBASSERT_END_NAMESPACE
 
 // __PRETTY_FUNCTION__ used because __builtin_FUNCTION() used in source_location (like __FUNCTION__) is just the method
 // name, not signature
@@ -758,7 +737,7 @@ namespace libassert {
             } \
         } \
         LIBASSERT_WARNING_PRAGMA_POP_CLANG \
-    } while(false) \
+    } while(0) \
 
 #define LIBASSERT_INVOKE_PANIC(name, type, ...) \
     do { \
@@ -769,17 +748,19 @@ namespace libassert {
             libassert_params \
             LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
         ); \
-    } while(false) \
+    } while(0) \
 
 // Workaround for gcc bug 105734 / libassert bug #24
 #define LIBASSERT_DESTROY_DECOMPOSER libassert_decomposer.~expression_decomposer() /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */
 #if LIBASSERT_IS_GCC
  #if __GNUC__ == 12 && __GNUC_MINOR__ == 1
-  namespace libassert::detail {
+  LIBASSERT_BEGIN_NAMESPACE
+  namespace detail {
       template<typename T> constexpr void destroy(T& t) {
           t.~T();
       }
   }
+  LIBASSERT_END_NAMESPACE
   #undef LIBASSERT_DESTROY_DECOMPOSER
   #define LIBASSERT_DESTROY_DECOMPOSER libassert::detail::destroy(libassert_decomposer)
  #endif
@@ -793,11 +774,13 @@ namespace libassert {
  #define LIBASSERT_STMTEXPR(B, R) [&](const char* libassert_msvc_pfunc) { B return R }(LIBASSERT_PFUNC)
  // Workaround for msvc bug
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) libassert::detail::static_cast_to_bool(x)
- namespace libassert::detail {
+ LIBASSERT_BEGIN_NAMESPACE
+ namespace detail {
      template<typename T> constexpr bool static_cast_to_bool(T&& t) {
          return static_cast<bool>(t);
      }
  }
+ LIBASSERT_END_NAMESPACE
 #endif
 #define LIBASSERT_INVOKE_VAL(expr, doreturn, check_expression, name, type, failaction, ...) \
     /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
@@ -854,7 +837,7 @@ namespace libassert {
     LIBASSERT_WARNING_PRAGMA_POP_CLANG
 
 #ifdef NDEBUG
- #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE_CALL;
+ #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE_CALL();
 #else
  #define LIBASSERT_ASSUME_ACTION
 #endif
@@ -882,7 +865,7 @@ namespace libassert {
 #ifndef NDEBUG
  #define LIBASSERT_UNREACHABLE(...) LIBASSERT_INVOKE_PANIC("UNREACHABLE", unreachable, __VA_ARGS__)
 #else
- #define LIBASSERT_UNREACHABLE(...) LIBASSERT_UNREACHABLE_CALL
+ #define LIBASSERT_UNREACHABLE(...) LIBASSERT_UNREACHABLE_CALL()
 #endif
 
 // value variants
@@ -979,7 +962,6 @@ namespace libassert {
   #define USER_STATIC_ASSERT_BACKUP_MSG(cond, msg, constant) static_assert(cond, msg)
  #endif
 #endif
-
 
 #endif // LIBASSERT_HPP
 

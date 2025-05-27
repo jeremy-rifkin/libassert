@@ -12,16 +12,11 @@
 
 using namespace libassert::detail;
 
-void custom_fail(libassert::assert_type, const libassert::assertion_info& assertion) {
-    std::cerr<<assertion.to_string(libassert::terminal_width(2), libassert::color_scheme::ansi_rgb)<<std::endl<<std::endl;
-    abort();
-}
-
 // Some test cases for TMP stuff
 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, nothing, nothing>>().get_value()), int&>::value);
 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, nothing, nothing>>().get_value()), int&>::value);
 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().get_value()), bool>::value);
-static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().take_lhs()), int>::value);
+static_assert(std::is_same<decltype(std::declval<expression_decomposer<int, int, ops::lteq>>().take_lhs()), int&&>::value);
 static_assert(std::is_same<decltype(std::declval<expression_decomposer<int&, int, ops::lteq>>().take_lhs()), int&>::value);
 
 static_assert(is_string_type<char*>);

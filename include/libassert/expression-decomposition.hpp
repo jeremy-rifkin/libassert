@@ -12,60 +12,8 @@
 // || Expression decomposition micro-library                                                                          ||
 // =====================================================================================================================
 
-namespace libassert::detail {
-    // Lots of boilerplate
-    // Using int comparison functions here to support proper signed comparisons. Need to make sure
-    // assert(map.count(1) == 2) doesn't produce a warning. It wouldn't under normal circumstances
-    // but it would in this library due to the parameters being forwarded down a long chain.
-    // And we want to provide as much robustness as possible anyways.
-    // Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
-    // Not using std:: versions because library is targeting C++17
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_equal(T t, U u) {
-        using UT = std::make_unsigned_t<T>;
-        using UU = std::make_unsigned_t<U>;
-        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>) {
-            return t == u;
-        } else if constexpr(std::is_signed_v<T>) {
-            return t >= 0 && UT(t) == u;
-        } else {
-            return u >= 0 && t == UU(u);
-        }
-    }
-
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_not_equal(T t, U u) {
-        return !cmp_equal(t, u);
-    }
-
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_less(T t, U u) {
-        using UT = std::make_unsigned_t<T>;
-        using UU = std::make_unsigned_t<U>;
-        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>) {
-            return t < u;
-        } else if constexpr(std::is_signed_v<T>) {
-            return t < 0  || UT(t) < u;
-        } else {
-            return u >= 0 && t < UU(u);
-        }
-    }
-
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_greater(T t, U u) {
-        return cmp_less(u, t);
-    }
-
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_less_equal(T t, U u) {
-        return !cmp_less(u, t);
-    }
-
-    template<typename T, typename U>
-    [[nodiscard]] constexpr bool cmp_greater_equal(T t, U u) {
-        return !cmp_less(t, u);
-    }
-
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     // Lots of boilerplate
     // std:: implementations don't allow two separate types for lhs/rhs
     // Note: is this macro potentially bad when it comes to debugging(?)
@@ -147,6 +95,19 @@ namespace libassert::detail {
         LIBASSERT_GEN_OP_BOILERPLATE(bor_assign,  |=);
         #undef LIBASSERT_GEN_OP_BOILERPLATE
         #undef LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL
+
+        inline constexpr bool ret_lhs(std::string_view op_string) {
+            // return LHS for the following types;
+            return op_string == "=="
+                || op_string == "!="
+                || op_string == "<"
+                || op_string == ">"
+                || op_string == "<="
+                || op_string == ">="
+                || op_string == "&&"
+                || op_string == "||";
+            // don't return LHS for << >> & ^ | and all assignments
+        }
     }
 
     // I learned this automatic expression decomposition trick from lest:
@@ -180,151 +141,163 @@ namespace libassert::detail {
     // a < b + c    (<< a) < (b + c)
     // a < b == c   ((<< a) < b) == c // edge case
 
+    // Ownership logic:
+    //  One of two things can happen to this class
+    //   - Either it is composed with another operation
+    //         + The value of the subexpression represented by this is computed (either get_value()
+    //           or operator bool), either A& or C()(a, b)
+    //      + Or, just the lhs is moved B is nothing
+    //   - Or this class represents the whole expression
+    //      + The value is computed (either A& or C()(a, b))
+    //      + a and b are referenced freely
+    //      + Either the value is taken or a is moved out
+    // Ensuring the value is only computed once is left to the assert handler
+
+    // expression_decomposer is a template of the left hand type, right hand type, and the operator (as a function
+    // object)
+    // Specialized for
+    //   empty, default-constructed base-case
+    //   just a left-hand value
+    //   full representation of a binary expression
+
     template<typename A = nothing, typename B = nothing, typename C = nothing>
-    struct expression_decomposer {
-        A a;
-        B b;
+    struct expression_decomposer;
+
+    // empty expression_decomposer
+    template<>
+    struct expression_decomposer<nothing, nothing, nothing> {
         explicit constexpr expression_decomposer() = default;
-        ~expression_decomposer() = default;
-        // not copyable
-        constexpr expression_decomposer(const expression_decomposer&) = delete;
-        constexpr expression_decomposer& operator=(const expression_decomposer&) = delete;
-        // allow move construction
-        constexpr expression_decomposer(expression_decomposer&&)
-        #if !LIBASSERT_IS_GCC || __GNUC__ >= 10 // gcc 9 has some issue with the move constructor being noexcept
-         noexcept
-        #endif
-         = default;
-        constexpr expression_decomposer& operator=(expression_decomposer&&) = delete;
-        // value constructors
+
+        template<typename O> [[nodiscard]] constexpr auto operator<<(O&& operand) && {
+            return expression_decomposer<O, nothing, nothing>(std::forward<O>(operand));
+        }
+    };
+
+    #if __cplusplus >= 202002L
+    #define LIBASSERT_GEN_OP_BOILERPLATE_SPACESHIP LIBASSERT_GEN_OP_BOILERPLATE(ops::spaceship, <=>)
+    #else
+    #define LIBASSERT_GEN_OP_BOILERPLATE_SPACESHIP
+    #endif
+
+    #ifdef LIBASSERT_DECOMPOSE_BINARY_LOGICAL
+    #define LIBASSERT_GEN_OP_BOILERPLATE_BINARY_LOGICAL \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::land, &&) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::lor, ||)
+    #else
+    #define LIBASSERT_GEN_OP_BOILERPLATE_BINARY_LOGICAL
+    #endif
+
+    #define LIBASSERT_DO_GEN_OP_BOILERPLATE \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::shl, <<) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::shr, >>) \
+        LIBASSERT_GEN_OP_BOILERPLATE_SPACESHIP \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::eq, ==) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::neq, !=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::gt, >) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::lt, <) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::gteq, >=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::lteq, <=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::band, &) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::bxor, ^) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::bor, |) \
+        LIBASSERT_GEN_OP_BOILERPLATE_BINARY_LOGICAL \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::assign, =) /* NOLINT(cppcoreguidelines-c-copy-assignment-signature, misc-unconventional-assign-operator) */ \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::add_assign, +=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::sub_assign, -=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::mul_assign, *=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::div_assign, /=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::mod_assign, %=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::shl_assign, <<=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::shr_assign, >>=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::band_assign, &=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::bxor_assign, ^=) \
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::bor_assign, |=)
+
+    // just a left-hand value
+    template<typename A>
+    struct expression_decomposer<A, nothing, nothing> {
+        A a;
+        explicit constexpr expression_decomposer() = delete;
         template<typename U, typename std::enable_if_t<!isa<U, expression_decomposer>, int> = 0>
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload) // TODO
         explicit constexpr expression_decomposer(U&& _a) : a(std::forward<U>(_a)) {}
-        template<typename U, typename V>
-        explicit constexpr expression_decomposer(U&& _a, V&& _b) : a(std::forward<U>(_a)), b(std::forward<V>(_b)) {}
-        /* Ownership logic:
-         *  One of two things can happen to this class
-         *   - Either it is composed with another operation
-         *         + The value of the subexpression represented by this is computed (either get_value()
-         *        or operator bool), either A& or C()(a, b)
-         *      + Or, just the lhs is moved B is nothing
-         *   - Or this class represents the whole expression
-         *      + The value is computed (either A& or C()(a, b))
-         *      + a and b are referenced freely
-         *      + Either the value is taken or a is moved out
-         * Ensuring the value is only computed once is left to the assert handler
-         */
         [[nodiscard]]
-        constexpr decltype(auto) get_value() {
-            if constexpr(is_nothing<C>) {
-                static_assert(is_nothing<B> && !is_nothing<A>);
-                return (a);
-            } else {
-                return C()(a, b);
-            }
+        constexpr A& get_value() {
+            return a;
         }
         [[nodiscard]]
         constexpr operator bool() { // for ternary support
-            return (bool)get_value();
+            return static_cast<bool>(get_value());
         }
         // return true if the lhs should be returned, false if full computed value should be
         [[nodiscard]]
         constexpr bool ret_lhs() {
-            static_assert(!is_nothing<A>);
-            static_assert(is_nothing<B> == is_nothing<C>);
-            if constexpr(is_nothing<C>) {
-                // if there is no top-level binary operation, A is the only thing that can be returned
-                return true;
-            } else {
-                // return LHS for the following types;
-                return C::op_string == "=="
-                    || C::op_string == "!="
-                    || C::op_string == "<"
-                    || C::op_string == ">"
-                    || C::op_string == "<="
-                    || C::op_string == ">="
-                    || C::op_string == "&&"
-                    || C::op_string == "||";
-                // don't return LHS for << >> & ^ | and all assignments
-            }
+            // if there is no top-level binary operation, A is the only thing that can be returned
+            return true;
         }
         [[nodiscard]]
-        constexpr A take_lhs() { // should only be called if ret_lhs() == true
-            if constexpr(std::is_lvalue_reference_v<A>) {
-                return ((((a))));
-            } else {
-                return std::move(a);
-            }
+        constexpr decltype(auto) take_lhs() { // should only be called if ret_lhs() == true
+            // This use of std::forward may look surprising as it's not the traditional use of forwarding a T&& in a
+            // template<typename T>. None the less, this still does what we want regarding forwarding lvalues as lvalues
+            // and rvalues as rvalues.
+            return std::forward<A>(a);
         }
-        // Need overloads for operators with precedence <= bitshift
-        // TODO: spaceship operator?
-        // Note: Could decompose more than just comparison and boolean operators, but it would take
-        // a lot of work and I don't think it's beneficial for this library.
-        template<typename O> [[nodiscard]] constexpr auto operator<<(O&& operand) && {
-            using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>;
-            if constexpr(is_nothing<A>) {
-                static_assert(is_nothing<B> && is_nothing<C>);
-                return expression_decomposer<Q, nothing, nothing>(std::forward<O>(operand));
-            } else if constexpr(is_nothing<B>) {
-                static_assert(is_nothing<C>);
-                return expression_decomposer<A, Q, ops::shl>(std::forward<A>(a), std::forward<O>(operand));
-            } else {
-                static_assert(!is_nothing<C>);
-                return expression_decomposer<decltype(get_value()), O, ops::shl>(
-                    std::forward<A>(get_value()),
-                    std::forward<O>(operand)
-                );
-            }
+        #define LIBASSERT_GEN_OP_BOILERPLATE(functor, op) \
+        template<typename O> [[nodiscard]] constexpr auto operator op(O&& operand) && { \
+            return expression_decomposer<A, O, functor>(std::forward<A>(a), std::forward<O>(operand)); \
+        }
+        LIBASSERT_DO_GEN_OP_BOILERPLATE
+        #undef LIBASSERT_GEN_OP_BOILERPLATE
+    };
+
+    template<typename T> T deduce_type(T&&);
+
+    template<typename A, typename B, typename C>
+    struct expression_decomposer {
+        static_assert(!is_nothing<A> && !is_nothing<B> && !is_nothing<C>);
+        A a;
+        B b;
+        explicit constexpr expression_decomposer() = delete;
+        template<typename U, typename V>
+        explicit constexpr expression_decomposer(U&& _a, V&& _b) : a(std::forward<U>(_a)), b(std::forward<V>(_b)) {}
+        [[nodiscard]]
+        constexpr decltype(auto) get_value() {
+            return C()(a, b);
+        }
+        [[nodiscard]]
+        constexpr operator bool() { // for ternary support
+            return static_cast<bool>(get_value());
+        }
+        // return true if the lhs should be returned, false if full computed value should be
+        [[nodiscard]]
+        constexpr bool ret_lhs() {
+            return ops::ret_lhs(C::op_string);
+        }
+        [[nodiscard]]
+        constexpr decltype(auto) take_lhs() { // should only be called if ret_lhs() == true
+             // This use of std::forward may look surprising but it's correct
+            return std::forward<A>(a);
         }
         #define LIBASSERT_GEN_OP_BOILERPLATE(functor, op) \
         template<typename O> [[nodiscard]] constexpr auto operator op(O&& operand) && { \
             static_assert(!is_nothing<A>); \
-            using Q = std::conditional_t<std::is_rvalue_reference_v<O>, std::remove_reference_t<O>, O>; \
-            if constexpr(is_nothing<B>) { \
-                static_assert(is_nothing<C>); \
-                return expression_decomposer<A, Q, functor>(std::forward<A>(a), std::forward<O>(operand)); \
-            } else { \
-                static_assert(!is_nothing<C>); \
-                using V = decltype(get_value()); \
-                return expression_decomposer<V, Q, functor>(std::forward<V>(get_value()), std::forward<O>(operand)); \
-            } \
+            using V = decltype(deduce_type(get_value())); /* deduce_type turns T&& into T while leaving T& as T& */ \
+            return expression_decomposer<V, O, functor>(get_value(), std::forward<O>(operand)); \
         }
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::shr, >>)
-        #if __cplusplus >= 202002L
-         LIBASSERT_GEN_OP_BOILERPLATE(ops::spaceship, <=>)
-        #endif
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::eq, ==)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::neq, !=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::gt, >)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::lt, <)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::gteq, >=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::lteq, <=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::band, &)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::bxor, ^)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::bor, |)
-        #ifdef LIBASSERT_DECOMPOSE_BINARY_LOGICAL
-         LIBASSERT_GEN_OP_BOILERPLATE(ops::land, &&)
-         LIBASSERT_GEN_OP_BOILERPLATE(ops::lor, ||)
-        #endif
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::assign, =) // NOLINT(cppcoreguidelines-c-copy-assignment-signature, misc-unconventional-assign-operator)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::add_assign, +=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::sub_assign, -=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::mul_assign, *=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::div_assign, /=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::mod_assign, %=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::shl_assign, <<=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::shr_assign, >>=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::band_assign, &=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::bxor_assign, ^=)
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::bor_assign, |=)
+        LIBASSERT_DO_GEN_OP_BOILERPLATE
         #undef LIBASSERT_GEN_OP_BOILERPLATE
     };
 
+    #undef LIBASSERT_GEN_OP_BOILERPLATE_SPACESHIP
+    #undef LIBASSERT_GEN_OP_BOILERPLATE_BINARY_LOGICAL
+    #undef LIBASSERT_DO_GEN_OP_BOILERPLATE
+
     // for ternary support
     template<typename U>
-    expression_decomposer(U&&) -> expression_decomposer<
-        std::conditional_t<std::is_rvalue_reference_v<U>, std::remove_reference_t<U>, U>
-    >;
+    expression_decomposer(U&&) -> expression_decomposer<U>;
+
+    expression_decomposer() -> expression_decomposer<>;
 }
+LIBASSERT_END_NAMESPACE
 
 #endif

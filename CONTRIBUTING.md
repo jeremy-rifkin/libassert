@@ -15,6 +15,8 @@ premature-optimizations, or micro-optimizations.
 When contributing, please try to match the current code style in the codebase. Style doesn't matter
 too much ultimately but consistency within a codebase is important.
 
+Please base changes against the `dev` branch, which is used for development.
+
 ## Local development
 
 The easiest way to develop locally is to run `make build` which will handle cmake invocation and

@@ -111,9 +111,15 @@ target_link_libraries(
   cpptrace::cpptrace
 )
 
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "MSVC")
+  set(IS_CLANG_CL 1)
+else()
+  set(IS_CLANG_CL 0)
+endif()
+
 set(
   warning_options
-  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror=return-type -Wundef>
+  $<$<NOT:$<OR:$<CXX_COMPILER_ID:MSVC>,$<STREQUAL:${IS_CLANG_CL},1>>>:-Wall -Wextra -Werror=return-type -Wundef>
   $<$<CXX_COMPILER_ID:GNU>:-Wuseless-cast -Wmaybe-uninitialized>
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->
 )
@@ -209,6 +215,9 @@ if(LIBASSERT_USE_MAGIC_ENUM)
   )
 endif()
 
+if(NOT LIBASSERT_STD_FORMAT)
+  target_compile_definitions(${target_name} PUBLIC LIBASSERT_NO_STD_FORMAT)
+endif()
 
 # ---- Install Rules ----
 

@@ -11,7 +11,7 @@
 // || Core utilities                                                                                                  ||
 // =====================================================================================================================
 
-namespace libassert {
+LIBASSERT_BEGIN_NAMESPACE
     // Lightweight helper, eventually may use C++20 std::source_location if this library no longer
     // targets C++17. Note: __builtin_FUNCTION only returns the name, so __PRETTY_FUNCTION__ is
     // still needed.
@@ -25,9 +25,10 @@ namespace libassert {
             int _line         = __builtin_LINE()
         ) : file(_file), /*function(_function),*/ line(_line) {}
     };
-}
+LIBASSERT_END_NAMESPACE
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     // bootstrap with primitive implementations
     LIBASSERT_EXPORT void primitive_assert_impl(
         bool condition,
@@ -56,14 +57,14 @@ namespace libassert::detail {
 
     #define LIBASSERT_PRIMITIVE_PANIC(message) ::libassert::detail::primitive_panic_impl(LIBASSERT_PFUNC, {}, message)
 }
+LIBASSERT_END_NAMESPACE
 
 // =====================================================================================================================
 // || Basic formatting and type tools                                                                                 ||
 // =====================================================================================================================
 
-namespace libassert::detail {
-    [[nodiscard]] LIBASSERT_EXPORT std::string bstringf(const char* format, ...);
-
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     LIBASSERT_ATTR_COLD [[nodiscard]]
     constexpr inline std::string_view substring_bounded_by(
         std::string_view sig,
@@ -94,12 +95,14 @@ namespace libassert::detail {
 
     [[nodiscard]] LIBASSERT_EXPORT std::string prettify_type(std::string type);
 }
+LIBASSERT_END_NAMESPACE
 
 // =====================================================================================================================
 // || Metaprogramming utilities                                                                                       ||
 // =====================================================================================================================
 
-namespace libassert::detail {
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
     struct nothing {};
 
     template<typename T> inline constexpr bool is_nothing = std::is_same_v<T, nothing>;
@@ -121,15 +124,9 @@ namespace libassert::detail {
     inline constexpr bool is_arith_not_bool_char = std::is_arithmetic_v<strip<T>> && !isa<T, bool> && !isa<T, char>;
 
     template<typename T>
-    inline constexpr bool is_c_string =
-           isa<std::decay_t<strip<T>>, char*> // <- covers literals (i.e. const char(&)[N]) too
-            || isa<std::decay_t<strip<T>>, const char*>;
-
-    template<typename T>
     inline constexpr bool is_string_type =
-           isa<T, std::string>
-            || isa<T, std::string_view>
-            || is_c_string<T>;
+        std::is_convertible_v<T, std::string_view>
+            && !std::is_same_v<T, std::nullptr_t>;
 
     // char(&)[20], const char(&)[20], const char(&)[]
     template<typename T> inline constexpr bool is_string_literal =
@@ -139,5 +136,62 @@ namespace libassert::detail {
 
     template<typename T> typename std::add_lvalue_reference_t<T> decllval() noexcept;
 }
+LIBASSERT_END_NAMESPACE
+
+// =====================================================================================================================
+// || Safe comparisons                                                                                                ||
+// =====================================================================================================================
+
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
+    // Copied and pasted from https://en.cppreference.com/w/cpp/utility/intcmp
+    // Not using std:: versions because library is targeting C++17
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_equal(T t, U u) {
+        using UT = std::make_unsigned_t<T>;
+        using UU = std::make_unsigned_t<U>;
+        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>) {
+            return t == u;
+        } else if constexpr(std::is_signed_v<T>) {
+            return t >= 0 && UT(t) == u;
+        } else {
+            return u >= 0 && t == UU(u);
+        }
+    }
+
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_not_equal(T t, U u) {
+        return !cmp_equal(t, u);
+    }
+
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_less(T t, U u) {
+        using UT = std::make_unsigned_t<T>;
+        using UU = std::make_unsigned_t<U>;
+        if constexpr(std::is_signed_v<T> == std::is_signed_v<U>) {
+            return t < u;
+        } else if constexpr(std::is_signed_v<T>) {
+            return t < 0  || UT(t) < u;
+        } else {
+            return u >= 0 && t < UU(u);
+        }
+    }
+
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_greater(T t, U u) {
+        return cmp_less(u, t);
+    }
+
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_less_equal(T t, U u) {
+        return !cmp_less(u, t);
+    }
+
+    template<typename T, typename U>
+    [[nodiscard]] constexpr bool cmp_greater_equal(T t, U u) {
+        return !cmp_less(t, u);
+    }
+}
+LIBASSERT_END_NAMESPACE
 
 #endif

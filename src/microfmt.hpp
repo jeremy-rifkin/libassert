@@ -8,17 +8,21 @@
 #include <iostream>
 #include <iterator>
 #include <string>
-#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
+#if (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L
  #include <string_view>
 #endif
 #ifdef _MSC_VER
  #include <intrin.h>
 #endif
 
+#include <libassert/platform.hpp>
+#include <libassert/utilities.hpp>
+
 // https://github.com/jeremy-rifkin/microfmt
 // Format: {[align][width][:[fill][base]]}  # width: number or {}
 
-namespace libassert::microfmt {
+LIBASSERT_BEGIN_NAMESPACE
+namespace microfmt {
     namespace detail {
         inline std::uint64_t clz(std::uint64_t value) {
             #ifdef _MSC_VER
@@ -134,7 +138,7 @@ namespace libassert::microfmt {
             format_value(unsigned long int_val) : uint64_value(int_val), value(value_type::uint64_value) {}
             format_value(unsigned long long int_val) : uint64_value(int_val), value(value_type::uint64_value) {}
             format_value(const std::string& string) : string_value(&string), value(value_type::string_value) {}
-            #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
+            #if (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L
             format_value(std::string_view sv)
                 : string_view_value{sv.data(), sv.size()}, value(value_type::string_view_value) {}
             #endif
@@ -264,7 +268,7 @@ namespace libassert::microfmt {
             }
         }
 
-        #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
+        #if (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L
         template<typename OutputIt>
         void format(OutputIt out, std::string_view fmt, const std::initializer_list<format_value>& args) {
             return format(out, fmt.begin(), fmt.end(), args);
@@ -300,5 +304,6 @@ namespace libassert::microfmt {
         fwrite(str.data(), 1, str.size(), stream);
     }
 }
+LIBASSERT_END_NAMESPACE
 
 #endif
