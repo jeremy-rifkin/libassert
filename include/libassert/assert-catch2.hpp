@@ -45,6 +45,9 @@ LIBASSERT_END_NAMESPACE
 
 #define REQUIRE_ASSERT(expr) \
     do { \
+        LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
+        LIBASSERT_WARNING_PRAGMA_PUSH_MSVC \
+        LIBASSERT_IGNORE_UNUSED_VALUE \
         auto handler = ::libassert::get_failure_handler(); \
         ::libassert::set_failure_handler([] (const ::libassert::assertion_info& info) { \
             throw info; \
@@ -60,6 +63,8 @@ LIBASSERT_END_NAMESPACE
             FAIL("Expected assertion failure from " #expr " however none happened"); \
         } \
         ::libassert::set_failure_handler(handler); \
+        LIBASSERT_WARNING_PRAGMA_POP_MSVC \
+        LIBASSERT_WARNING_PRAGMA_POP_CLANG \
     } while(0)
 
 #endif
