@@ -19,3 +19,6 @@ jobs:
       run: |
            chmod +x lint.sh
           #  ./lint.sh
+
+           # Check that we're not merging the dev branch into main
+           (grep 'LIBASSERT_CPPTRACE_TAG "origin/dev"' CMakeLists.txt && exit 1) || exit 0
