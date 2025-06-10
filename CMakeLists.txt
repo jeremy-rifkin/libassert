@@ -51,7 +51,7 @@ set(LIBASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
 set(LIBASSERT_MAGIC_ENUM_TAG "e046b69a3736d314fad813e159b1c192eaef92cd") # v0.9.7
 
 set(LIBASSERT_ENCHANTUM_REPO "https://github.com/ZXShady/enchantum.git")
-set(LIBASSERT_ENCHANTUM_TAG "54aaad672b358348f6b2adf9fa1e2ae2e608e8bb") # v0.1.0
+set(LIBASSERT_ENCHANTUM_TAG "4bf5931be85e8d57fbc8a96ea3499144974980a8") # v0.2.0
 
 set(LIBASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
 set(LIBASSERT_CPPTRACE_TAG "c37b5ed7364f4fc1c58e92d13399cd04656e6572") # v0.8.2
@@ -190,7 +190,7 @@ if(
     "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 9.0
   )
 )
-  if(LIBASSERT_DESIRED_CXX_STANDARD STREQUAL "std_cxx_17")
+  if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 11.0 OR LIBASSERT_DESIRED_CXX_STANDARD STREQUAL "cxx_std_17")
     set(LIBASSERT_USE_MAGIC_ENUM ON)
   else()
     set(LIBASSERT_USE_ENCHANTUM ON)
@@ -199,6 +199,12 @@ endif()
 
 if(LIBASSERT_USE_MAGIC_ENUM AND LIBASSERT_USE_ENCHANTUM)
     message(FATAL_ERROR "You cannot use both magic_enum and enchantum at once!")
+endif()
+
+if(LIBASSERT_USE_MAGIC_ENUM)
+    message("Libassert is using magic enum!")
+else(LIBASSERT_USE_ENCHANTUM)
+    message("Libassert is using enchantum!")
 endif()
 
 if(LIBASSERT_USE_MAGIC_ENUM)
@@ -236,12 +242,6 @@ if(LIBASSERT_USE_ENCHANTUM)
     ${target_name} PUBLIC
     LIBASSERT_USE_ENCHANTUM
   )
-endif()
-
-if(LIBASSERT_USE_ENCHANTUM)
-    message(STATUS "Libassert is using enchatnum!! ")
-elseif(LIBASSERT_USE_MAGIC_ENUM)
-    message(STATUS "Libassert is using magic enum!! ")
 endif()
 
 # ---- Install Rules ----
