@@ -51,7 +51,7 @@ set(LIBASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
 set(LIBASSERT_MAGIC_ENUM_TAG "e046b69a3736d314fad813e159b1c192eaef92cd") # v0.9.7
 
 set(LIBASSERT_ENCHANTUM_REPO "https://github.com/ZXShady/enchantum.git")
-set(LIBASSERT_ENCHANTUM_TAG "4bf5931be85e8d57fbc8a96ea3499144974980a8") # v0.2.0
+set(LIBASSERT_ENCHANTUM_TAG "12fd5d9397e23365e76f0f130cba29b5c7167619") # Fix clang edge case commit
 
 set(LIBASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
 set(LIBASSERT_CPPTRACE_TAG "c37b5ed7364f4fc1c58e92d13399cd04656e6572") # v0.8.2
@@ -202,12 +202,6 @@ if(LIBASSERT_USE_MAGIC_ENUM AND LIBASSERT_USE_ENCHANTUM)
 endif()
 
 if(LIBASSERT_USE_MAGIC_ENUM)
-    message("Libassert is using magic enum!")
-else(LIBASSERT_USE_ENCHANTUM)
-    message("Libassert is using enchantum!")
-endif()
-
-if(LIBASSERT_USE_MAGIC_ENUM)
   set(MAGIC_ENUM_OPT_INSTALL ON)
   if(LIBASSERT_USE_EXTERNAL_MAGIC_ENUM)
     find_package(magic_enum REQUIRED)
@@ -225,7 +219,6 @@ if(LIBASSERT_USE_MAGIC_ENUM)
     LIBASSERT_USE_MAGIC_ENUM
   )
 endif()
-
 
 if(LIBASSERT_USE_ENCHANTUM)
   if(LIBASSERT_USE_EXTERNAL_ENCHANTUM)
