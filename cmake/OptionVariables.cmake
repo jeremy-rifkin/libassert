@@ -102,7 +102,14 @@ option(
   "Use magic_enum library to print better diagnostics for enum classes (will also be included in ${package_name} package installation)"
   OFF
 )
+option(
+  LIBASSERT_USE_ENCHANTUM
+  "Use enchantum library to print better diagnostics for enum classes (will also be included in ${package_name} package installation)"
+  OFF
+)
+
 option(LIBASSERT_USE_EXTERNAL_MAGIC_ENUM "Obtain magic_enum via find_package instead of FetchContent" OFF)
+option(LIBASSERT_USE_EXTERNAL_ENCHANTUM "Obtain enchantum via find_package instead of FetchContent" OFF)
 
 option(LIBASSERT_WERROR_BUILD "" OFF)
 
