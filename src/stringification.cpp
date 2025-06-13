@@ -23,8 +23,8 @@ namespace detail {
     }
 
     std::mutex literal_format_config_mutex;
-    literal_format_mode current_literal_format_mode;
-    literal_format current_fixed_literal_format;
+    literal_format_mode current_literal_format_mode = literal_format_mode::infer;
+    literal_format current_fixed_literal_format = literal_format::default_format;
 
     thread_local literal_format thread_current_literal_format = literal_format::default_format;
 }
@@ -39,6 +39,7 @@ LIBASSERT_BEGIN_NAMESPACE
     LIBASSERT_EXPORT void set_fixed_literal_format(literal_format format) {
         std::unique_lock lock(detail::literal_format_config_mutex);
         detail::current_fixed_literal_format = format;
+        detail::thread_current_literal_format = format;
         detail::current_literal_format_mode = literal_format_mode::fixed_variations;
     }
 LIBASSERT_END_NAMESPACE

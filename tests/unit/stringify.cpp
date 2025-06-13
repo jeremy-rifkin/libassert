@@ -190,6 +190,12 @@ TEST(Stringify, Containers) {
 }
 
 TEST(Stringify, LiteralFormatting) {
+    struct resetter {
+        ~resetter() {
+            libassert::set_fixed_literal_format(libassert::literal_format::default_format);
+            libassert::set_literal_format_mode(libassert::literal_format_mode::infer);
+        }
+    } reset;
     ASSERT(generate_stringification(100) == "100");
     libassert::set_fixed_literal_format(libassert::literal_format::integer_hex | libassert::literal_format::integer_octal);
     libassert::detail::set_literal_format("", "", "", false);
