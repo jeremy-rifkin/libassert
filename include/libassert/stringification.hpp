@@ -96,13 +96,22 @@ namespace detail {
         //
         // General traits
         //
+        template<typename T, bool = (std::tuple_size<T>::value > 0)>
+        struct canonicalized_get_0 {
+            using type = decltype(std::get<0>(std::declval<T>()));
+        };
+        template<typename T>
+        struct canonicalized_get_0<T, false> {
+            using type = void;
+        };
+
         template<typename T, typename = void> class is_tuple_like : public std::false_type {};
         template<typename T>
         class is_tuple_like<
             T,
             std::void_t<
                 typename std::tuple_size<T>::type, // TODO: decltype(std::tuple_size_v<T>) ?
-                decltype(std::get<0>(std::declval<T>()))
+                typename canonicalized_get_0<T>::type
             >
         > : public std::true_type {};
 
@@ -317,7 +326,11 @@ namespace detail {
         template<typename T>
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify_tuple_like(const T& t) {
-            return stringify_tuple_like_impl(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
+            if constexpr(std::tuple_size<T>::value == 0) {
+                return "[]";
+            } else {
+                return stringify_tuple_like_impl(t, std::make_index_sequence<std::tuple_size<T>::value - 1>{});
+            }
         }
 
         template<typename T>
@@ -374,15 +387,11 @@ namespace detail {
         || stringifiable_container<T>();
 
     template<typename T, size_t... I> constexpr bool tuple_has_stringifiable_args_core(std::index_sequence<I...>) {
-        return (
-            stringifiable<decltype(std::get<0>(std::declval<T>()))>
-            || ...
-            || stringifiable<decltype(std::get<I>(std::declval<T>()))>
-        );
+        return sizeof...(I) == 0 || (stringifiable<decltype(std::get<I>(std::declval<T>()))> || ...);
     }
 
     template<typename T> inline constexpr bool tuple_has_stringifiable_args =
-        tuple_has_stringifiable_args_core<T>(std::make_index_sequence<std::tuple_size<T>::value - 1>{});
+        tuple_has_stringifiable_args_core<T>(std::make_index_sequence<std::tuple_size<T>::value>{});
 
     template<typename T> constexpr bool stringifiable_container() {
         // TODO: Guard against std::expected....?

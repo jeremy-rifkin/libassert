@@ -239,6 +239,13 @@ TEST(Stringify, Regression01) {
     ASSERT(fields.begin() == fields.end());
 }
 
+TEST(Stringify, Tuples) {
+    std::tuple<int, float> tuple{1, 2};
+    ASSERT(generate_stringification(tuple) == R"(std::tuple<int, float>: [1, 2.0])");
+    std::tuple<> tuple2;
+    ASSERT(generate_stringification(tuple2) == R"(std::tuple<>: [])");
+}
+
 // TODO: Other formats
 // enum E { EE, FF };
 // ASSERT(generate_stringification(FF) == R"(int [6]: [1, 1, 2, 3, 5, 8])");
