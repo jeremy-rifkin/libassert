@@ -24,7 +24,7 @@
  #endif
 #endif
 
-#ifdef LIBASSERT_USE_FMT
+#if defined(LIBASSERT_USE_FMT) && !defined(LIBASSERT_USE_STD_FORMAT)
  #include <fmt/format.h>
 #endif
 
@@ -32,7 +32,7 @@
  #include <compare>
 #endif
 
-#ifdef LIBASSERT_USE_STD_FORMAT
+#if defined(LIBASSERT_USE_STD_FORMAT) && !defined(LIBASSERT_USE_FMT)
  #include <format>
 #endif
 
