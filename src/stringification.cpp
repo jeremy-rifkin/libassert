@@ -293,6 +293,10 @@ namespace detail {
             return stringify_floating_point(value);
         }
 
+        LIBASSERT_ATTR_COLD std::string stringify(std::byte value) {
+            return stringify_integral(static_cast<unsigned>(value));
+        }
+
         LIBASSERT_ATTR_COLD std::string stringify(std::error_code ec) {
             return ec.category().name() + (':' + std::to_string(ec.value())) + ' ' + ec.message();
         }

@@ -202,6 +202,7 @@ namespace detail {
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(float);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(double);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(long double);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::byte);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_code ec);
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::error_condition ec);
         #if __cplusplus >= 202002L
@@ -498,7 +499,7 @@ namespace detail {
             } else {
                 return stringification::stringify_pointer_value(v.get());
             }
-        } else if constexpr(std::is_enum_v<T>) {
+        } else if constexpr(std::is_enum_v<T> && !std::is_same_v<T, std::byte>) {
             return stringification::stringify_enum(v);
         } else if constexpr(stringification::is_tuple_like<T>::value) {
             if constexpr(stringifiable_container<T>()) {

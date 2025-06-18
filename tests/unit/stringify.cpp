@@ -189,13 +189,15 @@ TEST(Stringify, Containers) {
     ASSERT(generate_stringification(svec3) == R"(std::vector<std::vector<int>>: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])");
 }
 
+struct format_resetter {
+    ~format_resetter() {
+        libassert::set_fixed_literal_format(libassert::literal_format::default_format);
+        libassert::set_literal_format_mode(libassert::literal_format_mode::infer);
+    }
+};
+
 TEST(Stringify, LiteralFormatting) {
-    struct resetter {
-        ~resetter() {
-            libassert::set_fixed_literal_format(libassert::literal_format::default_format);
-            libassert::set_literal_format_mode(libassert::literal_format_mode::infer);
-        }
-    } reset;
+    format_resetter resetter;
     ASSERT(generate_stringification(100) == "100");
     libassert::set_fixed_literal_format(libassert::literal_format::integer_hex | libassert::literal_format::integer_octal);
     libassert::detail::set_literal_format("", "", "", false);
@@ -244,6 +246,17 @@ TEST(Stringify, Tuples) {
     ASSERT(generate_stringification(tuple) == R"(std::tuple<int, float>: [1, 2.0])");
     std::tuple<> tuple2;
     ASSERT(generate_stringification(tuple2) == R"(std::tuple<>: [])");
+}
+
+TEST(Stringify, Bytes) {
+    format_resetter resetter;
+    std::byte b{0x7f};
+    unsigned char c = 0x7f;
+    EXPECT(generate_stringification(c) == R"(127)");
+    EXPECT(generate_stringification(b) == R"(127)");
+    libassert::set_fixed_literal_format(libassert::literal_format::integer_hex | libassert::literal_format::integer_octal);
+    EXPECT(generate_stringification(c) == R"(127 0x7f 0177)");
+    EXPECT(generate_stringification(b) == R"(127 0x7f 0177)");
 }
 
 // TODO: Other formats
