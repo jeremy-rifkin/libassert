@@ -20,5 +20,11 @@ jobs:
            chmod +x lint.sh
           #  ./lint.sh
 
-           # Check that we're not merging the dev branch into main
+  prevent-dev-tag:
+    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v2
+    - name: check
+      run: |
            (grep 'LIBASSERT_CPPTRACE_TAG "origin/dev"' CMakeLists.txt && exit 1) || exit 0
