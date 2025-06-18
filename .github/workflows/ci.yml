@@ -197,6 +197,15 @@ jobs:
            chmod +x lint.sh
           #  ./lint.sh
 
+  prevent-dev-tag:
+    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v2
+    - name: check
+      run: |
+           (grep 'LIBASSERT_CPPTRACE_TAG "origin/dev"' CMakeLists.txt && exit 1) || exit 0
+
   test-linux-fetchcontent:
     runs-on: ubuntu-22.04
     needs: test-linux
