@@ -254,7 +254,7 @@ namespace detail {
                 return std::string(name);
             } else {
                 return stringify_enum(
-                    type_name<T>(),
+                    type_name<E>(),
                     stringify(enchantum::to_underlying(e))
                 );
             }
