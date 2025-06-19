@@ -40,6 +40,7 @@ LIBASSERT_BEGIN_NAMESPACE
     export using libassert::extra_diagnostic;
     export using libassert::assertion_info;
     namespace detail {
+        export using libassert::detail::set_literal_format;
         export using libassert::detail::assert_static_parameters;
         export using libassert::detail::pretty_function_name_wrapper;
         export using libassert::detail::process_assert_fail;
@@ -54,6 +55,14 @@ LIBASSERT_BEGIN_NAMESPACE
     }
     // stringification.hpp
     export using libassert::stringifier;
+    namespace detail {
+        export using libassert::detail::generate_stringification;
+        export using libassert::detail::stringifiable;
+        export using libassert::detail::stringifiable_container;
+    }
     // utilities.hpp
     export using libassert::source_location;
+    namespace detail {
+        export using libassert::detail::prettify_type;
+    }
 LIBASSERT_END_NAMESPACE

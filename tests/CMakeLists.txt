@@ -103,61 +103,114 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     # For catch 3 only
     list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
 
-    set(
-      unit_test_sources
-      tests/unit/constexpr_contexts.cpp
-      tests/unit/disambiguation.cpp
-      tests/unit/lexer.cpp
-      tests/unit/literals.cpp
-      tests/unit/test_public_utilities.cpp
-      tests/unit/test_type_prettier.cpp
-      tests/unit/type_handling.cpp
-      tests/unit/stringify.cpp
-      tests/unit/fmt-test.cpp
-      tests/unit/std_format20.cpp
-      tests/unit/assertion_tests.cpp
-    )
-    if(cxx_std_23 IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-      LIST(APPEND unit_test_sources tests/unit/std_format23.cpp)
-    endif()
-    foreach(test_file ${unit_test_sources})
-      get_filename_component(test_name ${test_file} NAME_WE)
-      list(APPEND all_targets ${test_name})
-      add_executable(${test_name} ${test_file})
-      target_link_libraries(${test_name} PRIVATE libassert-lib)
-      target_include_directories(${test_name} PRIVATE src)
-      target_compile_definitions(${test_name} PRIVATE LIBASSERT_BUILD_TESTING)
-      target_compile_features(${test_name} PUBLIC cxx_std_17)
+    function(do_add_unittest)
+      cmake_parse_arguments(
+          LIBASSERT_UNIT
+          ""
+          ""
+          "TEST_NAME;SOURCES;OPTIONS;FEATURES;DEFINES;LIBS"
+          ${ARGN}
+      )
+
+      add_executable(
+        "${LIBASSERT_UNIT_TEST_NAME}"
+        ${LIBASSERT_UNIT_SOURCES}
+      )
+
+      list(APPEND all_targets "${LIBASSERT_UNIT_TEST_NAME}")
+      target_link_libraries("${LIBASSERT_UNIT_TEST_NAME}" PRIVATE libassert-lib ${LIBASSERT_UNIT_LIBS})
+      target_compile_options("${LIBASSERT_UNIT_TEST_NAME}" PRIVATE ${LIBASSERT_UNIT_OPTIONS})
+      target_compile_features("${LIBASSERT_UNIT_TEST_NAME}" PRIVATE ${LIBASSERT_UNIT_FEATURES})
+      target_include_directories("${LIBASSERT_UNIT_TEST_NAME}" PRIVATE src)
+      target_compile_definitions("${LIBASSERT_UNIT_TEST_NAME}" PRIVATE LIBASSERT_BUILD_TESTING ${LIBASSERT_UNIT_DEFINES})
+      target_compile_features("${LIBASSERT_UNIT_TEST_NAME}" PUBLIC cxx_std_17)
       if(LIBASSERT_USE_CI_WRAPPER)
         add_test(
-          NAME ${test_name}
-          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/ci-wrapper.py $<TARGET_FILE:${test_name}>
+          NAME "${LIBASSERT_UNIT_TEST_NAME}"
+          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/ci-wrapper.py $<TARGET_FILE:"${LIBASSERT_UNIT_TEST_NAME}">
         )
       else()
-        add_test(NAME ${test_name} COMMAND ${test_name})
+        add_test(NAME "${LIBASSERT_UNIT_TEST_NAME}" COMMAND "${LIBASSERT_UNIT_TEST_NAME}")
       endif()
-      list(APPEND dsym_targets ${test_name})
-    endforeach()
+      list(APPEND dsym_targets "${LIBASSERT_UNIT_TEST_NAME}")
+    endfunction()
 
-    target_link_libraries(lexer PRIVATE GTest::gtest_main)
-    target_link_libraries(fmt-test PRIVATE GTest::gtest_main fmt::fmt)
-    target_link_libraries(std_format20 PRIVATE GTest::gtest_main fmt::fmt)
-    target_link_libraries(assertion_tests PRIVATE GTest::gtest_main)
-    target_link_libraries(stringify PRIVATE GTest::gtest_main)
-    target_compile_options(assertion_tests PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/permissive- /Zc:preprocessor>)
-    target_compile_definitions(fmt-test PRIVATE LIBASSERT_USE_FMT)
-    target_compile_definitions(std_format20 PRIVATE LIBASSERT_USE_FMT)
-    target_compile_options(lexer PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
-    target_compile_options(fmt-test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
-    target_compile_options(stringify PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
-    target_compile_options(std_format20 PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
-    target_compile_features(std_format20 PRIVATE cxx_std_20)
+    function(add_unittest)
+      cmake_parse_arguments(
+          LIBASSERT_UNIT
+          ""
+          ""
+          "SOURCE;OPTIONS;FEATURES;DEFINES;LIBS"
+          ${ARGN}
+      )
+
+      get_filename_component(test_name "${LIBASSERT_UNIT_SOURCE}" NAME_WE)
+
+      do_add_unittest(
+        TEST_NAME "${test_name}"
+        SOURCES ${LIBASSERT_UNIT_SOURCE}
+        OPTIONS ${LIBASSERT_UNIT_OPTIONS}
+        FEATURES ${LIBASSERT_UNIT_FEATURES}
+        DEFINES ${LIBASSERT_UNIT_DEFINES}
+        LIBS ${LIBASSERT_UNIT_LIBS}
+      )
+
+      if(HAS_CXX20_MODULES)
+        do_add_unittest(
+          TEST_NAME "${test_name}_modules"
+          SOURCES ${LIBASSERT_UNIT_SOURCE}
+          OPTIONS ${LIBASSERT_UNIT_OPTIONS}
+          FEATURES ${LIBASSERT_UNIT_FEATURES}
+          DEFINES ${LIBASSERT_UNIT_DEFINES} TEST_MODULE
+          LIBS ${LIBASSERT_UNIT_LIBS}
+        )
+      endif()
+    endfunction()
+
+    add_unittest(SOURCE tests/unit/constexpr_contexts.cpp)
+    add_unittest(SOURCE tests/unit/disambiguation.cpp)
+    add_unittest(SOURCE tests/unit/lexer.cpp OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor> LIBS GTest::gtest_main)
+    add_unittest(SOURCE tests/unit/literals.cpp)
+    add_unittest(SOURCE tests/unit/test_public_utilities.cpp)
+    add_unittest(SOURCE tests/unit/test_type_prettier.cpp)
+    add_unittest(SOURCE tests/unit/type_handling.cpp)
+    add_unittest(
+      SOURCE tests/unit/stringify.cpp
+      OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>
+      LIBS GTest::gtest_main
+    )
+    add_unittest(
+      SOURCE tests/unit/fmt-test.cpp
+      OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>
+      DEFINES LIBASSERT_USE_FMT
+      LIBS GTest::gtest_main fmt::fmt
+    )
+    add_unittest(
+      SOURCE tests/unit/std_format20.cpp
+      OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>
+      FEATURES cxx_std_20
+      DEFINES LIBASSERT_USE_FMT
+      LIBS GTest::gtest_main fmt::fmt
+    )
+    add_unittest(
+      SOURCE tests/unit/assertion_tests.cpp
+      OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/permissive- /Zc:preprocessor>
+      LIBS GTest::gtest_main
+    )
     if(cxx_std_23 IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-      target_link_libraries(std_format23 PRIVATE GTest::gtest_main fmt::fmt)
-      target_compile_definitions(std_format23 PRIVATE LIBASSERT_USE_FMT)
-      target_compile_features(std_format23 PRIVATE cxx_std_23)
-      target_compile_options(std_format23 PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>)
+      add_unittest(
+        SOURCE tests/unit/std_format23.cpp
+        OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>
+        FEATURES cxx_std_23
+        DEFINES LIBASSERT_USE_FMT
+        LIBS GTest::gtest_main fmt::fmt
+      )
     endif()
+    add_unittest(
+      SOURCE tests/unit/catch2-test.cpp
+      OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/permissive- /Zc:preprocessor>
+      LIBS Catch2::Catch2WithMain
+    )
 
     set(
       binary_sources

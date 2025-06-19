@@ -6,6 +6,8 @@
 
 #include <libassert/platform.hpp>
 
+#include <string_view>
+
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
  // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
  #define LIBASSERT_EVAL0(...) __VA_ARGS__

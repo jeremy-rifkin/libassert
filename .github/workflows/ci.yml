@@ -41,6 +41,36 @@ jobs:
       working-directory: build
       run: |
            CTEST_OUTPUT_ON_FAILURE=1 ninja test
+  test-linux-modules:
+    runs-on: ubuntu-24.04
+    needs: test-linux
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: |
+           sudo apt install ninja-build clang-19 clang-tools-19
+           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER=clang++-19 \
+            -DCMAKE_C_COMPILER=clang-19 \
+            -DCMAKE_CXX_STANDARD=20 \
+            -DLIBASSERT_DESIRED_CXX_STANDARD=cxx_std_20 \
+            -DCPPTRACE_BUILD_SHARED=ON \
+            -DLIBASSERT_BUILD_TESTING=On \
+            -DLIBASSERT_WERROR_BUILD=On
+           ninja
+    - name: test
+      working-directory: build
+      run: |
+           CTEST_OUTPUT_ON_FAILURE=1 ninja test
   # test-linux-gcc-8:
   #   runs-on: ubuntu-20.04
   #   strategy:
