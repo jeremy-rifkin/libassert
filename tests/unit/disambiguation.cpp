@@ -3,9 +3,14 @@
 #include <string>
 #include <tuple>
 
-#include <libassert/assert.hpp>
-
 #include "analysis.hpp"
+
+#ifdef TEST_MODULE
+import libassert;
+#include <libassert/assert-macros.hpp>
+#else
+#include <libassert/assert.hpp>
+#endif
 
 #define ESC "\033["
 #define RED ESC "1;31m"

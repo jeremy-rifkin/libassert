@@ -69,7 +69,7 @@ template<class T> struct S {
     S& operator=(S&&) noexcept = default;
     bool operator==(const S& s) const { return x == s.x; }
     friend std::ostream& operator<<(std::ostream& o, const S& s) {
-        o<<"I'm S<"<<libassert::detail::type_name<T>()<<"> and I contain:"<<std::endl;
+        o<<"I'm S<"<<libassert::type_name<T>()<<"> and I contain:"<<std::endl;
         std::ostringstream oss;
         oss<<s.x;
         o<<indent(std::move(oss).str(), 4);
@@ -189,14 +189,14 @@ public:
         {
             int fd = open(path, O_RDONLY);
             debug_assert(fd >= 0, "Internal error with foobars", errno, path);
-            LIBASSERT_PHONY_USE(fd);
+            (void)fd;
         }
         {
             debug_assert(open(path, O_RDONLY) >= 0, "Internal error with foobars", errno, path);
         }
         {
             FILE* f = ASSERT_VAL(fopen(path, "r") != nullptr, "Internal error with foobars", errno, path);
-            LIBASSERT_PHONY_USE(f);
+            (void)f;
         }
         debug_assert(false, "Error while doing XYZ");
         debug_assert(false);

@@ -1039,6 +1039,16 @@ find_package(libassert CONFIG REQUIRED)
 target_link_libraries(YOUR_TARGET PRIVATE libassert::assert)
 ```
 
+## C++20 Moduels
+
+Libassert supports C++20 modules: `import libassert;`. You'll need a modern toolchain in order to use C++20 modules (i.e.
+relatively new compilers, cmake, etc).
+
+You will also have to `#include` headers with the macro definitions:
+- `<libassert/assert-macros.hpp>`: All the library assertion macros
+- `<libassert/assert-gtest-macros.hpp>`: Macros for gtest integration
+- `<libassert/assert-catch2-macros.hpp>`: Macros for catch2 integration
+
 # Platform Logistics
 
 Windows and macos require a little extra work to get everything in the right place

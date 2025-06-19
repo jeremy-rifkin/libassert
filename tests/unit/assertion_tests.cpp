@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <libassert/assert.hpp>
 
 #include "utils.hpp"
 #include "microfmt.hpp"
@@ -12,6 +11,13 @@
 #include <set>
 #include <string>
 #include <vector>
+
+#ifdef TEST_MODULE
+import libassert;
+#include <libassert/assert-macros.hpp>
+#else
+#include <libassert/assert.hpp>
+#endif
 
 using namespace std::literals;
 

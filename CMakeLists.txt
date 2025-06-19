@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.15...4.0)
 
 include(cmake/PreventInSourceBuilds.cmake)
 
@@ -41,6 +41,34 @@ if(PROJECT_IS_TOP_LEVEL)
     elseif("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
       SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
     endif()
+  endif()
+endif()
+
+set(HAS_CXX20_MODULES FALSE)
+if(NOT LIBASSERT_DISABLE_CXX_20_MODULES)
+  if(CMAKE_CXX_STANDARD GREATER_EQUAL 20)
+    # https://cmake.org/cmake/help/latest/manual/cmake-cxxmodules.7.html#compiler-support
+    # msvc 14.34+/19.34+
+    # clang 16+
+    # gcc 15 and newer
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.34)
+        set(HAS_CXX20_MODULES TRUE)
+      endif()
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16.0)
+        set(HAS_CXX20_MODULES TRUE)
+      endif()
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15.0)
+        set(HAS_CXX20_MODULES TRUE)
+      endif()
+    endif()
+  endif()
+  if(HAS_CXX20_MODULES)
+    message(STATUS "Libassert HAS_CXX20_MODULES: Yes")
+  else()
+    message(STATUS "Libassert HAS_CXX20_MODULES: No")
   endif()
 endif()
 
@@ -104,6 +132,15 @@ target_sources(
   src/paths.cpp
   src/tokenizer.cpp
 )
+
+if(HAS_CXX20_MODULES)
+  target_sources(
+    ${target_name} PUBLIC
+    FILE_SET CXX_MODULES
+    FILES "src/libassert.cppm"
+    BASE_DIRS "src"
+  )
+endif()
 
 # link dependencies
 target_link_libraries(

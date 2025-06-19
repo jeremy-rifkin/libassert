@@ -2,7 +2,12 @@
 #include <string>
 #include <utility>
 
+#ifdef TEST_MODULE
+import libassert;
+#include <libassert/assert-macros.hpp>
+#else
 #include <libassert/assert.hpp>
+#endif
 
 using namespace libassert;
 

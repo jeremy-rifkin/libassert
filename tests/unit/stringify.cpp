@@ -1,6 +1,3 @@
-#undef ASSERT_LOWERCASE
-#include <libassert/assert-gtest.hpp>
-
 #include <array>
 #include <filesystem>
 #include <map>
@@ -12,6 +9,17 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#undef ASSERT_LOWERCASE
+
+#ifdef TEST_MODULE
+#include <gtest/gtest.h>
+
+import libassert;
+#include <libassert/assert-gtest-macros.hpp>
+#else
+#include <libassert/assert-gtest.hpp>
+#endif
 
 using namespace libassert::detail;
 using namespace std::literals;
@@ -42,20 +50,20 @@ TEST(Stringify, Pointers) {
     int x;
     int* ptr = &x;
     auto s = generate_stringification(ptr);
-    ASSERT(s.find("int*: 0x") == 0 || s.find("int *: 0x") == 0, "", s);
+    ASSERT(s.find("int*: 0x") == std::size_t(0) || s.find("int *: 0x") == std::size_t(0), "", s);
 }
 
 TEST(Stringify, SmartPointers) {
     auto uptr = std::make_unique<int>(62);
     ASSERT(generate_stringification(uptr) == R"(std::unique_ptr<int>: 62)");
     ASSERT(generate_stringification(std::unique_ptr<int>()) == R"(std::unique_ptr<int>: nullptr)");
-    ASSERT(generate_stringification(std::make_unique<S>()).find(R"(std::unique_ptr<S>: 0x)") == 0, generate_stringification(std::make_unique<S>()));
+    ASSERT(generate_stringification(std::make_unique<S>()).find(R"(std::unique_ptr<S>: 0x)") == std::size_t(0), generate_stringification(std::make_unique<S>()));
 
     std::unique_ptr<std::vector<int>> uptr2(new std::vector<int>{1,2,3,4});
     ASSERT(generate_stringification(uptr2) == R"(std::unique_ptr<std::vector<int>>: [1, 2, 3, 4])");
     auto d = [](int*) {};
     std::unique_ptr<int, decltype(d)> uptr3(nullptr, d);
-    ASSERT(generate_stringification(uptr3).find("std::unique_ptr<int,") == 0);
+    ASSERT(generate_stringification(uptr3).find("std::unique_ptr<int,") == std::size_t(0));
     ASSERT(generate_stringification(uptr3).find("nullptr") != std::string::npos);
 }
 
