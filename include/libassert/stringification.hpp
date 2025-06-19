@@ -9,6 +9,14 @@
 #include <libassert/platform.hpp>
 #include <libassert/utilities.hpp>
 
+#if defined(LIBASSERT_USE_ENCHANTUM) && defined(LIBASSERT_USE_MAGIC_ENUM)
+ #error cannot use both enchantum and magic_enum at the same time
+#endif
+
+#ifdef LIBASSERT_USE_ENCHANTUM
+ #include <enchantum/enchantum.hpp>
+#endif
+
 #ifdef LIBASSERT_USE_MAGIC_ENUM
  // relative include so that multiple library versions don't clash
  // e.g. if both libA and libB have different versions of libassert as a public
@@ -205,8 +213,21 @@ namespace libassert::detail {
             oss<<t;
             return std::move(oss).str();
         }
-
-        #ifdef LIBASSERT_USE_MAGIC_ENUM
+        #if defined(LIBASSERT_USE_ENCHANTUM)
+        template<enchantum::Enum E>
+        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify_enum(E e) {
+            std::string_view name = enchantum::to_string(e);
+            if(!name.empty()) {
+                return std::string(name);
+            } else {
+                return bstringf(
+                    "enum %s: %s",
+                    prettify_type(std::string(type_name<E>())).c_str(),
+                    stringify(enchantum::to_underlying(e)).c_str()
+                );
+            }
+        }
+        #elif defined(LIBASSERT_USE_MAGIC_ENUM)
         template<typename T, typename std::enable_if_t<std::is_enum_v<strip<T>>, int> = 0>
         LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify_enum(const T& t) {
             std::string_view name = magic_enum::enum_name(t);
