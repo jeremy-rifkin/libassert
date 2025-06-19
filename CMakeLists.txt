@@ -51,7 +51,7 @@ set(LIBASSERT_MAGIC_ENUM_REPO "https://github.com/Neargye/magic_enum.git")
 set(LIBASSERT_MAGIC_ENUM_TAG "e046b69a3736d314fad813e159b1c192eaef92cd") # v0.9.7
 
 set(LIBASSERT_ENCHANTUM_REPO "https://github.com/ZXShady/enchantum.git")
-set(LIBASSERT_ENCHANTUM_TAG "12fd5d9397e23365e76f0f130cba29b5c7167619") # Fix clang edge case commit
+set(LIBASSERT_ENCHANTUM_TAG "c460fbf0fcfe01eb49cd8e5790f05ced7e2a6bb6") # 0.3.0
 
 set(LIBASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
 set(LIBASSERT_CPPTRACE_TAG "c37b5ed7364f4fc1c58e92d13399cd04656e6572") # v0.8.2
