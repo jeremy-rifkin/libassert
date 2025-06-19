@@ -35,7 +35,8 @@ jobs:
             -DLIBASSERT_BUILD_SHARED=${{matrix.shared}} \
             -DCPPTRACE_BUILD_SHARED=ON \
             -DLIBASSERT_BUILD_TESTING=On \
-            -DLIBASSERT_WERROR_BUILD=On
+            -DLIBASSERT_WERROR_BUILD=On \
+            -DLIBASSERT_DISABLE_CXX_20_MODULES=On
            ninja
     - name: test
       working-directory: build
@@ -66,6 +67,36 @@ jobs:
             -DCPPTRACE_BUILD_SHARED=ON \
             -DLIBASSERT_BUILD_TESTING=On \
             -DLIBASSERT_WERROR_BUILD=On
+           ninja
+    - name: test
+      working-directory: build
+      run: |
+           CTEST_OUTPUT_ON_FAILURE=1 ninja test
+  test-linux-enchantum:
+    runs-on: ubuntu-24.04
+    needs: test-linux
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: dependencies
+      run: |
+           sudo apt install ninja-build clang-19 clang-tools-19
+           python3 -m pip install git+https://github.com/jeffkaufman/icdiff.git
+    - name: build
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_STANDARD=20 \
+            -DLIBASSERT_DESIRED_CXX_STANDARD=cxx_std_20 \
+            -DCPPTRACE_BUILD_SHARED=ON \
+            -DLIBASSERT_BUILD_TESTING=On \
+            -DLIBASSERT_WERROR_BUILD=On \
+            -DLIBASSERT_USE_ENCHANTUM=On \
+            -DLIBASSERT_DISABLE_CXX_20_MODULES=On
            ninja
     - name: test
       working-directory: build
@@ -158,7 +189,8 @@ jobs:
             -DLIBASSERT_BUILD_SHARED=${{matrix.shared}} `
             -DCPPTRACE_BUILD_SHARED=ON `
             -DLIBASSERT_BUILD_TESTING=On `
-            -DLIBASSERT_WERROR_BUILD=On
+            -DLIBASSERT_WERROR_BUILD=On `
+            -DLIBASSERT_DISABLE_CXX_20_MODULES=On
            cmake --build . --config ${{matrix.target}}
     # - name: build clang
     #   if: ${{ matrix.compiler == 'clang++' }}
@@ -205,7 +237,8 @@ jobs:
             -DCPPTRACE_BUILD_SHARED=ON `
             -DLIBASSERT_BUILD_TESTING=On `
             -DLIBASSERT_USE_CI_WRAPPER=On `
-            -DLIBASSERT_WERROR_BUILD=On
+            -DLIBASSERT_WERROR_BUILD=On `
+            -DLIBASSERT_DISABLE_CXX_20_MODULES=On
            ninja
     - name: test
       working-directory: build
