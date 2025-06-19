@@ -17,11 +17,8 @@
 #include <utility>
 #include <vector>
 
-// #include <libassert/assert.hpp>
-// #include <libassert/version.hpp>
-
-import libassert;
-#include <libassert/assert-macros.hpp>
+#include <libassert/assert.hpp>
+#include <libassert/version.hpp>
 
 #define ESC "\033["
 #define RED ESC "1;31m"
