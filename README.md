@@ -49,6 +49,7 @@
   - [Package Managers](#package-managers)
     - [Conan](#conan)
     - [Vcpkg](#vcpkg)
+  - [C++20 Moduels](#c20-moduels)
 - [Platform Logistics](#platform-logistics)
 - [Replacing \<cassert\>](#replacing-cassert)
 - [FAQ](#faq)
@@ -379,6 +380,9 @@ The operation between left and right hand sides of the top-level operation in th
 function object.
 
 Note: Boolean logical operators (`&&` and `||`) are not decomposed by default due to short circuiting.
+
+Note: Because of limitations with C macros, expressions with template arguments will need to be templatized. E.g.
+`ASSERT(foo<a, b>() == c)` needs to be written as `ASSERT((foo<a, b>()) == c)`.
 
 #### `assertion message` <!-- omit in toc -->
 
