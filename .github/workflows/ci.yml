@@ -28,6 +28,7 @@ jobs:
            mkdir -p build
            cd build
            cmake .. \
+            -GNinja \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
             -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" \
@@ -35,11 +36,11 @@ jobs:
             -DCPPTRACE_BUILD_SHARED=ON \
             -DLIBASSERT_BUILD_TESTING=On \
             -DLIBASSERT_WERROR_BUILD=On
-           make -j
+           ninja
     - name: test
       working-directory: build
       run: |
-           CTEST_OUTPUT_ON_FAILURE=1 make test
+           CTEST_OUTPUT_ON_FAILURE=1 ninja test
   # test-linux-gcc-8:
   #   runs-on: ubuntu-20.04
   #   strategy:
@@ -86,6 +87,7 @@ jobs:
            mkdir -p build
            cd build
            cmake .. \
+            -GNinja \
             -DCMAKE_BUILD_TYPE=${{matrix.target}} \
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
             -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" \
@@ -93,11 +95,11 @@ jobs:
             -DCPPTRACE_BUILD_SHARED=ON \
             -DLIBASSERT_BUILD_TESTING=On \
             -DLIBASSERT_WERROR_BUILD=On
-           make -j
+           ninja
     - name: test
       working-directory: build
       run: |
-           CTEST_OUTPUT_ON_FAILURE=1 make test
+           CTEST_OUTPUT_ON_FAILURE=1 ninja test
   test-windows:
     runs-on: windows-2022
     strategy:
@@ -165,6 +167,7 @@ jobs:
            mkdir -p build
            cd build
            cmake .. `
+            -GNinja `
             -DCMAKE_BUILD_TYPE=${{matrix.target}} `
             -DCMAKE_CXX_COMPILER=${{matrix.compiler}} `
             -DLIBASSERT_DESIRED_CXX_STANDARD="${{matrix.cxx_version}}" `
@@ -172,14 +175,13 @@ jobs:
             -DCPPTRACE_BUILD_SHARED=ON `
             -DLIBASSERT_BUILD_TESTING=On `
             -DLIBASSERT_USE_CI_WRAPPER=On `
-            -DLIBASSERT_WERROR_BUILD=On `
-            "-GUnix Makefiles"
-           make -j
+            -DLIBASSERT_WERROR_BUILD=On
+           ninja
     - name: test
       working-directory: build
       run: |
            $env:CTEST_OUTPUT_ON_FAILURE=1
-           make test
+           ninja test
 
   clang-tidy:
     runs-on: ubuntu-22.04
@@ -218,8 +220,8 @@ jobs:
            cp -rv libassert/tests/fetchcontent-integration .
            mkdir fetchcontent-integration/build
            cd fetchcontent-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG=$tag -DLIBASSERT_WERROR_BUILD=On
-           make
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG=$tag -DLIBASSERT_WERROR_BUILD=On
+           ninja
            ./main
   test-linux-findpackage:
     runs-on: ubuntu-22.04
@@ -231,15 +233,15 @@ jobs:
            tag=$(git rev-parse --abbrev-ref HEAD)
            mkdir build
            cd build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
-           sudo make -j install
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
+           sudo ninja install
            sudo /sbin/ldconfig
            cd ../..
            cp -rv libassert/tests/findpackage-integration .
            mkdir findpackage-integration/build
            cd findpackage-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug
-           make
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug
+           ninja
            ./main
   test-linux-add_subdirectory:
     runs-on: ubuntu-22.04
@@ -253,8 +255,8 @@ jobs:
            cp -rv libassert add_subdirectory-integration
            mkdir add_subdirectory-integration/build
            cd add_subdirectory-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
-           make
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
+           ninja
            ./main
 
   test-macos-fetchcontent:
@@ -269,8 +271,8 @@ jobs:
            cp -rv libassert/tests/fetchcontent-integration .
            mkdir fetchcontent-integration/build
            cd fetchcontent-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG=$tag -DLIBASSERT_WERROR_BUILD=On
-           make
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG=$tag -DLIBASSERT_WERROR_BUILD=On
+           ninja
            ./main
   test-macos-findpackage:
     runs-on: macos-14
@@ -282,14 +284,14 @@ jobs:
            tag=$(git rev-parse --abbrev-ref HEAD)
            mkdir build
            cd build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
-           sudo make -j install
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
+           sudo ninja install
            cd ../..
            cp -rv libassert/tests/findpackage-integration .
            mkdir findpackage-integration/build
            cd findpackage-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug
-           make
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug
+           ninja
            ./main
   test-macos-add_subdirectory:
     runs-on: macos-14
@@ -303,8 +305,8 @@ jobs:
            cp -rv libassert add_subdirectory-integration
            mkdir add_subdirectory-integration/build
            cd add_subdirectory-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
-           make
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
+           ninja
            ./main
 
   test-mingw-fetchcontent:
@@ -319,8 +321,8 @@ jobs:
            cp -Recurse libassert/tests/fetchcontent-integration .
            mkdir fetchcontent-integration/build
            cd fetchcontent-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG="$tag" "-GUnix Makefiles" -DLIBASSERT_WERROR_BUILD=On
-           make
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_TAG="$tag" -DLIBASSERT_WERROR_BUILD=On
+           ninja
            .\main.exe
   test-mingw-findpackage:
     runs-on: windows-2022
@@ -332,14 +334,14 @@ jobs:
            $tag=$(git rev-parse --abbrev-ref HEAD)
            mkdir build
            cd build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug "-GUnix Makefiles" -DCMAKE_INSTALL_PREFIX=C:/foo -DLIBASSERT_WERROR_BUILD=On
-           make -j install
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=C:/foo -DLIBASSERT_WERROR_BUILD=On
+           ninja install
            cd ../..
            cp -Recurse libassert/tests/findpackage-integration .
            mkdir findpackage-integration/build
            cd findpackage-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug "-GUnix Makefiles" -DCMAKE_PREFIX_PATH=C:/foo
-           make
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=C:/foo
+           ninja
            ./main.exe
   test-mingw-add_subdirectory:
     runs-on: windows-2022
@@ -353,8 +355,8 @@ jobs:
            cp -Recurse libassert add_subdirectory-integration
            mkdir add_subdirectory-integration/build
            cd add_subdirectory-integration/build
-           cmake .. -DCMAKE_BUILD_TYPE=Debug "-GUnix Makefiles" -DLIBASSERT_WERROR_BUILD=On
-           make
+           cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DLIBASSERT_WERROR_BUILD=On
+           ninja
            .\main.exe
   test-windows-fetchcontent:
     runs-on: windows-2022
