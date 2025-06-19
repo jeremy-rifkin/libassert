@@ -818,6 +818,7 @@ gcc 10 and the library can surpress that warning for gcc 12. <!-- https://godbol
 **Defines:**
 
 - `LIBASSERT_USE_MAGIC_ENUM`: Use [magic enum](https://github.com/Neargye/magic_enum) for stringifying enum values
+- `LIBASSERT_USE_ENCHANTUM`: Use [enchantum](https://github.com/ZXShady/enchantum) for stringifying enum values
 - `LIBASSERT_DECOMPOSE_BINARY_LOGICAL`: Decompose `&&` and `||`
 - `LIBASSERT_SAFE_COMPARISONS`: Enable safe signed-unsigned comparisons for decomposed expressions
 - `LIBASSERT_PREFIX_ASSERTIONS`: Prefixes all assertion macros with `LIBASSERT_`
@@ -825,8 +826,12 @@ gcc 10 and the library can surpress that warning for gcc 12. <!-- https://godbol
 - `LIBASSERT_NO_STRINGIFY_SMART_POINTER_OBJECTS`: Disables stringification of smart pointer contents
 
 **CMake:**
-- `LIBASSERT_USE_EXTERNAL_CPPTRACE`: Use an external [cpptrace](https://github.com/jeremy-rifkin/cpptrace) instead of aquiring the library with FetchContent
-- `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`: Use an external [magic enum](https://github.com/Neargye/magic_enum) instead of aquiring the library with FetchContent
+- `LIBASSERT_USE_EXTERNAL_CPPTRACE`: Use an external [cpptrace](https://github.com/jeremy-rifkin/cpptrace) instead of
+  acquiring the library with FetchContent
+- `LIBASSERT_USE_EXTERNAL_MAGIC_ENUM`: Use an external [magic enum](https://github.com/Neargye/magic_enum) instead of
+  acquiring the library with FetchContent
+- `LIBASSERT_USE_EXTERNAL_ENCHANTUM`: Use an external [enchantum](https://github.com/ZXShady/enchantum) instead of
+  acquiring the library with FetchContent
 
 ## Library Version
 
