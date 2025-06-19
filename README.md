@@ -322,12 +322,13 @@ course, if the result is unused and produces no side effects it will be optimize
 
 # Considerations
 
-**Performance:** As far as runtime performance goes, the impact at callsites is very minimal under `-Og` or higher. The fast-path in the
-code (i.e., where the assertion does not fail), will be fast. A lot of work is required to process assertion failures
-once they happen. However, since failures should be rare, this should not matter.
+**Performance:** As far as runtime performance goes, the impact at callsites is very minimal when optimizations are on.
+The happy-path in the code (i.e., where the assertion does not fail) will be fast. The failure path may be relatively
+slow, but, assertion failures are rare and performance in such a situation is the least of a program's problems.
 
-**Compile speeds:**, there is a compile-time cost associated with all the template instantiations required for this library's
-magic.
+**Compile speeds:** There is some compile-time cost associated with the library's machinery, however, it tends to not
+make a huge difference in compile speeds. If enum stringification with magic enum is enabled that can slow down builds a
+lot.
 
 **Other:**
 
