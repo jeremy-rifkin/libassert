@@ -714,7 +714,7 @@ TEST(LibassertBasic, LvalueForwarding) {
     EXPECT_EQ(x, 0);
 }
 
-#ifdef LIBASSERT_USE_MAGIC_ENUM
+#if defined(LIBASSERT_USE_MAGIC_ENUM) || defined(LIBASSERT_USE_ENCHANTUM)
 enum foo_e { A, B };
 enum class bar_e { A, B };
 TEST(LibassertBasic, EnumHandling) {
