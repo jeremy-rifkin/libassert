@@ -90,12 +90,6 @@ namespace detail {
     //  - Containers are only stringified if their value_type is stringifiable
     // TODO Weak pointers?
 
-    template<typename Test, template<typename...> class Ref>
-    struct is_specialization : std::false_type {};
-
-    template<template<typename...> class Ref, typename... Args>
-    struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
-
     template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string do_stringify(const T& v);

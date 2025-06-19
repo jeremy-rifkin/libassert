@@ -135,6 +135,12 @@ namespace detail {
             && isa<typename std::remove_extent_t<typename std::remove_reference_t<T>>, char>;
 
     template<typename T> typename std::add_lvalue_reference_t<T> decllval() noexcept;
+
+    template<typename T, template<typename...> typename Template>
+    struct is_specialization : std::false_type {};
+
+    template<template<typename...> typename Template, typename... Args>
+    struct is_specialization<Template<Args...>, Template>: std::true_type {};
 }
 LIBASSERT_END_NAMESPACE
 
