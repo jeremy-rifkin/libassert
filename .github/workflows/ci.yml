@@ -269,7 +269,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: check
       run: |
-           (grep 'LIBASSERT_CPPTRACE_TAG "origin/dev"' CMakeLists.txt && exit 1) || exit 0
+           ! grep 'LIBASSERT_CPPTRACE_TAG "origin/dev"' CMakeLists.txt
 
   test-linux-fetchcontent:
     runs-on: ubuntu-22.04
