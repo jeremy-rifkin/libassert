@@ -1,3 +1,4 @@
+- [libassert 2.2.0](#libassert-220)
 - [libassert 2.1.5](#libassert-215)
 - [libassert 2.1.4](#libassert-214)
 - [libassert 2.1.3](#libassert-213)
@@ -14,6 +15,31 @@
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.2.0
+
+Potentially-breaking changes:
+- Libassert now uses an inline ABI versioning namespace. All library symbols are now secretly in the `libassert::v1`
+  namespace. This is technically an ABI break, however, any ABI mismatch will result in linker errors instead of silent
+  bugs. This change is an effort to allow future evolution of libassert in an ABI-friendly manner.
+
+Added:
+- Added C++20 module support
+- Added support for `std::format` https://github.com/jeremy-rifkin/libassert/pull/132 (@cjdb)
+- Added [enchantum](https://github.com/ZXShady/enchantum) support for enum stringification https://github.com/jeremy-rifkin/libassert/pull/142 (@ZXShady)
+- Added formatter for `std::byte`
+
+Fixed:
+- Fixed warning flags on clang-cl
+- Fixed some literal format handling logic
+- Fixed stringification for empty `std::tuple<>`
+
+Other:
+- Reduced number of standard library `#include`s used by libassert to improve compile speeds
+- Bumped cpptrace via FetchContent to 1.0.1
+- Various code improvements
+- Various testing improvements
+- Miscellaneous readme updates and fixes
 
 ## libassert 2.1.5
 
