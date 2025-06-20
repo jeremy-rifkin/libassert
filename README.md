@@ -384,6 +384,10 @@ Note: Boolean logical operators (`&&` and `||`) are not decomposed by default du
 Note: Because of limitations with C macros, expressions with template arguments will need to be templatized. E.g.
 `ASSERT(foo<a, b>() == c)` needs to be written as `ASSERT((foo<a, b>()) == c)`.
 
+Note: Because libassert's expression decomposition system involves binding to references there can be problems when
+asserting comparisons involving bit fields. A simple workaround is to rewrite an assertion like `ASSERT(s.bit == 1)` as
+`ASSERT(+s.bit == 1)`, `ASSERT(s.bit * 1 == 1)`, or similar.
+
 #### `assertion message` <!-- omit in toc -->
 
 An optional assertion message may be provided. If the first argument following the assertion expression, or the first
