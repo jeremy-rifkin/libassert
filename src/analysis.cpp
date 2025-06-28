@@ -50,8 +50,8 @@ namespace detail {
         // "," -> ", " and " ," -> ", "
         static const std::regex comma_re(R"(\s*,\s*)");
         replace_all(type, comma_re, ", ");
-        // class C -> C for msvc
-        static const std::regex class_re(R"(\b(class|struct)\s+)");
+        // class/struct/enum C -> C for msvc
+        static const std::regex class_re(R"(\b(class|struct|enum)\s+)");
         replace_all(type, class_re, "");
         // `anonymous namespace' -> (anonymous namespace) for msvc
         // this brings it in-line with other compilers and prevents any tokenization/highlighting issues
