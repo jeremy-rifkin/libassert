@@ -319,7 +319,7 @@ LIBASSERT_BEGIN_NAMESPACE
         "",
         BASIC_PURPL, /* operator */
         BASIC_BLUE, /* call_identifier */
-        BASIC_YELLOW, /* scope_resolution_identifier */
+        BASIC_BLUE, /* scope_resolution_identifier */
         BASIC_BLUE, /* identifier */
         BASIC_BLUE, /* accent */
         BASIC_RED, /* unknown */
