@@ -49,7 +49,7 @@
   - [Package Managers](#package-managers)
     - [Conan](#conan)
     - [Vcpkg](#vcpkg)
-  - [C++20 Moduels](#c20-moduels)
+  - [C++20 Modules](#c20-Modules)
 - [Platform Logistics](#platform-logistics)
 - [Replacing \<cassert\>](#replacing-cassert)
 - [FAQ](#faq)
@@ -1053,7 +1053,7 @@ find_package(libassert CONFIG REQUIRED)
 target_link_libraries(YOUR_TARGET PRIVATE libassert::assert)
 ```
 
-## C++20 Moduels
+## C++20 Modules
 
 Libassert supports C++20 modules: `import libassert;`. You'll need a modern toolchain in order to use C++20 modules (i.e.
 relatively new compilers, cmake, etc).
