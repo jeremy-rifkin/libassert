@@ -137,10 +137,10 @@ namespace detail {
     template<typename T> typename std::add_lvalue_reference_t<T> decllval() noexcept;
 
     template<typename T, template<typename...> typename Template>
-    struct is_specialization : std::false_type {};
+    inline constexpr bool is_specialization = false;
 
     template<template<typename...> typename Template, typename... Args>
-    struct is_specialization<Template<Args...>, Template>: std::true_type {};
+    inline constexpr bool is_specialization<Template<Args...>, Template> = true;
 }
 LIBASSERT_END_NAMESPACE
 
