@@ -6,7 +6,7 @@
 
 #include <version>
 
-#define LIBASSERT_ABI_NAMESPACE_TAG v1
+#define LIBASSERT_ABI_NAMESPACE_TAG v2
 
 #define LIBASSERT_BEGIN_NAMESPACE \
     namespace libassert { \

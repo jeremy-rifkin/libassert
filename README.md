@@ -17,9 +17,6 @@
   - [CMake FetchContent Usage](#cmake-fetchcontent-usage)
 - [Philosophy](#philosophy)
 - [Features](#features)
-  - [Custom Failure Handlers](#custom-failure-handlers)
-  - [Smart literal formatting](#smart-literal-formatting)
-  - [Integrations with Catch2 and GoogleTest](#integrations-with-catch2-and-googletest)
 - [Methodology](#methodology)
 - [Considerations](#considerations)
 - [In-Depth Library Documentation](#in-depth-library-documentation)
@@ -33,7 +30,7 @@
   - [Assertion information](#assertion-information)
     - [Anatomy of Assertion Information](#anatomy-of-assertion-information)
   - [Stringification of Custom Objects](#stringification-of-custom-objects)
-  - [Custom Failure Handlers](#custom-failure-handlers-1)
+  - [Custom Failure Handlers](#custom-failure-handlers)
   - [Breakpoints](#breakpoints)
   - [Other Configurations](#other-configurations)
   - [Library Version](#library-version)
@@ -216,7 +213,15 @@ Another feature worth pointing out is that the stack traces will fold traces wit
 The assertion handler applies syntax highlighting wherever appropriate, as seen in all the
 screenshots above. This is to help enhance readability.
 
-## Custom Failure Handlers
+## Diff Highlighting <!-- omit in toc -->
+
+Libassert can provide diff highlighting on output:
+
+![](screenshots/diff.png)
+
+This is opt-in with `libassert::set_diff_highlighting(true);`
+
+## Custom Failure Handlers <!-- omit in toc -->
 
 Libassert supports custom assertion failure handlers:
 
@@ -252,7 +257,7 @@ template<> struct libassert::stringifier<MyObject> {
 
 ![](screenshots/custom_object_printing.png)
 
-## Smart literal formatting
+## Smart literal formatting <!-- omit in toc -->
 
 Assertion values are printed in hex or binary as well as decimal if hex/binary are used on either
 side of an assertion expression:
@@ -275,7 +280,7 @@ ASSERT(18446744073709551606ULL == -10);
 ![](screenshots/safe_comparison.png)
 
 
-## Integrations with Catch2 and GoogleTest
+## Integrations with Catch2 and GoogleTest <!-- omit in toc -->
 
 Libassert provides two headers `<libassert/assert-catch2.hpp>` and `<libassert/assert-gtest.hpp>` for use with catch2
 and GoogleTest.
@@ -484,7 +489,8 @@ namespace libassert {
     // long as the scheme is in use
     struct color_scheme {
         std::string_view string, escape, keyword, named_literal, number, punctuation, operator_token,
-                    call_identifier, scope_resolution_identifier, identifier, accent, unknown, reset;
+                    call_identifier, scope_resolution_identifier, identifier, accent, unknown,
+                    highlight_delete, highlight_insert, highlight_replace, reset;
         static const color_scheme ansi_basic;
         static const color_scheme ansi_rgb;
         static const color_scheme blank;
@@ -497,6 +503,16 @@ namespace libassert {
 By default `color_scheme::ansi_rgb` is used. To disable colors, use `color_scheme::blank`.
 
 - `set_color_scheme`: Sets the color scheme for the default assertion handler when stderr is a terminal
+
+### Diff Highlighting: <!-- omit in toc -->
+
+Diff highlighting is opt-in with `set_diff_highlighting`:
+
+```cpp
+namespace libassert {
+    void set_diff_highlighting(bool);
+}
+```
 
 ### Separator: <!-- omit in toc -->
 
@@ -890,7 +906,7 @@ This isn't as pretty as I would like, however, it gets the job done.
 # ABI Versioning
 
 Since libassert v2.2.0, the library uses an inline ABI versioning namespace and all symbols part of the public interface
-are secretly under the namespace `libassert::v1`. This is done to allow for potential future library evolution in an
+are secretly under the namespace `libassert::v2`. This is done to allow for potential future library evolution in an
 ABI-friendly manner. The namespace version is independent of the library major versions, and ABI changes are expected to
 be extremely rare.
 

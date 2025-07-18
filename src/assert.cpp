@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cerrno>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -192,6 +193,7 @@ namespace detail {
     constexpr int min_term_width = 50;
     constexpr size_t where_indent = 8;
     std::string arrow = "=>";
+    std::atomic_bool do_diff_highlighting = false;
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_binary_diagnostics(
@@ -227,18 +229,23 @@ namespace detail {
             where += "    Where:\n";
             auto print_clause = [term_width, lw, &where, &scheme](
                 std::string_view expr_str,
-                const std::string& stringification
+                std::string_view stringification,
+                std::optional<std::string_view> diff_against
             ) {
+                auto highlighted = highlight_blocks(stringification, scheme);
+                if(do_diff_highlighting && diff_against) {
+                    // TODO: Redundant highlight
+                    if(auto res = diff(highlight_blocks(*diff_against, scheme), highlighted, scheme)) {
+                        highlighted = *std::move(res);
+                    }
+                }
                 if(term_width >= min_term_width) {
                     where += wrapped_print(
                         {
                             { where_indent - 1, {{"", ""}} }, // 8 space indent, wrapper will add a space
                             { lw, highlight_blocks(expr_str, scheme) },
                             { arrow.size(), {{"", arrow}} },
-                            {
-                                term_width - lw - 8 /* indent */ - 4 /* arrow */,
-                                highlight_blocks(stringification, scheme)
-                            }
+                            { term_width - lw - 8 /* indent */ - 4 /* arrow */, highlighted }
                         },
                         scheme
                     );
@@ -252,15 +259,19 @@ namespace detail {
                     );
                     where += microfmt::format(
                         "{}\n",
-                        indent(detail::highlight(stringification, scheme), 8 + lw + 4, ' ', true)
+                        indent(detail::combine_blocks(highlighted, scheme), 8 + lw + 4, ' ', true)
                     );
                 }
             };
-            if(has_useful_where_clause.left) {
-                print_clause(left_expression, left_stringification);
+            auto left =
+                has_useful_where_clause.left ? std::optional<std::string_view>(left_stringification) : std::nullopt;
+            auto right =
+                has_useful_where_clause.right ? std::optional<std::string_view>(right_stringification) : std::nullopt;
+            if(left) {
+                print_clause(left_expression, *left, right);
             }
-            if(has_useful_where_clause.right) {
-                print_clause(right_expression, right_stringification);
+            if(right) {
+                print_clause(right_expression, *right, left);
             }
         }
         return where;
@@ -323,6 +334,9 @@ LIBASSERT_BEGIN_NAMESPACE
         BASIC_BLUE, /* identifier */
         BASIC_BLUE, /* accent */
         BASIC_RED, /* unknown */
+        BASIC_HIGHLIGHT_RED, /* highlight delete */
+        BASIC_HIGHLIGHT_GREEN, /* highlight insert */
+        BASIC_HIGHLIGHT_YELLOW, /* highlight replace */
         RESET
     };
 
@@ -339,6 +353,9 @@ LIBASSERT_BEGIN_NAMESPACE
         RGB_BLUE, /* identifier */
         RGB_BLUE, /* accent */
         RGB_RED, /* unknown */
+        BASIC_HIGHLIGHT_RED, /* highlight delete */
+        BASIC_HIGHLIGHT_GREEN, /* highlight insert */
+        BASIC_HIGHLIGHT_YELLOW, /* highlight replace */
         RESET
     };
 
@@ -355,6 +372,10 @@ LIBASSERT_BEGIN_NAMESPACE
     LIBASSERT_EXPORT const color_scheme& get_color_scheme() {
         std::unique_lock lock(color_scheme_mutex);
         return current_color_scheme;
+    }
+
+    void set_diff_highlighting(bool dff) {
+        detail::do_diff_highlighting = dff;
     }
 
     LIBASSERT_EXPORT void set_separator(std::string_view separator) {
