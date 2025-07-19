@@ -107,92 +107,93 @@ namespace detail {
             using type = void;
         };
 
-		template<typename T, typename = void> 
-		inline constexpr bool is_tuple_like = false;
-		template<typename T>
-		inline constexpr bool is_tuple_like<
-			T,
-			std::void_t<
-			typename std::tuple_size<T>::type, // TODO: decltype(std::tuple_size_v<T>) ?
-			typename canonicalized_get_0<T>::type
-			>
-		> = true;
+        template<typename T, typename = void>
+        inline constexpr bool is_tuple_like = false;
+        template<typename T>
+        inline constexpr bool is_tuple_like<
+            T,
+            std::void_t<
+                typename std::tuple_size<T>::type, // TODO: decltype(std::tuple_size_v<T>) ?
+                typename canonicalized_get_0<T>::type
+            >
+        > = true;
 
-		namespace adl {
-			using std::begin, std::end; // ADL
-			template<typename T, typename = void>
-			inline constexpr bool is_container = false;
-			template<typename T>
-			inline constexpr bool is_container<
-				T,
-				std::void_t<
-				decltype(begin(decllval<T>())),
-				decltype(end(decllval<T>()))
-				>
-			> = true;
+        namespace adl {
+            using std::begin, std::end; // ADL
+            template<typename T, typename = void>
+            inline constexpr bool is_container = false;
+            template<typename T>
+            inline constexpr bool is_container<
+                T,
+                std::void_t<
+                    decltype(begin(decllval<T>())),
+                    decltype(end(decllval<T>()))
+                >
+            > = true;
 
-			template<typename T, typename = void>
-			inline constexpr bool is_begin_deref = false;
-			template<typename T>
-			inline constexpr bool is_begin_deref<
-				T,
-				std::void_t<
-				decltype(*begin(decllval<T>()))
-				>
-			> = true;
-		}
+            template<typename T, typename = void>
+            inline constexpr bool is_begin_deref = false;
+            template<typename T>
+            inline constexpr bool is_begin_deref<
+                T,
+                std::void_t<
+                    decltype(*begin(decllval<T>()))
+                >
+            > = true;
+        }
 
-		template<typename T, typename = void> 
-		inline constexpr bool can_dereference = false;
-		template<typename T>
-		inline constexpr bool can_dereference<
-			T,
-			std::void_t<
-			decltype(*decllval<T>())
-			>
-		> = true;
+        template<typename T, typename = void>
+        inline constexpr bool can_dereference = false;
+        template<typename T>
+        inline constexpr bool can_dereference<
+            T,
+            std::void_t<
+                decltype(*decllval<T>())
+            >
+        > = true;
 
-		template<typename T, typename = void>
-		inline constexpr bool has_ostream_overload = false;
-		template<typename T>
-		inline constexpr bool has_ostream_overload<
-			T,
-			std::void_t<decltype(std::declval<std::ostream&>() << std::declval<T>())>
-		> = true;
+        template<typename T, typename = void>
+        inline constexpr bool has_ostream_overload = false;
+        template<typename T>
+        inline constexpr bool has_ostream_overload<
+            T,
+            std::void_t<decltype(std::declval<std::ostream&>() << std::declval<T>())>
+        > = true;
 
-		template<typename T, typename = void> inline constexpr bool has_stringifier = false;
-		template<typename T>
-		inline constexpr bool has_stringifier <
-			T,
-			std::void_t<decltype(stringifier<strip<T>>{}.stringify(std::declval<T>())) >
-		> = true;
+        template<typename T, typename = void> inline constexpr bool has_stringifier = false;
+        template<typename T>
+        inline constexpr bool has_stringifier<
+            T,
+            std::void_t<decltype(stringifier<strip<T>>{}.stringify(std::declval<T>()))>
+        > = true;
 
-		// Following a pattern used in fmt: This is a heuristic to detect types that look like std::filesystem::path
-		// This is used so that libassert doesn't have to #include <filesystem>
-		template<typename T, typename = void>
-		inline constexpr bool is_std_filesystem_path_like = false;
-		template<typename T>
-		inline constexpr bool is_std_filesystem_path_like<
-			T,
-			std::void_t<
-			decltype(std::declval<T>().parent_path()),
-			decltype(std::declval<T>().is_absolute()),
-			decltype(std::declval<T>().filename())
-			>
-		> = std::is_convertible_v<decltype(std::declval<T>().string()), std::string_view>;
+        // Following a pattern used in fmt: This is a heuristic to detect types that look like std::filesystem::path
+        // This is used so that libassert doesn't have to #include <filesystem>
+        template<typename T, typename = void>
+        inline constexpr bool is_std_filesystem_path_like = false;
+        template<typename T>
+        inline constexpr bool is_std_filesystem_path_like<
+            T,
+            std::void_t<
+                decltype(std::declval<T>().parent_path()),
+                decltype(std::declval<T>().is_absolute()),
+                decltype(std::declval<T>().filename())
+            >
+        > = std::is_convertible_v<decltype(std::declval<T>().string()), std::string_view>;
 
-		//
-		// Catch all
-		//
+        //
+        // Catch all
+        //
 
-		[[nodiscard]] LIBASSERT_EXPORT std::string stringify_unknown(std::string_view type_name);
+        [[nodiscard]] LIBASSERT_EXPORT std::string stringify_unknown(std::string_view type_name);
 
-		template<typename T>
-		[[nodiscard]] std::string stringify_unknown() {
-			return stringify_unknown(type_name<T>());
-		}
+        template<typename T>
+        [[nodiscard]] std::string stringify_unknown() {
+            return stringify_unknown(type_name<T>());
+        }
 
-		// Basic types
+        //
+        // Basic types
         //
         [[nodiscard]] LIBASSERT_EXPORT std::string stringify(std::string_view);
         // without nullptr_t overload msvc (without /permissive-) will call stringify(bool) and mingw
@@ -221,7 +222,7 @@ namespace detail {
         [[nodiscard]] LIBASSERT_EXPORT
         std::string stringify_pointer_value(const void*);
 
-		template<typename T>
+        template<typename T>
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify_smart_ptr(const T& t) {
             if(t) {
@@ -243,27 +244,29 @@ namespace detail {
             );
         }
 
-		[[nodiscard]] LIBASSERT_EXPORT
-			std::string stringify_enum(std::string_view type_name, std::string_view underlying_value);
+        [[nodiscard]] LIBASSERT_EXPORT
+        std::string stringify_enum(std::string_view type_name, std::string_view underlying_value);
 
-		template<typename E>
-		LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify_enum(E e) {
-#if defined(LIBASSERT_USE_ENCHANTUM)
-			std::string_view name = enchantum::to_string(e);
-			if (!name.empty())
-				return std::string(name);
-#elif defined(LIBASSERT_USE_MAGIC_ENUM)
-			std::string_view name = magic_enum::enum_name(e);
-			if (!name.empty())
-				return std::string(name);
-#endif
-			return stringify_enum(
-				type_name<E>(),
-				stringify(static_cast<std::underlying_type_t<E>>(e))
-			);
-		}
+        template<typename E>
+        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify_enum(E e) {
+            #if defined(LIBASSERT_USE_ENCHANTUM)
+             std::string_view name = enchantum::to_string(e);
+             if(!name.empty()) {
+                 return std::string(name);
+             }
+            #elif defined(LIBASSERT_USE_MAGIC_ENUM)
+             std::string_view name = magic_enum::enum_name(e);
+             if(!name.empty()) {
+                 return std::string(name);
+             }
+            #endif
+            return stringify_enum(
+                type_name<E>(),
+                stringify(static_cast<std::underlying_type_t<E>>(e))
+            );
+        }
 
-		//
+        //
         // Compositions of other types
         //
         // #ifdef __cpp_lib_expected
@@ -286,7 +289,7 @@ namespace detail {
         // }
         // #endif
 
-		template<typename T>
+        template<typename T>
         LIBASSERT_ATTR_COLD [[nodiscard]]
         std::string stringify(const std::optional<T>& t) {
             if(t) {
@@ -343,29 +346,29 @@ namespace detail {
         }
     }
 
-	template<typename T, typename = void>
-	inline constexpr bool has_value_type = false;
-	template<typename T>
-	inline constexpr bool has_value_type<
-		T,
-		std::void_t<typename T::value_type>
-	> = true;
+    template<typename T, typename = void>
+    inline constexpr bool has_value_type = false;
+    template<typename T>
+    inline constexpr bool has_value_type<
+        T,
+        std::void_t<typename T::value_type>
+    > = true;
 
-	template<typename T> inline constexpr bool is_smart_pointer =
-		is_specialization<T, std::unique_ptr>
-		|| is_specialization<T, std::shared_ptr>; // TODO: Handle weak_ptr too?
+    template<typename T> inline constexpr bool is_smart_pointer =
+        is_specialization<T, std::unique_ptr>
+        || is_specialization<T, std::shared_ptr>; // TODO: Handle weak_ptr too?
 
-	template<typename T, typename = void>
-	inline constexpr bool can_basic_stringify = false;
-	template<typename T>
-	inline constexpr bool can_basic_stringify<
-		T,
-		std::void_t<decltype(stringification::stringify(std::declval<T>()))>
-	> = true;
+    template<typename T, typename = void>
+    inline constexpr bool can_basic_stringify = false;
+    template<typename T>
+    inline constexpr bool can_basic_stringify<
+        T,
+        std::void_t<decltype(stringification::stringify(std::declval<T>()))>
+    > = true;
 
-	template<typename T> constexpr bool stringifiable_container();
+    template<typename T> constexpr bool stringifiable_container();
 
-	    template<typename T> inline constexpr bool stringifiable =
+    template<typename T> inline constexpr bool stringifiable =
         stringification::has_stringifier<T>
         || std::is_convertible_v<T, std::string_view>
         || (std::is_pointer_v<T> || std::is_function_v<T>)
@@ -455,7 +458,7 @@ namespace detail {
         }
     };
 
-	template<typename T>
+    template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string do_stringify(const T& v) {
         // TODO: This is overkill to do for every instantiation of do_stringify (e.g. primitive types could omit this)
@@ -544,7 +547,8 @@ namespace detail {
             return stringification::stringify_unknown<T>();
         }
     }
-// Top-level stringify utility
+
+    // Top-level stringify utility
     template<typename T>
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string generate_stringification(const T& v) {
