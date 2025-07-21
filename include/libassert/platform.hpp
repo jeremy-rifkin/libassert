@@ -4,8 +4,6 @@
 // Copyright (c) 2021-2025 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
-#include <version>
-
 #define LIBASSERT_ABI_NAMESPACE_TAG v1
 
 #define LIBASSERT_BEGIN_NAMESPACE \
@@ -159,13 +157,19 @@
 /// C++20 functionality wrappers.
 ///
 
-// Check if we can use std::is_constant_evaluated.
 #ifdef __has_include
  #if __has_include(<version>)
   #include <version>
+
+  // Check if we can use std::is_constant_evaluated.
   #ifdef __cpp_lib_is_constant_evaluated
    #include <type_traits>
    #define LIBASSERT_HAS_IS_CONSTANT_EVALUATED
+  #endif
+
+  // Check if we can use std::format.
+  #if !defined(LIBASSERT_NO_STD_FORMAT) && __has_include(<format>) && defined(__cpp_lib_format)
+   #define LIBASSERT_USE_STD_FORMAT
   #endif
  #endif
 #endif
@@ -273,10 +277,6 @@ LIBASSERT_END_NAMESPACE
 #else
  // some compiler we aren't prepared for
  #define LIBASSERT_BREAKPOINT()
-#endif
-
-#if !defined(LIBASSERT_NO_STD_FORMAT) && defined(__has_include) && __has_include(<format>) && defined(__cpp_lib_format)
- #define LIBASSERT_USE_STD_FORMAT
 #endif
 
 #endif
