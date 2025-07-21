@@ -1,6 +1,8 @@
 #include "paths.hpp"
 
 #include "common.hpp"
+
+#include <algorithm>
 #include <memory>
 
 LIBASSERT_BEGIN_NAMESPACE

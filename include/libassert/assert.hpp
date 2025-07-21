@@ -92,6 +92,9 @@ LIBASSERT_BEGIN_NAMESPACE
         std::string_view identifier;
         std::string_view accent;
         std::string_view unknown;
+        std::string_view highlight_delete;
+        std::string_view highlight_insert;
+        std::string_view highlight_replace;
         std::string_view reset;
         LIBASSERT_EXPORT const static color_scheme ansi_basic;
         LIBASSERT_EXPORT const static color_scheme ansi_rgb;
@@ -100,6 +103,8 @@ LIBASSERT_BEGIN_NAMESPACE
 
     LIBASSERT_EXPORT void set_color_scheme(const color_scheme&);
     LIBASSERT_EXPORT const color_scheme& get_color_scheme();
+
+    LIBASSERT_EXPORT void set_diff_highlighting(bool);
 
     // set separator used for diagnostics, by default it is "=>"
     // note: not thread-safe

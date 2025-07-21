@@ -17,11 +17,15 @@
 
 #define BASIC_RED    ESC "31m"
 #define BASIC_ORANGE ESC "33m" // using yellow as orange
-#define BASIC_YELLOW ESC "34m" // based off use (identifiers in scope res) it's better to color as blue here
+#define BASIC_YELLOW ESC "33m"
 #define BASIC_GREEN  ESC "32m"
 #define BASIC_BLUE   ESC "34m"
 #define BASIC_CYAN   ESC "36m"
 #define BASIC_PURPL  ESC "35m"
+
+#define BASIC_HIGHLIGHT_RED    ESC "101m"
+#define BASIC_HIGHLIGHT_GREEN  ESC "102m"
+#define BASIC_HIGHLIGHT_YELLOW ESC "103m"
 
 #if !defined(LIBASSERT_BUILD_TESTING) || defined(LIBASSERT_STATIC_DEFINE)
  #define LIBASSERT_EXPORT_TESTING

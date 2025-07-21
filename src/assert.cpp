@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cerrno>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -189,51 +190,10 @@ namespace detail {
         return stacktrace;
     }
 
-    LIBASSERT_ATTR_COLD
-    static std::string print_values(const std::vector<std::string>& vec, size_t lw, const color_scheme& scheme) {
-        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!vec.empty());
-        std::string values;
-        if(vec.size() == 1) {
-            values += microfmt::format("{}\n", indent(detail::highlight(vec[0], scheme), 8 + lw + 4, ' ', true));
-        } else {
-            // spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
-            // no indentation done here for multiple value printing
-            values += " ";
-            for(const auto& str : vec) {
-                values += microfmt::format("{}", detail::highlight(str, scheme));
-                if(&str != &*--vec.end()) {
-                    values += "  ";
-                }
-            }
-            values += "\n";
-        }
-        return values;
-    }
-
-    LIBASSERT_ATTR_COLD
-    static std::vector<highlight_block> get_values(const std::vector<std::string>& vec, const color_scheme& scheme) {
-        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!vec.empty());
-        if(vec.size() == 1) {
-            return highlight_blocks(vec[0], scheme);
-        } else {
-            std::vector<highlight_block> blocks;
-            // spacing here done carefully to achieve <expr> =  <a>  <b>  <c>, or similar
-            // no indentation done here for multiple value printing
-            blocks.push_back({"", " "});
-            for(const auto& str : vec) {
-                auto h = highlight_blocks(str, scheme);
-                blocks.insert(blocks.end(), h.begin(), h.end());
-                if(&str != &*--vec.end()) {
-                    blocks.push_back({"", "  "});
-                }
-            }
-            return blocks;
-        }
-    }
-
     constexpr int min_term_width = 50;
     constexpr size_t where_indent = 8;
     std::string arrow = "=>";
+    std::atomic_bool do_diff_highlighting = false;
 
     LIBASSERT_ATTR_COLD [[nodiscard]]
     std::string print_binary_diagnostics(
@@ -248,29 +208,12 @@ namespace detail {
             right_stringification,
             multiple_formats
         ] = diagnostics;
-        // TODO: Temporary hack while reworking
-        std::vector<std::string> lstrings = { left_stringification };
-        std::vector<std::string> rstrings = { right_stringification };
-        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!lstrings.empty());
-        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(!rstrings.empty());
-        // pad all columns where there is overlap
-        // TODO: Use column printer instead of manual padding.
-        for(size_t i = 0; i < std::min(lstrings.size(), rstrings.size()); i++) {
-            // find which clause, left or right, we're padding (entry i)
-            std::vector<std::string>& which = lstrings[i].length() < rstrings[i].length() ? lstrings : rstrings;
-            const int difference = std::abs((int)lstrings[i].length() - (int)rstrings[i].length());
-            if(i != which.size() - 1) { // last column excluded as padding is not necessary at the end of the line
-                which[i].insert(which[i].end(), difference, ' ');
-            }
-        }
         // determine whether we actually gain anything from printing a where clause (e.g. exclude "1 => 1")
         const struct { bool left, right; } has_useful_where_clause = {
             multiple_formats
-                || lstrings.size() > 1
-                || (left_expression != lstrings[0] && trim_suffix(left_expression) != lstrings[0]),
+                || (left_expression != left_stringification && trim_suffix(left_expression) != left_stringification),
             multiple_formats
-                || rstrings.size() > 1
-                || (right_expression != rstrings[0] && trim_suffix(right_expression) != rstrings[0])
+                || (right_expression != right_stringification && trim_suffix(right_expression) != right_stringification)
         };
         // print where clause
         std::string where;
@@ -286,15 +229,23 @@ namespace detail {
             where += "    Where:\n";
             auto print_clause = [term_width, lw, &where, &scheme](
                 std::string_view expr_str,
-                const std::vector<std::string>& expr_strs
+                std::string_view stringification,
+                std::optional<std::string_view> diff_against
             ) {
+                auto highlighted = highlight_blocks(stringification, scheme);
+                if(do_diff_highlighting && diff_against) {
+                    // TODO: Redundant highlight
+                    if(auto res = diff(highlight_blocks(*diff_against, scheme), highlighted, scheme)) {
+                        highlighted = *std::move(res);
+                    }
+                }
                 if(term_width >= min_term_width) {
                     where += wrapped_print(
                         {
                             { where_indent - 1, {{"", ""}} }, // 8 space indent, wrapper will add a space
                             { lw, highlight_blocks(expr_str, scheme) },
                             { arrow.size(), {{"", arrow}} },
-                            { term_width - lw - 8 /* indent */ - 4 /* arrow */, get_values(expr_strs, scheme) }
+                            { term_width - lw - 8 /* indent */ - 4 /* arrow */, highlighted }
                         },
                         scheme
                     );
@@ -306,14 +257,21 @@ namespace detail {
                         "",
                         arrow
                     );
-                    where += print_values(expr_strs, lw, scheme);
+                    where += microfmt::format(
+                        "{}\n",
+                        indent(detail::combine_blocks(highlighted, scheme), 8 + lw + 4, ' ', true)
+                    );
                 }
             };
-            if(has_useful_where_clause.left) {
-                print_clause(left_expression, lstrings);
+            auto left =
+                has_useful_where_clause.left ? std::optional<std::string_view>(left_stringification) : std::nullopt;
+            auto right =
+                has_useful_where_clause.right ? std::optional<std::string_view>(right_stringification) : std::nullopt;
+            if(left) {
+                print_clause(left_expression, *left, right);
             }
-            if(has_useful_where_clause.right) {
-                print_clause(right_expression, rstrings);
+            if(right) {
+                print_clause(right_expression, *right, left);
             }
         }
         return where;
@@ -372,10 +330,13 @@ LIBASSERT_BEGIN_NAMESPACE
         "",
         BASIC_PURPL, /* operator */
         BASIC_BLUE, /* call_identifier */
-        BASIC_YELLOW, /* scope_resolution_identifier */
+        BASIC_BLUE, /* scope_resolution_identifier */
         BASIC_BLUE, /* identifier */
         BASIC_BLUE, /* accent */
         BASIC_RED, /* unknown */
+        BASIC_HIGHLIGHT_RED, /* highlight delete */
+        BASIC_HIGHLIGHT_GREEN, /* highlight insert */
+        BASIC_HIGHLIGHT_YELLOW, /* highlight replace */
         RESET
     };
 
@@ -392,6 +353,9 @@ LIBASSERT_BEGIN_NAMESPACE
         RGB_BLUE, /* identifier */
         RGB_BLUE, /* accent */
         RGB_RED, /* unknown */
+        BASIC_HIGHLIGHT_RED, /* highlight delete */
+        BASIC_HIGHLIGHT_GREEN, /* highlight insert */
+        BASIC_HIGHLIGHT_YELLOW, /* highlight replace */
         RESET
     };
 
@@ -408,6 +372,10 @@ LIBASSERT_BEGIN_NAMESPACE
     LIBASSERT_EXPORT const color_scheme& get_color_scheme() {
         std::unique_lock lock(color_scheme_mutex);
         return current_color_scheme;
+    }
+
+    void set_diff_highlighting(bool dff) {
+        detail::do_diff_highlighting = dff;
     }
 
     LIBASSERT_EXPORT void set_separator(std::string_view separator) {

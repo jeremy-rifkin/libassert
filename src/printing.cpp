@@ -36,9 +36,11 @@ namespace detail {
                         extract = x + 1; // extract newline but don't print
                     }
                     // append
+                    lines[current_line][i].content += block.highlight;
                     lines[current_line][i].content += block.color;
                     lines[current_line][i].content += substr;
-                    lines[current_line][i].content += block.color.empty() ? "" : scheme.reset;
+                    lines[current_line][i].content
+                        += block.color.empty() && block.highlight.empty() ? "" : scheme.reset;
                     // advance
                     block_i += extract;
                     lines[current_line][i].length += extract;
