@@ -160,51 +160,11 @@
 #ifdef __has_include
  #if __has_include(<version>)
   #include <version>
-
-  // Check if we can use std::is_constant_evaluated.
-  #ifdef __cpp_lib_is_constant_evaluated
-   #include <type_traits>
-   #define LIBASSERT_HAS_IS_CONSTANT_EVALUATED
-  #endif
-
-  // Check if we can use std::format.
   #if !defined(LIBASSERT_NO_STD_FORMAT) && __has_include(<format>) && defined(__cpp_lib_format)
    #define LIBASSERT_USE_STD_FORMAT
   #endif
  #endif
 #endif
-
-// Check if we have the builtin __builtin_is_constant_evaluated.
-#ifdef __has_builtin
- #if __has_builtin(__builtin_is_constant_evaluated)
-  #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
- #endif
-#endif
-
-// GCC 9.1+ and later has __builtin_is_constant_evaluated
-#if defined(__GNUC__) && __GNUC__ >= 9 && !defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
- #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
-#endif
-
-// Visual Studio 2019 (19.25) and later supports __builtin_is_constant_evaluated
-#if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 192528326
- #define LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED
-#endif
-
-LIBASSERT_BEGIN_NAMESPACE
-namespace detail {
-    // Note: Works with >=C++20 and with C++17 for GCC 9.1+, Clang 9+, and MSVC 19.25+.
-    constexpr bool is_constant_evaluated() noexcept {
-        #if defined(LIBASSERT_HAS_IS_CONSTANT_EVALUATED)
-         return std::is_constant_evaluated();
-        #elif defined(LIBASSERT_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
-         return __builtin_is_constant_evaluated();
-        #else
-         return false;
-        #endif
-    }
-}
-LIBASSERT_END_NAMESPACE
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  #if LIBASSERT_IS_GCC
