@@ -23,7 +23,7 @@
 
 LIBASSERT_BEGIN_NAMESPACE
 namespace detail {
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
+    LIBASSERT_EXPORT
     void primitive_assert_impl(
         bool condition,
         bool normal_assert,
@@ -59,7 +59,7 @@ namespace detail {
         }
     }
 
-    [[noreturn]] LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
+    [[noreturn]] LIBASSERT_EXPORT
     void primitive_panic_impl(
         const char* signature,
         source_location location,
@@ -80,7 +80,7 @@ namespace detail {
      * string utilities
      */
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
+    LIBASSERT_EXPORT_TESTING
     std::vector<std::string_view> split(std::string_view s, std::string_view delims) {
         std::vector<std::string_view> vec;
         size_t old_pos = 0;
@@ -93,7 +93,6 @@ namespace detail {
         return vec;
     }
 
-    LIBASSERT_ATTR_COLD
     std::string_view trim(const std::string_view s) {
         const size_t l = s.find_first_not_of(whitespace_chars);
         if(l == std::string_view::npos) {
@@ -103,7 +102,6 @@ namespace detail {
         return s.substr(l, r - l);
     }
 
-    LIBASSERT_ATTR_COLD
     void replace_all_dynamic(std::string& str, std::string_view text, std::string_view replacement) {
         std::string::size_type pos = 0;
         while((pos = str.find(text.data(), pos, text.length())) != std::string::npos) {
@@ -114,7 +112,7 @@ namespace detail {
         }
     }
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
+    LIBASSERT_EXPORT_TESTING
     void replace_all(std::string& str, const std::regex& re, std::string_view replacement) {
         std::smatch match;
         std::size_t i = 0;
@@ -125,7 +123,7 @@ namespace detail {
         }
     }
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
+    LIBASSERT_EXPORT_TESTING
     void replace_all(std::string& str, std::string_view substr, std::string_view replacement) {
         std::string::size_type pos = 0;
         // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
@@ -135,7 +133,6 @@ namespace detail {
         }
     }
 
-    LIBASSERT_ATTR_COLD
     void replace_all_template(std::string& str, const std::pair<std::regex, std::string_view>& rule) {
         const auto& [re, replacement] = rule;
         std::smatch match;
@@ -158,7 +155,6 @@ namespace detail {
         }
     }
 
-    LIBASSERT_ATTR_COLD
     std::string indent(const std::string_view str, size_t depth, char c, bool ignore_first) {
         size_t i = 0;
         size_t j;

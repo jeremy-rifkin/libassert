@@ -44,20 +44,20 @@ LIBASSERT_BEGIN_NAMESPACE
     [[nodiscard]] LIBASSERT_EXPORT int terminal_width(int fd);
 
     // Enable virtual terminal processing on windows terminals
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed();
+    LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed();
 
     inline constexpr int stdin_fileno = 0;
     inline constexpr int stdout_fileno = 1;
     inline constexpr int stderr_fileno = 2;
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT bool isatty(int fd);
+    LIBASSERT_EXPORT bool isatty(int fd);
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT bool is_debugger_present() noexcept;
+    LIBASSERT_EXPORT bool is_debugger_present() noexcept;
     enum class debugger_check_mode {
         check_once,
         check_every_time,
     };
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void set_debugger_check_mode(debugger_check_mode mode) noexcept;
+    LIBASSERT_EXPORT void set_debugger_check_mode(debugger_check_mode mode) noexcept;
 
     // returns the type name of T
     template<typename T>

@@ -15,7 +15,6 @@ namespace detail {
      constexpr std::string_view path_delim = "/";
     #endif
 
-    LIBASSERT_ATTR_COLD
     path_components parse_path(const std::string_view path) {
         // Some cases to consider
         // projects/libassert/demo.cpp               projects   libassert  demo.cpp
@@ -53,13 +52,11 @@ namespace detail {
         return parts;
     }
 
-    LIBASSERT_ATTR_COLD
     void path_trie::insert(const path_components& path) {
         LIBASSERT_PRIMITIVE_DEBUG_ASSERT(path.back() == root);
         insert(path, (int)path.size() - 2);
     }
 
-    LIBASSERT_ATTR_COLD
     path_components path_trie::disambiguate(const path_components& path) {
         path_components result;
         path_trie* current = this;
@@ -79,7 +76,6 @@ namespace detail {
         return result;
     }
 
-    LIBASSERT_ATTR_COLD
     void path_trie::insert(const path_components& path, int i) {
         if(i < 0) {
             return;
@@ -107,22 +103,18 @@ namespace detail {
         LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false, "Improper path_handler::finalize");
     }
 
-    LIBASSERT_ATTR_COLD
     std::unique_ptr<detail::path_handler> identity_path_handler::clone() const {
         return std::make_unique<identity_path_handler>(*this);
     }
 
-    LIBASSERT_ATTR_COLD
     std::string_view identity_path_handler::resolve_path(std::string_view path) {
         return path;
     }
 
-    LIBASSERT_ATTR_COLD
     std::unique_ptr<detail::path_handler> disambiguating_path_handler::clone() const {
         return std::make_unique<disambiguating_path_handler>(*this);
     }
 
-    LIBASSERT_ATTR_COLD
     std::string_view disambiguating_path_handler::resolve_path(std::string_view path) {
         return path_map.at(std::string(path));
     }
@@ -131,12 +123,10 @@ namespace detail {
         return true;
     }
 
-    LIBASSERT_ATTR_COLD
     void disambiguating_path_handler::add_path(std::string_view path) {
         paths.emplace_back(path);
     }
 
-    LIBASSERT_ATTR_COLD
     void disambiguating_path_handler::finalize() {
         // raw full path -> components
         std::unordered_map<std::string, path_components> parsed_paths;
@@ -163,12 +153,10 @@ namespace detail {
         // return {files, std::min(longest_file_width, size_t(50))};
     }
 
-    LIBASSERT_ATTR_COLD
     std::unique_ptr<detail::path_handler> basename_path_handler::clone() const {
         return std::make_unique<basename_path_handler>(*this);
     }
 
-    LIBASSERT_ATTR_COLD
     std::string_view basename_path_handler::resolve_path(std::string_view path) {
         auto last = path.find_last_of(path_delim);
         if(last == path.npos) {

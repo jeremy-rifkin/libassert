@@ -65,7 +65,7 @@ LIBASSERT_END_NAMESPACE
 
 LIBASSERT_BEGIN_NAMESPACE
 namespace detail {
-    LIBASSERT_ATTR_COLD [[nodiscard]]
+    [[nodiscard]]
     constexpr inline std::string_view substring_bounded_by(
         std::string_view sig,
         std::string_view l,
@@ -76,7 +76,7 @@ namespace detail {
     }
 
     template<typename T>
-    LIBASSERT_ATTR_COLD [[nodiscard]]
+    [[nodiscard]]
     std::string_view type_name() noexcept {
         // Cases to handle:
         // gcc:   constexpr std::string_view ns::type_name() [with T = int; std::string_view = std::basic_string_view<char>]

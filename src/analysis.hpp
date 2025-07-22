@@ -21,16 +21,13 @@ namespace detail {
         ) : color(color_), highlight(highlight_), content(content_) {}
     };
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT /* FIXME */
+    LIBASSERT_EXPORT /* FIXME */
     std::string highlight(std::string_view expression, const color_scheme& scheme);
 
-    LIBASSERT_ATTR_COLD
     std::vector<highlight_block> highlight_blocks(std::string_view expression, const color_scheme& scheme);
 
-    LIBASSERT_ATTR_COLD
     std::string combine_blocks(const std::vector<highlight_block>& blocks, const color_scheme& scheme);
 
-    LIBASSERT_ATTR_COLD
     std::size_t length(const std::vector<highlight_block>& blocks);
 
     std::optional<std::vector<highlight_block>> diff(
@@ -39,11 +36,11 @@ namespace detail {
         const color_scheme& scheme
     );
 
-    LIBASSERT_ATTR_COLD literal_format get_literal_format(std::string_view expression);
+    literal_format get_literal_format(std::string_view expression);
 
-    LIBASSERT_ATTR_COLD std::string_view trim_suffix(std::string_view expression);
+    std::string_view trim_suffix(std::string_view expression);
 
-    LIBASSERT_ATTR_COLD bool is_bitwise(std::string_view op);
+    bool is_bitwise(std::string_view op);
 }
 LIBASSERT_END_NAMESPACE
 

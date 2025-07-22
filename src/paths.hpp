@@ -14,7 +14,6 @@ LIBASSERT_BEGIN_NAMESPACE
 namespace detail {
     using path_components = std::vector<std::string>;
 
-    LIBASSERT_ATTR_COLD
     path_components parse_path(const std::string_view path);
 
     class path_trie {
@@ -31,14 +30,10 @@ namespace detail {
         std::string root;
         std::unordered_map<std::string, std::unique_ptr<path_trie>> edges;
     public:
-        LIBASSERT_ATTR_COLD
         explicit path_trie(std::string _root) : root(std::move(_root)) {};
-        LIBASSERT_ATTR_COLD
         void insert(const path_components& path);
-        LIBASSERT_ATTR_COLD
         path_components disambiguate(const path_components& path);
     private:
-        LIBASSERT_ATTR_COLD
         void insert(const path_components& path, int i);
     };
 

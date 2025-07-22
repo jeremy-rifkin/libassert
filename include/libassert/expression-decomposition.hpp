@@ -21,7 +21,7 @@ namespace detail {
         #define LIBASSERT_GEN_OP_BOILERPLATE(name, op) struct name { \
             static constexpr std::string_view op_string = #op; \
             template<typename A, typename B> \
-            LIBASSERT_ATTR_COLD [[nodiscard]] \
+            [[nodiscard]] \
             constexpr decltype(auto) operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
                 return std::forward<A>(lhs) op std::forward<B>(rhs); \
             } \
@@ -29,7 +29,7 @@ namespace detail {
         #define LIBASSERT_GEN_OP_BOILERPLATE_SPECIAL(name, op, cmp) struct name { \
             static constexpr std::string_view op_string = #op; \
             template<typename A, typename B> \
-            LIBASSERT_ATTR_COLD [[nodiscard]] \
+            [[nodiscard]] \
             constexpr decltype(auto) operator()(A&& lhs, B&& rhs) const { /* no need to forward ints */ \
                 if constexpr(is_integral_and_not_bool<A> && is_integral_and_not_bool<B>) return cmp(lhs, rhs); \
                 else return std::forward<A>(lhs) op std::forward<B>(rhs); \
@@ -63,7 +63,7 @@ namespace detail {
          struct land {
              static constexpr std::string_view op_string = "&&";
              template<typename A, typename B>
-             LIBASSERT_ATTR_COLD [[nodiscard]]
+             [[nodiscard]]
              constexpr decltype(auto) operator()(A&& lhs, B&& rhs) const {
                  // Go out of the way to support old-style ASSERT(foo && "Message")
                  #if LIBASSERT_IS_GCC

@@ -61,7 +61,6 @@ namespace detail {
 
     constexpr std::string_view libassert_detail_prefix = "libassert::" STR(LIBASSERT_ABI_NAMESPACE_TAG) "::detail::";
 
-    LIBASSERT_ATTR_COLD
     auto get_trace_window(const cpptrace::stacktrace& trace) {
         // Two boundaries: assert_detail and main
         // Both are found here, nothing is filtered currently at stack trace generation
@@ -83,7 +82,7 @@ namespace detail {
         std::string printed;
     };
 
-    LIBASSERT_ATTR_COLD [[nodiscard]]
+    [[nodiscard]]
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     std::string print_stacktrace(
@@ -195,7 +194,7 @@ namespace detail {
     std::string arrow = "=>";
     std::atomic_bool do_diff_highlighting = false;
 
-    LIBASSERT_ATTR_COLD [[nodiscard]]
+    [[nodiscard]]
     std::string print_binary_diagnostics(
         const binary_diagnostics_descriptor& diagnostics,
         size_t term_width,
@@ -277,7 +276,7 @@ namespace detail {
         return where;
     }
 
-    LIBASSERT_ATTR_COLD [[nodiscard]]
+    [[nodiscard]]
     std::string print_extra_diagnostics(
         const std::vector<extra_diagnostic>& extra_diagnostics,
         size_t term_width,
@@ -393,7 +392,6 @@ LIBASSERT_BEGIN_NAMESPACE
     }
 
     namespace detail {
-        LIBASSERT_ATTR_COLD
         std::unique_ptr<detail::path_handler> new_path_handler() {
             auto mode = current_path_mode.load();
             switch(mode) {
@@ -409,7 +407,7 @@ LIBASSERT_BEGIN_NAMESPACE
 
     }
 
-    [[noreturn]] LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
+    [[noreturn]] LIBASSERT_EXPORT
     void default_failure_handler(const assertion_info& info) {
         enable_virtual_terminal_processing_if_needed(); // for terminal colors on windows
         std::string message = info.to_string(
@@ -440,24 +438,24 @@ LIBASSERT_BEGIN_NAMESPACE
         }
     }
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
+    LIBASSERT_EXPORT
     handler_ptr get_failure_handler() {
         return detail::get_failure_handler();
     }
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
+    LIBASSERT_EXPORT
     void set_failure_handler(handler_ptr handler) {
         detail::get_failure_handler() = handler;
     }
 
     namespace detail {
-        LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void fail(const assertion_info& info) {
+        LIBASSERT_EXPORT void fail(const assertion_info& info) {
             detail::get_failure_handler().load()(info);
         }
     }
 
-    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
-    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::binary_diagnostics_descriptor(
+    binary_diagnostics_descriptor::binary_diagnostics_descriptor() = default;
+    binary_diagnostics_descriptor::binary_diagnostics_descriptor(
         std::string_view _left_expression,
         std::string_view _right_expression,
         std::string&& _left_stringification,
@@ -469,12 +467,11 @@ LIBASSERT_BEGIN_NAMESPACE
         left_stringification(std::move(_left_stringification)),
         right_stringification(std::move(_right_stringification)),
         multiple_formats(_multiple_formats) {}
-    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
-    LIBASSERT_ATTR_COLD
+    binary_diagnostics_descriptor::~binary_diagnostics_descriptor() = default;
     binary_diagnostics_descriptor::binary_diagnostics_descriptor(const binary_diagnostics_descriptor&) = default;
     binary_diagnostics_descriptor::binary_diagnostics_descriptor(binary_diagnostics_descriptor&&) noexcept = default;
     binary_diagnostics_descriptor& binary_diagnostics_descriptor::operator=(const binary_diagnostics_descriptor&) = default;
-    LIBASSERT_ATTR_COLD binary_diagnostics_descriptor&
+    binary_diagnostics_descriptor&
     binary_diagnostics_descriptor::operator=(binary_diagnostics_descriptor&&) noexcept(LIBASSERT_GCC_ISNT_STUPID) = default;
 LIBASSERT_END_NAMESPACE
 
@@ -485,7 +482,7 @@ LIBASSERT_BEGIN_NAMESPACE
 
             trace_holder(cpptrace::raw_trace raw_trace) : trace(raw_trace) {};
 
-            LIBASSERT_ATTR_COLD const cpptrace::raw_trace& get_raw_trace() const {
+            const cpptrace::raw_trace& get_raw_trace() const {
                 try {
                     return std::get<cpptrace::raw_trace>(trace);
                 } catch(std::bad_variant_access&) {
@@ -493,7 +490,7 @@ LIBASSERT_BEGIN_NAMESPACE
                 }
             }
 
-            LIBASSERT_ATTR_COLD const cpptrace::stacktrace& get_stacktrace() {
+            const cpptrace::stacktrace& get_stacktrace() {
                 if(std::holds_alternative<cpptrace::raw_trace>(trace)) {
                     // do resolution
                     auto raw_trace = std::move(std::get<cpptrace::raw_trace>(trace));
@@ -540,7 +537,7 @@ LIBASSERT_BEGIN_NAMESPACE
 
     using namespace detail;
 
-    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE assertion_info::assertion_info(
+    LIBASSERT_ATTR_NOINLINE assertion_info::assertion_info(
         const assert_static_parameters* static_params,
         std::unique_ptr<detail::trace_holder, detail::trace_holder_deleter> _trace,
         size_t _n_args
@@ -554,7 +551,7 @@ LIBASSERT_BEGIN_NAMESPACE
         n_args(_n_args),
         trace(_trace.release()) {}
 
-    LIBASSERT_ATTR_COLD assertion_info::~assertion_info() = default;
+    assertion_info::~assertion_info() = default;
     assertion_info::assertion_info(const assertion_info& other) :
         macro_name(other.macro_name),
         type(other.type),
@@ -603,7 +600,7 @@ LIBASSERT_BEGIN_NAMESPACE
         return path_handler.get();
     }
 
-    LIBASSERT_ATTR_COLD std::string_view assertion_info::action() const {
+    std::string_view assertion_info::action() const {
         switch(type) {
             case assert_type::debug_assertion: return "Debug Assertion failed";
             case assert_type::assertion:       return "Assertion failed";
@@ -615,12 +612,12 @@ LIBASSERT_BEGIN_NAMESPACE
         }
     }
 
-    LIBASSERT_ATTR_COLD const cpptrace::raw_trace& assertion_info::get_raw_trace() const {
+    const cpptrace::raw_trace& assertion_info::get_raw_trace() const {
         LIBASSERT_PRIMITIVE_ASSERT(trace != nullptr);
         return trace->get_raw_trace();
     }
 
-    LIBASSERT_ATTR_COLD const cpptrace::stacktrace& assertion_info::get_stacktrace() const {
+    const cpptrace::stacktrace& assertion_info::get_stacktrace() const {
         LIBASSERT_PRIMITIVE_ASSERT(trace != nullptr);
         return trace->get_stacktrace();
     }
@@ -694,7 +691,7 @@ LIBASSERT_BEGIN_NAMESPACE
         return libassert::detail::print_stacktrace(get_stacktrace(), width, scheme, get_path_handler());
     }
 
-    LIBASSERT_ATTR_COLD std::string assertion_info::to_string(int width, const color_scheme& scheme) const {
+    std::string assertion_info::to_string(int width, const color_scheme& scheme) const {
         // auto& stacktrace = get_stacktrace(); // TODO
         // now do output
         std::string output;
@@ -711,7 +708,7 @@ LIBASSERT_BEGIN_NAMESPACE
 LIBASSERT_END_NAMESPACE
 
 LIBASSERT_BEGIN_NAMESPACE
-    [[nodiscard]] LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
+    [[nodiscard]] LIBASSERT_ATTR_NOINLINE
     std::string stacktrace(int width, const color_scheme& scheme, std::size_t skip) {
         auto trace = cpptrace::generate_trace(skip + 1);
         detail::identity_path_handler handler;

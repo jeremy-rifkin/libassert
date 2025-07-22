@@ -4,7 +4,6 @@
 
 LIBASSERT_BEGIN_NAMESPACE
 namespace detail {
-    LIBASSERT_ATTR_COLD
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     std::string wrapped_print(const std::vector<column_t>& columns, const color_scheme& scheme) {

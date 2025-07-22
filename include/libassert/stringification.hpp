@@ -91,7 +91,7 @@ namespace detail {
     // TODO Weak pointers?
 
     template<typename T>
-    LIBASSERT_ATTR_COLD [[nodiscard]]
+    [[nodiscard]]
     std::string do_stringify(const T& v);
 
     namespace stringification {
@@ -223,7 +223,7 @@ namespace detail {
         std::string stringify_pointer_value(const void*);
 
         template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         std::string stringify_smart_ptr(const T& t) {
             if(t) {
                 return do_stringify(*t);
@@ -236,7 +236,7 @@ namespace detail {
         std::string stringify_by_ostream(const void*, void(*)(std::ostream&, const void*));
 
         template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         std::string stringify_by_ostream(const T& t) {
             return stringify_by_ostream(
                 &t,
@@ -248,7 +248,7 @@ namespace detail {
         std::string stringify_enum(std::string_view type_name, std::string_view underlying_value);
 
         template<typename E>
-        LIBASSERT_ATTR_COLD [[nodiscard]] std::string stringify_enum(E e) {
+        [[nodiscard]] std::string stringify_enum(E e) {
             #if defined(LIBASSERT_USE_ENCHANTUM)
              std::string_view name = enchantum::to_string(e);
              if(!name.empty()) {
@@ -290,7 +290,7 @@ namespace detail {
         // #endif
 
         template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         std::string stringify(const std::optional<T>& t) {
             if(t) {
                 return do_stringify(t.value());
@@ -302,7 +302,7 @@ namespace detail {
         inline constexpr std::size_t max_container_print_items = 1000;
 
         template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         std::string stringify_container(const T& container) {
             using std::begin, std::end; // ADL
             std::string str = "[";
@@ -324,13 +324,13 @@ namespace detail {
 
         // I'm going to assume at least one index because is_tuple_like requires index 0 to exist
         template<typename T, size_t... I>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         std::string stringify_tuple_like_impl(const T& t, std::index_sequence<I...>) {
             return "[" + (do_stringify(std::get<0>(t)) + ... + (", " + do_stringify(std::get<I + 1>(t)))) + "]";
         }
 
         template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         std::string stringify_tuple_like(const T& t) {
             if constexpr(std::tuple_size<T>::value == 0) {
                 return "[]";
@@ -340,7 +340,7 @@ namespace detail {
         }
 
         template<typename T>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         std::string stringify_filesystem_path_like(const T& t) {
             return stringify(t.string());
         }
@@ -459,7 +459,7 @@ namespace detail {
     };
 
     template<typename T>
-    LIBASSERT_ATTR_COLD [[nodiscard]]
+    [[nodiscard]]
     std::string do_stringify(const T& v) {
         // TODO: This is overkill to do for every instantiation of do_stringify (e.g. primitive types could omit this)
         thread_local recursion_flag flag;
@@ -550,7 +550,7 @@ namespace detail {
 
     // Top-level stringify utility
     template<typename T>
-    LIBASSERT_ATTR_COLD [[nodiscard]]
+    [[nodiscard]]
     std::string generate_stringification(const T& v) {
         if constexpr(
             stringification::adl::is_container<T>

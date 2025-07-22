@@ -32,11 +32,10 @@ namespace detail {
      * string utilities
      */
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
+    LIBASSERT_EXPORT_TESTING
     std::vector<std::string_view> split(std::string_view s, std::string_view delims);
 
     template<typename C>
-    LIBASSERT_ATTR_COLD
     std::string join(const C& container, const std::string_view delim) {
         auto iter = std::begin(container);
         auto end = std::end(container);
@@ -52,7 +51,6 @@ namespace detail {
     }
 
     template<typename T>
-    LIBASSERT_ATTR_COLD
     std::vector<T> concat(std::vector<T> a, std::vector<T> b) {
         a.insert(
             a.end(),
@@ -64,22 +62,18 @@ namespace detail {
 
     constexpr const char* const whitespace_chars = " \t\n\r\f\v";
 
-    LIBASSERT_ATTR_COLD
     std::string_view trim(std::string_view s);
 
-    LIBASSERT_ATTR_COLD
     void replace_all_dynamic(std::string& str, std::string_view text, std::string_view replacement);
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
+    LIBASSERT_EXPORT_TESTING
     void replace_all(std::string& str, const std::regex& re, std::string_view replacement);
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT_TESTING
+    LIBASSERT_EXPORT_TESTING
     void replace_all(std::string& str, std::string_view substr, std::string_view replacement);
 
-    LIBASSERT_ATTR_COLD
     void replace_all_template(std::string& str, const std::pair<std::regex, std::string_view>& rule);
 
-    LIBASSERT_ATTR_COLD
     std::string indent(std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
 
     /*
@@ -164,7 +158,6 @@ namespace detail {
     static_assert(popcount(0xf0U) == 4);
 
     template<typename T>
-    LIBASSERT_ATTR_COLD
     static constexpr T n_digits(T value) {
         return value < 10 ? 1 : 1 + n_digits(value / 10);
     }

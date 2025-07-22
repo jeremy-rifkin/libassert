@@ -30,7 +30,6 @@ namespace detail {
      * C++ syntax analysis logic
      */
 
-    LIBASSERT_ATTR_COLD
     std::string union_regexes(std::initializer_list<std::string_view> regexes) {
         std::string composite;
         for(const std::string_view str : regexes) {
@@ -42,7 +41,6 @@ namespace detail {
         return composite;
     }
 
-    LIBASSERT_ATTR_COLD
     std::string prettify_type(std::string type) {
         // > > -> >> replacement
         // could put in analysis:: but the replacement is basic and this is more convenient for
@@ -130,7 +128,6 @@ namespace detail {
         std::vector<std::pair<std::regex, literal_format>> literal_formats;
 
     private:
-        LIBASSERT_ATTR_COLD
         analysis() {
             // https://eel.is/c++draft/gram.lex
             // generate regular expressions
@@ -248,7 +245,6 @@ namespace detail {
         }
 
     public:
-        LIBASSERT_ATTR_COLD
         std::string_view normalize_op(const std::string_view op) {
             // Operators need to be normalized to support alternative operators like and and bitand
             // Normalization instead of just adding to the precedence table because target operators
@@ -260,7 +256,6 @@ namespace detail {
             }
         }
 
-        LIBASSERT_ATTR_COLD
         std::string_view normalize_brace(const std::string_view brace) {
             // Operators need to be normalized to support alternative operators like and and bitand
             // Normalization instead of just adding to the precedence table because target operators
@@ -272,7 +267,6 @@ namespace detail {
             }
         }
 
-        LIBASSERT_ATTR_COLD
         std::vector<highlight_block> highlight_string(std::string_view str, const color_scheme& scheme) const {
             std::vector<highlight_block> output;
             std::cmatch match;
@@ -294,7 +288,6 @@ namespace detail {
             return output;
         }
 
-        LIBASSERT_ATTR_COLD
         // TODO: Refactor
         // NOLINTNEXTLINE(readability-function-cognitive-complexity)
         std::vector<highlight_block> highlight(std::string_view expression, const color_scheme& scheme) try {
@@ -363,7 +356,6 @@ namespace detail {
             return {{"", std::string(expression)}};
         }
 
-        LIBASSERT_ATTR_COLD
         literal_format get_literal_format(std::string_view expression) {
             for(auto& [ re, type ] : literal_formats) {
                 if(std::regex_match(expression.begin(), expression.end(), re)) {
@@ -373,7 +365,6 @@ namespace detail {
             return literal_format::default_format; // not a literal // TODO
         }
 
-        LIBASSERT_ATTR_COLD
         static token_t find_last_non_ws(const std::vector<token_t>& tokens, size_t i) {
             // returns empty token_e::whitespace on failure
             while(i--) {
@@ -384,7 +375,6 @@ namespace detail {
             return {token_e::whitespace, ""};
         }
 
-        LIBASSERT_ATTR_COLD
         static std::string_view get_real_op(const std::vector<token_t>& tokens, const size_t i) {
             // re-coalesce >> if necessary
             const bool is_shr = tokens[i].str == ">" && i < tokens.size() - 1 && tokens[i + 1].str == ">";
@@ -399,7 +389,7 @@ namespace detail {
         static constexpr int max_depth = 10;
         // TODO
         // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-        LIBASSERT_ATTR_COLD bool pseudoparse(
+        bool pseudoparse(
             const std::vector<token_t>& tokens,
             const std::string_view target_op,
             size_t i,
@@ -561,7 +551,6 @@ namespace detail {
             return true;
         }
 
-        LIBASSERT_ATTR_COLD
         std::pair<std::string, std::string> decompose_expression(
             std::string_view expression,
             std::string_view target_op
@@ -653,7 +642,6 @@ namespace detail {
     std::unique_ptr<analysis> analysis::analysis_singleton;
     std::mutex analysis::singleton_mutex;
 
-    LIBASSERT_ATTR_COLD
     std::string highlight(std::string_view expression, const color_scheme& scheme) {
         if(scheme == libassert::color_scheme::blank) {
             return std::string(expression);
@@ -663,7 +651,6 @@ namespace detail {
         }
     }
 
-    LIBASSERT_ATTR_COLD
     std::string combine_blocks(const std::vector<highlight_block>& blocks, const color_scheme& scheme) {
         std::string str;
         for(auto& block : blocks) {
@@ -676,7 +663,6 @@ namespace detail {
         return str;
     }
 
-    LIBASSERT_ATTR_COLD
     std::size_t length(const std::vector<highlight_block>& blocks) {
         std::size_t length = 0;
         for(auto& block : blocks) {
@@ -693,7 +679,6 @@ namespace detail {
         char c;
     };
 
-    LIBASSERT_ATTR_COLD
     std::vector<formatted_character> to_chars(std::vector<highlight_block> blocks) {
         std::vector<formatted_character> chars;
         for(auto& block : blocks) {
@@ -716,7 +701,6 @@ namespace detail {
     };
 
     // Levenshtein diff
-    LIBASSERT_ATTR_COLD
     diff_result diff(const std::vector<formatted_character>& a, const std::vector<formatted_character>& b) {
         std::size_t m = a.size();
         std::size_t n = b.size();
@@ -767,7 +751,6 @@ namespace detail {
         return distance <= std::ceil(limit);
     }
 
-    LIBASSERT_ATTR_COLD
     std::optional<std::vector<highlight_block>> diff(
         std::vector<highlight_block> a,
         std::vector<highlight_block> b,
@@ -799,25 +782,23 @@ namespace detail {
         return out;
     }
 
-    LIBASSERT_ATTR_COLD
     std::vector<highlight_block> highlight_blocks(std::string_view expression, const color_scheme& scheme) {
         // TODO: Maybe check scheme == libassert::color_scheme::blank here? Have to consult ramifications.
         return analysis::get().highlight(expression, scheme);
     }
 
-    LIBASSERT_ATTR_COLD literal_format get_literal_format(std::string_view expression) {
+    literal_format get_literal_format(std::string_view expression) {
         return analysis::get().get_literal_format(expression);
     }
 
-    LIBASSERT_ATTR_COLD std::string_view trim_suffix(std::string_view expression) {
+    std::string_view trim_suffix(std::string_view expression) {
         return expression.substr(0, expression.find_last_not_of("FfUuLlZz") + 1);
     }
 
-    LIBASSERT_ATTR_COLD bool is_bitwise(std::string_view op) {
+    bool is_bitwise(std::string_view op) {
         return analysis::get().bitwise_operators.count(op);
     }
 
-    LIBASSERT_ATTR_COLD
     std::pair<std::string, std::string> decompose_expression(
         std::string_view expression,
         std::string_view target_op

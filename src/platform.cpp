@@ -35,7 +35,7 @@
 
 LIBASSERT_BEGIN_NAMESPACE
     // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-    LIBASSERT_ATTR_COLD int terminal_width(int fd) {
+    int terminal_width(int fd) {
         if(fd < 0) {
             return 0;
         }
@@ -75,7 +75,7 @@ LIBASSERT_BEGIN_NAMESPACE
     };
     #endif
 
-	LIBASSERT_ATTR_COLD bool is_debugger_present_internal() noexcept {
+	bool is_debugger_present_internal() noexcept {
         #if IS_WINDOWS
          return IsDebuggerPresent();
         #elif IS_LINUX
@@ -146,7 +146,6 @@ LIBASSERT_BEGIN_NAMESPACE
     std::mutex is_debugger_present_mutex;
     std::optional<bool> cached_is_debugger_present;
 
-    LIBASSERT_ATTR_COLD
     bool is_debugger_present() noexcept {
         if(check_mode.load() == debugger_check_mode::check_every_time) {
             return is_debugger_present_internal();
@@ -161,12 +160,12 @@ LIBASSERT_BEGIN_NAMESPACE
         }
     }
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT
+    LIBASSERT_EXPORT
     void set_debugger_check_mode(debugger_check_mode mode) noexcept {
         check_mode = mode;
     }
 
-    LIBASSERT_ATTR_COLD LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed() {
+    LIBASSERT_EXPORT void enable_virtual_terminal_processing_if_needed() {
         // enable colors / ansi processing if necessary
         #if IS_WINDOWS
          // https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#example-of-enabling-virtual-terminal-processing
@@ -182,7 +181,7 @@ LIBASSERT_BEGIN_NAMESPACE
         #endif
     }
 
-    LIBASSERT_ATTR_COLD bool isatty(int fd) {
+    bool isatty(int fd) {
         #if IS_WINDOWS
          return _isatty(fd);
         #else
@@ -193,7 +192,7 @@ LIBASSERT_END_NAMESPACE
 
 LIBASSERT_BEGIN_NAMESPACE
 namespace detail {
-    LIBASSERT_ATTR_COLD std::string strerror_wrapper(int e) {
+    std::string strerror_wrapper(int e) {
         // "strerror is not required to be thread-safe. Implementations may be returning different pointers to static
         // read-only string literals or may be returning the same pointer over and over, pointing at a static buffer
         // in which strerror places the string."

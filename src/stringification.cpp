@@ -111,7 +111,6 @@ namespace detail {
      * Stringification
      */
 
-    LIBASSERT_ATTR_COLD
     static std::string escape_string(const std::string_view str, char quote) {
         std::string escaped;
         escaped += quote;
@@ -132,19 +131,19 @@ namespace detail {
     }
 
     namespace stringification {
-        LIBASSERT_ATTR_COLD std::string stringify_unknown(std::string_view type_name) {
+        std::string stringify_unknown(std::string_view type_name) {
             return microfmt::format("<instance of {}>", prettify_type(std::string(type_name)));
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(std::string_view value) {
+        std::string stringify(std::string_view value) {
             return escape_string(value, '"');
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(std::nullptr_t) {
+        std::string stringify(std::nullptr_t) {
             return "nullptr";
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(char value) {
+        std::string stringify(char value) {
             if(get_thread_current_literal_format() & literal_format::integer_character) {
                 return stringify(static_cast<int>(value));
             } else {
@@ -152,12 +151,12 @@ namespace detail {
             }
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(bool value) {
+        std::string stringify(bool value) {
             return value ? "true" : "false";
         }
 
         template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         static std::string stringify_integral(T value, literal_format format) {
             std::ostringstream oss;
             switch(format) {
@@ -192,7 +191,7 @@ namespace detail {
         }
 
         template<typename T, typename std::enable_if<is_integral_and_not_bool<T>, int>::type = 0>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         static std::string stringify_integral(T value) {
             auto current_format = get_thread_current_literal_format();
             std::string result = stringify_integral(value, literal_format::default_format);
@@ -214,40 +213,40 @@ namespace detail {
             return result;
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(short value) {
+        std::string stringify(short value) {
             return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(int value) {
+        std::string stringify(int value) {
             return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(long value) {
+        std::string stringify(long value) {
             return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(long long value) {
+        std::string stringify(long long value) {
             return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(unsigned short value) {
+        std::string stringify(unsigned short value) {
             return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(unsigned int value) {
+        std::string stringify(unsigned int value) {
             return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(unsigned long value) {
+        std::string stringify(unsigned long value) {
             return stringify_integral(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(unsigned long long value) {
+        std::string stringify(unsigned long long value) {
             return stringify_integral(value);
         }
 
         template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         static std::string stringify_floating_point(T value, literal_format format) {
             std::ostringstream oss;
             if(format == literal_format::float_hex) {
@@ -264,7 +263,7 @@ namespace detail {
         }
 
         template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
-        LIBASSERT_ATTR_COLD [[nodiscard]]
+        [[nodiscard]]
         static std::string stringify_floating_point(T value) {
             auto current_format = get_thread_current_literal_format();
             std::string result = stringify_floating_point(value, literal_format::default_format);
@@ -281,45 +280,45 @@ namespace detail {
             return result;
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(float value) {
+        std::string stringify(float value) {
             return stringify_floating_point(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(double value) {
+        std::string stringify(double value) {
             return stringify_floating_point(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(long double value) {
+        std::string stringify(long double value) {
             return stringify_floating_point(value);
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(std::byte value) {
+        std::string stringify(std::byte value) {
             return stringify_integral(static_cast<unsigned>(value));
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(std::error_code ec) {
+        std::string stringify(std::error_code ec) {
             return ec.category().name() + (':' + std::to_string(ec.value())) + ' ' + ec.message();
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify(std::error_condition ec) {
+        std::string stringify(std::error_condition ec) {
             return ec.category().name() + (':' + std::to_string(ec.value())) + ' ' + ec.message();
         }
 
         #if __cplusplus >= 202002L
-        LIBASSERT_ATTR_COLD std::string stringify(std::strong_ordering value) {
+        std::string stringify(std::strong_ordering value) {
                 if(value == std::strong_ordering::less)       return "std::strong_ordering::less";
                 if(value == std::strong_ordering::equivalent) return "std::strong_ordering::equivalent";
                 if(value == std::strong_ordering::equal)      return "std::strong_ordering::equal";
                 if(value == std::strong_ordering::greater)    return "std::strong_ordering::greater";
                 return "Unknown std::strong_ordering value";
         }
-        LIBASSERT_ATTR_COLD std::string stringify(std::weak_ordering value) {
+        std::string stringify(std::weak_ordering value) {
                 if(value == std::weak_ordering::less)       return "std::weak_ordering::less";
                 if(value == std::weak_ordering::equivalent) return "std::weak_ordering::equivalent";
                 if(value == std::weak_ordering::greater)    return "std::weak_ordering::greater";
                 return "Unknown std::weak_ordering value";
         }
-        LIBASSERT_ATTR_COLD std::string stringify(std::partial_ordering value) {
+        std::string stringify(std::partial_ordering value) {
                 if(value == std::partial_ordering::less)       return "std::partial_ordering::less";
                 if(value == std::partial_ordering::equivalent) return "std::partial_ordering::equivalent";
                 if(value == std::partial_ordering::greater)    return "std::partial_ordering::greater";
@@ -328,7 +327,7 @@ namespace detail {
         }
         #endif
 
-        LIBASSERT_ATTR_COLD std::string stringify_pointer_value(const void* value) {
+        std::string stringify_pointer_value(const void* value) {
             if(value == nullptr) {
                 return "nullptr";
             }
@@ -340,7 +339,7 @@ namespace detail {
             return std::move(oss).str();
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify_by_ostream(
+        std::string stringify_by_ostream(
             const void* ptr,
             void(*outputter)(std::ostream&, const void*)
         ) {
@@ -349,7 +348,7 @@ namespace detail {
             return std::move(oss).str();
         }
 
-        LIBASSERT_ATTR_COLD std::string stringify_enum(std::string_view type_name, std::string_view underlying_value) {
+        std::string stringify_enum(std::string_view type_name, std::string_view underlying_value) {
             return microfmt::format("enum {}: {}", prettify_type(std::string(type_name)), underlying_value);
         }
     }
