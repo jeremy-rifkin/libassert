@@ -79,11 +79,6 @@
 #define LIBASSERT_STRINGIFY(x) #x,
 #define LIBASSERT_COMMA ,
 
-// Church boolean
-#define LIBASSERT_IF(b) LIBASSERT_IF_##b
-#define LIBASSERT_IF_true(t,...) t
-#define LIBASSERT_IF_false(t,f,...) f
-
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  #if LIBASSERT_IS_GCC
   #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
@@ -280,7 +275,7 @@ LIBASSERT_END_NAMESPACE
  }
  LIBASSERT_END_NAMESPACE
 #endif
-#define LIBASSERT_INVOKE_VAL(expr, doreturn, check_expression, name, type, failaction, ...) \
+#define LIBASSERT_INVOKE_VAL(expr, check_expression, name, type, failaction, ...) \
     /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
     /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
     LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
@@ -327,11 +322,10 @@ LIBASSERT_END_NAMESPACE
         /* https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3 */ \
         /* Note: Somewhat relying on this call being inlined so inefficiency is eliminated */ \
         libassert::detail::get_expression_return_value< \
-            doreturn LIBASSERT_COMMA \
             libassert_ret_lhs LIBASSERT_COMMA \
             std::is_lvalue_reference_v<decltype(libassert_value)> \
         >(libassert_value, *std::launder(&libassert_decomposer)); \
-    ) LIBASSERT_IF(doreturn)(.value,) \
+    ).value \
     LIBASSERT_WARNING_PRAGMA_POP_CLANG
 
 #ifdef NDEBUG
@@ -369,14 +363,14 @@ LIBASSERT_END_NAMESPACE
 // value variants
 
 #ifndef NDEBUG
- #define LIBASSERT_DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
+ #define LIBASSERT_DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
 #else
- #define LIBASSERT_DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, false, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
+ #define LIBASSERT_DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, false, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
 #endif
 
-#define LIBASSERT_ASSUME_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSUME_VAL", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
+#define LIBASSERT_ASSUME_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "ASSUME_VAL", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
 
-#define LIBASSERT_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "ASSERT_VAL", assertion, , __VA_ARGS__)
+#define LIBASSERT_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "ASSERT_VAL", assertion, , __VA_ARGS__)
 
 // non-prefixed versions
 
@@ -415,14 +409,14 @@ LIBASSERT_END_NAMESPACE
 
 #ifdef LIBASSERT_LOWERCASE
  #ifndef NDEBUG
-  #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "debug_assert_val", debug_assertion, , __VA_ARGS__)
+  #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "debug_assert_val", debug_assertion, , __VA_ARGS__)
  #else
-  #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, false, "debug_assert_val", debug_assertion, , __VA_ARGS__)
+  #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, false, "debug_assert_val", debug_assertion, , __VA_ARGS__)
  #endif
 #endif
 
 #ifdef LIBASSERT_LOWERCASE
- #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, true, "assert_val", assertion, , __VA_ARGS__)
+ #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "assert_val", assertion, , __VA_ARGS__)
 #endif
 
 // Wrapper macro to allow support for C++26's user generated static_assert messages.

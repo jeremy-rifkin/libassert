@@ -489,23 +489,21 @@ LIBASSERT_END_NAMESPACE
     };
 
     template<
-        bool R, bool ret_lhs, bool value_is_lval_ref,
+        bool ret_lhs, bool value_is_lval_ref,
         typename T, typename A, typename B, typename C
     >
     constexpr auto get_expression_return_value(T& value, expression_decomposer<A, B, C>& decomposer) {
-        if constexpr(R) {
-            if constexpr(ret_lhs) {
-                if constexpr(std::is_lvalue_reference_v<A>) {
-                    return assert_value_wrapper<A>{decomposer.take_lhs()};
-                } else {
-                    return assert_value_wrapper<A>{std::move(decomposer.take_lhs())};
-                }
+        if constexpr(ret_lhs) {
+            if constexpr(std::is_lvalue_reference_v<A>) {
+                return assert_value_wrapper<A>{decomposer.take_lhs()};
             } else {
-                if constexpr(value_is_lval_ref) {
-                    return assert_value_wrapper<T&>{value};
-                } else {
-                    return assert_value_wrapper<T>{std::move(value)};
-                }
+                return assert_value_wrapper<A>{std::move(decomposer.take_lhs())};
+            }
+        } else {
+            if constexpr(value_is_lval_ref) {
+                return assert_value_wrapper<T&>{value};
+            } else {
+                return assert_value_wrapper<T>{std::move(value)};
             }
         }
     }
