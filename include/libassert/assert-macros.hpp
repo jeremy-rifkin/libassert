@@ -214,20 +214,11 @@ LIBASSERT_END_NAMESPACE
             LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
             failaction \
             LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
-            if constexpr(sizeof libassert_decomposer > 32) { \
-                libassert::detail::process_assert_fail( \
-                    libassert_decomposer, \
-                    libassert_params \
-                    LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
-                ); \
-            } else { \
-                /* std::move it to assert_fail_m, will be moved back to r */ \
-                libassert::detail::process_assert_fail_n( \
-                    std::move(libassert_decomposer), \
-                    libassert_params \
-                    LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
-                ); \
-            } \
+            libassert::detail::process_assert_fail( \
+                libassert_decomposer, \
+                libassert_params \
+                LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
+            ); \
         } \
         LIBASSERT_WARNING_PRAGMA_POP_CLANG \
     } while(0) \
@@ -299,32 +290,18 @@ LIBASSERT_END_NAMESPACE
                 LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
                 failaction \
                 LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
-                if constexpr(sizeof libassert_decomposer > 32) { \
-                    libassert::detail::process_assert_fail( \
-                        libassert_decomposer, \
-                        libassert_params \
-                        LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG \
-                    ); \
-                } else { \
-                    /* std::move it to assert_fail_m, will be moved back to r */ \
-                    auto libassert_r = libassert::detail::process_assert_fail_m( \
-                        std::move(libassert_decomposer), \
-                        libassert_params \
-                        LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG \
-                    ); \
-                    /* can't move-assign back to decomposer if it holds reference members */ \
-                    LIBASSERT_DESTROY_DECOMPOSER; \
-                    new (&libassert_decomposer) libassert::detail::expression_decomposer(std::move(libassert_r)); \
-                } \
+                libassert::detail::process_assert_fail( \
+                    libassert_decomposer, \
+                    libassert_params \
+                    LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG \
+                ); \
             } \
         }, \
-        /* Note: std::launder needed in 17 in case of placement new / move shenanigans above */ \
-        /* https://timsong-cpp.github.io/cppwp/n4659/basic.life#8.3 */ \
-        /* Note: Somewhat relying on this call being inlined so inefficiency is eliminated */ \
+        /* Note: Relying on this call being inlined so inefficiency is eliminated */ \
         libassert::detail::get_expression_return_value< \
             libassert_ret_lhs LIBASSERT_COMMA \
             std::is_lvalue_reference_v<decltype(libassert_value)> \
-        >(libassert_value, *std::launder(&libassert_decomposer)); \
+        >(libassert_value, libassert_decomposer); \
     ).value \
     LIBASSERT_WARNING_PRAGMA_POP_CLANG
 

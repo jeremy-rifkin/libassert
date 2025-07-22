@@ -461,28 +461,6 @@ LIBASSERT_END_NAMESPACE
         LIBASSERT_PRIMITIVE_PANIC("PANIC/UNREACHABLE failure handler returned");
     }
 
-    // TODO: Re-evaluate benefit of this at all in non-cold path code
-    template<typename A, typename B, typename C, typename... Args>
-    [[nodiscard]] LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
-    expression_decomposer<A, B, C> process_assert_fail_m(
-        expression_decomposer<A, B, C> decomposer,
-        const assert_static_parameters* params,
-        Args&&... args
-    ) {
-        process_assert_fail(decomposer, params, std::forward<Args>(args)...);
-        return decomposer;
-    }
-
-    template<typename A, typename B, typename C, typename... Args>
-    LIBASSERT_ATTR_COLD LIBASSERT_ATTR_NOINLINE
-    void process_assert_fail_n(
-        expression_decomposer<A, B, C> decomposer,
-        const assert_static_parameters* params,
-        Args&&... args
-    ) {
-        process_assert_fail(decomposer, params, std::forward<Args>(args)...);
-    }
-
     template<typename T>
     struct assert_value_wrapper {
         T value;
