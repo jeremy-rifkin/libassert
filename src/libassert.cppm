@@ -44,8 +44,6 @@ LIBASSERT_BEGIN_NAMESPACE
         export using libassert::detail::assert_static_parameters;
         export using libassert::detail::pretty_function_name_wrapper;
         export using libassert::detail::process_assert_fail;
-        export using libassert::detail::process_assert_fail_n;
-        export using libassert::detail::process_assert_fail_m;
         export using libassert::detail::process_panic;
         export using libassert::detail::get_expression_return_value;
     }
