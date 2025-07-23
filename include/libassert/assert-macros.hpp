@@ -182,6 +182,32 @@ LIBASSERT_END_NAMESPACE
  #define LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL()
 #endif
 
+// ifndef here to allow a library like rsl-test to use this as a customization point for fancy instrumentation
+#ifndef LIBASSERT_ASSERT_MAIN_BODY
+ #define LIBASSERT_ASSERT_MAIN_BODY(expr, name, type, failaction, decomposer_name, condition_value, pretty_function_arg, ...) \
+     if(LIBASSERT_STRONG_EXPECT(!(condition_value), 0)) { \
+         libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
+         LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
+         failaction \
+         LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
+         libassert::detail::process_assert_fail( \
+             decomposer_name, \
+             libassert_params \
+             LIBASSERT_VA_ARGS(__VA_ARGS__) pretty_function_arg \
+         ); \
+     }
+#endif
+#ifndef LIBASSERT_PANIC_MAIN_BODY
+ #define LIBASSERT_PANIC_MAIN_BODY(name, type, pretty_function_arg, ...) \
+     libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
+     LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
+     LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, "", __VA_ARGS__) \
+     libassert::detail::process_panic( \
+         libassert_params \
+         LIBASSERT_VA_ARGS(__VA_ARGS__) pretty_function_arg \
+     );
+#endif
+
 #define LIBASSERT_INVOKE(expr, name, type, failaction, ...) \
     do { \
         LIBASSERT_WARNING_PRAGMA_PUSH \
@@ -190,29 +216,27 @@ LIBASSERT_END_NAMESPACE
             libassert::detail::expression_decomposer{} << expr \
         ); \
         LIBASSERT_WARNING_PRAGMA_POP \
-        if(LIBASSERT_STRONG_EXPECT(!static_cast<bool>(libassert_decomposer.get_value()), 0)) { \
-            libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
-            LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
-            failaction \
-            LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
-            libassert::detail::process_assert_fail( \
-                libassert_decomposer, \
-                libassert_params \
-                LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
-            ); \
-        } \
+        LIBASSERT_ASSERT_MAIN_BODY( \
+            expr, \
+            name, \
+            type, \
+            failaction, \
+            libassert_decomposer, \
+            static_cast<bool>(libassert_decomposer.get_value()), \
+            LIBASSERT_PRETTY_FUNCTION_ARG, \
+            __VA_ARGS__ \
+        ) \
     } while(0) \
 
 #define LIBASSERT_INVOKE_PANIC(name, type, ...) \
     do { \
-        libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
-        LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
-        LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, "", __VA_ARGS__) \
-        libassert::detail::process_panic( \
-            libassert_params \
-            LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
-        ); \
-    } while(0) \
+        LIBASSERT_PANIC_MAIN_BODY( \
+            name, \
+            type, \
+            LIBASSERT_PRETTY_FUNCTION_ARG, \
+            __VA_ARGS__ \
+        ) \
+    } while(0)
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  // Extra set of parentheses here because clang treats __extension__ as a low-precedence unary operator which interferes
@@ -247,20 +271,19 @@ LIBASSERT_END_NAMESPACE
         decltype(auto) libassert_value = libassert_decomposer.get_value(); \
         constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
         if constexpr(check_expression) { \
-            /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very specific */ \
-            /* about casting a decltype(auto) value inside a lambda. Workaround is to put it in a wrapper. */ \
-            /* https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
-            if(LIBASSERT_STRONG_EXPECT(!LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), 0)) { \
-                libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
-                LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
-                failaction \
-                LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
-                libassert::detail::process_assert_fail( \
-                    libassert_decomposer, \
-                    libassert_params \
-                    LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG \
-                ); \
-            } \
+            LIBASSERT_ASSERT_MAIN_BODY( \
+                expr, \
+                name, \
+                type, \
+                failaction, \
+                libassert_decomposer, \
+                /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very */ \
+                /* specific about casting a decltype(auto) value inside a lambda. Workaround is to put it in a */ \
+                /* wrapper. https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
+                LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), \
+                LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG, \
+                __VA_ARGS__ \
+            ) \
         }, \
         /* Note: Relying on this call being inlined so inefficiency is eliminated */ \
         libassert::detail::get_expression_return_value< \
