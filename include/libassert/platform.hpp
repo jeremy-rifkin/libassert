@@ -167,22 +167,11 @@
 #endif
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
- #if LIBASSERT_IS_GCC
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC _Pragma("GCC diagnostic push")
-  #define LIBASSERT_WARNING_PRAGMA_POP_GCC _Pragma("GCC diagnostic pop")
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
-  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
- #else
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
-  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG _Pragma("GCC diagnostic push")
-  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG _Pragma("GCC diagnostic pop")
- #endif
-#else
- #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
- #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
- #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
- #define LIBASSERT_WARNING_PRAGMA_POP_GCC
+  #define LIBASSERT_WARNING_PRAGMA_PUSH _Pragma("GCC diagnostic push")
+  #define LIBASSERT_WARNING_PRAGMA_POP _Pragma("GCC diagnostic pop")
+#elif LIBASSERT_IS_MSVC
+  #define LIBASSERT_WARNING_PRAGMA_PUSH _Pragma("warning(push)")
+  #define LIBASSERT_WARNING_PRAGMA_POP _Pragma("warning(pop)")
 #endif
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_ICX
@@ -199,11 +188,11 @@
  #endif
  #define LIBASSERT_ASM_BREAKPOINT(instruction) \
   do { \
-   LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
+   LIBASSERT_WARNING_PRAGMA_PUSH \
    LIBASSERT_IGNORE_CPP20_EXTENSION_WARNING \
    __asm__ __volatile__(instruction) \
    ; \
-   LIBASSERT_WARNING_PRAGMA_POP_GCC \
+   LIBASSERT_WARNING_PRAGMA_POP \
   } while(0)
  // precedence for these come from llvm's __builtin_debugtrap() implementation
  // arm: https://github.com/llvm/llvm-project/blob/e9954ec087d640809082f46d1c7e5ac1767b798d/llvm/lib/Target/ARM/ARMInstrInfo.td#L2393-L2394

@@ -81,31 +81,17 @@
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  #if LIBASSERT_IS_GCC
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
+  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
      _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC _Pragma("GCC diagnostic push")
-  #define LIBASSERT_WARNING_PRAGMA_POP_GCC _Pragma("GCC diagnostic pop")
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
-  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
  #else
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
+  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
      _Pragma("GCC diagnostic ignored \"-Woverloaded-shift-op-parentheses\"")
-  #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
-  #define LIBASSERT_WARNING_PRAGMA_POP_GCC
-  #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG _Pragma("GCC diagnostic push")
-  #define LIBASSERT_WARNING_PRAGMA_POP_CLANG _Pragma("GCC diagnostic pop")
  #endif
 #else
- #define LIBASSERT_WARNING_PRAGMA_PUSH_CLANG
- #define LIBASSERT_WARNING_PRAGMA_POP_CLANG
- #define LIBASSERT_WARNING_PRAGMA_PUSH_GCC
- #define LIBASSERT_WARNING_PRAGMA_POP_GCC
- #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC
- #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG
+ // NOTE: If this is changed, LIBASSERT_ASSERT_STMT_EXPR below will need to be updated for MSVC
+ #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA
 #endif
 
 LIBASSERT_BEGIN_NAMESPACE
@@ -197,18 +183,13 @@ LIBASSERT_END_NAMESPACE
 #endif
 
 #define LIBASSERT_INVOKE(expr, name, type, failaction, ...) \
-    /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
-    /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
     do { \
-        LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
-        LIBASSERT_IGNORE_UNUSED_VALUE \
-        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
-        LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
-        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
+        LIBASSERT_WARNING_PRAGMA_PUSH \
+        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
         auto libassert_decomposer = libassert::detail::expression_decomposer( \
             libassert::detail::expression_decomposer{} << expr \
         ); \
-        LIBASSERT_WARNING_PRAGMA_POP_GCC \
+        LIBASSERT_WARNING_PRAGMA_POP \
         if(LIBASSERT_STRONG_EXPECT(!static_cast<bool>(libassert_decomposer.get_value()), 0)) { \
             libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
             LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
@@ -220,7 +201,6 @@ LIBASSERT_END_NAMESPACE
                 LIBASSERT_VA_ARGS(__VA_ARGS__) LIBASSERT_PRETTY_FUNCTION_ARG \
             ); \
         } \
-        LIBASSERT_WARNING_PRAGMA_POP_CLANG \
     } while(0) \
 
 #define LIBASSERT_INVOKE_PANIC(name, type, ...) \
@@ -234,28 +214,20 @@ LIBASSERT_END_NAMESPACE
         ); \
     } while(0) \
 
-// Workaround for gcc bug 105734 / libassert bug #24
-#define LIBASSERT_DESTROY_DECOMPOSER libassert_decomposer.~expression_decomposer() /* NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move) */
-#if LIBASSERT_IS_GCC
- #if __GNUC__ == 12 && __GNUC_MINOR__ == 1
-  LIBASSERT_BEGIN_NAMESPACE
-  namespace detail {
-      template<typename T> constexpr void destroy(T& t) {
-          t.~T();
-      }
-  }
-  LIBASSERT_END_NAMESPACE
-  #undef LIBASSERT_DESTROY_DECOMPOSER
-  #define LIBASSERT_DESTROY_DECOMPOSER libassert::detail::destroy(libassert_decomposer)
- #endif
-#endif
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  // Extra set of parentheses here because clang treats __extension__ as a low-precedence unary operator which interferes
  // with decltype(auto) in an expression like decltype(auto) x = __extension__ ({...}).y;
- #define LIBASSERT_STMTEXPR(B, R) (__extension__ ({ B R }))
+ // Surpress warnings here because of a clang bug: https://github.com/llvm/llvm-project/issues/63897
+ #define LIBASSERT_ASSERT_STMT_EXPR(B, R) (__extension__ ({ \
+        LIBASSERT_WARNING_PRAGMA_PUSH \
+        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
+        B \
+        LIBASSERT_WARNING_PRAGMA_POP \
+        R \
+    }))
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) static_cast<bool>(x)
 #else
- #define LIBASSERT_STMTEXPR(B, R) [&](const char* libassert_msvc_pfunc) { B return R }(LIBASSERT_PFUNC)
+ #define LIBASSERT_ASSERT_STMT_EXPR(B, R) [&](const char* libassert_msvc_pfunc) { B return R }(LIBASSERT_PFUNC)
  // Workaround for msvc bug
  #define LIBASSERT_STATIC_CAST_TO_BOOL(x) libassert::detail::static_cast_to_bool(x)
  LIBASSERT_BEGIN_NAMESPACE
@@ -266,19 +238,12 @@ LIBASSERT_END_NAMESPACE
  }
  LIBASSERT_END_NAMESPACE
 #endif
+
 #define LIBASSERT_INVOKE_VAL(expr, check_expression, name, type, failaction, ...) \
-    /* must push/pop out here due to nasty clang bug https://github.com/llvm/llvm-project/issues/63897 */ \
-    /* must do awful stuff to workaround differences in where gcc and clang allow these directives to go */ \
-    LIBASSERT_WARNING_PRAGMA_PUSH_CLANG \
-    LIBASSERT_IGNORE_UNUSED_VALUE \
-    LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_CLANG \
-    LIBASSERT_STMTEXPR( \
-        LIBASSERT_WARNING_PRAGMA_PUSH_GCC \
-        LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA_GCC \
+    LIBASSERT_ASSERT_STMT_EXPR( \
         auto libassert_decomposer = libassert::detail::expression_decomposer( \
             libassert::detail::expression_decomposer{} << expr \
         ); \
-        LIBASSERT_WARNING_PRAGMA_POP_GCC \
         decltype(auto) libassert_value = libassert_decomposer.get_value(); \
         constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
         if constexpr(check_expression) { \
@@ -302,8 +267,7 @@ LIBASSERT_END_NAMESPACE
             libassert_ret_lhs LIBASSERT_COMMA \
             std::is_lvalue_reference_v<decltype(libassert_value)> \
         >(libassert_value, libassert_decomposer); \
-    ).value \
-    LIBASSERT_WARNING_PRAGMA_POP_CLANG
+    ).value
 
 #ifdef NDEBUG
  #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE_CALL();
