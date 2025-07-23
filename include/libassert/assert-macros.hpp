@@ -274,18 +274,19 @@ LIBASSERT_END_NAMESPACE
 #else
  #define LIBASSERT_ASSUME_ACTION
 #endif
+#define LIBASSERT_NOP_ACTION
 
 // assertion macros
 
 // Debug assert
 #ifndef NDEBUG
- #define LIBASSERT_DEBUG_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "DEBUG_ASSERT", debug_assertion, , __VA_ARGS__)
+ #define LIBASSERT_DEBUG_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "DEBUG_ASSERT", debug_assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
 #else
  #define LIBASSERT_DEBUG_ASSERT(expr, ...) (void)0
 #endif
 
 // Assert
-#define LIBASSERT_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "ASSERT", assertion, , __VA_ARGS__)
+#define LIBASSERT_ASSERT(expr, ...) LIBASSERT_INVOKE(expr, "ASSERT", assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
 // lowercase version intentionally done outside of the include guard here
 
 // Assume
@@ -304,14 +305,14 @@ LIBASSERT_END_NAMESPACE
 // value variants
 
 #ifndef NDEBUG
- #define LIBASSERT_DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
+ #define LIBASSERT_DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "DEBUG_ASSERT_VAL", debug_assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
 #else
- #define LIBASSERT_DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, false, "DEBUG_ASSERT_VAL", debug_assertion, , __VA_ARGS__)
+ #define LIBASSERT_DEBUG_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, false, "DEBUG_ASSERT_VAL", debug_assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
 #endif
 
 #define LIBASSERT_ASSUME_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "ASSUME_VAL", assumption, LIBASSERT_ASSUME_ACTION, __VA_ARGS__)
 
-#define LIBASSERT_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "ASSERT_VAL", assertion, , __VA_ARGS__)
+#define LIBASSERT_ASSERT_VAL(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "ASSERT_VAL", assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
 
 // non-prefixed versions
 
@@ -342,7 +343,7 @@ LIBASSERT_END_NAMESPACE
 
 #ifdef LIBASSERT_LOWERCASE
  #ifndef NDEBUG
-  #define debug_assert(expr, ...) LIBASSERT_INVOKE(expr, "debug_assert", debug_assertion, , __VA_ARGS__)
+  #define debug_assert(expr, ...) LIBASSERT_INVOKE(expr, "debug_assert", debug_assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
  #else
   #define debug_assert(expr, ...) (void)0
  #endif
@@ -350,14 +351,14 @@ LIBASSERT_END_NAMESPACE
 
 #ifdef LIBASSERT_LOWERCASE
  #ifndef NDEBUG
-  #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "debug_assert_val", debug_assertion, , __VA_ARGS__)
+  #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "debug_assert_val", debug_assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
  #else
-  #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, false, "debug_assert_val", debug_assertion, , __VA_ARGS__)
+  #define debug_assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, false, "debug_assert_val", debug_assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
  #endif
 #endif
 
 #ifdef LIBASSERT_LOWERCASE
- #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "assert_val", assertion, , __VA_ARGS__)
+ #define assert_val(expr, ...) LIBASSERT_INVOKE_VAL(expr, true, "assert_val", assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
 #endif
 
 // Wrapper macro to allow support for C++26's user generated static_assert messages.
@@ -405,8 +406,8 @@ LIBASSERT_END_NAMESPACE
   #undef assert
  #endif
  #ifndef NDEBUG
-  #define assert(expr, ...) LIBASSERT_INVOKE(expr, "assert", assertion, , __VA_ARGS__)
+  #define assert(expr, ...) LIBASSERT_INVOKE(expr, "assert", assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
  #else
-  #define assert(expr, ...) LIBASSERT_INVOKE(expr, "assert", assertion, , __VA_ARGS__)
+  #define assert(expr, ...) LIBASSERT_INVOKE(expr, "assert", assertion, LIBASSERT_NOP_ACTION, __VA_ARGS__)
  #endif
 #endif
