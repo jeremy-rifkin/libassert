@@ -163,11 +163,6 @@ LIBASSERT_END_NAMESPACE
  #define LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
 #endif
 #define LIBASSERT_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
-#if LIBASSERT_IS_CLANG // -Wall in clang
- #define LIBASSERT_IGNORE_UNUSED_VALUE _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
-#else
- #define LIBASSERT_IGNORE_UNUSED_VALUE
-#endif
 
 #define LIBASSERT_BREAKPOINT_IF_DEBUGGING() \
     do \
