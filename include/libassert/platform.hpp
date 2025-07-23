@@ -4,7 +4,7 @@
 // Copyright (c) 2021-2025 Jeremy Rifkin under the MIT license
 // https://github.com/jeremy-rifkin/libassert
 
-#define LIBASSERT_ABI_NAMESPACE_TAG v2
+#define LIBASSERT_ABI_NAMESPACE_TAG abiv2
 
 #define LIBASSERT_BEGIN_NAMESPACE \
     namespace libassert { \
