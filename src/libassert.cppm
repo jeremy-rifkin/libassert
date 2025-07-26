@@ -20,6 +20,7 @@ LIBASSERT_BEGIN_NAMESPACE
     export using libassert::color_scheme;
     export using libassert::set_color_scheme;
     export using libassert::get_color_scheme;
+    export using libassert::set_diff_highlighting;
     export using libassert::set_separator;
     export using libassert::highlight;
     export using libassert::highlight_stringify;
