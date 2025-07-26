@@ -1,3 +1,4 @@
+- [libassert 2.2.1](#libassert-221)
 - [libassert 2.2.0](#libassert-220)
 - [libassert 2.1.5](#libassert-215)
 - [libassert 2.1.4](#libassert-214)
@@ -15,6 +16,24 @@
 - [libassert 1.2](#libassert-12)
 - [libassert 1.1](#libassert-11)
 - [libassert 1.0 🎉](#libassert-10-)
+
+## libassert 2.2.1
+
+Added
+- Added [diff highlighting](https://github.com/jeremy-rifkin/libassert?tab=readme-ov-file#diff-highlighting-)
+- Added normalization for `enum E` -> `E` in type prettification
+- Added `libassert::print_stacktrace` utility
+- Added `libassert::get_path_mode`
+
+Fixed
+- Fixed missing include in paths.cpp
+- Fixed unconditional include of `<version>` https://github.com/jeremy-rifkin/libassert/pull/150 (@CrackedMatter)
+
+Other
+- Fixed typo in readme https://github.com/jeremy-rifkin/libassert/pull/147 (@OpenByteDev)
+- Reworked some stringification metaprogramming logic https://github.com/jeremy-rifkin/libassert/pull/148 (@ZXShady)
+- Cleaned up library headers a bit
+- Simplified assertion macro implementation
 
 ## libassert 2.2.0
 
