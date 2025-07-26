@@ -117,10 +117,6 @@ LIBASSERT_BEGIN_NAMESPACE
         return highlight(stringify(t), scheme);
     }
 
-    // generates a stack trace, formats to the given width
-    [[nodiscard]] LIBASSERT_ATTR_NOINLINE LIBASSERT_EXPORT
-    std::string stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme(), std::size_t skip = 0);
-
     enum class literal_format : unsigned {
         // integers and floats are decimal by default, chars are of course chars, and everything else only has one
         // format that makes sense
@@ -162,6 +158,20 @@ LIBASSERT_BEGIN_NAMESPACE
         basename,
     };
     LIBASSERT_EXPORT void set_path_mode(path_mode mode);
+    LIBASSERT_EXPORT path_mode get_path_mode();
+
+    // generates a stack trace, formats to the given width
+    [[nodiscard]] LIBASSERT_ATTR_NOINLINE LIBASSERT_EXPORT
+    std::string stacktrace(int width = 0, const color_scheme& scheme = get_color_scheme(), std::size_t skip = 0);
+
+    // formats a stacktrace
+    [[nodiscard]] LIBASSERT_EXPORT
+    std::string print_stacktrace(
+        const cpptrace::stacktrace& trace,
+        int width = 0,
+        const color_scheme& scheme = get_color_scheme(),
+        path_mode = get_path_mode()
+    );
 
     enum class assert_type {
         debug_assertion,

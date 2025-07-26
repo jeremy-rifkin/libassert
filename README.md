@@ -439,6 +439,12 @@ namespace libassert {
         const color_scheme& scheme = get_color_scheme(),
         std::size_t skip = 0
     );
+    [[nodiscard]] std::string print_stacktrace(
+        const cpptrace::stacktrace& trace,
+        int width = 0,
+        const color_scheme& scheme = get_color_scheme(),
+        path_mode = get_path_mode()
+    );
     template<typename T> [[nodiscard]] std::string_view type_name() noexcept;
     template<typename T> [[nodiscard]] std::string pretty_type_name() noexcept;
     template<typename T> [[nodiscard]] std::string stringify(const T& value);
@@ -455,6 +461,7 @@ namespace libassert {
 ```
 
 - `stacktrace`: Generates a stack trace, formats to the given width (0 for no width formatting)
+- `print_stacktrace`: Formats a provided stack trace with libassert's internal trace formatting
 - `type_name`: Returns the type name of T
 - `pretty_type_name`: Returns the prettified type name for T
 - `stringify`: Produces a debug stringification of a value
@@ -565,10 +572,12 @@ namespace libassert {
         basename, // only the file name is used
     };
     LIBASSERT_EXPORT void set_path_mode(path_mode mode);
+    path_mode get_path_mode();
 }
 ```
 
 - `set_path_mode`: Sets the path shortening mode for assertion output. Default: `path_mode::disambiguated`.
+- `get_path_mode`: Gets the path shortening mode for assertion output.
 
 ## Assertion information
 

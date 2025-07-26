@@ -391,9 +391,12 @@ LIBASSERT_BEGIN_NAMESPACE
         current_path_mode = mode;
     }
 
+    path_mode get_path_mode() {
+        return current_path_mode;
+    }
+
     namespace detail {
-        std::unique_ptr<detail::path_handler> new_path_handler() {
-            auto mode = current_path_mode.load();
+        std::unique_ptr<detail::path_handler> new_path_handler(path_mode mode = get_path_mode()) {
             switch(mode) {
                 case path_mode::disambiguated:
                     return std::make_unique<disambiguating_path_handler>();
@@ -404,7 +407,6 @@ LIBASSERT_BEGIN_NAMESPACE
                     return std::make_unique<identity_path_handler>();
             }
         }
-
     }
 
     [[noreturn]] LIBASSERT_EXPORT
@@ -713,5 +715,23 @@ LIBASSERT_BEGIN_NAMESPACE
         auto trace = cpptrace::generate_trace(skip + 1);
         detail::identity_path_handler handler;
         return print_stacktrace(trace, width, scheme, &handler);
+    }
+
+    [[nodiscard]]
+    std::string print_stacktrace(
+        const cpptrace::stacktrace& trace,
+        int width,
+        const color_scheme& scheme,
+        path_mode mode
+    ) {
+        auto path_handler = new_path_handler(mode);
+        // if this is a disambiguating handler or similar it needs to be fed all paths
+        if(path_handler->has_add_path()) {
+            for(const auto& frame : trace.frames) {
+                path_handler->add_path(frame.filename);
+            }
+            path_handler->finalize();
+        }
+        return print_stacktrace(trace, width, scheme, path_handler.get());
     }
 LIBASSERT_END_NAMESPACE

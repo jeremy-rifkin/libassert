@@ -25,6 +25,7 @@ LIBASSERT_BEGIN_NAMESPACE
     export using libassert::highlight;
     export using libassert::highlight_stringify;
     export using libassert::stacktrace;
+    export using libassert::print_stacktrace;
     export using libassert::literal_format;
     export using libassert::operator|;
     export using libassert::literal_format_mode;
@@ -32,6 +33,7 @@ LIBASSERT_BEGIN_NAMESPACE
     export using libassert::set_fixed_literal_format;
     export using libassert::path_mode;
     export using libassert::set_path_mode;
+    export using libassert::get_path_mode;
     export using libassert::assert_type;
     export using libassert::default_failure_handler;
     export using libassert::handler_ptr;
