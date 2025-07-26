@@ -106,9 +106,6 @@ LIBASSERT_BEGIN_NAMESPACE
 
     LIBASSERT_EXPORT void set_diff_highlighting(bool);
 
-    using stacktrace_callback_function = void(cpptrace::stacktrace&);
-    LIBASSERT_EXPORT void set_stacktrace_callback(stacktrace_callback_function*);
-
     // set separator used for diagnostics, by default it is "=>"
     // note: not thread-safe
     LIBASSERT_EXPORT void set_separator(std::string_view separator);

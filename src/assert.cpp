@@ -193,7 +193,6 @@ namespace detail {
     constexpr size_t where_indent = 8;
     std::string arrow = "=>";
     std::atomic_bool do_diff_highlighting = false;
-    std::atomic<stacktrace_callback_function*> stacktrace_callback = nullptr;
 
     [[nodiscard]]
     std::string print_binary_diagnostics(
@@ -378,10 +377,6 @@ LIBASSERT_BEGIN_NAMESPACE
         detail::do_diff_highlighting = dff;
     }
 
-    void set_stacktrace_callback(stacktrace_callback_function* fn) {
-        detail::stacktrace_callback = fn;
-    }
-
     LIBASSERT_EXPORT void set_separator(std::string_view separator) {
         detail::arrow = separator;
     }
@@ -499,12 +494,7 @@ LIBASSERT_BEGIN_NAMESPACE
                 if(std::holds_alternative<cpptrace::raw_trace>(trace)) {
                     // do resolution
                     auto raw_trace = std::move(std::get<cpptrace::raw_trace>(trace));
-                    auto resolved = raw_trace.resolve();
-                    auto callback = detail::stacktrace_callback.load();
-                    if(callback) {
-                        callback(resolved);
-                    }
-                    trace = std::move(resolved);
+                    trace = raw_trace.resolve();
                 }
                 return std::get<cpptrace::stacktrace>(trace);
             }
