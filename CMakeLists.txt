@@ -82,7 +82,7 @@ set(LIBASSERT_ENCHANTUM_REPO "https://github.com/ZXShady/enchantum.git")
 set(LIBASSERT_ENCHANTUM_TAG "c460fbf0fcfe01eb49cd8e5790f05ced7e2a6bb6") # 0.3.0
 
 set(LIBASSERT_CPPTRACE_REPO "https://github.com/jeremy-rifkin/cpptrace.git")
-set(LIBASSERT_CPPTRACE_TAG "4cf9dc66b557c9070610940e1f03c42f425fefec") # 1.0.2
+set(LIBASSERT_CPPTRACE_TAG "3db8da80111171c219ab5839905771386bee06b3") # 1.0.4
 
 # obtain cpptrace
 if(LIBASSERT_USE_EXTERNAL_CPPTRACE)
