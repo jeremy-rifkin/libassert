@@ -101,11 +101,14 @@ std::string normalize(std::string message) {
     // clang does T *
     replace_all(message, "void *", "void*");
     replace_all(message, "char *", "char*");
+    replace_all(message, "int *", "int*");
+
     // clang does T[N], gcc does T [N]
     replace_all(message, "int [5]", "int[5]");
     // msvc includes the std::less
     replace_all(message, ", std::less<int>", "");
     replace_all(message, ", std::less<std::string>", "");
+
     return message;
 }
 
@@ -223,6 +226,55 @@ TEST(LibassertBasic, PointerDiagnostics) {
         )XX"
     );
 }
+
+
+TEST(LibassertBasic, NULLMacroComparison) {
+    int* p{ 0 };
+    CHECK(
+        ASSERT(p != 0),
+        R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(p != 0);
+        |    Where:
+        |        p => int*: nullptr
+        |        0 => nullptr
+        )XX"
+    );
+
+    CHECK(
+        ASSERT(0 != p),
+        R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(0 != p);
+        |    Where:
+        |        0 => nullptr
+        |        p => int*: nullptr
+        )XX"
+    );
+
+    CHECK(
+        ASSERT(0 != p + 0),
+        R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(0 != p + 0);
+        |    Where:
+        |        0     => nullptr
+        |        p + 0 => int*: nullptr
+        )XX"
+    );
+
+    CHECK(
+        ASSERT(p + 0 != 0),
+        R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(p + 0 != 0);
+        |    Where:
+        |        p + 0 => int*: nullptr
+        |        0     => nullptr
+        )XX"
+    );
+}
+
 
 TEST(LibassertBasic, LiteralFormatting) {
     const uint16_t flags = 0b000101010;

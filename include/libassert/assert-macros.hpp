@@ -205,6 +205,7 @@ LIBASSERT_END_NAMESPACE
 
 #define LIBASSERT_INVOKE(expr, name, type, failaction, ...) \
     do { \
+        if constexpr(false) { const bool libassert_unused_var = false && (expr);(void)libassert_unused_var;} \
         LIBASSERT_WARNING_PRAGMA_PUSH \
         LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
         auto libassert_decomposer = libassert::detail::expression_decomposer( \
@@ -263,6 +264,7 @@ LIBASSERT_END_NAMESPACE
         auto libassert_decomposer = libassert::detail::expression_decomposer( \
             libassert::detail::expression_decomposer{} << expr \
         ); \
+        if constexpr(false) { const bool libassert_unused_var = false && (expr);(void)libassert_unused_var;} \
         decltype(auto) libassert_value = libassert_decomposer.get_value(); \
         constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
         if constexpr(check_expression) { \
