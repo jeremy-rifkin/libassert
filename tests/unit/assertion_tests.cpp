@@ -101,11 +101,14 @@ std::string normalize(std::string message) {
     // clang does T *
     replace_all(message, "void *", "void*");
     replace_all(message, "char *", "char*");
+    replace_all(message, "int *", "int*");
+
     // clang does T[N], gcc does T [N]
     replace_all(message, "int [5]", "int[5]");
     // msvc includes the std::less
     replace_all(message, ", std::less<int>", "");
     replace_all(message, ", std::less<std::string>", "");
+
     return message;
 }
 
@@ -223,6 +226,75 @@ TEST(LibassertBasic, PointerDiagnostics) {
         )XX"
     );
 }
+
+
+TEST(LibassertBasic, NULLMacroComparison) {
+    int* p{ 0 };
+    CHECK(
+        ASSERT(p != 0),
+        R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(p != 0);
+        |    Where:
+        |        p => int*: nullptr
+        |        0 => nullptr
+        )XX"
+    );
+
+    CHECK(
+        ASSERT(0 != p),
+        R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(0 != p);
+        |    Where:
+        |        0 => nullptr
+        |        p => int*: nullptr
+        )XX"
+    );
+
+    CHECK(
+        ASSERT(0 != p + 0),
+        R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(0 != p + 0);
+        |    Where:
+        |        0     => nullptr
+        |        p + 0 => int*: nullptr
+        )XX"
+    );
+
+    CHECK(
+        ASSERT(p + 0 != 0),
+        R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(p + 0 != 0);
+        |    Where:
+        |        p + 0 => int*: nullptr
+        |        0     => nullptr
+        )XX"
+    );
+}
+
+TEST(LibassertBasic, Bitfields) {
+    struct Bit {
+    int bit : 1;
+  };
+ Bit bit{1};
+  CHECK(
+      ASSERT(bit.bit == 1),
+       R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(bit.bit == 1);
+        )XX"
+  );
+
+  CHECK(ASSERT(1 == bit.bit),
+        R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(1 == bit.bit);
+        )XX");
+}
+
 
 TEST(LibassertBasic, LiteralFormatting) {
     const uint16_t flags = 0b000101010;
@@ -547,6 +619,7 @@ TEST(LibassertBasic, General) {
         |        printable{2.55} => (printable = 2.55)
         )XX"
     );
+#if LIBASSERT_CPLUSPLUS >= 202002
     CHECK(
         ASSERT([] { return false; } ()),
         R"XX(
@@ -554,6 +627,7 @@ TEST(LibassertBasic, General) {
         |    ASSERT([] { return false; } ());
         )XX"
     );
+#endif
 }
 
 TEST(LibassertBasic, SignedUnsignedComparisonWithoutSafeCompareMode) {
@@ -648,6 +722,7 @@ TEST(LibassertBasic, ExpressionDecomposition) {
         |        x -= x -= 1 => 0
         )XX"
     );
+
     CHECK(
         ASSERT(true ? false : true, "pffft"),
         R"XX(

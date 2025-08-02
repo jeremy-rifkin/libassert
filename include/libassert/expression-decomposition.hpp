@@ -14,6 +14,13 @@
 
 LIBASSERT_BEGIN_NAMESPACE
 namespace detail {
+    template<typename T>
+    inline constexpr bool is_pointer_or_member_pointer = std::is_pointer_v<strip<T>> || std::is_member_pointer_v<strip<T>>;
+
+    template<typename T,typename U>
+    inline constexpr bool is_NULL_comparable = (std::is_integral_v<strip<T>> && is_pointer_or_member_pointer<U>)
+        || (std::is_integral_v<strip<U>> && is_pointer_or_member_pointer<T>);
+
     // Lots of boilerplate
     // std:: implementations don't allow two separate types for lhs/rhs
     // Note: is this macro potentially bad when it comes to debugging(?)
@@ -168,6 +175,7 @@ namespace detail {
     struct expression_decomposer<nothing, nothing, nothing> {
         explicit constexpr expression_decomposer() = default;
 
+
         template<typename O> [[nodiscard]] constexpr auto operator<<(O&& operand) && {
             return expression_decomposer<O, nothing, nothing>(std::forward<O>(operand));
         }
@@ -191,8 +199,6 @@ namespace detail {
         LIBASSERT_GEN_OP_BOILERPLATE(ops::shl, <<) \
         LIBASSERT_GEN_OP_BOILERPLATE(ops::shr, >>) \
         LIBASSERT_GEN_OP_BOILERPLATE_SPACESHIP \
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::eq, ==) \
-        LIBASSERT_GEN_OP_BOILERPLATE(ops::neq, !=) \
         LIBASSERT_GEN_OP_BOILERPLATE(ops::gt, >) \
         LIBASSERT_GEN_OP_BOILERPLATE(ops::lt, <) \
         LIBASSERT_GEN_OP_BOILERPLATE(ops::gteq, >=) \
@@ -242,6 +248,42 @@ namespace detail {
             // and rvalues as rvalues.
             return std::forward<A>(a);
         }
+        template<typename Null,std::enable_if_t<
+            std::is_integral_v<Null> && is_pointer_or_member_pointer<A>,int> = 0>
+        constexpr auto operator==(Null) &&
+        {
+            return expression_decomposer<A, std::nullptr_t, ops::eq>(std::forward<A>(a), nullptr);
+        }
+
+        template<typename Pointer, std::enable_if_t<
+            is_pointer_or_member_pointer<Pointer> && std::is_integral_v<strip<A>>, int> = 0>
+        constexpr auto operator==(Pointer&& pointer) &&
+        {
+            return expression_decomposer<std::nullptr_t , Pointer, ops::eq > (nullptr, std::forward<Pointer>(pointer));
+        }
+
+        template<typename Null, std::enable_if_t<std::is_integral_v<Null> && is_pointer_or_member_pointer<A>, int> = 0>
+        constexpr auto operator!=(Null) &&
+        {
+            return expression_decomposer<A, std::nullptr_t, ops::neq>(std::forward<A>(a), nullptr);
+        }
+
+        template<typename Pointer, std::enable_if_t<
+            is_pointer_or_member_pointer<Pointer> &&
+            std::is_integral_v<strip<A>>,int> = 0>
+        constexpr auto operator!=(Pointer&& pointer) &&
+        {
+            return expression_decomposer<std::nullptr_t, Pointer, ops::neq>(nullptr, std::forward<Pointer>(pointer));
+        }
+        
+        template<typename O,std::enable_if_t<!is_NULL_comparable<A,O>,int> = 0> [[nodiscard]] constexpr auto operator==(O&& operand) && {
+            return expression_decomposer<A, O, ops::eq>(std::forward<A>(a), std::forward<O>(operand)); 
+        }
+
+        template<typename O, std::enable_if_t<!is_NULL_comparable<A, O>, int> = 0> [[nodiscard]] constexpr auto operator!=(O&& operand)&& {
+            return expression_decomposer<A, O, ops::neq>(std::forward<A>(a), std::forward<O>(operand));
+        }
+
         #define LIBASSERT_GEN_OP_BOILERPLATE(functor, op) \
         template<typename O> [[nodiscard]] constexpr auto operator op(O&& operand) && { \
             return expression_decomposer<A, O, functor>(std::forward<A>(a), std::forward<O>(operand)); \
@@ -278,6 +320,7 @@ namespace detail {
              // This use of std::forward may look surprising but it's correct
             return std::forward<A>(a);
         }
+
         #define LIBASSERT_GEN_OP_BOILERPLATE(functor, op) \
         template<typename O> [[nodiscard]] constexpr auto operator op(O&& operand) && { \
             static_assert(!is_nothing<A>); \
@@ -285,6 +328,10 @@ namespace detail {
             return expression_decomposer<V, O, functor>(get_value(), std::forward<O>(operand)); \
         }
         LIBASSERT_DO_GEN_OP_BOILERPLATE
+
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::eq,==)
+        LIBASSERT_GEN_OP_BOILERPLATE(ops::neq,!=)
+
         #undef LIBASSERT_GEN_OP_BOILERPLATE
     };
 
