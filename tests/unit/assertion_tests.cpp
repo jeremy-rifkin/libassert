@@ -275,6 +275,26 @@ TEST(LibassertBasic, NULLMacroComparison) {
     );
 }
 
+TEST(LibassertBasic, Bitfields) {
+    struct Bit {
+    int bit : 1;
+  };
+ Bit bit{1};
+  CHECK(
+      ASSERT(bit.bit == 1),
+       R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(bit.bit == 1);
+        )XX"
+  );
+
+  CHECK(ASSERT(1 == bit.bit),
+        R"XX(
+        |Assertion failed at <LOCATION>:
+        |    ASSERT(1 == bit.bit);
+        )XX");
+}
+
 
 TEST(LibassertBasic, LiteralFormatting) {
     const uint16_t flags = 0b000101010;
@@ -599,6 +619,7 @@ TEST(LibassertBasic, General) {
         |        printable{2.55} => (printable = 2.55)
         )XX"
     );
+#if LIBASSERT_CPLUSPLUS >= 202002
     CHECK(
         ASSERT([] { return false; } ()),
         R"XX(
@@ -606,6 +627,7 @@ TEST(LibassertBasic, General) {
         |    ASSERT([] { return false; } ());
         )XX"
     );
+#endif
 }
 
 TEST(LibassertBasic, SignedUnsignedComparisonWithoutSafeCompareMode) {
@@ -700,6 +722,7 @@ TEST(LibassertBasic, ExpressionDecomposition) {
         |        x -= x -= 1 => 0
         )XX"
     );
+
     CHECK(
         ASSERT(true ? false : true, "pffft"),
         R"XX(

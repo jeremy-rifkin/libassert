@@ -5,8 +5,47 @@
 // https://github.com/jeremy-rifkin/libassert
 
 #include <libassert/platform.hpp>
-
+#include <libassert/expression-decomposition.hpp>
 #include <string_view>
+
+LIBASSERT_BEGIN_NAMESPACE
+namespace detail {
+
+template <typename Concept, typename = void>
+inline constexpr bool is_referencable_expression_impl = false;
+
+template <typename Concept>
+inline constexpr bool is_referencable_expression_impl<
+    Concept,
+    decltype(void(std::declval<Concept>()(detail::expression_decomposer{})))> = true;
+
+template <typename Concept>
+constexpr bool is_referencable_expression(const Concept&) {
+  return is_referencable_expression_impl<Concept>;
+}
+// A macro that checks whether an expression can be decomposed by the
+// decomposer. An expression that fails is a bitfield for example.
+#define LIBASSERT_IS_DECOMPOSABLE_EXPR(expr)                          \
+  libassert::detail::is_referencable_expression(                      \
+      [](auto expr_decomposer) -> decltype(std::move(expr_decomposer) \
+                                           << expr) {})
+
+// The decomposer is passed as a template parameter to not evaluate the other
+// path and cause a hard error
+#define LIBASSERT_DECOMPOSER(expr)                                             \
+  [&](auto decomposer) {                                                       \
+    if constexpr (sizeof(decomposer) &&                                        \
+                  LIBASSERT_IS_DECOMPOSABLE_EXPR(expr)) {                      \
+      return libassert::detail::expression_decomposer(std::move(decomposer)    \
+                                                      << expr);                \
+    } else {                                                                   \
+      return std::move(decomposer) << (expr);                                  \
+    }                                                                          \
+  }(libassert::detail::expression_decomposer{})
+
+} // namespace detail
+LIBASSERT_END_NAMESPACE
+
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
  // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
@@ -208,9 +247,7 @@ LIBASSERT_END_NAMESPACE
         if constexpr(false) { (void)(expr);} \
         LIBASSERT_WARNING_PRAGMA_PUSH \
         LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
-        auto libassert_decomposer = libassert::detail::expression_decomposer( \
-            libassert::detail::expression_decomposer{} << expr \
-        ); \
+        auto libassert_decomposer = LIBASSERT_DECOMPOSER(expr);\
         LIBASSERT_WARNING_PRAGMA_POP \
         LIBASSERT_ASSERT_MAIN_BODY( \
             expr, \
