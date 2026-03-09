@@ -32,7 +32,7 @@ int main() {
         {"a<x<x<x<x<x<x<x<x<x<x<1>>>>>>>>>>", "<", false}, // <- max depth exceeded
         {"1 == something<a == b>>2", "==", false}, // <- ambiguous
         {"1 == something<a == b>>2", "<", false}, // <- should be an error
-        {"1 < something<a < b>>2", "<", false}, // <- ambiguous
+        {"1 < something<a < b>>2", "<", true}, // <- template interpretation leaves bare term
         {"1 < something<a < b>> - 2", "<", false}, // <- ambiguous
         {"18446744073709551606ULL == -10", "==", true}
     };

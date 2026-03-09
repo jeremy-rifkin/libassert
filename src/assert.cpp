@@ -283,16 +283,27 @@ namespace detail {
         const color_scheme& scheme
     ) {
         std::string output = "    Extra diagnostics:\n";
-        size_t lw = 0;
-        for(const auto& entry : extra_diagnostics) {
-            lw = std::max(lw, entry.expression.size());
+        // Generate placeholder names for entries with empty expressions (happens on parse failure)
+        std::vector<std::string> placeholder_storage;
+        std::vector<std::string_view> extra_diagnostic_strings;
+        for(size_t i = 0; i < extra_diagnostics.size(); i++) {
+            if(extra_diagnostics[i].expression.empty()) {
+                placeholder_storage.push_back(microfmt::format("{{arg {}}}", i));
+                extra_diagnostic_strings.push_back(placeholder_storage.back());
+            } else {
+                extra_diagnostic_strings.push_back(extra_diagnostics[i].expression);
+            }
         }
-        for(const auto& entry : extra_diagnostics) {
+        size_t lw = 0;
+        for(const auto& expression : extra_diagnostic_strings) {
+            lw = std::max(lw, expression.size());
+        }
+        for(const auto& [entry, expression] : zip(extra_diagnostics, extra_diagnostic_strings)) {
             if(term_width >= min_term_width) {
                 output += wrapped_print(
                     {
                         { 7, {{"", ""}} }, // 8 space indent, wrapper will add a space
-                        { lw, highlight_blocks(entry.expression, scheme) },
+                        { lw, highlight_blocks(expression, scheme) },
                         { arrow.size(), {{"", arrow}} },
                         { term_width - lw - 8 /* indent */ - 4 /* arrow */, highlight_blocks(entry.stringification, scheme) }
                     },
@@ -301,8 +312,8 @@ namespace detail {
             } else {
                 output += microfmt::format(
                     "        {}{<{}} {} {}\n",
-                    detail::highlight(entry.expression, scheme),
-                    lw - entry.expression.length(),
+                    detail::highlight(expression, scheme),
+                    lw - expression.length(),
                     "",
                     arrow,
                     indent(

@@ -192,8 +192,9 @@ namespace detail {
                     auto named_literal = peek_any(to_array<std::string_view>({"false", "true", "nullptr"}));
                     named_literal && !is_identifier_continue(peek(named_literal->size()))
                 ) {
+                    auto begin = pos();
                     TRY(advance(named_literal->size()));
-                    tokens.push_back({token_e::named_literal, *named_literal});
+                    tokens.push_back({token_e::named_literal, source_view(begin, named_literal->size())});
                 }
                 else if( // char literals
                     auto prefix = peek_any(to_array<std::string_view>({"u8", "u", "U", "L"}));
@@ -202,8 +203,7 @@ namespace detail {
                     auto begin = pos();
                     TRY(advance(prefix.value_or("").size()));
                     TRY(read_char_literal());
-                    auto end = pos();
-                    tokens.push_back({token_e::string, std::string_view(source.data() + begin, end - begin)});
+                    tokens.push_back({token_e::string, source_view_from(begin)});
                 }
                 else if( // string literals
                     // reusing same prefix from last if
@@ -217,52 +217,51 @@ namespace detail {
                     } else {
                         TRY(read_string_literal());
                     }
-                    auto end = pos();
-                    tokens.push_back({token_e::string, std::string_view(source.data() + begin, end - begin)});
+                    tokens.push_back({token_e::string, source_view_from(begin)});
                 }
                 else if(isdigit(peek()) || (peek() == '.' && isdigit(peek(1)))) { // integer, float
                     auto begin = pos();
                     TRY(read_numeric_literal());
-                    auto end = pos();
-                    tokens.push_back({token_e::number, std::string_view(source.data() + begin, end - begin)});
+                    tokens.push_back({token_e::number, source_view_from(begin)});
                 }
                 // 2. punctuation
                 //     handle normal punctuation and alternative operators separately
                 else if(auto punctuator = peek_any(punctuators_and_operators)) {
+                    auto begin = pos();
                     TRY(advance(punctuator->size()));
                     // handle <:: edge case https://eel.is/c++draft/lex.pptoken#3.2
                     if(punctuator == "<:" && peek() == ':' && !needle(peek(1)).is_in(':', '>')) {
                         rollback(1);
-                        tokens.push_back({token_e::punctuation, "<"});
+                        tokens.push_back({token_e::punctuation, source_view(begin, 1)});
                     }
                     // handle >> decomposition for templates
                     else if(decompose_shr && punctuator == ">>") {
-                        tokens.push_back({token_e::punctuation, ">"});
-                        tokens.push_back({token_e::punctuation, ">"});
+                        tokens.push_back({token_e::punctuation, source_view(begin, 1)});
+                        tokens.push_back({token_e::punctuation, source_view(begin + 1, 1)});
                     } else {
-                        tokens.push_back({token_e::punctuation, *punctuator});
+                        tokens.push_back({token_e::punctuation, source_view(begin, punctuator->size())});
                     }
                 }
                 else if(
                     auto alternative_operator = peek_any(alternative_operators);
                     alternative_operator && !is_identifier_continue(peek(alternative_operator->size()))
                 ) {
+                    auto begin = pos();
                     TRY(advance(alternative_operator->size()));
-                    tokens.push_back({token_e::punctuation, *alternative_operator});
+                    tokens.push_back({token_e::punctuation, source_view(begin, alternative_operator->size())});
                 }
                 // 3. identifiers
                 else if(is_identifier_start(peek())) {
                     auto begin = pos();
                     TRY(read_identifier_or_keyword());
-                    auto end = pos();
-                    std::string_view contents = std::string_view(source.data() + begin, end - begin);
+                    auto contents = source_view_from(begin);
                     tokens.push_back({
                         keywords.find(contents) == keywords.end() ? token_e::identifier : token_e::keyword,
                         contents
                     });
                 } else {
                     // we don't know....
-                    tokens.push_back({token_e::unknown, std::string_view(source.data(), 1)});
+                    tokens.push_back({token_e::unknown, source_view(pos(), 1)});
                     TRY(advance());
                 }
                 // // universal character escapes like \U0001F60A get stringified so we have to handle them
@@ -282,12 +281,10 @@ namespace detail {
     private:
         token_t read_whitespace() {
             auto begin = pos();
-            std::size_t count = 0;
             while(isspace(peek())) {
                 LIBASSERT_PRIMITIVE_ASSERT(advance() == std::nullopt);
-                count++;
             }
-            return {token_e::whitespace, std::string_view(source.data() + begin, count)};
+            return {token_e::whitespace, source_view_from(begin)};
         }
 
         [[nodiscard]] std::optional<lexer_error> read_comment() {
@@ -357,7 +354,7 @@ namespace detail {
             while(!end() && peek() != '(') {
                 TRY(advance());
             }
-            auto d_char_sequence = std::string_view(source.data() + d_begin, pos() - d_begin);
+            auto d_char_sequence = source_view_from(d_begin);
             // read r-char sequence
             while(!end()) {
                 if(peek() == ')' && peek(d_char_sequence, 1) && peek(1 + d_char_sequence.size()) == '"') {
@@ -488,6 +485,14 @@ namespace detail {
 
         [[nodiscard]] std::size_t pos() const {
             return it - source.begin();
+        }
+
+        [[nodiscard]] std::string_view source_view(std::size_t start, std::size_t len) const {
+            return {source.data() + start, len};
+        }
+
+        [[nodiscard]] std::string_view source_view_from(std::size_t start) const {
+            return source_view(start, pos() - start);
         }
 
         [[nodiscard]] char peek(std::size_t count = 0) const {

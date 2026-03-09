@@ -184,6 +184,43 @@ namespace detail {
             && a.unknown == b.unknown
             && a.reset == b.reset;
     }
+
+    template<typename I1, typename I2>
+    class zip_iterator {
+        I1 it1;
+        I2 it2;
+
+    public:
+        zip_iterator(I1 _it1, I2 _it2) : it1(_it1), it2(_it2) {}
+        auto operator*() const {
+            return std::tie(*it1, *it2);
+        }
+        zip_iterator& operator++() {
+            ++it1;
+            ++it2;
+            return *this;
+        }
+        bool operator!=(const zip_iterator& other) const {
+            return it1 != other.it1 && it2 != other.it2;
+        }
+    };
+
+    template<typename R1, typename R2>
+    class zip {
+        R1 r1;
+        R2 r2;
+
+    public:
+        zip(R1&& _r1, R2&& _r2) : r1(std::forward<R1>(_r1)), r2(std::forward<R2>(_r2)) {}
+        auto begin() {
+            return zip_iterator(std::begin(r1), std::begin(r2));
+        }
+        auto end() {
+            return zip_iterator(std::end(r1), std::end(r2));
+        }
+    };
+
+    template<typename R1, typename R2> zip(R1&&, R2&&) -> zip<R1, R2>;
 }
 LIBASSERT_END_NAMESPACE
 
