@@ -41,6 +41,8 @@ namespace detail {
     std::string_view trim_suffix(std::string_view expression);
 
     bool is_bitwise(std::string_view op);
+
+    std::vector<std::string_view> split_args_string(std::string_view args_string, size_t n_args);
 }
 LIBASSERT_END_NAMESPACE
 

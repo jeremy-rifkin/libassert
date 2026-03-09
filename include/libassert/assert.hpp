@@ -211,18 +211,13 @@ LIBASSERT_BEGIN_NAMESPACE
     };
 
     namespace detail {
-        struct sv_span {
-            const std::string_view* data;
-            std::size_t size;
-        };
-
-        // collection of assertion data that can be put in static storage and all passed by a single pointer
+        // collection of assertion metadata that can be put in static storage and all passed by a single pointer
         struct LIBASSERT_EXPORT assert_static_parameters {
             std::string_view macro_name;
             assert_type type;
             std::string_view expr_str;
             source_location location;
-            sv_span args_strings;
+            std::string_view args_string;
         };
     }
 
@@ -325,6 +320,12 @@ namespace detail {
         std::string_view target_op
     );
 
+    [[nodiscard]] LIBASSERT_EXPORT std::vector<std::string_view> split_args_string(
+        std::string_view args_string,
+        size_t n_args
+    );
+
+
     /*
      * assert diagnostics generation
      */
@@ -364,7 +365,7 @@ namespace detail {
     inline void process_arg( // TODO: Don't inline
         assertion_info& info,
         size_t,
-        sv_span,
+        const std::vector<std::string_view>&,
         const pretty_function_name_wrapper& t
     ) {
         info.function = t.pretty_function;
@@ -379,7 +380,7 @@ namespace detail {
     LIBASSERT_ATTR_COLD
     // TODO
     // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    void process_arg(assertion_info& info, size_t i, sv_span args_strings, const T& t) {
+    void process_arg(assertion_info& info, size_t i, const std::vector<std::string_view>& args_strings, const T& t) {
         if constexpr(is_string_type<T>) {
             if(i == 0) {
                 set_message(info, t);
@@ -387,15 +388,17 @@ namespace detail {
             }
         }
         if constexpr(isa<T, int>) {
-            info.extra_diagnostics.push_back(make_extra_diagnostic(args_strings.data[i], t));
+            info.extra_diagnostics.push_back(make_extra_diagnostic(args_strings[i], t));
         } else {
-            info.extra_diagnostics.push_back({ args_strings.data[i], generate_stringification(t) });
+            info.extra_diagnostics.push_back({ args_strings[i], generate_stringification(t) });
         }
     }
 
     template<typename... Args>
     LIBASSERT_ATTR_COLD
-    void process_args(assertion_info& info, sv_span args_strings, Args&... args) {
+    void process_args(assertion_info& info, std::string_view args_string, const Args&... args) {
+        constexpr size_t n_extra_args = sizeof...(args) - 1; // - 1 for pretty function signature
+        auto args_strings = split_args_string(args_string, n_extra_args);
         size_t i = 0;
         (process_arg(info, i++, args_strings, args), ...);
         (void)args_strings;
@@ -421,10 +424,9 @@ LIBASSERT_END_NAMESPACE
         Args&&... args
     ) {
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
-        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(sizeof...(args) <= params->args_strings.size);
         assertion_info info(params, detail::generate_trace(), sizeof_extra_diagnostics);
         // process_args fills in the message, extra_diagnostics, and pretty_function
-        process_args(info, params->args_strings, args...);
+        process_args(info, params->args_string, args...);
         // generate binary diagnostics
         if constexpr(is_nothing<C>) {
             static_assert(is_nothing<B> && !is_nothing<A>);
@@ -462,10 +464,9 @@ LIBASSERT_END_NAMESPACE
         Args&&... args
     ) {
         const size_t sizeof_extra_diagnostics = sizeof...(args) - 1; // - 1 for pretty function signature
-        LIBASSERT_PRIMITIVE_DEBUG_ASSERT(sizeof...(args) <= params->args_strings.size);
         assertion_info info(params, detail::generate_trace(), sizeof_extra_diagnostics);
         // process_args fills in the message, extra_diagnostics, and pretty_function
-        process_args(info, params->args_strings, args...);
+        process_args(info, params->args_string, args...);
         // send off
         fail(info);
         LIBASSERT_PRIMITIVE_PANIC("PANIC/UNREACHABLE failure handler returned");

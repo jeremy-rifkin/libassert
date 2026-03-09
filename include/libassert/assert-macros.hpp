@@ -8,75 +8,6 @@
 
 #include <string_view>
 
-#if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC || !LIBASSERT_NON_CONFORMANT_MSVC_PREPROCESSOR
- // Macro mapping utility by William Swanson https://github.com/swansontec/map-macro/blob/master/map.h
- #define LIBASSERT_EVAL0(...) __VA_ARGS__
- #define LIBASSERT_EVAL1(...) LIBASSERT_EVAL0(LIBASSERT_EVAL0(LIBASSERT_EVAL0(__VA_ARGS__)))
- #define LIBASSERT_EVAL2(...) LIBASSERT_EVAL1(LIBASSERT_EVAL1(LIBASSERT_EVAL1(__VA_ARGS__)))
- #define LIBASSERT_EVAL3(...) LIBASSERT_EVAL2(LIBASSERT_EVAL2(LIBASSERT_EVAL2(__VA_ARGS__)))
- #define LIBASSERT_EVAL4(...) LIBASSERT_EVAL3(LIBASSERT_EVAL3(LIBASSERT_EVAL3(__VA_ARGS__)))
- #define LIBASSERT_EVAL(...)  LIBASSERT_EVAL4(LIBASSERT_EVAL4(LIBASSERT_EVAL4(__VA_ARGS__)))
- #define LIBASSERT_MAP_END(...)
- #define LIBASSERT_MAP_OUT
- #define LIBASSERT_MAP_COMMA ,
- #define LIBASSERT_MAP_GET_END2() 0, LIBASSERT_MAP_END
- #define LIBASSERT_MAP_GET_END1(...) LIBASSERT_MAP_GET_END2
- #define LIBASSERT_MAP_GET_END(...) LIBASSERT_MAP_GET_END1
- #define LIBASSERT_MAP_NEXT0(test, next, ...) next LIBASSERT_MAP_OUT
- #define LIBASSERT_MAP_NEXT1(test, next) LIBASSERT_MAP_NEXT0(test, next, 0)
- #define LIBASSERT_MAP_NEXT(test, next)  LIBASSERT_MAP_NEXT1(LIBASSERT_MAP_GET_END test, next)
- #define LIBASSERT_MAP0(f, x, peek, ...) f(x) LIBASSERT_MAP_NEXT(peek, LIBASSERT_MAP1)(f, peek, __VA_ARGS__)
- #define LIBASSERT_MAP1(f, x, peek, ...) f(x) LIBASSERT_MAP_NEXT(peek, LIBASSERT_MAP0)(f, peek, __VA_ARGS__)
- #define LIBASSERT_MAP_LIST_NEXT1(test, next) LIBASSERT_MAP_NEXT0(test, LIBASSERT_MAP_COMMA next, 0)
- #define LIBASSERT_MAP_LIST_NEXT(test, next)  LIBASSERT_MAP_LIST_NEXT1(LIBASSERT_MAP_GET_END test, next)
- #define LIBASSERT_MAP_LIST0(f, x, peek, ...) \
-                                   f(x) LIBASSERT_MAP_LIST_NEXT(peek, LIBASSERT_MAP_LIST1)(f, peek, __VA_ARGS__)
- #define LIBASSERT_MAP_LIST1(f, x, peek, ...) \
-                                   f(x) LIBASSERT_MAP_LIST_NEXT(peek, LIBASSERT_MAP_LIST0)(f, peek, __VA_ARGS__)
- #define LIBASSERT_MAP(f, ...) LIBASSERT_EVAL(LIBASSERT_MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
-#else
- // https://stackoverflow.com/a/29474124/15675011
- #define LIBASSERT_PLUS_TEXT_(x,y) x ## y
- #define LIBASSERT_PLUS_TEXT(x, y) LIBASSERT_PLUS_TEXT_(x, y)
- #define LIBASSERT_ARG_1(_1, ...) _1
- #define LIBASSERT_ARG_2(_1, _2, ...) _2
- #define LIBASSERT_ARG_3(_1, _2, _3, ...) _3
- #define LIBASSERT_ARG_40( _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, \
-                 _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, \
-                 _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, \
-                 _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, \
-                 ...) _39
- #define LIBASSERT_OTHER_1(_1, ...) __VA_ARGS__
- #define LIBASSERT_OTHER_3(_1, _2, _3, ...) __VA_ARGS__
- #define LIBASSERT_EVAL0(...) __VA_ARGS__
- #define LIBASSERT_EVAL1(...) LIBASSERT_EVAL0(LIBASSERT_EVAL0(LIBASSERT_EVAL0(__VA_ARGS__)))
- #define LIBASSERT_EVAL2(...) LIBASSERT_EVAL1(LIBASSERT_EVAL1(LIBASSERT_EVAL1(__VA_ARGS__)))
- #define LIBASSERT_EVAL3(...) LIBASSERT_EVAL2(LIBASSERT_EVAL2(LIBASSERT_EVAL2(__VA_ARGS__)))
- #define LIBASSERT_EVAL4(...) LIBASSERT_EVAL3(LIBASSERT_EVAL3(LIBASSERT_EVAL3(__VA_ARGS__)))
- #define LIBASSERT_EVAL(...) LIBASSERT_EVAL4(LIBASSERT_EVAL4(LIBASSERT_EVAL4(__VA_ARGS__)))
- #define LIBASSERT_EXPAND(x) x
- #define LIBASSERT_MAP_SWITCH(...) \
-     LIBASSERT_EXPAND(LIBASSERT_ARG_40(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2, \
-             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, \
-             2, 2, 2, 2, 2, 2, 2, 2, 2, \
-             2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0))
- #define LIBASSERT_MAP_A(...) LIBASSERT_PLUS_TEXT(LIBASSERT_MAP_NEXT_, \
-                                            LIBASSERT_MAP_SWITCH(0, __VA_ARGS__)) (LIBASSERT_MAP_B, __VA_ARGS__)
- #define LIBASSERT_MAP_B(...) LIBASSERT_PLUS_TEXT(LIBASSERT_MAP_NEXT_, \
-                                            LIBASSERT_MAP_SWITCH(0, __VA_ARGS__)) (LIBASSERT_MAP_A, __VA_ARGS__)
- #define LIBASSERT_MAP_CALL(fn, Value) LIBASSERT_EXPAND(fn(Value))
- #define LIBASSERT_MAP_OUT
- #define LIBASSERT_MAP_NEXT_2(...) \
-     LIBASSERT_MAP_CALL(LIBASSERT_EXPAND(LIBASSERT_ARG_2(__VA_ARGS__)), \
-     LIBASSERT_EXPAND(LIBASSERT_ARG_3(__VA_ARGS__))) \
-     LIBASSERT_EXPAND(LIBASSERT_ARG_1(__VA_ARGS__)) \
-     LIBASSERT_MAP_OUT \
-     (LIBASSERT_EXPAND(LIBASSERT_ARG_2(__VA_ARGS__)), LIBASSERT_EXPAND(LIBASSERT_OTHER_3(__VA_ARGS__)))
- #define LIBASSERT_MAP_NEXT_0(...)
- #define LIBASSERT_MAP(...)    LIBASSERT_EVAL(LIBASSERT_MAP_A(__VA_ARGS__))
-#endif
-
-#define LIBASSERT_STRINGIFY(x) #x,
 #define LIBASSERT_COMMA ,
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
@@ -108,38 +39,28 @@ LIBASSERT_END_NAMESPACE
 // TODO: Try to do a hybrid in C++20 with std::is_constant_evaluated?
 #if defined(__cpp_constexpr) && __cpp_constexpr >= 202211L
 // Can just use static constexpr everywhere
-#define LIBASSERT_STATIC_DATA(name, type, expr_str, ...) \
-    /* extra string here because of extra comma from map, also serves as terminator */ \
-    /* LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS because msvc */ \
+#define LIBASSERT_STATIC_DATA(name, type, expr_str, args_string) \
     /* Trailing return type here to work around a gcc <= 9.2 bug */ \
     /* Oddly only affecting builds under -DNDEBUG https://godbolt.org/z/5Treozc4q */ \
     using libassert_params_t = libassert::detail::assert_static_parameters; \
-    /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
-    static constexpr std::string_view libassert_arg_strings[] = { \
-        LIBASSERT_MAP(LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS(__VA_ARGS__)) "" \
-    }; \
     static constexpr libassert_params_t _libassert_params = { \
         name LIBASSERT_COMMA \
         type LIBASSERT_COMMA \
         expr_str LIBASSERT_COMMA \
         {} LIBASSERT_COMMA \
-        {libassert_arg_strings, sizeof(libassert_arg_strings) / sizeof(std::string_view)} LIBASSERT_COMMA \
+        args_string \
     }; \
     const libassert_params_t* libassert_params = &_libassert_params;
 #else
-#define LIBASSERT_STATIC_DATA(name, type, expr_str, ...) \
+#define LIBASSERT_STATIC_DATA(name, type, expr_str, args_string) \
     using libassert_params_t = libassert::detail::assert_static_parameters; \
-    /* NOLINTNEXTLINE(*-avoid-c-arrays) */ \
     const libassert_params_t* libassert_params = []() -> const libassert_params_t* { \
-        static constexpr std::string_view libassert_arg_strings[] = { \
-            LIBASSERT_MAP(LIBASSERT_STRINGIFY LIBASSERT_VA_ARGS(__VA_ARGS__)) "" \
-        }; \
         static constexpr libassert_params_t _libassert_params = { \
             name LIBASSERT_COMMA \
             type LIBASSERT_COMMA \
             expr_str LIBASSERT_COMMA \
             {} LIBASSERT_COMMA \
-            {libassert_arg_strings, sizeof(libassert_arg_strings) / sizeof(std::string_view)} LIBASSERT_COMMA \
+            args_string \
         }; \
         return &_libassert_params; \
     }();
@@ -184,7 +105,7 @@ LIBASSERT_END_NAMESPACE
          libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
          LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
          failaction \
-         LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, __VA_ARGS__) \
+         LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, #expr, #__VA_ARGS__) \
          libassert::detail::process_assert_fail( \
              decomposer_name, \
              libassert_params \
@@ -196,7 +117,7 @@ LIBASSERT_END_NAMESPACE
  #define LIBASSERT_PANIC_MAIN_BODY(name, type, pretty_function_arg, ...) \
      libassert::ERROR_ASSERTION_FAILURE_IN_CONSTEXPR_CONTEXT(); \
      LIBASSERT_BREAKPOINT_IF_DEBUGGING_ON_FAIL(); \
-     LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, "", __VA_ARGS__) \
+     LIBASSERT_STATIC_DATA(name, libassert::assert_type::type, "", #__VA_ARGS__) \
      libassert::detail::process_panic( \
          libassert_params \
          LIBASSERT_VA_ARGS(__VA_ARGS__) pretty_function_arg \
@@ -221,7 +142,7 @@ LIBASSERT_END_NAMESPACE
             LIBASSERT_PRETTY_FUNCTION_ARG, \
             __VA_ARGS__ \
         ) \
-    } while(0) \
+    } while(0)
 
 #define LIBASSERT_INVOKE_PANIC(name, type, ...) \
     do { \

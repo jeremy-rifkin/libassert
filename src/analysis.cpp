@@ -1,13 +1,13 @@
 #include <algorithm>
-#include <cstdio>
 #include <cctype>
 #include <cmath>
+#include <cstdio>
 #include <initializer_list>
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <regex>
-#include <set>
 #include <stdexcept>
 #include <string_view>
 #include <string>
@@ -381,30 +381,101 @@ namespace detail {
             return is_shr ? std::string_view(">>") : std::string_view(tokens[i].str);
         }
 
+        // Pseudoparse is given a driver tracks state and decides what to do while exploring parse trees
+        // These are copied in order to save/restore state on template `<` branching
+
+        enum class pseudoparse_action { ok, prune, abort };
+
+        // Tracks lowest-precedence operator split point, filtering by target_op
+        struct decompose_driver {
+            int lowest_precedence = 0;
+            int split_index = -1;
+            std::string_view current_split_op;
+            std::string_view target_op;
+            std::optional<int>& result;
+
+            pseudoparse_action on_operator(size_t i, std::string_view op, int precedence) {
+                if(
+                    precedence < lowest_precedence
+                    || (precedence == lowest_precedence && precedence != -10)
+                ) {
+                    split_index = static_cast<int>(i);
+                    lowest_precedence = precedence;
+                    current_split_op = op;
+                }
+                return pseudoparse_action::ok;
+            }
+
+            pseudoparse_action on_complete() {
+                if(split_index != -1 && current_split_op == target_op) {
+                    if(result && *result != split_index) {
+                        return pseudoparse_action::abort;
+                    } else {
+                        result = split_index;
+                    }
+                }
+                return pseudoparse_action::ok;
+            }
+        };
+
+        struct arg_split_driver {
+            std::vector<size_t>& commas; // lives in caller, shared across branches, storage is resused to avoid copying
+            size_t commas_count; // per-branch logical size
+            size_t n_commas;
+            std::optional<std::vector<size_t>>& result;
+
+            pseudoparse_action on_operator(size_t i, std::string_view op, int) {
+                if(op == ",") {
+                    if(commas_count < commas.size()) {
+                        commas[commas_count] = i;
+                    } else {
+                        commas.push_back(i);
+                    }
+                    commas_count++;
+                    if(commas_count > n_commas) {
+                        // stop exploring this branch, but not an abort of the whole thing
+                        return pseudoparse_action::prune;
+                    }
+                }
+                return pseudoparse_action::ok;
+            }
+
+            pseudoparse_action on_complete() {
+                if(commas_count == n_commas) {
+                    if(!result) {
+                        result.emplace(commas.begin(), commas.begin() + commas_count);
+                    } else if(
+                        !std::equal(result->begin(), result->end(), commas.begin(), commas.begin() + commas_count)
+                    ) {
+                        return pseudoparse_action::abort;
+                    }
+                }
+                return pseudoparse_action::ok;
+            }
+        };
+
         // In this function we are essentially exploring all possible parse trees for an expression
-        // an making an attempt to disambiguate as much as we can. It's potentially O(2^t) (?) with
+        // and making an attempt to disambiguate as much as we can. It's potentially O(2^t) (?) with
         // t being the number of possible templates in the expression, but t is anticipated to
         // always be small.
-        // Returns true if parse tree traversal was a success, false if depth was exceeded
+        enum class pseudoparse_result { ok, abort };
         static constexpr int max_depth = 10;
         // TODO
         // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-        bool pseudoparse(
+        template<typename Driver>
+        pseudoparse_result pseudoparse(
             const std::vector<token_t>& tokens,
-            const std::string_view target_op,
             size_t i,
-            int current_lowest_precedence,
+            Driver driver, // taken by value so we fork the state
             int template_depth,
-            int middle_index, // where the split currently is, current op = tokens[middle_index]
-            int depth,
-            std::set<int>& output
+            int depth
         ) {
             #ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
             (void)fprintf(stderr, "*");
             #endif
             if(depth > max_depth) {
                 (void)fprintf(stderr, "Max depth exceeded\n");
-                return false;
+                return pseudoparse_result::abort;
             }
             // precedence table is binary, unary operators have highest precedence
             // we can figure out unary / binary easy enough
@@ -441,6 +512,39 @@ namespace detail {
                 switch(token.type) {
                     case token_e::punctuation:
                         if(operators.count(token.str)) {
+                            // Comma in term position is never valid
+                            if(state == expecting_term && token.str == ",") {
+                                return pseudoparse_result::ok;
+                            }
+                            // No branch here: This must be a close. C++ standard
+                            // Disambiguates by treating > always as a template parameter
+                            // list close and >> is broken down.
+                            // >= and >>= don't need to be broken down and we don't need to
+                            // worry about re-tokenizing beyond just the simple breakdown.
+                            // I.e. we don't need to worry about x<2>>>1 which is tokenized
+                            // as x < 2 >> > 1 but perhaps being intended as x < 2 > >> 1.
+                            // Standard has saved us from this complexity.
+                            // Note: >> breakdown moved to initial tokenization so we can
+                            // take the token vector by reference.
+                            if(template_depth > 0 && token.str == ">") {
+                                template_depth--;
+                                state = expecting_operator;
+                                // reject template interpretation if closing > is followed by a bare term
+                                if(template_depth == 0) {
+                                    size_t j = i + 1;
+                                    while(j < tokens.size() && tokens[j].type == token_e::whitespace) {
+                                        j++;
+                                    }
+                                    if(
+                                        j < tokens.size()
+                                        && tokens[j].type != token_e::punctuation
+                                        && tokens[j].type != token_e::whitespace
+                                    ) {
+                                        return pseudoparse_result::ok;
+                                    }
+                                }
+                                continue;
+                            }
                             if(state == expecting_term) {
                                 // must be unary, continue
                             } else {
@@ -448,17 +552,16 @@ namespace detail {
                                 // also must be preceeded by an identifier
                                 if(token.str == "<" && find_last_non_ws(tokens, i).type == token_e::identifier) {
                                     // branch 1: this is a template opening
-                                    const bool success = pseudoparse(
+                                    // driver is passed by value, so the copy provides automatic save/restore
+                                    const auto result = pseudoparse(
                                         tokens,
-                                        target_op,
                                         i + 1,
-                                        current_lowest_precedence,
+                                        driver,
                                         template_depth + 1,
-                                        middle_index, depth + 1,
-                                        output
+                                        depth + 1
                                     );
-                                    if(!success) { // early exit if we have to discard
-                                        return false;
+                                    if(result == pseudoparse_result::abort) {
+                                        return pseudoparse_result::abort;
                                     }
                                     // branch 2: this is a binary operator // fallthrough
                                 } else if(token.str == "<" && normalize_brace(find_last_non_ws(tokens, i).str) == "]") {
@@ -468,37 +571,17 @@ namespace detail {
                                     state = expecting_operator;
                                     continue;
                                 }
-                                if(template_depth > 0 && token.str == ">") {
-                                    // No branch here: This must be a close. C++ standard
-                                    // Disambiguates by treating > always as a template parameter
-                                    // list close and >> is broken down.
-                                    // >= and >>= don't need to be broken down and we don't need to
-                                    // worry about re-tokenizing beyond just the simple breakdown.
-                                    // I.e. we don't need to worry about x<2>>>1 which is tokenized
-                                    // as x < 2 >> > 1 but perhaps being intended as x < 2 > >> 1.
-                                    // Standard has saved us from this complexity.
-                                    // Note: >> breakdown moved to initial tokenization so we can
-                                    // take the token vector by reference.
-                                    template_depth--;
-                                    state = expecting_operator;
-                                    continue;
-                                }
                                 // binary
-                                if(template_depth == 0) { // ignore precedence in template parameter list
+                                if(template_depth == 0) { // ignore operators in template parameter list
                                     // re-coalesce >> if necessary
                                     const std::string_view op = normalize_op(get_real_op(tokens, i));
-                                    if(
-                                        precedence.count(op)
-                                        && (
-                                            precedence.at(op) < current_lowest_precedence
-                                            || (
-                                                precedence.at(op) == current_lowest_precedence
-                                                && precedence.at(op) != -10
-                                            )
-                                        )
-                                    ) {
-                                        middle_index = (int)i;
-                                        current_lowest_precedence = precedence.at(op);
+                                    if(precedence.count(op)) {
+                                        const auto action = driver.on_operator(i, op, precedence.at(op));
+                                        if(action == pseudoparse_action::prune) {
+                                            return pseudoparse_result::ok;
+                                        } else if(action == pseudoparse_action::abort) {
+                                            return pseudoparse_result::abort;
+                                        }
                                     }
                                     if(op == ">>") {
                                         i++;
@@ -520,7 +603,7 @@ namespace detail {
                             // after the captures list. Not concerned with template parameters at
                             // the moment.
                             if(state == expecting_term && empty && normalize_brace(open) != "[") {
-                                return true; // this is a failed parse tree
+                                return pseudoparse_result::ok;
                             }
                             state = expecting_operator;
                         } else {
@@ -538,17 +621,12 @@ namespace detail {
                         break;
                 }
             }
-            if(
-                middle_index != -1
-                && normalize_op(get_real_op(tokens, middle_index)) == target_op
-                && template_depth == 0
-                && state == expecting_operator
-            ) {
-                output.insert(middle_index);
-            } else {
-                // failed parse tree, ignore
+            if(template_depth == 0 && state == expecting_operator) {
+                if(driver.on_complete() == pseudoparse_action::abort) {
+                    return pseudoparse_result::abort;
+                }
             }
-            return true;
+            return pseudoparse_result::ok;
         }
 
         std::pair<std::string, std::string> decompose_expression(
@@ -601,13 +679,14 @@ namespace detail {
                 return { "left", "right" };
             }
             const auto& tokens = *res;
-            // We're only looking for the split, we can just store a set of split indices. No need
-            // to store a vector<pair<vector<token_t>, vector<token_t>>>
-            std::set<int> candidates;
-            const bool success = pseudoparse(tokens, target_op, 0, 0, 0, -1, 0, candidates);
+            // We only need the index of the operator that splits the expression
+            std::optional<int> split;
+            decompose_driver driver{0, -1, {}, target_op, split};
+            const auto result = pseudoparse(tokens, 0, driver, 0, 0);
             #ifdef _0_DEBUG_ASSERT_DISAMBIGUATION
-             fprintf(stderr, "\n%d %d\n", (int)candidates.size(), success);
-             for(size_t m : candidates) {
+             fprintf(stderr, "\n%d %d\n", split.has_value(), result == pseudoparse_result::ok);
+             if(split) {
+                 const size_t m = *split;
                  std::vector<std::string> left_strings;
                  std::vector<std::string> right_strings;
                  for(size_t i = 0; i < m; i++) left_strings.push_back(tokens[i].str);
@@ -618,10 +697,10 @@ namespace detail {
                  fprintf(stderr, "---\n");
              }
             #endif
-            if(success && candidates.size() == 1) {
+            if(result == pseudoparse_result::ok && split) {
                 std::vector<std::string> left_strings;
                 std::vector<std::string> right_strings;
-                const size_t m = *candidates.begin();
+                const size_t m = *split;
                 for(size_t i = 0; i < m; i++) {
                     left_strings.push_back(std::string(tokens[i].str));
                 }
@@ -804,6 +883,55 @@ namespace detail {
         std::string_view target_op
     ) {
         return analysis::get().decompose_expression(expression, target_op);
+    }
+
+    std::optional<std::vector<size_t>> find_comma_indices(
+        const std::vector<token_t>& tokens,
+        size_t n_commas
+    ) {
+        std::vector<size_t> commas;
+        std::optional<std::vector<size_t>> result;
+        analysis::arg_split_driver driver{commas, 0, n_commas, result};
+        auto parse_result = analysis::get().pseudoparse(tokens, 0, driver, 0, 0);
+        if(parse_result == analysis::pseudoparse_result::ok && result) {
+            return result;
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    std::vector<std::string_view> split_args_string(std::string_view args_string, size_t n_args) {
+        if(n_args == 0 || args_string.empty()) {
+            return {};
+        }
+        if(n_args == 1) {
+            return { trim(args_string) };
+        }
+        const auto res = tokenize(args_string, true);
+        if(!res) {
+            return std::vector<std::string_view>(n_args);
+        }
+        const auto comma_indices = find_comma_indices(*res, n_args - 1);
+        if(!comma_indices) {
+            return std::vector<std::string_view>(n_args);
+        }
+        const auto& tokens = *res;
+        const auto& commas = *comma_indices;
+        // extract the source span covering tokens[first..last] inclusive
+        auto token_span = [&](size_t first, size_t last) {
+            const char* begin = tokens[first].str.data();
+            const char* end = tokens[last].str.data() + tokens[last].str.size();
+            return std::string_view{begin, static_cast<size_t>(end - begin)};
+        };
+        std::vector<std::string_view> result;
+        result.reserve(n_args);
+        size_t start = 0;
+        for(size_t comma_idx : commas) {
+            result.push_back(start < comma_idx ? trim(token_span(start, comma_idx - 1)) : std::string_view{});
+            start = comma_idx + 1;
+        }
+        result.push_back(start < tokens.size() ? trim(token_span(start, tokens.size() - 1)) : std::string_view{});
+        return result;
     }
 }
 LIBASSERT_END_NAMESPACE

@@ -169,6 +169,7 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 
     add_unittest(SOURCE tests/unit/constexpr_contexts.cpp)
     add_unittest(SOURCE tests/unit/disambiguation.cpp)
+    add_unittest(SOURCE tests/unit/parse_args_string.cpp)
     add_unittest(SOURCE tests/unit/lexer.cpp OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor> LIBS GTest::gtest_main)
     add_unittest(SOURCE tests/unit/literals.cpp)
     add_unittest(SOURCE tests/unit/test_public_utilities.cpp)
