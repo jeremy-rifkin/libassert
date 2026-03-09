@@ -189,7 +189,7 @@ Changes since v1:
 **Library structure:**
 - Removed `libassert::utility` and `libassert::config` namespaces
 - Updated the library's cmake target name to `libassert::assert`
-- Updated the library's header to `<libasssert/assert.hpp>`
+- Updated the library's header to `<libassert/assert.hpp>`
 
 **Configuration:**
 - Added configuration for literal formatting
@@ -312,7 +312,7 @@ Core changes:
 - Resolved inconsistent use of `ASSERT` vs `LIBASSERT` for the library's macro prefix
 - Fixed inconsistent use of `assert` vs `libassert` for referring to the library
 - Updated the library's cmake target name to `libassert::assert`
-- Updated the library's header to `<libasssert/assert.hpp>`
+- Updated the library's header to `<libassert/assert.hpp>`
 - Updated internal error handling to use cpptrace exceptions
 - Added cmake integration testing on mingw to CI
 - General CI improvements
