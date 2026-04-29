@@ -83,10 +83,12 @@
  #if LIBASSERT_IS_GCC
   #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+     _Pragma("GCC diagnostic ignored \"-Wc++20-extensions\"") \
      _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"") // #49
  #else
   #define LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
      _Pragma("GCC diagnostic ignored \"-Wparentheses\"") \
+     _Pragma("GCC diagnostic ignored \"-Wc++20-extensions\"") \
      _Pragma("GCC diagnostic ignored \"-Woverloaded-shift-op-parentheses\"")
  #endif
 #else
@@ -145,24 +147,7 @@ LIBASSERT_END_NAMESPACE
     }();
 #endif
 
-// Note about statement expressions: These are needed for two reasons. The first is putting the arg string array and
-// source location structure in .rodata rather than on the stack, the second is a _Pragma for warnings which isn't
-// allowed in the middle of an expression by GCC. The semantics are similar to a function return:
-// Given M m; in parent scope, ({ m; }) is an rvalue M&& rather than an lvalue
-// ({ M m; m; }) doesn't move, it copies
-// ({ M{}; }) does move
-// Of relevance to this: in foo(__extension__ ({ M{1} + M{1}; })); the lifetimes of the M{1} objects end during the
-// statement expression but the lifetime of the returned object is extend to the end of the full foo() expression.
-// A wrapper struct is used here to return an lvalue reference from a gcc statement expression.
-// Note: There is a current issue with tarnaries: auto x = assert(b ? y : y); must copy y. This can be fixed with
-// lambdas but that's potentially very expensive compile-time wise. Need to investigate further.
-// Note: libassert::detail::expression_decomposer(libassert::detail::expression_decomposer{} << expr) done for ternary
-#if LIBASSERT_IS_MSVC
- #define LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{libassert_msvc_pfunc}
-#else
- #define LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
-#endif
-#define LIBASSERT_PRETTY_FUNCTION_ARG ,libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}
+#define LIBASSERT_PRETTY_FUNCTION_ARG ,libassert_pretty_function_arg
 
 #define LIBASSERT_BREAKPOINT_IF_DEBUGGING() \
     do \
@@ -204,34 +189,37 @@ LIBASSERT_END_NAMESPACE
 #endif
 
 #define LIBASSERT_INVOKE(expr, name, type, failaction, ...) \
-    do { \
+    ([&](auto libassert_pretty_function_arg) { \
         LIBASSERT_WARNING_PRAGMA_PUSH \
         LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
-        auto libassert_decomposer = libassert::detail::expression_decomposer( \
-            libassert::detail::expression_decomposer{} << expr \
+        [&](auto libassert_decomposer) { \
+            LIBASSERT_ASSERT_MAIN_BODY( \
+                expr, \
+                name, \
+                type, \
+                failaction, \
+                libassert_decomposer, \
+                static_cast<bool>(libassert_decomposer.get_value()), \
+                LIBASSERT_PRETTY_FUNCTION_ARG, \
+                __VA_ARGS__ \
+            ) \
+        }( \
+            libassert::detail::expression_decomposer( \
+                libassert::detail::expression_decomposer{} << expr \
+            ) \
         ); \
         LIBASSERT_WARNING_PRAGMA_POP \
-        LIBASSERT_ASSERT_MAIN_BODY( \
-            expr, \
-            name, \
-            type, \
-            failaction, \
-            libassert_decomposer, \
-            static_cast<bool>(libassert_decomposer.get_value()), \
-            LIBASSERT_PRETTY_FUNCTION_ARG, \
-            __VA_ARGS__ \
-        ) \
-    } while(0) \
+    }(libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}))
 
 #define LIBASSERT_INVOKE_PANIC(name, type, ...) \
-    do { \
+    ([&](auto libassert_pretty_function_arg) { \
         LIBASSERT_PANIC_MAIN_BODY( \
             name, \
             type, \
             LIBASSERT_PRETTY_FUNCTION_ARG, \
             __VA_ARGS__ \
         ) \
-    } while(0)
+    }(libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC}))
 
 #if LIBASSERT_IS_CLANG || LIBASSERT_IS_GCC
  // Extra set of parentheses here because clang treats __extension__ as a low-precedence unary operator which interferes
@@ -259,33 +247,42 @@ LIBASSERT_END_NAMESPACE
 #endif
 
 #define LIBASSERT_INVOKE_VAL(expr, check_expression, name, type, failaction, ...) \
-    LIBASSERT_ASSERT_STMT_EXPR( \
-        auto libassert_decomposer = libassert::detail::expression_decomposer( \
-            libassert::detail::expression_decomposer{} << expr \
-        ); \
-        decltype(auto) libassert_value = libassert_decomposer.get_value(); \
-        constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
-        if constexpr(check_expression) { \
-            LIBASSERT_ASSERT_MAIN_BODY( \
-                expr, \
-                name, \
-                type, \
-                failaction, \
-                libassert_decomposer, \
-                /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very */ \
-                /* specific about casting a decltype(auto) value inside a lambda. Workaround is to put it in a */ \
-                /* wrapper. https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
-                LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), \
-                LIBASSERT_INVOKE_VAL_PRETTY_FUNCTION_ARG, \
-                __VA_ARGS__ \
-            ) \
-        }, \
-        /* Note: Relying on this call being inlined so inefficiency is eliminated */ \
-        libassert::detail::get_expression_return_value< \
-            libassert_ret_lhs LIBASSERT_COMMA \
-            std::is_lvalue_reference_v<decltype(libassert_value)> \
-        >(libassert_value, libassert_decomposer); \
-    ).value
+        ([&](auto libassert_pretty_function_arg) -> decltype(auto) { \
+            LIBASSERT_WARNING_PRAGMA_PUSH \
+            LIBASSERT_EXPRESSION_DECOMP_WARNING_PRAGMA \
+            return [&](auto libassert_decomposer) -> decltype(auto) { \
+                decltype(auto) libassert_value = libassert_decomposer.get_value(); \
+                constexpr bool libassert_ret_lhs = libassert_decomposer.ret_lhs(); \
+                if constexpr(check_expression) { \
+                    LIBASSERT_ASSERT_MAIN_BODY( \
+                        expr, \
+                        name, \
+                        type, \
+                        failaction, \
+                        libassert_decomposer, \
+                        /* For *some* godforsaken reason static_cast<bool> causes an ICE in MSVC here. Something very */ \
+                        /* specific about casting a decltype(auto) value inside a lambda. Workaround is to put it in a */ \
+                        /* wrapper. https://godbolt.org/z/Kq8Wb6q5j https://godbolt.org/z/nMnqnsMYx */ \
+                        LIBASSERT_STATIC_CAST_TO_BOOL(libassert_value), \
+                        LIBASSERT_PRETTY_FUNCTION_ARG, \
+                        __VA_ARGS__ \
+                    ) \
+                } \
+                /* Note: Relying on this call being inlined so inefficiency is eliminated */ \
+                return \
+                libassert::detail::get_expression_return_value< \
+                    libassert_ret_lhs LIBASSERT_COMMA \
+                    std::is_lvalue_reference_v<decltype(libassert_value)> \
+                >(libassert_value, libassert_decomposer); \
+            }( \
+                libassert::detail::expression_decomposer( \
+                    libassert::detail::expression_decomposer{} << expr \
+                ) \
+            ); \
+            LIBASSERT_WARNING_PRAGMA_POP \
+        }( \
+            libassert::detail::pretty_function_name_wrapper{LIBASSERT_PFUNC} \
+        )).value
 
 #ifdef NDEBUG
  #define LIBASSERT_ASSUME_ACTION LIBASSERT_UNREACHABLE_CALL();

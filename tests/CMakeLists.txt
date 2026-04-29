@@ -186,6 +186,11 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
       LIBS GTest::gtest_main fmt::fmt
     )
     add_unittest(
+      SOURCE tests/unit/temporaries-test.cpp
+      OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>
+      LIBS GTest::gtest_main
+    )
+    add_unittest(
       SOURCE tests/unit/std_format20.cpp
       OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>
       FEATURES cxx_std_20
