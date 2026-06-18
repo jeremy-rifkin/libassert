@@ -48,7 +48,7 @@
 #if defined(_WIN32)
  #undef IS_WINDOWS
  #define IS_WINDOWS 1
-#elif defined(__linux)
+#elif defined(__linux) || defined(__EMSCRIPTEN__)
  #undef IS_LINUX
  #define IS_LINUX 1
 #elif defined(__APPLE__)
