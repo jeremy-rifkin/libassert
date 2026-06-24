@@ -1,0 +1,93 @@
+---
+AccessModifierOffset: -2
+AlignAfterOpenBracket: BlockIndent
+AlignConsecutiveMacros: false
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: DontAlign
+AlignOperands: false
+AlignTrailingComments: false
+AllowAllArgumentsOnNextLine: false
+AllowAllConstructorInitializersOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Attach
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: AfterColon
+BreakInheritanceList: AfterColon
+BreakStringLiterals: false
+ColumnLimit: 100
+CompactNamespaces: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
+FixNamespaceComments: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:           '^<proxsuite/.*\.h(pp)?>'
+    Priority:        0
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           '^<(Eigen|fmt|libassert|catch2).*>'
+    Priority:        1
+    SortPriority:    2
+    CaseSensitive:   false
+  - Regex:           '^<.*>'
+    Priority:        2
+    SortPriority:    1
+    CaseSensitive:   false
+IncludeIsMainRegex: '([-_](test|unittest))?$'
+IndentCaseLabels: true
+IndentPPDirectives: BeforeHash
+IndentWrappedFunctionNames: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: Inner
+PointerAlignment: Left
+ReferenceAlignment: Left
+ReflowComments: false
+SeparateDefinitionBlocks: Always
+SortIncludes: true
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: false
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+UseTab: ForContinuationAndIndentation
+ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 2
+IndentWidth: 2
+TabWidth: 2
+Macros:
+ - PROXSUITE_REQUIRES(a0, a1, a2, a3, a4, a5, a6, a7)=requires(a0, a1, a2, a3, a4, a5, a6, a7)
+ - PROXSUITE_REQUIRES(a0, a1, a2, a3, a4, a5, a6)=requires(a0, a1, a2, a3, a4, a5, a6)
+ - PROXSUITE_REQUIRES(a0, a1, a2, a3, a4, a5)=requires(a0, a1, a2, a3, a4, a5)
+ - PROXSUITE_REQUIRES(a0, a1, a2, a3, a4)=requires(a0, a1, a2, a3, a4)
+ - PROXSUITE_REQUIRES(a0, a1, a2, a3)=requires(a0, a1, a2, a3)
+ - PROXSUITE_REQUIRES(a0, a1, a2)=requires(a0, a1, a2)
+ - PROXSUITE_REQUIRES(a0, a1)=requires(a0, a1)
+ - PROXSUITE_REQUIRES(a0)=requires(a0)
+...

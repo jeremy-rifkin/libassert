@@ -1,10 +1,5 @@
-#include <gtest/gtest.h>
-
-#include "utils.hpp"
-#include "microfmt.hpp"
-#include "tokenizer.hpp"
-
 #include <array>
+#include <gtest/gtest.h>
 #include <iostream>
 #include <map>
 #include <optional>
@@ -12,117 +7,125 @@
 #include <string>
 #include <vector>
 
+#include "microfmt.hpp"
+#include "tokenizer.hpp"
+#include "utils.hpp"
+
 #ifdef TEST_MODULE
 import libassert;
-#include <libassert/assert-macros.hpp>
+	#include <libassert/assert-macros.hpp>
 #else
-#include <libassert/assert.hpp>
+	#include <libassert/assert.hpp>
 #endif
 
 using namespace std::literals;
 
 inline void failure_handler(const libassert::assertion_info& info) {
-    // everything from .to_string except the stacktrace
-    std::string output;
-    output += info.tagline(libassert::color_scheme::blank);
-    output += info.statement(libassert::color_scheme::blank);
-    output += info.print_binary_diagnostics(0, libassert::color_scheme::blank);
-    output += info.print_extra_diagnostics(0, libassert::color_scheme::blank);
-    throw std::runtime_error(output);
+	// everything from .to_string except the stacktrace
+	std::string output;
+	output += info.tagline(libassert::color_scheme::blank);
+	output += info.statement(libassert::color_scheme::blank);
+	output += info.print_binary_diagnostics(0, libassert::color_scheme::blank);
+	output += info.print_extra_diagnostics(0, libassert::color_scheme::blank);
+	throw std::runtime_error(output);
 }
 
-inline auto pre_main = [] () {
-    libassert::set_failure_handler(failure_handler);
-    return 1;
-} ();
+inline auto pre_main = []() {
+	libassert::set_failure_handler(failure_handler);
+	return 1;
+}();
 
 struct location {
-    std::string_view file;
-    int line;
-    std::string_view signature;
+	std::string_view file;
+	int line;
+	std::string_view signature;
 };
 
-constexpr std::string_view file = [] () constexpr {
-    constexpr std::string_view f = __FILE__;
-    constexpr std::size_t pos = f.find_last_of("/\\");
-    static_assert(pos != std::string_view::npos);
-    return f.substr(pos + 1);
-} ();
+constexpr std::string_view file = []() constexpr {
+	constexpr std::string_view f = __FILE__;
+	constexpr std::size_t pos = f.find_last_of("/\\");
+	static_assert(pos != std::string_view::npos);
+	return f.substr(pos + 1);
+}();
 
 std::string_view mtrim(const std::string_view s) {
-    const size_t l = s.find_first_not_of(" \n");
-    if(l == std::string_view::npos) {
-        return "";
-    }
-    const size_t r = s.find_last_not_of(" ") + 1;
-    ASSERT(r != std::string_view::npos);
-    return s.substr(l, r - l);
+	const size_t l = s.find_first_not_of(" \n");
+	if (l == std::string_view::npos) {
+		return "";
+	}
+	const size_t r = s.find_last_not_of(" ") + 1;
+	ASSERT(r != std::string_view::npos);
+	return s.substr(l, r - l);
 }
 
 std::string replace(std::string str, std::string_view needle, std::string_view replacement) {
-    if(auto pos = str.find(needle); pos != std::string::npos) {
-        return str.replace(pos, needle.size(), replacement);
-    } else {
-        return str;
-    }
+	if (auto pos = str.find(needle); pos != std::string::npos) {
+		return str.replace(pos, needle.size(), replacement);
+	} else {
+		return str;
+	}
 }
 
 std::string assertion_failure_message;
 
-#define WRAP(...) do { \
-        assertion_failure_message = ""; \
-        try { \
-            __VA_ARGS__; \
-        } catch(std::exception& e) { \
-            assertion_failure_message = e.what(); \
-        } \
-    } while(0)
+#define WRAP(...) \
+	do { \
+		assertion_failure_message = ""; \
+		try { \
+			__VA_ARGS__; \
+		} catch (std::exception & e) { \
+			assertion_failure_message = e.what(); \
+		} \
+	} while (0)
 
 std::string prepare(std::string_view string, location loc) {
-    using namespace libassert::detail;
-    auto lines = split(mtrim(string), "\n");
-    for(auto& line : lines) {
-        auto pos = line.find('|');
-        line = line.substr(pos == std::string_view::npos ? 0 : pos + 1);
-    }
-    auto message = replace(
-        join(lines, "\n"),
-        "<LOCATION>",
-        libassert::microfmt::format("{}:{}: {}", loc.file, loc.line, loc.signature)
-    );
-    return message;
+	using namespace libassert::detail;
+	auto lines = split(mtrim(string), "\n");
+	for (auto& line : lines) {
+		auto pos = line.find('|');
+		line = line.substr(pos == std::string_view::npos ? 0 : pos + 1);
+	}
+	auto message = replace(
+		join(lines, "\n"),
+		"<LOCATION>",
+		libassert::microfmt::format("{}:{}: {}", loc.file, loc.line, loc.signature)
+	);
+	return message;
 }
 
 std::string normalize(std::string message) {
-    using namespace libassert::detail;
-    // TODO: Find a better way to do this, or integrate into normal type normalization rules
-    // msvc does T const
-    replace_all(message, "char const", "const char");
-    // clang does T *
-    replace_all(message, "void *", "void*");
-    replace_all(message, "char *", "char*");
-    // clang does T[N], gcc does T [N]
-    replace_all(message, "int [5]", "int[5]");
-    // msvc includes the std::less
-    replace_all(message, ", std::less<int>", "");
-    replace_all(message, ", std::less<std::string>", "");
-    return message;
+	using namespace libassert::detail;
+	// TODO: Find a better way to do this, or integrate into normal type normalization rules
+	// msvc does T const
+	replace_all(message, "char const", "const char");
+	// clang does T *
+	replace_all(message, "void *", "void*");
+	replace_all(message, "char *", "char*");
+	// clang does T[N], gcc does T [N]
+	replace_all(message, "int [5]", "int[5]");
+	// msvc includes the std::less
+	replace_all(message, ", std::less<int>", "");
+	replace_all(message, ", std::less<std::string>", "");
+	return message;
 }
 
 #define CHECK(call, expected) \
-    do { \
-        /* using __builtin_LINE() as source_location to work around */ \
-        /* https://developercommunity.visualstudio.com/t/__builtin_LINE-function-is-reporting-w/10439054 */ \
-        /* and also there seems to be some weirdness with __LINE__ vs __builtin_LINE() on msvc */ \
-        location loc = {file, __builtin_LINE(), LIBASSERT_PFUNC}; \
-        WRAP(call); \
-        EXPECT_EQ( \
-            prepare((expected), loc), \
-            normalize(assertion_failure_message) \
-        ); \
-    } while(0)
+	do { \
+		/* using __builtin_LINE() as source_location to work around */ \
+		/* https://developercommunity.visualstudio.com/t/__builtin_LINE-function-is-reporting-w/10439054 */ \
+		/* and also there seems to be some weirdness with __LINE__ vs __builtin_LINE() on msvc */ \
+		location loc = {file, __builtin_LINE(), LIBASSERT_PFUNC}; \
+		WRAP(call); \
+		EXPECT_EQ(prepare((expected), loc), normalize(assertion_failure_message)); \
+	} while (0)
 
-#define SHOULD_PASS(statement) try { statement; SUCCEED(); } catch(const std::exception& e) { FAIL() << e.what(); }
+#define SHOULD_PASS(statement) \
+	try { \
+		statement; \
+		SUCCEED(); \
+	} catch (const std::exception& e) { \
+		FAIL() << e.what(); \
+	}
 
 // TEST(LibassertBasic, Warmup) {
 //     try {
@@ -131,20 +134,20 @@ std::string normalize(std::string message) {
 // }
 
 TEST(LibassertBasic, StringDiagnostics) {
-    std::string s = "test\n";
-    CHECK(
-        ASSERT(s == "test"),
-        R"XX(
+	std::string s = "test\n";
+	CHECK(
+		ASSERT(s == "test"),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(s == "test");
         |    Where:
         |        s => "test\n"
         )XX"
-    );
-    int i = 0;
-    CHECK(
-        ASSERT(s[i] == 'c', "", s, i),
-        R"XX(
+	);
+	int i = 0;
+	CHECK(
+		ASSERT(s[i] == 'c', "", s, i),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(s[i] == 'c', ...);
         |    Where:
@@ -153,390 +156,395 @@ TEST(LibassertBasic, StringDiagnostics) {
         |        s => "test\n"
         |        i => 0
         )XX"
-    );
-    char* buffer = nullptr;
-    char thing[] = "foo";
-    CHECK(
-        ASSERT(buffer == thing),
-        R"XX(
+	);
+	char* buffer = nullptr;
+	char thing[] = "foo";
+	CHECK(
+		ASSERT(buffer == thing),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(buffer == thing);
         |    Where:
         |        buffer => nullptr
         |        thing  => "foo"
         )XX"
-    );
-    CHECK(
-        ASSERT(buffer == +thing),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(buffer == +thing),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(buffer == +thing);
         |    Where:
         |        buffer => nullptr
         |        +thing => "foo"
         )XX"
-    );
-    std::string_view sv = "foo";
-    CHECK(
-        ASSERT(s == sv),
-        R"XX(
+	);
+	std::string_view sv = "foo";
+	CHECK(
+		ASSERT(s == sv),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(s == sv);
         |    Where:
         |        s  => "test\n"
         |        sv => "foo"
         )XX"
-    );
+	);
 }
 
 TEST(LibassertBasic, PointerDiagnostics) {
-    // TODO: Move
-    CHECK(
-        ASSERT((uintptr_t)-1 == 0xff),
-        R"XX(
+	// TODO: Move
+	CHECK(
+		ASSERT((uintptr_t)-1 == 0xff),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT((uintptr_t)-1 == 0xff);
         |    Where:
         |        (uintptr_t)-1 => 18446744073709551615 0xffffffffffffffff
         |        0xff          => 255 0xff
         )XX"
-    );
-    // TODO: Move
-    CHECK(
-        ASSERT((uintptr_t)-1 == (uintptr_t)0xff),
-        R"XX(
+	);
+	// TODO: Move
+	CHECK(
+		ASSERT((uintptr_t)-1 == (uintptr_t)0xff),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT((uintptr_t)-1 == (uintptr_t)0xff);
         |    Where:
         |        (uintptr_t)-1   => 18446744073709551615
         |        (uintptr_t)0xff => 255
         )XX"
-    );
-    void* foo = (void*)0xdeadbeefULL;
-    CHECK(
-        ASSERT(foo == nullptr),
-        R"XX(
+	);
+	void* foo = (void*)0xdeadbeefULL;
+	CHECK(
+		ASSERT(foo == nullptr),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(foo == nullptr);
         |    Where:
         |        foo => void*: 0xdeadbeef
         )XX"
-    );
+	);
 }
 
 TEST(LibassertBasic, LiteralFormatting) {
-    const uint16_t flags = 0b000101010;
-    const uint16_t mask = 0b110010101;
-    CHECK(
-        ASSERT(mask bitand flags),
-        R"XX(
+	const uint16_t flags = 0b000101010;
+	const uint16_t mask = 0b110010101;
+	CHECK(
+		ASSERT(mask bitand flags),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(mask bitand flags);
         |    Where:
         |        mask  => 405 0b0000000110010101
         |        flags => 42 0b0000000000101010
         )XX"
-    );
-    CHECK(
-        ASSERT(0xf == 16),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(0xf == 16),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(0xf == 16);
         |    Where:
         |        0xf => 15 0xf
         |        16  => 16 0x10
         )XX"
-    );
-    CHECK(
-        ASSERT(0xff == 077),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(0xff == 077),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(0xff == 077);
         |    Where:
         |        0xff => 255 0xff 0377
         |        077  => 63 0x3f 077
         )XX"
-    );
-    CHECK(
-        ASSERT('x' == 20),
-        R"XX(
+	);
+	CHECK(
+		ASSERT('x' == 20),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT('x' == 20);
         |    Where:
         |        'x' => 'x' 120
         |        20  => '\x14' 20
         )XX"
-    );
-    CHECK(
-        ASSERT('x' == 'y'),
-        R"XX(
+	);
+	CHECK(
+		ASSERT('x' == 'y'),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT('x' == 'y');
         )XX"
-    );
-    char c = 'x';
-    CHECK(
-        ASSERT(c == 20),
-        R"XX(
+	);
+	char c = 'x';
+	CHECK(
+		ASSERT(c == 20),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(c == 20);
         |    Where:
         |        c  => 'x' 120
         |        20 => '\x14' 20
         )XX"
-    );
+	);
 }
 
 TEST(LibassertBasic, FloatingPoint) {
-    CHECK(
-        ASSERT(1 == 1.5),
-        R"XX(
+	CHECK(
+		ASSERT(1 == 1.5),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(1 == 1.5);
         )XX"
-    );
-    // FIXME
-    CHECK(
-        ASSERT(0.5 != .5),
-        R"XX(
+	);
+	// FIXME
+	CHECK(
+		ASSERT(0.5 != .5),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(0.5 != .5);
         |    Where:
         |        .5 => 0.5
         )XX"
-    );
-    CHECK(
-        ASSERT(0.1 + 0.2 == 0.3),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(0.1 + 0.2 == 0.3),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(0.1 + 0.2 == 0.3);
         |    Where:
         |        0.1 + 0.2 => 0.30000000000000004
         |        0.3       => 0.29999999999999999
         )XX"
-    );
-    CHECK(
-        ASSERT(.1 + .2 == .3),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(.1 + .2 == .3),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(.1 + .2 == .3);
         |    Where:
         |        .1 + .2 => 0.30000000000000004
         |        .3      => 0.29999999999999999
         )XX"
-    );
-    float ff = .1f;
-    CHECK(
-        ASSERT(ff == .1),
-        R"XX(
+	);
+	float ff = .1f;
+	CHECK(
+		ASSERT(ff == .1),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(ff == .1);
         |    Where:
         |        ff => 0.100000001
         |        .1 => 0.10000000000000001
         )XX"
-    );
-    CHECK(
-        ASSERT(.1f == .1),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(.1f == .1),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(.1f == .1);
         |    Where:
         |        .1f => 0.100000001
         |        .1  => 0.10000000000000001
         )XX"
-    );
-    SHOULD_PASS(ASSERT(0.1f + 0.2f == 0.3f));
+	);
+	SHOULD_PASS(ASSERT(0.1f + 0.2f == 0.3f));
 }
 
 template<typename T>
 struct printable {
-    std::optional<T> f;
-    printable(T t) : f(t) {}
-    bool operator==(const printable& other) const {
-        return f == other.f;
-    }
+	std::optional<T> f;
+
+	printable(T t) : f(t) {}
+
+	bool operator==(const printable& other) const {
+		return f == other.f;
+	}
 };
 
 template<typename T>
 std::ostream& operator<<(std::ostream& stream, const printable<T>& p) {
-    return stream<<"(printable = "<<*p.f<<")";
+	return stream << "(printable = " << *p.f << ")";
 }
 
 TEST(LibassertBasic, OstreamOverloads) {
-    printable p{1.42};
-    CHECK(
-        ASSERT(p == printable{2.55}),
-        R"XX(
+	printable p {1.42};
+	CHECK(
+		ASSERT(p == printable {2.55}),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(p == printable{2.55});
         |    Where:
         |        p               => (printable = 1.42)
         |        printable{2.55} => (printable = 2.55)
         )XX"
-    );
+	);
 }
 
 template<typename T>
 struct not_printable {
-    std::optional<T> f;
-    not_printable(T t) : f(t) {}
-    bool operator==(const not_printable& other) const {
-        return f == other.f;
-    }
+	std::optional<T> f;
+
+	not_printable(T t) : f(t) {}
+
+	bool operator==(const not_printable& other) const {
+		return f == other.f;
+	}
 };
 
 TEST(LibassertBasic, NotPrintable) {
-    const not_printable p{1.42};
-    CHECK(
-        ASSERT(p == not_printable{2.55}),
-        R"XX(
+	const not_printable p {1.42};
+	CHECK(
+		ASSERT(p == not_printable {2.55}),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(p == not_printable{2.55});
         |    Where:
         |        p                   => <instance of not_printable<double>>
         |        not_printable{2.55} => <instance of not_printable<double>>
         )XX"
-    );
-    CHECK(
-        ASSERT(p.f == not_printable{2.55}.f),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(p.f == not_printable {2.55}.f),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(p.f == not_printable{2.55}.f);
         |    Where:
         |        p.f                   => std::optional<double>: 1.4199999999999999
         |        not_printable{2.55}.f => std::optional<double>: 2.5499999999999998
         )XX"
-    );
+	);
 }
 
 TEST(LibassertBasic, OptionalMessages) {
-    CHECK(
-        ASSERT(false, 2),
-        R"XX(
+	CHECK(
+		ASSERT(false, 2),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        2 => 2
         )XX"
-    );
-    CHECK(
-        ASSERT(false, "foo"),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(false, "foo"),
+		R"XX(
         |Assertion failed at <LOCATION>: foo
         |    ASSERT(false, ...);
         )XX"
-    );
-    CHECK(
-        ASSERT(false, "foo"s),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(false, "foo"s),
+		R"XX(
         |Assertion failed at <LOCATION>: foo
         |    ASSERT(false, ...);
         )XX"
-    );
-    CHECK(
-        ASSERT(false, "foo"sv),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(false, "foo"sv),
+		R"XX(
         |Assertion failed at <LOCATION>: foo
         |    ASSERT(false, ...);
         )XX"
-    );
-    CHECK(
-        ASSERT(false, (char*)"foo"),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(false, (char*)"foo"),
+		R"XX(
         |Assertion failed at <LOCATION>: foo
         |    ASSERT(false, ...);
         )XX"
-    );
-    CHECK(
-        ASSERT(false, "foo", 2),
-        R"XX(
-        |Assertion failed at <LOCATION>: foo
-        |    ASSERT(false, ...);
-        |    Extra diagnostics:
-        |        2 => 2
-        )XX"
-    );
-    CHECK(
-        ASSERT(false, "foo"s, 2),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(false, "foo", 2),
+		R"XX(
         |Assertion failed at <LOCATION>: foo
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        2 => 2
         )XX"
-    );
-    CHECK(
-        ASSERT(false, "foo"sv, 2),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(false, "foo"s, 2),
+		R"XX(
         |Assertion failed at <LOCATION>: foo
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        2 => 2
         )XX"
-    );
-    CHECK(
-        ASSERT(false, (char*)"foo", 2),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(false, "foo"sv, 2),
+		R"XX(
         |Assertion failed at <LOCATION>: foo
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        2 => 2
         )XX"
-    );
-    CHECK(
-        ASSERT(false, nullptr),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(false, (char*)"foo", 2),
+		R"XX(
+        |Assertion failed at <LOCATION>: foo
+        |    ASSERT(false, ...);
+        |    Extra diagnostics:
+        |        2 => 2
+        )XX"
+	);
+	CHECK(
+		ASSERT(false, nullptr),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        nullptr => nullptr
         )XX"
-    );
-    // TODO: This behavior should probably change
-    CHECK(
-        ASSERT(false, (char*)nullptr),
-        R"XX(
+	);
+	// TODO: This behavior should probably change
+	CHECK(
+		ASSERT(false, (char*)nullptr),
+		R"XX(
         |Assertion failed at <LOCATION>: (nullptr)
         |    ASSERT(false, ...);
         )XX"
-    );
+	);
 }
 
 TEST(LibassertBasic, Errno) {
-    errno = 2;
-    CHECK(
-        ASSERT(false, errno),
-        R"XX(
+	errno = 2;
+	CHECK(
+		ASSERT(false, errno),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        errno =>  2 "No such file or directory"
         )XX"
-    );
-    errno = 2;
-    CHECK(
-        ASSERT(false, "foo", errno),
-        R"XX(
+	);
+	errno = 2;
+	CHECK(
+		ASSERT(false, "foo", errno),
+		R"XX(
         |Assertion failed at <LOCATION>: foo
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        errno =>  2 "No such file or directory"
         )XX"
-    );
+	);
 }
 
 int foo() {
-    return 2;
+	return 2;
 }
+
 int bar() {
-    return -2;
+	return -2;
 }
 
 TEST(LibassertBasic, General) {
-    CHECK(
-        ASSERT(false, "foo", false, 2 * foo(), "foobar"sv, bar(), printable{2.55}),
-        R"XX(
+	CHECK(
+		ASSERT(false, "foo", false, 2 * foo(), "foobar"sv, bar(), printable {2.55}),
+		R"XX(
         |Assertion failed at <LOCATION>: foo
         |    ASSERT(false, ...);
         |    Extra diagnostics:
@@ -546,145 +554,145 @@ TEST(LibassertBasic, General) {
         |        bar()           => -2
         |        printable{2.55} => (printable = 2.55)
         )XX"
-    );
-    CHECK(
-        ASSERT([] { return false; } ()),
-        R"XX(
+	);
+	CHECK(
+		ASSERT([] { return false; }()),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT([] { return false; } ());
         )XX"
-    );
+	);
 }
 
 TEST(LibassertBasic, SignedUnsignedComparisonWithoutSafeCompareMode) {
-    SHOULD_PASS(ASSERT(18446744073709551606ULL == -10));
-    SHOULD_PASS(ASSERT(-1 > 1U));
+	SHOULD_PASS(ASSERT(18446744073709551606ULL == -10));
+	SHOULD_PASS(ASSERT(-1 > 1U));
 }
 
 TEST(LibassertBasic, ExpressionDecomposition) {
-    CHECK(
-        ASSERT(1 == (1 bitand 2)),
-        R"XX(
+	CHECK(
+		ASSERT(1 == (1 bitand 2)),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(1 == (1 bitand 2));
         |    Where:
         |        (1 bitand 2) => 0
         )XX"
-    );
-    CHECK(
-        ASSERT(1 < 1 < 0),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(1 < 1 < 0),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(1 < 1 < 0);
         |    Where:
         |        1 < 1 => false
         )XX"
-    );
-    CHECK(
-        ASSERT(0 + 0 + 0),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(0 + 0 + 0),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(0 + 0 + 0);
         |    Where:
         |        0 + 0 + 0 => 0
         )XX"
-    );
-    CHECK(
-        ASSERT(false == false == false),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(false == false == false),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(false == false == false);
         |    Where:
         |        false == false => true
         )XX"
-    );
-    CHECK(
-        ASSERT(1 << 1 == 200),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(1 << 1 == 200),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(1 << 1 == 200);
         |    Where:
         |        1 << 1 => 2
         )XX"
-    );
-    CHECK(
-        ASSERT(1 << 1 << 31),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(1 << 1 << 31),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(1 << 1 << 31);
         |    Where:
         |        1 << 1 => 2
         )XX"
-    );
-    int x = 2;
-    CHECK(
-        ASSERT(x -= 2),
-        R"XX(
+	);
+	int x = 2;
+	CHECK(
+		ASSERT(x -= 2),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(x -= 2);
         |    Where:
         |        x => 0
         )XX"
-    );
-    x = 2;
-    CHECK(
-        ASSERT(x -= x -= 1),
-        R"XX(
+	);
+	x = 2;
+	CHECK(
+		ASSERT(x -= x -= 1),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(x -= x -= 1);
         |    Where:
         |        x      => 0
         |        x -= 1 => 0
         )XX"
-    );
-    x = 2;
-    CHECK(
-        ASSERT(x -= x -= x -= 1),
-        R"XX(
+	);
+	x = 2;
+	CHECK(
+		ASSERT(x -= x -= x -= 1),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(x -= x -= x -= 1);
         |    Where:
         |        x           => 0
         |        x -= x -= 1 => 0
         )XX"
-    );
-    CHECK(
-        ASSERT(true ? false : true, "pffft"),
-        R"XX(
+	);
+	CHECK(
+		ASSERT(true ? false : true, "pffft"),
+		R"XX(
         |Assertion failed at <LOCATION>: pffft
         |    ASSERT(true ? false : true, ...);
         )XX"
-    );
-    // regression test for #26
-    int a = 1;
-    CHECK(
-        ASSERT(a >> 1),
-        R"XX(
+	);
+	// regression test for #26
+	int a = 1;
+	CHECK(
+		ASSERT(a >> 1),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(a >> 1);
         |    Where:
         |        a => 1
         )XX"
-    );
+	);
 }
 
 TEST(LibassertBasic, ValueComputation) {
-    // Ensure value names are only computed once
-    auto foo = [] {
-        static int x = 2;
-        return x++;
-    };
-    auto bar = [] {
-        static int x = -2;
-        return x--;
-    };
-    auto baz = [] {
-        static int x = 10;
-        return x++;
-    };
-    CHECK(
-        ASSERT(foo() < bar(), baz()),
-        R"XX(
+	// Ensure value names are only computed once
+	auto foo = [] {
+		static int x = 2;
+		return x++;
+	};
+	auto bar = [] {
+		static int x = -2;
+		return x--;
+	};
+	auto baz = [] {
+		static int x = 10;
+		return x++;
+	};
+	CHECK(
+		ASSERT(foo() < bar(), baz()),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(foo() < bar(), ...);
         |    Where:
@@ -693,90 +701,92 @@ TEST(LibassertBasic, ValueComputation) {
         |    Extra diagnostics:
         |        baz() => 10
         )XX"
-    );
-    EXPECT_EQ(foo(), 3);
-    EXPECT_EQ(bar(), -3);
-    EXPECT_EQ(baz(), 11);
+	);
+	EXPECT_EQ(foo(), 3);
+	EXPECT_EQ(bar(), -3);
+	EXPECT_EQ(baz(), 11);
 }
 
 TEST(LibassertBasic, LvalueForwarding) {
-    int x = 1;
-    CHECK(
-        ASSERT(x ^= 1),
-        R"XX(
+	int x = 1;
+	CHECK(
+		ASSERT(x ^= 1),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(x ^= 1);
         |    Where:
         |        x => 0 0b00000000000000000000000000000000
         |        1 => 1 0b00000000000000000000000000000001
         )XX"
-    );
-    EXPECT_EQ(x, 0);
+	);
+	EXPECT_EQ(x, 0);
 }
 
 #if defined(LIBASSERT_USE_MAGIC_ENUM) || defined(LIBASSERT_USE_ENCHANTUM)
 enum foo_e { A, B };
 enum class bar_e { A, B };
+
 TEST(LibassertBasic, EnumHandling) {
-    foo_e a = A;
-    CHECK(
-        ASSERT(a != A),
-        R"XX(
+	foo_e a = A;
+	CHECK(
+		ASSERT(a != A),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(a != A);
         |    Where:
         |        a => A
         )XX"
-    );
-    bar_e b = bar_e::A;
-    CHECK(
-        ASSERT(b != bar_e::A),
-        R"XX(
+	);
+	bar_e b = bar_e::A;
+	CHECK(
+		ASSERT(b != bar_e::A),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(b != bar_e::A);
         |    Where:
         |        b        => A
         |        bar_e::A => A
         )XX"
-    );
+	);
 }
 #else
 // TODO: Also test this outside of gcc 8
 enum foo_e { A, B };
 enum class bar_e { A, B };
+
 TEST(LibassertBasic, EnumHandling) {
-    foo_e a = A;
-    CHECK(
-        ASSERT(a != A),
-        R"XX(
+	foo_e a = A;
+	CHECK(
+		ASSERT(a != A),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(a != A);
         |    Where:
         |        a => enum foo_e: 0
         |        A => enum foo_e: 0
         )XX"
-    );
-    bar_e b = bar_e::A;
-    CHECK(
-        ASSERT(b != bar_e::A),
-        R"XX(
+	);
+	bar_e b = bar_e::A;
+	CHECK(
+		ASSERT(b != bar_e::A),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(b != bar_e::A);
         |    Where:
         |        b        => enum bar_e: 0
         |        bar_e::A => enum bar_e: 0
         )XX"
-    );
+	);
 }
 #endif
 
 TEST(LibassertBasic, Containers) {
-    std::set<int> a = { 2, 2, 4, 6, 10 };
-    std::set<int> b = { 2, 2, 5, 6, 10 };
-    std::vector<double> c = { 1.2f, 2.44f, 3.15159f, 5.2f };
-    CHECK(
-        ASSERT(a == b, c),
-        R"XX(
+	std::set<int> a = {2, 2, 4, 6, 10};
+	std::set<int> b = {2, 2, 5, 6, 10};
+	std::vector<double> c = {1.2f, 2.44f, 3.15159f, 5.2f};
+	CHECK(
+		ASSERT(a == b, c),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(a == b, ...);
         |    Where:
@@ -785,89 +795,90 @@ TEST(LibassertBasic, Containers) {
         |    Extra diagnostics:
         |        c => std::vector<double>: [1.2000000476837158, 2.440000057220459, 3.15159010887146, 5.1999998092651367]
         )XX"
-    );
-    std::map<std::string, int> m0 = {
-        {"foo", 2},
-        {"bar", -2}
-    };
-    CHECK(
-        ASSERT(false, m0),
-        R"XX(
+	);
+	std::map<std::string, int> m0 = {{"foo", 2}, {"bar", -2}};
+	CHECK(
+		ASSERT(false, m0),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        m0 => std::map<std::string, int>: [["bar", -2], ["foo", 2]]
         )XX"
-    );
-    std::map<std::string, std::vector<int>> m1 = {
-        {"foo", {1, -2, 3, -4}},
-        {"bar", {-100, 200, 400, -800}}
-    };
-    CHECK(
-        ASSERT(false, m1),
-        R"XX(
+	);
+	std::map<std::string, std::vector<int>> m1 = {
+		{"foo", {1, -2, 3, -4}},
+		{"bar", {-100, 200, 400, -800}}
+	};
+	CHECK(
+		ASSERT(false, m1),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        m1 => std::map<std::string, std::vector<int>>: [["bar", [-100, 200, 400, -800]], ["foo", [1, -2, 3, -4]]]
         )XX"
-    );
-    auto t = std::make_tuple(1, 0.1 + 0.2, "foobars");
-    CHECK(
-        ASSERT(false, t),
-        R"XX(
+	);
+	auto t = std::make_tuple(1, 0.1 + 0.2, "foobars");
+	CHECK(
+		ASSERT(false, t),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        t => std::tuple<int, double, const char*>: [1, 0.30000000000000004, "foobars"]
         )XX"
-    );
-    std::array<int, 10> arr = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    CHECK(
-        ASSERT(false, arr),
-        R"XX(
+	);
+	std::array<int, 10> arr = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+	CHECK(
+		ASSERT(false, arr),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        arr => std::array<int, 10>: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         )XX"
-    );
-    int carr[] = { 5, 4, 3, 2, 1 };
-    CHECK(
-        ASSERT(false, carr),
-        R"XX(
+	);
+	int carr[] = {5, 4, 3, 2, 1};
+	CHECK(
+		ASSERT(false, carr),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(false, ...);
         |    Extra diagnostics:
         |        carr => int[5]: [5, 4, 3, 2, 1]
         )XX"
-    );
+	);
 }
 
 // TEST(LibassertBasic, TypeCleaning) {}
 
 struct debug_print_customization {
-    int x;
-    debug_print_customization(int t) : x(t) {}
-    bool operator==(const debug_print_customization& other) const {
-        return x == other.x;
-    }
-    friend std::ostream& operator<<(std::ostream& stream, const debug_print_customization&) {
-        return stream<<"wrong print";
-    }
+	int x;
+
+	debug_print_customization(int t) : x(t) {}
+
+	bool operator==(const debug_print_customization& other) const {
+		return x == other.x;
+	}
+
+	friend std::ostream& operator<<(std::ostream& stream, const debug_print_customization&) {
+		return stream << "wrong print";
+	}
 };
 
-template<> struct libassert::stringifier<debug_print_customization> {
-    std::string stringify(const debug_print_customization& p) {
-        return "(debug_print_customization = " + std::to_string(p.x) + ")";
-    }
+template<>
+struct libassert::stringifier<debug_print_customization> {
+	std::string stringify(const debug_print_customization& p) {
+		return "(debug_print_customization = " + std::to_string(p.x) + ")";
+	}
 };
 
 TEST(LibassertBasic, StringificationCustomizationPoint) {
-    debug_print_customization x = 2, y = 1;
-    CHECK(
-        ASSERT(x == y, x, y),
-        R"XX(
+	debug_print_customization x = 2, y = 1;
+	CHECK(
+		ASSERT(x == y, x, y),
+		R"XX(
         |Assertion failed at <LOCATION>:
         |    ASSERT(x == y, ...);
         |    Where:
@@ -877,49 +888,49 @@ TEST(LibassertBasic, StringificationCustomizationPoint) {
         |        x => (debug_print_customization = 2)
         |        y => (debug_print_customization = 1)
         )XX"
-    );
+	);
 }
 
 TEST(LibassertBasic, Panic) {
-    const std::vector<std::string> vec{"foo", "bar", "baz"};
-    CHECK(
-        PANIC("message", vec),
-        R"XX(
+	const std::vector<std::string> vec {"foo", "bar", "baz"};
+	CHECK(
+		PANIC("message", vec),
+		R"XX(
         |Panic at <LOCATION>: message
         |    PANIC(...);
         |    Extra diagnostics:
         |        vec => std::vector<std::string>: ["foo", "bar", "baz"]
         )XX"
-    );
-    float x = 40;
-    CHECK(
-        PANIC(x),
-        R"XX(
+	);
+	float x = 40;
+	CHECK(
+		PANIC(x),
+		R"XX(
         |Panic at <LOCATION>:
         |    PANIC(...);
         |    Extra diagnostics:
         |        x => 40.0
         )XX"
-    );
+	);
 }
 
 TEST(LibassertBasic, DebugAssert) {
-    int x = 1;
-    int y = 2;
-    #ifndef NDEBUG
-    CHECK(
-        DEBUG_ASSERT(x == y),
-        R"XX(
+	int x = 1;
+	int y = 2;
+#ifndef NDEBUG
+	CHECK(
+		DEBUG_ASSERT(x == y),
+		R"XX(
         |Debug Assertion failed at <LOCATION>:
         |    DEBUG_ASSERT(x == y);
         |    Where:
         |        x => 1
         |        y => 2
         )XX"
-    );
-    #else
-    SHOULD_PASS(DEBUG_ASSERT(x == y));
-    #endif
+	);
+#else
+	SHOULD_PASS(DEBUG_ASSERT(x == y));
+#endif
 }
 
 // TODO:

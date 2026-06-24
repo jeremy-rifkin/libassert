@@ -7,184 +7,183 @@
 #include <iterator>
 #include <optional>
 #include <regex>
-#include <string_view>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
-#include <type_traits>
 
 #include <libassert/assert.hpp>
 
 #include "common.hpp"
 
 LIBASSERT_BEGIN_NAMESPACE
-namespace detail {
-    // Still present in release mode, nonfatal
-    #define LIBASSERT_PRIMITIVE_ASSERT(c, ...) ::libassert::detail::primitive_assert_impl( \
-        c, \
-        true, \
-        #c, \
-        LIBASSERT_PFUNC, \
-        {} LIBASSERT_VA_ARGS(__VA_ARGS__) \
-    )
 
-    /*
+namespace detail {
+// Still present in release mode, nonfatal
+#define LIBASSERT_PRIMITIVE_ASSERT(c, ...) \
+	::libassert::detail::primitive_assert_impl(c, true, #c, LIBASSERT_PFUNC, { \
+	} LIBASSERT_VA_ARGS(__VA_ARGS__))
+
+/*
      * string utilities
      */
 
-    LIBASSERT_EXPORT_TESTING
-    std::vector<std::string_view> split(std::string_view s, std::string_view delims);
+LIBASSERT_EXPORT_TESTING
+std::vector<std::string_view> split(std::string_view s, std::string_view delims);
 
-    template<typename C>
-    std::string join(const C& container, const std::string_view delim) {
-        auto iter = std::begin(container);
-        auto end = std::end(container);
-        std::string str;
-        if(std::distance(iter, end) > 0) {
-            str += *iter;
-            while(++iter != end) {
-                str += delim;
-                str += *iter;
-            }
-        }
-        return str;
-    }
+template<typename C>
+std::string join(const C& container, const std::string_view delim) {
+	auto iter = std::begin(container);
+	auto end = std::end(container);
+	std::string str;
+	if (std::distance(iter, end) > 0) {
+		str += *iter;
+		while (++iter != end) {
+			str += delim;
+			str += *iter;
+		}
+	}
+	return str;
+}
 
-    template<typename T>
-    std::vector<T> concat(std::vector<T> a, std::vector<T> b) {
-        a.insert(
-            a.end(),
-            std::make_move_iterator(b.begin()),
-            std::make_move_iterator(b.end())
-        );
-        return a;
-    }
+template<typename T>
+std::vector<T> concat(std::vector<T> a, std::vector<T> b) {
+	a.insert(a.end(), std::make_move_iterator(b.begin()), std::make_move_iterator(b.end()));
+	return a;
+}
 
-    constexpr const char* const whitespace_chars = " \t\n\r\f\v";
+constexpr const char* const whitespace_chars = " \t\n\r\f\v";
 
-    std::string_view trim(std::string_view s);
+std::string_view trim(std::string_view s);
 
-    void replace_all_dynamic(std::string& str, std::string_view text, std::string_view replacement);
+void replace_all_dynamic(std::string& str, std::string_view text, std::string_view replacement);
 
-    LIBASSERT_EXPORT_TESTING
-    void replace_all(std::string& str, const std::regex& re, std::string_view replacement);
+LIBASSERT_EXPORT_TESTING
+void replace_all(std::string& str, const std::regex& re, std::string_view replacement);
 
-    LIBASSERT_EXPORT_TESTING
-    void replace_all(std::string& str, std::string_view substr, std::string_view replacement);
+LIBASSERT_EXPORT_TESTING
+void replace_all(std::string& str, std::string_view substr, std::string_view replacement);
 
-    void replace_all_template(std::string& str, const std::pair<std::regex, std::string_view>& rule);
+void replace_all_template(std::string& str, const std::pair<std::regex, std::string_view>& rule);
 
-    std::string indent(std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
+std::string indent(std::string_view str, size_t depth, char c = ' ', bool ignore_first = false);
 
-    /*
+/*
      * Other
      */
 
-    // Container utility
-    template<typename N> class needle {
-        // TODO: Re-evaluate
-        const N& needle_value;
-    public:
-        explicit needle(const N& n) : needle_value(n) {}
-        template<typename K, typename V, typename... Rest>
-        constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
-            if(needle_value == option) { return result; }
-            if constexpr(sizeof...(Rest) > 0) { return lookup(rest...); }
-            else { LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false); LIBASSERT_UNREACHABLE_CALL(); }
-        }
-        template<typename... Args>
-        constexpr bool is_in(const Args&... option) {
-            return ((needle_value == option) || ... || false);
-        }
-    };
+// Container utility
+template<typename N>
+class needle {
+	// TODO: Re-evaluate
+	const N& needle_value;
 
-    #if LIBASSERT_IS_GCC && LIBASSERT_GCC_VERSION < 900
-    // note: the use of U here is to workaround a gcc 8 issue https://godbolt.org/z/bdsWhdGj3
-    template<typename T, typename U, std::size_t N, std::size_t... I>
-    constexpr std::array<std::remove_cv_t<T>, N> to_array_impl(U(&&a)[N], std::index_sequence<I...>) {
-        return {{std::move(a[I])...}};
-    }
-    template<typename T, typename U, std::size_t N>
-    constexpr std::array<std::remove_cv_t<T>, N> to_array(U(&&a)[N]) {
-        return to_array_impl<T>(std::move(a), std::make_index_sequence<N>{});
-    }
-    #else
-    // unfortunately the above workaround ICEs MSVC https://godbolt.org/z/bjMEcY9fM
-    template<typename T, std::size_t N, std::size_t... I>
-    constexpr std::array<std::remove_cv_t<T>, N> to_array_impl(T(&&a)[N], std::index_sequence<I...>) {
-        return {{std::move(a[I])...}};
-    }
-    template<typename T, std::size_t N>
-    constexpr std::array<std::remove_cv_t<T>, N> to_array(T(&&a)[N]) {
-        return to_array_impl<T>(std::move(a), std::make_index_sequence<N>{});
-    }
-    #endif
+public:
+	explicit needle(const N& n) : needle_value(n) {}
 
-    template<typename A, typename B>
-    constexpr void constexpr_swap(A& a, B& b) {
-        B tmp = std::move(b);
-        b = std::move(a);
-        a = std::move(tmp);
-    }
+	template<typename K, typename V, typename... Rest>
+	constexpr V lookup(const K& option, const V& result, const Rest&... rest) {
+		if (needle_value == option) {
+			return result;
+		}
+		if constexpr (sizeof...(Rest) > 0) {
+			return lookup(rest...);
+		} else {
+			LIBASSERT_PRIMITIVE_DEBUG_ASSERT(false);
+			LIBASSERT_UNREACHABLE_CALL();
+		}
+	}
 
-    // cmp(a, b) should return whether a comes before b
-    template<typename T, std::size_t N, typename C>
-    constexpr void constexpr_sort(std::array<T, N>& arr, const C& cmp) {
-        // insertion sort is fine for small arrays
-        static_assert(N <= 65);
-        for(std::size_t i = 1; i < arr.size(); i++) {
-            for(std::size_t j = 0; j < i; j++) {
-                if(cmp(arr[j], arr[i])) {
-                    constexpr_swap(arr[i], arr[j]);
-                }
-            }
-        }
-    }
+	template<typename... Args>
+	constexpr bool is_in(const Args&... option) {
+		return ((needle_value == option) || ... || false);
+	}
+};
 
-    template<typename T, typename std::enable_if<std::is_unsigned<T>::value, int>::type = 0>
-    constexpr T popcount(T value) {
-        T pop = 0;
-        while(value) {
-            value &= value - 1;
-            pop++;
-        }
-        return pop;
-    }
-
-    static_assert(popcount(0U) == 0);
-    static_assert(popcount(1U) == 1);
-    static_assert(popcount(2U) == 1);
-    static_assert(popcount(3U) == 2);
-    static_assert(popcount(0xf0U) == 4);
-
-    template<typename T>
-    static constexpr T n_digits(T value) {
-        return value < 10 ? 1 : 1 + n_digits(value / 10);
-    }
-
-    static_assert(n_digits(0) == 1);
-    static_assert(n_digits(1) == 1);
-    static_assert(n_digits(9) == 1);
-    static_assert(n_digits(10) == 2);
-    static_assert(n_digits(11) == 2);
-    static_assert(n_digits(1024) == 4);
-
-    inline bool operator==(const color_scheme& a, const color_scheme& b) {
-        return a.string == b.string
-            && a.escape == b.escape
-            && a.keyword == b.keyword
-            && a.named_literal == b.named_literal
-            && a.number == b.number
-            && a.punctuation == b.punctuation
-            && a.operator_token == b.operator_token
-            && a.call_identifier == b.call_identifier
-            && a.scope_resolution_identifier == b.scope_resolution_identifier
-            && a.identifier == b.identifier
-            && a.accent == b.accent
-            && a.unknown == b.unknown
-            && a.reset == b.reset;
-    }
+#if LIBASSERT_IS_GCC && LIBASSERT_GCC_VERSION < 900
+// note: the use of U here is to workaround a gcc 8 issue https://godbolt.org/z/bdsWhdGj3
+template<typename T, typename U, std::size_t N, std::size_t... I>
+constexpr std::array<std::remove_cv_t<T>, N> to_array_impl(U (&&a)[N], std::index_sequence<I...>) {
+	return {{std::move(a[I])...}};
 }
+
+template<typename T, typename U, std::size_t N>
+constexpr std::array<std::remove_cv_t<T>, N> to_array(U (&&a)[N]) {
+	return to_array_impl<T>(std::move(a), std::make_index_sequence<N> {});
+}
+#else
+// unfortunately the above workaround ICEs MSVC https://godbolt.org/z/bjMEcY9fM
+template<typename T, std::size_t N, std::size_t... I>
+constexpr std::array<std::remove_cv_t<T>, N> to_array_impl(T (&&a)[N], std::index_sequence<I...>) {
+	return {{std::move(a[I])...}};
+}
+
+template<typename T, std::size_t N>
+constexpr std::array<std::remove_cv_t<T>, N> to_array(T (&&a)[N]) {
+	return to_array_impl<T>(std::move(a), std::make_index_sequence<N> {});
+}
+#endif
+
+template<typename A, typename B>
+constexpr void constexpr_swap(A& a, B& b) {
+	B tmp = std::move(b);
+	b = std::move(a);
+	a = std::move(tmp);
+}
+
+// cmp(a, b) should return whether a comes before b
+template<typename T, std::size_t N, typename C>
+constexpr void constexpr_sort(std::array<T, N>& arr, const C& cmp) {
+	// insertion sort is fine for small arrays
+	static_assert(N <= 65);
+	for (std::size_t i = 1; i < arr.size(); i++) {
+		for (std::size_t j = 0; j < i; j++) {
+			if (cmp(arr[j], arr[i])) {
+				constexpr_swap(arr[i], arr[j]);
+			}
+		}
+	}
+}
+
+template<typename T, typename std::enable_if<std::is_unsigned<T>::value, int>::type = 0>
+constexpr T popcount(T value) {
+	T pop = 0;
+	while (value) {
+		value &= value - 1;
+		pop++;
+	}
+	return pop;
+}
+
+static_assert(popcount(0U) == 0);
+static_assert(popcount(1U) == 1);
+static_assert(popcount(2U) == 1);
+static_assert(popcount(3U) == 2);
+static_assert(popcount(0xf0U) == 4);
+
+template<typename T>
+static constexpr T n_digits(T value) {
+	return value < 10 ? 1 : 1 + n_digits(value / 10);
+}
+
+static_assert(n_digits(0) == 1);
+static_assert(n_digits(1) == 1);
+static_assert(n_digits(9) == 1);
+static_assert(n_digits(10) == 2);
+static_assert(n_digits(11) == 2);
+static_assert(n_digits(1024) == 4);
+
+inline bool operator==(const color_scheme& a, const color_scheme& b) {
+	return a.string == b.string && a.escape == b.escape && a.keyword == b.keyword
+		&& a.named_literal == b.named_literal && a.number == b.number && a.punctuation == b.punctuation
+		&& a.operator_token == b.operator_token && a.call_identifier == b.call_identifier
+		&& a.scope_resolution_identifier == b.scope_resolution_identifier
+		&& a.identifier == b.identifier && a.accent == b.accent && a.unknown == b.unknown
+		&& a.reset == b.reset;
+}
+} // namespace detail
+
 LIBASSERT_END_NAMESPACE
 
 #endif

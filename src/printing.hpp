@@ -3,28 +3,34 @@
 
 #include <vector>
 
+#include <libassert/assert.hpp>
+
 #include "analysis.hpp"
 #include "utils.hpp"
 
-#include <libassert/assert.hpp>
-
 LIBASSERT_BEGIN_NAMESPACE
-namespace detail {
-    struct column_t {
-        size_t width;
-        std::vector<highlight_block> blocks;
-        bool right_align = false;
-        column_t(size_t _width, std::vector<highlight_block> _blocks, bool _right_align = false)
-            : width(_width), blocks(std::move(_blocks)), right_align(_right_align) {}
-        column_t(const column_t&) = default;
-        column_t(column_t&&) = default;
-        ~column_t() = default;
-        column_t& operator=(const column_t&) = default;
-        column_t& operator=(column_t&&) = default;
-    };
 
-    std::string wrapped_print(const std::vector<column_t>& columns, const color_scheme& scheme);
-}
+namespace detail {
+struct column_t {
+	size_t width;
+	std::vector<highlight_block> blocks;
+	bool right_align = false;
+
+	column_t(size_t _width, std::vector<highlight_block> _blocks, bool _right_align = false) :
+		width(_width),
+		blocks(std::move(_blocks)),
+		right_align(_right_align) {}
+
+	column_t(const column_t&) = default;
+	column_t(column_t&&) = default;
+	~column_t() = default;
+	column_t& operator=(const column_t&) = default;
+	column_t& operator=(column_t&&) = default;
+};
+
+std::string wrapped_print(const std::vector<column_t>& columns, const color_scheme& scheme);
+} // namespace detail
+
 LIBASSERT_END_NAMESPACE
 
 #endif
