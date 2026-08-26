@@ -89,6 +89,13 @@ set(
 # depends on CMAKE_INSTALL_LIBDIR which is marked as advanced in GNUInstallDirs
 mark_as_advanced(LIBASSERT_INSTALL_CMAKEDIR)
 
+# Controls whether the install rules are generated. Defaults to on only when
+# libassert is the top level project, so that consumers using add_subdirectory
+# or FetchContent don't install libassert's headers and package files when they
+# run their own install target.
+option(LIBASSERT_INSTALL "Generate and install libassert package files" ${PROJECT_IS_TOP_LEVEL})
+mark_as_advanced(LIBASSERT_INSTALL)
+
 # Enables obtaining cpptrace via find_package instead of using FetchContent to
 # obtain it from the official GitHub repo
 option(LIBASSERT_USE_EXTERNAL_CPPTRACE "Obtain cpptrace via find_package instead of FetchContent" OFF)
