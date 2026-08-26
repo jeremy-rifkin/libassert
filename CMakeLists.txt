@@ -282,7 +282,7 @@ endif()
 
 # ---- Install Rules ----
 
-if(NOT CMAKE_SKIP_INSTALL_RULES)
+if(LIBASSERT_INSTALL AND NOT CMAKE_SKIP_INSTALL_RULES)
   include(cmake/InstallRules.cmake)
 endif()
 
