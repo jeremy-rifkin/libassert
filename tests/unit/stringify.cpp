@@ -249,6 +249,34 @@ TEST(Stringify, Regression01) {
     ASSERT(fields.begin() == fields.end());
 }
 
+// A tuple-like type that provides get through ADL rather than as std::get, which the tuple protocol
+// allows and which structured bindings support. boost::multi's extents and similar types do this.
+namespace adl_tuple_like {
+    struct pair_like {
+        int a;
+        float b;
+    };
+
+    template<std::size_t I>
+    auto get(const pair_like& p) {
+        if constexpr(I == 0) {
+            return p.a;
+        } else {
+            return p.b;
+        }
+    }
+}
+
+template<> struct std::tuple_size<adl_tuple_like::pair_like> : std::integral_constant<std::size_t, 2> {};
+template<> struct std::tuple_element<0, adl_tuple_like::pair_like> { using type = int; };
+template<> struct std::tuple_element<1, adl_tuple_like::pair_like> { using type = float; };
+
+TEST(Stringify, AdlTupleLike) {
+    // regression test: std::tuple_size does not imply std::get, the type is read through ADL
+    adl_tuple_like::pair_like p{1, 2};
+    ASSERT(generate_stringification(p) == R"(adl_tuple_like::pair_like: [1, 2.0])");
+}
+
 TEST(Stringify, Tuples) {
     std::tuple<int, float> tuple{1, 2};
     ASSERT(generate_stringification(tuple) == R"(std::tuple<int, float>: [1, 2.0])");

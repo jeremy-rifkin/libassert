@@ -98,9 +98,21 @@ namespace detail {
         //
         // General traits
         //
+        // The tuple protocol allows get to be provided through ADL instead of as std::get, which is what structured
+        // bindings look for. Types doing that (boost::multi's extents, for example) specialize std::tuple_size but are
+        // not readable with std::get, and looking them up with std::get is a hard error here, not a substitution
+        // failure, because it happens in a class body. Do the lookup the same way structured bindings do.
+        namespace adl_get {
+            using std::get;
+            template<std::size_t I, typename T>
+            constexpr auto get_impl(T&& t) -> decltype(get<I>(std::forward<T>(t))) {
+                return get<I>(std::forward<T>(t));
+            }
+        }
+
         template<typename T, bool = (std::tuple_size<T>::value > 0)>
         struct canonicalized_get_0 {
-            using type = decltype(std::get<0>(std::declval<T>()));
+            using type = decltype(adl_get::get_impl<0>(std::declval<T>()));
         };
         template<typename T>
         struct canonicalized_get_0<T, false> {
@@ -326,7 +338,9 @@ namespace detail {
         template<typename T, size_t... I>
         [[nodiscard]]
         std::string stringify_tuple_like_impl(const T& t, std::index_sequence<I...>) {
-            return "[" + (do_stringify(std::get<0>(t)) + ... + (", " + do_stringify(std::get<I + 1>(t)))) + "]";
+            return "["
+                + (do_stringify(adl_get::get_impl<0>(t)) + ... + (", " + do_stringify(adl_get::get_impl<I + 1>(t))))
+                + "]";
         }
 
         template<typename T>
@@ -393,7 +407,8 @@ namespace detail {
         || stringifiable_container<T>();
 
     template<typename T, size_t... I> constexpr bool tuple_has_stringifiable_args_core(std::index_sequence<I...>) {
-        return sizeof...(I) == 0 || (stringifiable<decltype(std::get<I>(std::declval<T>()))> || ...);
+        return sizeof...(I) == 0
+            || (stringifiable<decltype(stringification::adl_get::get_impl<I>(std::declval<T>()))> || ...);
     }
 
     template<typename T> inline constexpr bool tuple_has_stringifiable_args =
