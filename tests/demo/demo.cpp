@@ -25,7 +25,7 @@
 #define GREEN ESC "1;32m"
 #define BLUE ESC "1;34m"
 #define CYAN ESC "1;36m"
-#define PURPL ESC "1;35m"
+#define PURPLE ESC "1;35m"
 #define DARK ESC "1;30m"
 #define RESET ESC "0m"
 
