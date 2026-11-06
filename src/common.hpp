@@ -13,7 +13,7 @@
 #define RGB_GREEN  ANSIRGB(150, 205, 112) // modified
 #define RGB_BLUE   ANSIRGB(98,  174, 239)
 #define RGB_CYAN   ANSIRGB(86,  194, 192) // modified
-#define RGB_PURPL  ANSIRGB(198, 120, 221)
+#define RGB_PURPLE ANSIRGB(198, 120, 221)
 
 #define BASIC_RED    ESC "31m"
 #define BASIC_ORANGE ESC "33m" // using yellow as orange
@@ -21,7 +21,7 @@
 #define BASIC_GREEN  ESC "32m"
 #define BASIC_BLUE   ESC "34m"
 #define BASIC_CYAN   ESC "36m"
-#define BASIC_PURPL  ESC "35m"
+#define BASIC_PURPLE ESC "35m"
 
 #define BASIC_HIGHLIGHT_RED    ESC "101m"
 #define BASIC_HIGHLIGHT_GREEN  ESC "102m"

@@ -323,11 +323,11 @@ LIBASSERT_BEGIN_NAMESPACE
     LIBASSERT_EXPORT const color_scheme color_scheme::ansi_basic {
         BASIC_GREEN, /* string */
         BASIC_BLUE, /* escape */
-        BASIC_PURPL, /* keyword */
+        BASIC_PURPLE, /* keyword */
         BASIC_ORANGE, /* named_literal */
         BASIC_CYAN, /* number */
         "",
-        BASIC_PURPL, /* operator */
+        BASIC_PURPLE, /* operator */
         BASIC_BLUE, /* call_identifier */
         BASIC_BLUE, /* scope_resolution_identifier */
         BASIC_BLUE, /* identifier */
@@ -342,11 +342,11 @@ LIBASSERT_BEGIN_NAMESPACE
     LIBASSERT_EXPORT const color_scheme color_scheme::ansi_rgb {
         RGB_GREEN, /* string */
         RGB_BLUE, /* escape */
-        RGB_PURPL, /* keyword */
+        RGB_PURPLE, /* keyword */
         RGB_ORANGE, /* named_literal */
         RGB_CYAN, /* number */
         "",
-        RGB_PURPL, /* operator */
+        RGB_PURPLE, /* operator */
         RGB_BLUE, /* call_identifier */
         RGB_YELLOW, /* scope_resolution_identifier */
         RGB_BLUE, /* identifier */
